@@ -1,0 +1,111 @@
+/* FactureTotauxDisplay.css */
+
+/* Les styles spécifiques au contenu des totaux */
+.facture-totaux-content {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ligne de total */
+.facture-totaux-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding: 5px 0;
+  align-items: center;
+}
+
+/* Étiquette du total */
+.facture-totaux-label {
+  flex: 1;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Valeur du total */
+.facture-totaux-value {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  width: 140px; /* Largeur fixe pour éviter les décalages */
+}
+
+/* Style pour la ligne de ristourne */
+.facture-totaux-row.ristourne-row {
+  color: #333; /* Couleur de texte par défaut */
+}
+
+/* Mise en forme spéciale pour le total final */
+.facture-totaux-row.total-final {
+  margin-top: 15px;
+  border-top: 1px solid #ddd;
+  padding-top: 15px;
+  font-size: 1.1em;
+}
+
+.facture-totaux-row.total-final .facture-totaux-label,
+.facture-totaux-row.total-final .facture-totaux-value {
+  font-weight: 700;
+  color: #800000;
+}
+
+/* Style pour le bouton de suggestion de ristourne */
+.sugerer-ristourne-btn {
+  background-color: #f0f0f0;
+  color: #800000;
+  border: 1px solid #ddd;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
+  line-height: 1;
+  margin-left: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.sugerer-ristourne-btn:hover {
+  background-color: #e0e0e0;
+}
+
+/* Style pour les montants */
+.montant-valeur {
+  width: 80px;
+  text-align: right;
+  display: inline-block;
+  margin-right: 0;
+  padding-right: 0;
+}
+
+/* Style pour le suffixe CHF */
+.montant-suffix {
+  width: 40px;
+  text-align: left;
+  display: inline-block;
+  padding-left: 10px;
+}
+
+/* Styles forcés pour le champ de ristourne - utilisation de !important pour surcharger tous les styles existants */
+#ristourne {
+  width: 80px !important;
+  box-sizing: border-box !important;
+  padding: 0 !important;
+  padding-right: 0 !important;
+  margin-right: 0 !important;
+  font-size: 16px !important;
+  border: none !important;
+  border-bottom: 1px solid #ccc !important;
+  background-color: transparent !important;
+  outline: none !important;
+  text-align: right !important;
+  display: inline-block !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+#ristourne:focus {
+  border-bottom: 2px solid #800000 !important;
+}

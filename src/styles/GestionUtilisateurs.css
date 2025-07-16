@@ -1,0 +1,534 @@
+/* Styles pour la gestion des utilisateurs - adaptation des styles de FacturationPage.css */
+
+/* Style de l'en-tête - pour correspondre exactement au style de Facturation */
+.facturation-header {
+    background-color: #800000;
+    padding: 20px;
+    border-radius: 5px 5px 0 0;
+    text-align: center;
+    margin-bottom: 0;
+  }
+  
+  .facturation-header h1 {
+    color: white;
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 500;
+  }
+  
+  /* Structure du tableau */
+  .users-table {
+    width: 100%;
+    border: 1px solid #ddd;
+    border-top: none;
+    border-radius: 0 0 5px 5px;
+    margin-bottom: 20px;
+  }
+  
+  /* En-tête du tableau */
+  .users-table-header {
+    display: flex;
+    width: 100%;
+    background-color: #f0f0f0;
+    border-bottom: 2px solid #ddd;
+    box-sizing: border-box;
+  }
+  
+  .users-header-cell {
+    padding: 12px 15px;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    overflow: hidden;
+    font-weight: 600;
+    color: #333;
+    background-color: #f0f0f0;
+  }
+  
+  /* Dimensions des colonnes */
+  .users-username-cell {
+    flex: 1;
+    width: 15%;
+    min-width: 120px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .users-name-cell {
+    flex: 2;
+    width: 25%;
+    min-width: 180px;
+  }
+  
+  .users-email-cell {
+    flex: 2;
+    width: 25%;
+    min-width: 180px;
+  }
+  
+  .users-role-cell {
+    flex: 1;
+    width: 15%;
+    min-width: 120px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .users-status-cell {
+    flex: 1;
+    width: 10%;
+    min-width: 100px;
+  }
+  
+  .users-actions-cell {
+    flex: 0;
+    width: 180px;
+    min-width: 180px;
+    justify-content: space-between;
+    padding: 8px;
+    display: flex;
+  }
+  
+  /* Corps du tableau */
+  .users-table-body {
+    width: 100%;
+    min-height: 400px;
+    overflow-x: auto;
+  }
+  
+  .users-table-row {
+    display: flex;
+    width: 100%;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.2s;
+    cursor: pointer;
+    box-sizing: border-box;
+  }
+  
+  .users-table-row:hover {
+    background-color: #f9f9f9;
+  }
+  
+  .users-table-row.users-selected {
+    background-color: #e6f0ff;
+  }
+  
+  .users-table-row.users-inactive {
+    background-color: #fff5f5;
+    color: #999;
+  }
+  
+  .users-table-row.users-inactive:hover {
+    background-color: #fff0f0;
+  }
+  
+  .users-table-cell {
+    padding: 12px 15px;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  
+  /* Badges pour le rôle et le statut */
+  .users-role-badge, .users-status-badge {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  
+  .users-role-admin {
+    background-color: #e8f5e9;
+    color: #155724;
+  }
+  
+  .users-role-gestionnaire {
+    background-color: #e1f5fe;
+    color: #0277bd;
+  }
+  
+  .users-role-standard {
+    background-color: #f5f5f5;
+    color: #616161;
+  }
+  
+  .users-status-active {
+    background-color: #d4edda;
+    color: #155724;
+  }
+  
+  .users-status-inactive {
+    background-color: #f8d7da;
+    color: #721c24;
+  }
+  
+  /* Messages de chargement et d'erreur */
+  .users-loading-message,
+  .users-error-message,
+  .users-empty-message {
+    padding: 40px 20px;
+    text-align: center;
+  }
+  
+  .users-error-message {
+    color: #721c24;
+    background-color: #f8d7da;
+  }
+  
+  /* Bouton flottant pour ajouter un utilisateur - style repris de FacturationPage.css */
+  .users-floating-button {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    background-color: #800000;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+    z-index: 1000;
+    margin: 0;
+    padding: 0;
+    border: none;
+  }
+  
+  .users-floating-button span {
+    font-size: 32px;
+    font-weight: 300;
+    margin-top: -2px;
+  }
+  
+  .users-floating-button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
+  }
+  
+  .users-floating-tooltip {
+    position: absolute;
+    right: 70px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  
+  .users-floating-button:hover .users-floating-tooltip {
+    opacity: 1;
+  }
+  
+  /* Styles pour le formulaire */
+  .user-form-container {
+    padding: 20px;
+  }
+  
+  .user-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .user-form-error {
+    color: #721c24;
+    background-color: #f8d7da;
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    border: 1px solid #f5c6cb;
+  }
+  
+  .input-group {
+    position: relative;
+    margin-bottom: 10px;
+  }
+  
+  .input-group label {
+    position: absolute;
+    pointer-events: none;
+    left: 0;
+    top: 10px;
+    font-size: 16px;
+    color: #999;
+    transition: 0.2s ease all;
+    font-weight: normal;
+  }
+  
+  .input-group label.required::after {
+    content: " *";
+    color: #800000;
+  }
+  
+  .input-group input {
+    width: 100%;
+    padding: 10px 0;
+    border: none;
+    border-bottom: 1px solid #ccc;
+    background-color: transparent;
+    box-sizing: border-box;
+    font-size: 16px;
+    transition: border-color 0.3s;
+  }
+  
+  .input-group select {
+    width: 100%;
+    padding: 10px 0;
+    border: none;
+    border-bottom: 1px solid #ccc;
+    background-color: transparent;
+    box-sizing: border-box;
+    font-size: 16px;
+    transition: border-color 0.3s;
+    appearance: none;
+    cursor: pointer;
+  }
+  
+  .select-group::after {
+    content: '';
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid #800000;
+    pointer-events: none;
+  }
+  
+  .input-group input:focus,
+  .input-group select:focus {
+    outline: none;
+    border-bottom: 2px solid #800000;
+  }
+  
+  .input-group input:focus + label,
+  .input-group select:focus + label,
+  .input-group input:not(:placeholder-shown) + label,
+  .input-group select:not([value=""]):not(:focus) + label {
+    top: -12px;
+    font-size: 12px;
+    color: #800000;
+    font-weight: 500;
+  }
+  
+  /* S'assurer que le placeholder est transparent pour le bon fonctionnement des labels flottants */
+  .input-group input::placeholder {
+    color: transparent;
+  }
+  
+  /* Style pour les champs désactivés */
+  .input-group input:disabled,
+  .input-group select:disabled {
+    background-color: #f5f5f5;
+    cursor: not-allowed;
+    opacity: 0.8;
+    border-bottom-color: #ddd;
+  }
+  
+  /* Style spécifique pour le groupe du mot de passe */
+  .password-group {
+    position: relative;
+  }
+  
+  .toggle-password-btn {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #800000;
+    cursor: pointer;
+    padding: 5px;
+  }
+  
+  .toggle-password-btn:hover {
+    color: #600000;
+  }
+  
+  .toggle-password-btn:disabled {
+    color: #ccc;
+    cursor: not-allowed;
+  }
+  
+  /* Style pour la case à cocher */
+  .checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 5px;
+  }
+  
+  .checkbox-group input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+  
+  .checkbox-group input[type="checkbox"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+  
+  .checkbox-group label {
+    position: static;
+    font-size: 14px;
+    cursor: pointer;
+    color: #333;
+  }
+  
+  /* Style pour l'affichage en mode vue */
+  .view-info-row {
+    display: flex;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .view-info-label {
+    font-weight: bold;
+    width: 40%;
+    color: #333;
+  }
+  
+  .view-info-value {
+    width: 60%;
+  }
+  
+  /* Disposition en ligne pour certains champs */
+  .form-row {
+    display: flex;
+    gap: 20px;
+  }
+  
+  .form-row .input-group {
+    flex: 1;
+  }
+  
+  /* Styles des boutons d'action pour les modales */
+  .modal-action-button {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-left: 10px;
+    transition: background-color 0.2s;
+  }
+  
+  .modal-action-primary {
+    background-color: #800000;
+    color: white;
+  }
+  
+  .modal-action-primary:hover {
+    background-color: #600000;
+  }
+  
+  .modal-action-primary:disabled {
+    background-color: #bd9393;
+    cursor: not-allowed;
+  }
+  
+  .modal-action-secondary {
+    background-color: #f1f1f1;
+    color: #333;
+  }
+  
+  .modal-action-secondary:hover {
+    background-color: #e0e0e0;
+  }
+  
+  .modal-action-secondary:disabled {
+    background-color: #f1f1f1;
+    color: #999;
+    cursor: not-allowed;
+  }
+  
+  /* Styles pour les boutons d'action dans les listes
+  .bouton-impression {
+    background: white;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.2s;
+  }
+  
+  .bouton-impression:hover {
+    background-color: rgba(128, 0, 32, 0.1);
+  } */
+  
+  /* Style pour les boutons désactivés */
+  .bouton-desactive {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .bouton-desactive:hover {
+    background-color: white !important;
+  }
+  
+  /* Ajustement pour que ce composant s'intègre dans la structure de FacturationPage */
+  .content-section-container {
+    max-width: 100%;
+    margin: 0;
+  }
+  
+  /* Responsive design */
+  @media (max-width: 768px) {
+    .form-row {
+      flex-direction: column;
+      gap: 0;
+    }
+    
+    .users-email-cell {
+      display: none;
+    }
+    
+    .users-floating-button {
+      bottom: 20px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+    }
+    
+    .users-floating-button span {
+      font-size: 24px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .users-table-header,
+    .users-table-row {
+      flex-wrap: wrap;
+    }
+    
+    .users-actions-cell {
+      width: 100%;
+      justify-content: space-around;
+      padding-top: 10px;
+    }
+    
+    .users-name-cell {
+      display: none;
+    }
+  }

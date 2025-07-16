@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bouton d'impression</title>
+    <style>
+        /* Style pour le bouton rond */
+        .bouton-impression {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: white;
+            border: 2px solid #800020; /* Bordeaux */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .bouton-impression:hover {
+            background-color: #f8f8f8;
+            box-shadow: 0 2px 5px rgba(128, 0, 32, 0.3);
+        }
+
+        /* Style pour l'icône d'imprimante */
+        .icone-imprimante {
+            width: 30px;
+            height: 30px;
+            position: relative;
+        }
+
+        /* Corps de l'imprimante */
+        .imprimante-corps {
+            width: 26px;
+            height: 14px;
+            border: 2px solid #800020;
+            border-radius: 3px;
+            position: absolute;
+            top: 8px;
+            left: 0;
+        }
+
+        /* Feuille en haut */
+        .imprimante-feuille-haut {
+            width: 16px;
+            height: 8px;
+            border: 2px solid #800020;
+            border-bottom: none;
+            position: absolute;
+            top: 0;
+            left: 5px;
+        }
+
+        /* Feuille qui sort */
+        .imprimante-feuille-bas {
+            width: 16px;
+            height: 8px;
+            border: 2px solid #800020;
+            border-top: none;
+            position: absolute;
+            bottom: 0;
+            left: 5px;
+        }
+
+        /* Bouton sur l'imprimante */
+        .imprimante-bouton {
+            width: 4px;
+            height: 4px;
+            background-color: #800020;
+            border-radius: 50%;
+            position: absolute;
+            top: 12px;
+            right: 4px;
+        }
+    </style>
+</head>
+<body>
+    <button class="bouton-impression" aria-label="Imprimer">
+        <div class="icone-imprimante">
+            <div class="imprimante-feuille-haut"></div>
+            <div class="imprimante-corps"></div>
+            <div class="imprimante-feuille-bas"></div>
+            <div class="imprimante-bouton"></div>
+        </div>
+    </button>
+</body>
+</html>

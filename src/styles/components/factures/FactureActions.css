@@ -1,0 +1,39 @@
+/* FactureActions.css - Styles propres pour tooltip curseur et boutons */
+
+/* ========== BOUTONS D'ACTION ========== */
+.lf-actions-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px;
+    min-width: 280px;
+}
+
+
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+    .lf-actions-cell {
+        min-width: 240px;
+        gap: 2px;
+    }
+   
+}
+
+@media (max-width: 480px) {
+    .lf-actions-cell {
+        min-width: 200px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+ 
+}
+
+
+/* ========== PRINT ========== */
+@media print {
+    .lf-actions-cell {
+        display: none;
+    }
+}

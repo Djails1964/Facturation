@@ -1,0 +1,14 @@
+/* 
+ * styles/components/factures/FacturesListe.css
+ * Styles spécifiques au composant FacturesListe
+ */
+
+/* 
+ * Les styles globaux (variables, buttons, forms, modals, layout) sont 
+ * déjà disponibles via l'import de index.css dans index.js
+ */
+
+/* Ajustement de position spécifique pour le bouton flottant */
+.lf-floating-button {
+  right: calc(20px + 5mm); /* Ajout de 5mm à droite par rapport au style par défaut */
+}

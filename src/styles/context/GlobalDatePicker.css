@@ -1,0 +1,148 @@
+/* ==========================================================================
+   GlobalDatePicker.css - Styles pour le composant DatePicker global
+   ========================================================================== */
+
+.gdp-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.gdp-modal {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  width: 90%;
+  max-width: 400px;
+  padding: 20px;
+  animation: gdp-fadeIn 0.3s;
+  max-height: 90vh;
+  overflow-y: auto;
+  z-index: 1001;
+}
+
+@keyframes gdp-fadeIn {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.gdp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+.gdp-header h3 {
+  margin: 0;
+  color: #800000;
+  font-size: 18px;
+}
+
+.gdp-close-btn {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.gdp-close-btn:hover {
+  color: #800000;
+}
+
+.gdp-content {
+  margin-bottom: 20px;
+}
+
+/* Customisation du composant react-datepicker */
+.gdp-content .react-datepicker {
+  font-family: inherit;
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.gdp-content .react-datepicker__month-container {
+  width: 100%;
+}
+
+.gdp-content .react-datepicker__header {
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+}
+
+.gdp-content .react-datepicker__day--highlighted,
+.gdp-content .react-datepicker__day--selected {
+  background-color: #800000;
+  color: white;
+}
+
+.gdp-content .react-datepicker__day:hover {
+  background-color: #f0f0f0;
+}
+
+.gdp-info {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+}
+
+.gdp-info p {
+  margin: 5px 0;
+  color: #333;
+}
+
+.gdp-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid #eee;
+  padding-top: 15px;
+}
+
+.gdp-confirm-btn {
+  background-color: #800000;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.gdp-confirm-btn:hover {
+  background-color: #600000;
+}
+
+.gdp-confirm-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.gdp-cancel-btn {
+  background-color: #f9f9f9;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.gdp-cancel-btn:hover {
+  background-color: #eee;
+}

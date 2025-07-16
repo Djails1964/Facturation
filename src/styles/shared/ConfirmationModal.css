@@ -1,0 +1,203 @@
+/* Styles pour la modal de confirmation */
+
+.confirmation-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1050;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.confirmation-modal-dialog {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 500px; /* Augmenté pour accommoder les détails */
+    animation: slideIn 0.3s ease-out;
+    overflow: hidden;
+}
+
+.confirmation-modal-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.confirmation-modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #333;
+}
+
+.confirmation-modal-body {
+    padding: 20px;
+    font-size: 16px;
+    line-height: 1.5;
+    color: #444;
+}
+
+.confirmation-modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #eee;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.confirmation-modal-cancel {
+    padding: 8px 16px;
+    background-color: #f8f9fa;
+    color: #333;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.confirmation-modal-cancel:hover {
+    background-color: #e9ecef;
+}
+
+.confirmation-modal-confirm {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+/* Styles pour les différents types de modales */
+.confirmation-modal-confirm.cm-warning {
+    background-color: #f0ad4e;
+}
+
+.confirmation-modal-confirm.cm-warning:hover {
+    background-color: #ec971f;
+}
+
+.confirmation-modal-confirm.cm-danger {
+    background-color: #d9534f;
+}
+
+.confirmation-modal-confirm.cm-danger:hover {
+    background-color: #c9302c;
+}
+
+.confirmation-modal-confirm.cm-info {
+    background-color: #5bc0de;
+}
+
+.confirmation-modal-confirm.cm-info:hover {
+    background-color: #31b0d5;
+}
+
+/* Adaptation au style de notre application */
+.cm-warning .confirmation-modal-confirm {
+    background-color: #800000;
+}
+
+.cm-warning .confirmation-modal-confirm:hover {
+    background-color: #600000;
+}
+
+.cm-danger .confirmation-modal-confirm {
+    background-color: #dc3545;
+}
+
+.cm-danger .confirmation-modal-confirm:hover {
+    background-color: #bd2130;
+}
+
+.cm-info .confirmation-modal-confirm {
+    background-color: #800000;
+}
+
+.cm-info .confirmation-modal-confirm:hover {
+    background-color: #600000;
+}
+
+/* Styles pour les détails de la facture */
+.confirmation-modal-details {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+.details-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    padding: 5px 0;
+    align-items: center;
+}
+
+.detail-item {
+    display: inline-flex;
+    align-items: center;
+    font-size: 14px;
+    color: #444;
+    padding: 3px 8px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #eee;
+}
+
+.detail-label {
+    font-weight: 600;
+    margin-right: 5px;
+    color: #666;
+}
+
+.detail-value {
+    color: #333;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideIn {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+    .confirmation-modal-dialog {
+        width: 95%;
+        max-width: none;
+    }
+    
+    .confirmation-modal-body {
+        padding: 15px;
+        font-size: 15px;
+    }
+    
+    .confirmation-modal-footer {
+        padding: 10px 15px;
+    }
+    
+    .details-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .detail-item {
+        width: 100%;
+    }
+}

@@ -1,0 +1,59 @@
+/* Style pour le résumé des lignes de facture */
+
+/* Conteneur principal de chaque ligne de résumé */
+.ligne-facture-resume {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+/* Suppression de la bordure pour la dernière ligne */
+.ligne-facture-resume:last-child {
+    border-bottom: none;
+}
+
+/* Conteneur des détails de la ligne */
+.ligne-facture-resume-details {
+    flex: 1;
+    padding: 8px 8px 8px 16px;
+}
+
+/* Style du titre (service et unité) */
+.ligne-facture-resume-titre {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+/* Style de la description */
+.ligne-facture-resume-description {
+    color: #666;
+    font-size: 0.9em;
+}
+
+/* Conteneur des montants */
+.ligne-facture-resume-montants {
+    text-align: right;
+    padding: 8px 8px 8px 8px;
+}
+
+/* Style du calcul (quantité × prix) */
+.ligne-facture-resume-calcul {
+    color: #666;
+    font-size: 0.9em;
+    margin-bottom: 5px;
+}
+
+/* Style du total de la ligne */
+.ligne-facture-resume-total {
+    font-weight: bold;
+}
+
+/* Style du total général de la facture */
+.resume-total-facture {
+    display: flex;
+    justify-content: flex-end;
+    font-weight: bold;
+
+}

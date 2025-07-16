@@ -1,0 +1,51 @@
+/* Import des styles de base et spécifiques pour les factures */
+
+/* Base et variables */
+@import './_base.css';
+
+/* Composants principaux */
+@import './FactureDetailsForm.css';
+@import './FactureLigneDetail.css';
+@import './FactureLigneReadOnly.css';
+@import './FactureLigneResume.css';
+
+/* Styles globaux spécifiques aux factures */
+.factures-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: var(--facture-spacing-lg);
+    background-color: #fff;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+/* Thème sombre optionnel */
+@media (prefers-color-scheme: dark) {
+    .factures-container {
+        background-color: #1a1a1a;
+        color: #f4f4f4;
+    }
+
+    /* Ajustements des couleurs pour le mode sombre */
+    :root {
+        --facture-color-primary: #a06060;
+        --facture-color-secondary: #804040;
+    }
+}
+
+/* Print styles */
+@media print {
+    .factures-container {
+        max-width: none;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+    }
+
+    /* Styles spécifiques pour l'impression */
+    .ligne-facture-resume,
+    .fdf_line-container {
+        page-break-inside: avoid;
+        border: 1px solid #000;
+        margin-bottom: 10px;
+    }
+}

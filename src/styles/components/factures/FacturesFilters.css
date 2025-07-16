@@ -1,0 +1,93 @@
+/* 
+ * styles/components/factures/FacturesFilters.css
+ * Styles pour la barre de filtres
+ */
+
+/* ========== FILTRES ========== */
+.lf-filters-row {
+  display: flex;
+  width: 100%;
+  background-color: var(--color-secondary);
+  padding: 15px 0;
+  border-bottom: 2px solid var(--color-border);
+  box-sizing: border-box;
+}
+
+.lf-filter-cell {
+  position: relative;
+  padding: 12px 15px;
+}
+
+/* Styles pour les select de filtres */
+.lf-filter-cell select {
+  width: 100%;
+  padding: 10px 0;
+  border: none;
+  border-bottom: 1px solid #ccc;
+  background-color: transparent;
+  appearance: none;
+  outline: none;
+  font-size: 16px;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+  margin-left: 0;
+}
+
+.lf-filter-cell select:focus {
+  border-bottom-color: var(--color-primary);
+}
+
+.lf-filter-cell select + label {
+  position: absolute;
+  top: 6px;
+  left: 15px;
+  font-size: 12px;
+  color: var(--color-primary);
+  font-weight: 500;
+  pointer-events: none;
+}
+
+/* Flèche déroulante personnalisée */
+.lf-filter-cell::after {
+  content: '';
+  position: absolute;
+  right: 25px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid var(--color-text-light);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Supprimer la flèche dans la cellule montant */
+.lf-filter-cell.lf-montant-cell::after {
+  display: none;
+}
+
+/* Conteneur des boutons d'action dans l'en-tête */
+.lf-action-buttons-container {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+/* Supprimer la flèche déroulante dans la cellule d'actions */
+.lf-filter-cell.lf-actions-cell::after {
+  display: none;
+}
+
+/* ========== RESPONSIVE DESIGN ========== */
+@media (max-width: 480px) {
+  .lf-filters-row {
+    flex-direction: column;
+  }
+  
+  .lf-filter-cell {
+    padding: 8px;
+  }
+}

@@ -1,0 +1,104 @@
+┌───────────────────────────┐
+│ Navigateur de l'utilisateur │
+│  https://localhost/fact-back │
+└─────────────┬─────────────┘
+              │
+              ▼
+┌───────────────────────────┐
+│ Serveur PHP (Apache/Nginx) │
+│      facturation.php      │
+└─────────────┬─────────────┘
+              │ Inclut
+              ▼
+┌───────────────────────────┐    ┌───────────────────────────┐
+│      bootstrap.php        │◄───┤    check_session.php      │
+│(Configuration et variables)│    │  (Vérification session)   │
+└─────────────┬─────────────┘    └───────────────────────────┘
+              │
+              ▼
+┌───────────────────────────┐
+│     HTML généré avec      │
+│  window.APP_CONFIG et     │
+│     window.USER_DATA      │
+└─────────────┬─────────────┘
+              │
+              ▼
+┌───────────────────────────┐
+│  Chargement des scripts   │
+│    React (bundle.js)      │
+└─────────────┬─────────────┘
+              │
+              │   ┌───────────────────────────┐
+              │   │     En développement      │
+              ├──►│  http://localhost:3007    │
+              │   └─────────────┬─────────────┘
+              │                 │
+              │                 ▼
+              │   ┌───────────────────────────┐
+              │   │     public/index.html     │
+              │   │ (Page HTML de base React) │
+              │   └─────────────┬─────────────┘
+              │                 │
+              ▼                 ▼
+┌───────────────────────────┐
+│        index.js           │
+│  (Point d'entrée React)   │
+└─────────────┬─────────────┘
+              │ Charge
+              ▼
+┌───────────────────────────┐
+│         App.js            │
+│ (Routeur et configuration)│
+└─────────────┬─────────────┘
+              │ Route par défaut
+              ▼
+┌───────────────────────────┐
+│    FacturationPage.jsx    │
+│ (Section "factures" par   │
+│         défaut)           │
+└─────────────┬─────────────┘
+              │ Affiche
+              ▼
+┌───────────────────────────┐
+│    FactureGestion.jsx     │
+│ (Composant de gestion des │
+│        factures)          │
+└─────────────┬─────────────┘
+              │ useEffect
+              ▼
+┌───────────────────────────┐
+│     fetchFactures()       │
+│  (Charger les factures)   │
+└─────────────┬─────────────┘
+              │ Appelle
+              ▼
+┌───────────────────────────┐
+│     FactureService.js     │
+│(Service d'accès aux données│
+│       des factures)       │
+└─────────────┬─────────────┘
+              │ Utilise
+              ▼
+┌───────────────────────────┐
+│         api.js            │
+│  (Configuration Axios)    │
+│   baseURL: '/api'         │
+└─────────────┬─────────────┘
+              │ GET /api/facture-api.php
+              ▼
+┌───────────────────────────┐
+│      setupProxy.js        │
+│(Proxy de développement React)│
+└─────────────┬─────────────┘
+              │ Redirige vers
+              ▼
+┌───────────────────────────┐
+│  https://localhost/fact-back/api │
+│      facture-api.php      │
+└─────────────┬─────────────┘
+              │ Renvoie les données
+              ▼
+┌───────────────────────────┐
+│   Affichage des factures  │
+│     ou erreur 404         │
+└───────────────────────────┘

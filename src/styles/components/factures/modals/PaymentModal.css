@@ -1,0 +1,21 @@
+/* 
+ * styles/components/modals/PaymentModal.css
+ * Styles spécifiques pour la modale de paiement
+ */
+
+/* Conteneur principal des formulaires de paiement */
+.facture-paiement-inputs {
+  margin-bottom: 20px;
+}
+
+/* Supprimer les flèches des champs numériques spécifiques au paiement */
+.facture-paiement-inputs input::-webkit-outer-spin-button,
+.facture-paiement-inputs input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.facture-paiement-inputs input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

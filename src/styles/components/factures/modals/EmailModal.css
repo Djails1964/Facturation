@@ -1,0 +1,274 @@
+/* 
+ * styles/components/modals/EmailModal.css
+ * Styles spécifiques pour la modale d'envoi d'email
+ * AJOUT: Styles pour le bypass de capture en développement
+ */
+
+/* Conteneur principal des formulaires d'email */
+.facture-email-inputs {
+  margin-top: 20px;
+}
+
+/* Section pour la sélection du type de corps (radios) */
+.email-type-selector {
+  margin-bottom: 20px;
+}
+
+/* Style de sélection active du type de corps */
+.email-type-button.active {
+  background-color: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.email-type-button:hover:not(.active) {
+  background-color: #e0e0e0;
+}
+
+/* ========== STYLES POUR LE BYPASS DE CAPTURE ========== */
+
+/* Bandeau d'avertissement pour l'envoi direct */
+.real-send-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+  color: white;
+  padding: 15px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Section pour la case à cocher de bypass */
+.bypass-section {
+  margin-top: 20px;
+  padding: 15px;
+  background: #fff3e0;
+  border: 1px solid #ffcc80;
+  border-radius: 8px;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.checkbox-group input[type="checkbox"] {
+  margin-top: 2px;
+  transform: scale(1.2);
+}
+
+.bypass-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+}
+
+.dev-badge {
+  background: #ff6b35;
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.bypass-warning {
+  font-size: 12px;
+  color: #e65100;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* Modal de confirmation de bypass */
+.bypass-confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.bypass-confirm-modal {
+  background: white;
+  border-radius: 12px;
+  max-width: 450px;
+  width: 90%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  animation: scaleIn 0.3s ease-out;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.bypass-confirm-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 20px 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.bypass-confirm-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.bypass-confirm-content {
+  padding: 20px;
+  line-height: 1.6;
+}
+
+.bypass-confirm-content p {
+  margin: 0 0 12px;
+  color: #555;
+}
+
+.bypass-confirm-content p:last-child {
+  margin-bottom: 0;
+  font-weight: 500;
+}
+
+.bypass-confirm-actions {
+  display: flex;
+  gap: 10px;
+  padding: 15px 20px 20px;
+  justify-content: flex-end;
+}
+
+.bypass-confirm-cancel,
+.bypass-confirm-ok {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.bypass-confirm-cancel {
+  background: #f5f5f5;
+  color: #666;
+  border: 1px solid #ddd;
+}
+
+.bypass-confirm-cancel:hover {
+  background: #e8e8e8;
+  color: #333;
+}
+
+.bypass-confirm-ok {
+  background: #ff6b35;
+  color: white;
+  box-shadow: 0 2px 4px rgba(255, 107, 53, 0.3);
+}
+
+.bypass-confirm-ok:hover {
+  background: #e55a2b;
+  box-shadow: 0 4px 8px rgba(255, 107, 53, 0.4);
+  transform: translateY(-1px);
+}
+
+/* Bouton d'action avec style warning */
+.modal-action-warning {
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+}
+
+.modal-action-warning:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e55a2b 0%, #e5793a 100%);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+  transform: translateY(-1px);
+}
+
+.modal-action-warning:disabled {
+  background: #ccc;
+  color: #999;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* Responsive pour mobile */
+@media (max-width: 768px) {
+  .bypass-confirm-modal {
+    width: 95%;
+    margin: 20px;
+  }
+  
+  .bypass-confirm-actions {
+    flex-direction: column;
+  }
+  
+  .bypass-confirm-cancel,
+  .bypass-confirm-ok {
+    width: 100%;
+    margin: 5px 0;
+  }
+  
+  .real-send-banner {
+    padding: 12px 15px;
+    font-size: 13px;
+  }
+  
+  .bypass-section {
+    padding: 12px;
+  }
+  
+  .bypass-label {
+    font-size: 13px;
+  }
+  
+  .bypass-warning {
+    font-size: 11px;
+  }
+}

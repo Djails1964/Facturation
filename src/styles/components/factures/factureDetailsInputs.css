@@ -1,0 +1,140 @@
+/* Styles pour les champs de saisie de la facture */
+
+.fdf_floating-label-input {
+  position: relative;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.fdf_floating-label-input input,
+.fdf_floating-label-input select {
+  width: 100%;
+  padding: 10px 0;
+  font-size: 16px;
+  border: none;
+  border-bottom: 1px solid #ccc;
+  background-color: transparent;
+  transition: border-color 0.3s;
+  outline: none;
+  height: 38px;
+  box-sizing: border-box;
+}
+
+.fdf_floating-label-input input:focus,
+.fdf_floating-label-input select:focus {
+  border-bottom: 2px solid #800000;
+}
+
+.fdf_floating-label-input label {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  font-size: 16px;
+  color: #666;
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+
+.fdf_floating-label-input.has-value label,
+.fdf_floating-label-input.fdf_focused label,
+.fdf_floating-label-input input:focus + label,
+.fdf_floating-label-input select:focus + label,
+.fdf_floating-label-input input:not(:placeholder-shown) + label,
+.fdf_floating-label-input select:not([value=""]) + label {
+  top: -12px;
+  font-size: 12px;
+  color: #800000;
+  font-weight: 500;
+}
+
+.fdf_floating-label-input .fdf_required {
+  color: #d32f2f;
+  margin-left: 3px;
+}
+
+.fdf_floating-label-input .fdf_error-validation {
+  border-bottom: 2px solid #d32f2f !important;
+}
+
+.fdf_floating-label-input .fdf_error-message {
+  color: #d32f2f;
+  font-size: 12px;
+  margin-top: 4px;
+  position: absolute;
+  left: 0;
+  bottom: -20px;
+}
+
+/* Styles spécifiques pour les sélecteurs */
+.fdf_floating-label-input select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 25px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1em;
+}
+
+/* Champs spéciaux */
+.fdf_text-right {
+  text-align: right !important;
+}
+
+.fdf_currency-suffix {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+  pointer-events: none;
+}
+
+.fdf_clipboard-icon {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #800020;
+  transition: opacity 0.2s ease;
+}
+
+.fdf_clipboard-icon:hover {
+  opacity: 0.8;
+}
+
+.fdf_clipboard-icon.fdf_icon-disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.fdf_description-group {
+  position: relative;
+}
+
+.fdf_char-limit-info {
+  font-size: 0.75rem;
+  color: #666;
+  text-align: right;
+  margin-top: 2px;
+  transition: color 0.3s ease;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .fdf_floating-label-input {
+    margin-bottom: 15px;
+  }
+
+  .fdf_floating-label-input input,
+  .fdf_floating-label-input select {
+    font-size: 14px;
+  }
+
+  .fdf_floating-label-input label {
+    font-size: 14px;
+  }
+}

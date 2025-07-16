@@ -1,0 +1,31 @@
+/* 
+ * styles/index.css
+ * Point d'entrée pour importer tous les styles communs
+ */
+
+/* Import des styles communs */
+@import './common/variables.css';
+@import './common/layout.css';
+@import './common/buttons.css';
+@import './common/forms.css';
+@import './common/modals.css';
+
+/* Styles globaux de base */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+  padding: 0;
+  background-color: #f7f7f7;
+  color: var(--color-text);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Les styles des composants spécifiques doivent être importés directement 
+   dans les fichiers des composants correspondants pour maintenir la modularité */

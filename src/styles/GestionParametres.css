@@ -1,0 +1,496 @@
+/* Styles pour la gestion des paramètres - adapté de GestionUtilisateurs.css */
+
+/* Style de l'en-tête */
+.facturation-header {
+    background-color: #800000;
+    padding: 20px;
+    border-radius: 5px 5px 0 0;
+    text-align: center;
+    margin-bottom: 0;
+  }
+  
+  .facturation-header h1 {
+    color: white;
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 500;
+  }
+  
+  /* Structure du tableau */
+  .params-table {
+    width: 100%;
+    border: 1px solid #ddd;
+    border-top: none;
+    border-radius: 0 0 5px 5px;
+    margin-bottom: 20px;
+  }
+  
+  /* En-tête du tableau */
+  .params-table-header {
+    display: flex;
+    width: 100%;
+    background-color: #f0f0f0;
+    border-bottom: 2px solid #ddd;
+    box-sizing: border-box;
+  }
+  
+  .params-header-cell {
+    padding: 12px 15px;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    overflow: hidden;
+    font-weight: 600;
+    color: #333;
+    background-color: #f0f0f0;
+  }
+  
+  /* Dimensions des colonnes */
+  .params-groupe-cell {
+    flex: 2;
+    width: 30%;
+    min-width: 180px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .params-parametre-cell {
+    flex: 2;
+    width: 25%;
+    min-width: 150px;
+  }
+  
+  .params-valeur-cell {
+    flex: 2;
+    width: 25%;
+    min-width: 150px;
+  }
+  
+  .params-annee-cell {
+    flex: 1;
+    width: 10%;
+    min-width: 80px;
+  }
+  
+  .params-actions-cell {
+    flex: 0;
+    width: 80px;
+    min-width: 80px;
+    justify-content: center;
+    padding: 8px;
+    display: flex;
+  }
+  
+  /* Corps du tableau */
+  .params-table-body {
+    width: 100%;
+    min-height: 400px;
+    overflow-x: auto;
+  }
+  
+  .params-table-row {
+    display: flex;
+    width: 100%;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.2s;
+    box-sizing: border-box;
+  }
+  
+  .params-groupe-row {
+    background-color: #f5f5f5;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  
+  .params-groupe-row:hover {
+    background-color: #e5e5e5;
+  }
+  
+  .params-sous-groupe-row {
+    background-color: #fafafa;
+    font-weight: 500;
+    border-left: 3px solid #800000;
+  }
+  
+  .params-data-row:hover {
+    background-color: #f9f9f9;
+  }
+  
+  .params-table-row.params-selected {
+    background-color: #e6f0ff;
+  }
+  
+  .params-table-cell {
+    padding: 12px 15px;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  
+  /* Styles pour les différents niveaux de groupe */
+  .params-groupe-icon {
+    margin-right: 10px;
+    color: #800000;
+    font-size: 12px;
+  }
+  
+  .params-groupe-nom {
+    font-weight: 600;
+    color: #333;
+  }
+  
+  .params-sous-groupe-nom {
+    font-weight: 500;
+    color: #555;
+    padding-left: 20px;
+    width: 100px;
+    /* Ajustez la largeur selon les besoins */
+    display: inline-block;
+    border-right: 1px solid #eee;
+    margin-right: 10px;
+  }
+  
+  .params-empty-sousgroupe {
+    width: 100px; /* Même largeur que params-sous-groupe-nom */
+    display: inline-block;
+    margin-right: 10px;
+    padding-left: 20px;
+  }
+  
+  .params-categorie-nom {
+    font-style: italic;
+    color: #666;
+    margin-left: 10px;
+  }
+  
+  /* Messages de chargement et d'erreur */
+  .params-loading-message,
+  .params-error-message,
+  .params-empty-message {
+    padding: 40px 20px;
+    text-align: center;
+  }
+  
+  .params-error-message {
+    color: #721c24;
+    background-color: #f8d7da;
+  }
+  
+  /* Styles pour le formulaire */
+  .param-form-container {
+    padding: 20px;
+  }
+  
+  .param-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .param-form-error {
+    color: #721c24;
+    background-color: #f8d7da;
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    border: 1px solid #f5c6cb;
+  }
+  
+  .param-info-row {
+    display: flex;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .param-info-label {
+    font-weight: bold;
+    width: 40%;
+    color: #333;
+  }
+  
+  .param-info-value {
+    width: 60%;
+  }
+  
+  .input-group {
+    position: relative;
+    margin-bottom: 20px;
+  }
+  
+  .input-group label {
+    position: absolute;
+    pointer-events: none;
+    left: 0;
+    top: 10px;
+    font-size: 16px;
+    color: #999;
+    transition: 0.2s ease all;
+    font-weight: normal;
+  }
+  
+  .input-group label.required::after {
+    content: " *";
+    color: #800000;
+  }
+  
+  .input-group input {
+    width: 100%;
+    padding: 10px 0;
+    border: none;
+    border-bottom: 1px solid #ccc;
+    background-color: transparent;
+    box-sizing: border-box;
+    font-size: 16px;
+    transition: border-color 0.3s;
+  }
+  
+  .input-group input:focus {
+    outline: none;
+    border-bottom: 2px solid #800000;
+  }
+  
+  .input-group input:focus + label,
+  .input-group input:not(:placeholder-shown) + label {
+    top: -12px;
+    font-size: 12px;
+    color: #800000;
+    font-weight: 500;
+  }
+  
+  /* S'assurer que le placeholder est transparent pour le bon fonctionnement des labels flottants */
+  .input-group input::placeholder {
+    color: transparent;
+  }
+  
+  /* Style pour les champs désactivés */
+  .input-group input:disabled {
+    background-color: #f5f5f5;
+    cursor: not-allowed;
+    opacity: 0.8;
+    border-bottom-color: #ddd;
+  }
+  
+  /* Nouvelle classe pour les descriptions de champs */
+  .field-description {
+    display: block;
+    font-size: 0.75rem;
+    color: #666;
+    text-align: left;
+    margin-top: 5px;
+    font-style: italic;
+  }
+  
+  /* Style pour les boutons d'action dans les listes */
+  .bouton-impression {
+    background: white;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.2s;
+  }
+  
+  .bouton-impression:hover {
+    background-color: rgba(128, 0, 32, 0.1);
+  }
+  
+  /* Style pour les boutons désactivés */
+  .bouton-desactive {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .bouton-desactive:hover {
+    background-color: white !important;
+  }
+  
+  /* Styles des boutons d'action pour les modales */
+  .modal-action-button {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-left: 10px;
+    transition: background-color 0.2s;
+  }
+  
+  .modal-action-primary {
+    background-color: #800000;
+    color: white;
+  }
+  
+  .modal-action-primary:hover {
+    background-color: #600000;
+  }
+  
+  .modal-action-primary:disabled {
+    background-color: #bd9393;
+    cursor: not-allowed;
+  }
+  
+  .modal-action-secondary {
+    background-color: #f1f1f1;
+    color: #333;
+  }
+  
+  .modal-action-secondary:hover {
+    background-color: #e0e0e0;
+  }
+  
+  .modal-action-secondary:disabled {
+    background-color: #f1f1f1;
+    color: #999;
+    cursor: not-allowed;
+  }
+  
+  /* Alignement à gauche pour les champs de facture */
+  input.align-left {
+    text-align: left !important;
+  }
+  
+  /* Ajustement pour que ce composant s'intègre dans la structure de FacturationPage */
+  .content-section-container {
+    max-width: 100%;
+    margin: 0;
+  }
+
+  /* Style pour le textarea des corps d'email */
+.email-corps-textarea {
+  width: 100%;
+  min-height: 120px !important;
+  padding: 10px !important;
+  border: 1px solid #ccc !important;
+  border-radius: 4px !important;
+  resize: vertical !important;
+  background-color: #fff !important;
+  font-family: inherit !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  color: #333 !important;
+  transition: border-color 0.3s;
+}
+
+.email-corps-textarea:focus {
+  outline: none !important;
+  border-color: #800000 !important;
+  box-shadow: 0 0 3px rgba(128, 0, 0, 0.2) !important;
+}
+
+/* Adaptation des labels flottants pour les textarea */
+.input-group textarea {
+  margin-top: 15px; /* Espace pour le label flottant */
+}
+
+.input-group textarea + label {
+  top: 25px; /* Position ajustée pour le textarea */
+}
+
+.input-group textarea:focus + label,
+.input-group textarea:not(:placeholder-shown) + label {
+  top: 0px; /* Position du label quand focalisé ou rempli */
+  font-size: 12px;
+  color: #800000;
+  font-weight: 500;
+}
+
+/* Adaptation pour les modals */
+.generic-modal-body .input-group textarea {
+  margin-top: 20px;
+}
+
+.generic-modal-body .input-group textarea + label {
+  top: 30px;
+}
+
+.generic-modal-body .input-group textarea:focus + label,
+.generic-modal-body .input-group textarea:not(:placeholder-shown) + label {
+  top: 5px;
+}
+
+/* Styles corrigés pour le textarea dans la modal des paramètres */
+
+/* Style pour le textarea des corps d'email - avec uniquement une bordure en bas */
+.email-corps-textarea {
+  width: 100%;
+  min-height: 120px !important;
+  padding: 10px 0 !important; /* Enlever le padding horizontal */
+  border: none !important; /* Enlever toutes les bordures */
+  border-bottom: 1px solid #ccc !important; /* Ajouter uniquement la bordure du bas */
+  border-radius: 0 !important; /* Enlever les coins arrondis */
+  resize: vertical !important;
+  background-color: transparent !important; /* Fond transparent */
+  font-family: inherit !important;
+  font-size: 16px !important; /* Même taille que les inputs */
+  line-height: 1.5 !important;
+  color: #333 !important;
+  transition: border-color 0.3s;
+}
+
+.email-corps-textarea:focus {
+  outline: none !important;
+  border-bottom: 2px solid #800000 !important; /* Bordure du bas plus épaisse au focus, comme les inputs */
+  box-shadow: none !important; /* Pas d'ombre */
+}
+
+/* Adaptation des labels flottants pour les textarea */
+.input-group textarea {
+  margin-top: 15px; /* Espace pour le label flottant */
+}
+
+.input-group textarea + label {
+  top: 25px; /* Position ajustée pour le textarea */
+}
+
+.input-group textarea:focus + label,
+.input-group textarea:not(:placeholder-shown) + label {
+  top: 0px; /* Position du label quand focalisé ou rempli */
+  font-size: 12px;
+  color: #800000;
+  font-weight: 500;
+}
+
+/* Adaptation pour les modals */
+.generic-modal-body .input-group textarea {
+  margin-top: 20px;
+}
+
+.generic-modal-body .input-group textarea + label {
+  top: 30px;
+}
+
+.generic-modal-body .input-group textarea:focus + label,
+.generic-modal-body .input-group textarea:not(:placeholder-shown) + label {
+  top: 5px;
+}
+  
+  /* Responsive design */
+  @media (max-width: 768px) {
+    .params-table-header,
+    .params-table-row {
+      flex-wrap: wrap;
+    }
+    
+    .params-annee-cell {
+      display: none;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .params-parametre-cell {
+      display: none;
+    }
+    
+    .params-actions-cell {
+      width: 100%;
+      justify-content: space-around;
+      padding-top: 10px;
+    }
+  }

@@ -1,0 +1,287 @@
+/* src/styles/components/LoginPage.css */
+
+/* Utilisation des variables globales définies dans variables.css */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #F5F5F5; /* Même fond que home-page.html */
+  color: var(--color-text);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.login-container {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+}
+
+.login-card {
+  background-color: var(--color-background);
+  border-radius: var(--border-radius-md);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Même ombre que home-page.html */
+  width: 100%;
+  max-width: 380px;
+  padding: 3rem 2.5rem;
+  text-align: center;
+}
+
+.login-header {
+  margin-bottom: 2.5rem;
+}
+
+/* Arc décoratif - exactement comme dans home-page.html */
+.arc-decoration {
+  position: relative;
+  height: 60px;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+
+.arc {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 150px;
+  height: 150px;
+  border: 3px solid #A51C30; /* Couleur exacte de home-page.html */
+  border-bottom: none;
+  border-radius: 50%;
+}
+
+.login-header h1 {
+  color: #A51C30; /* Couleur exacte de home-page.html */
+  font-size: 1.8rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  margin-bottom: 0.5rem;
+}
+
+.login-header p {
+  color: var(--color-text);
+  font-size: 0.9rem;
+  margin-bottom: 0;
+  font-weight: 400;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  text-align: left;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.5rem; /* Cohérent avec home-page.html */
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--color-text);
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.75rem; /* Même padding que home-page.html */
+  border: 1px solid #E6E6E6; /* Même couleur que home-page.html */
+  border-radius: var(--border-radius-md);
+  font-size: 1rem;
+  transition: border-color 0.3s;
+  font-family: inherit;
+  background-color: var(--color-background);
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #A51C30; /* Même couleur primaire */
+  box-shadow: 0 0 0 2px rgba(165, 28, 48, 0.1);
+}
+
+.form-group input:disabled {
+  background-color: #f8f8f8;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.error-message {
+  color: #A51C30;
+  background-color: rgba(165, 28, 48, 0.1); /* Même style que home-page.html */
+  border: 1px solid rgba(165, 28, 48, 0.2);
+  padding: 0.75rem;
+  border-radius: var(--border-radius-md);
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem; /* Cohérent avec home-page.html */
+  text-align: center;
+  animation: slideIn 0.3s ease-out;
+}
+
+.login-button {
+  background-color: #A51C30; /* Couleur exacte de home-page.html */
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-md);
+  padding: 0.75rem 1.5rem; /* Même padding que home-page.html */
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  width: 100%;
+  transition: background-color 0.3s;
+  font-family: inherit;
+}
+
+.login-button:hover:not(:disabled) {
+  background-color: #8A1828; /* Même couleur hover que home-page.html */
+}
+
+.login-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  position: relative;
+}
+
+.loading-state .login-button {
+  color: transparent;
+}
+
+.loading-state .login-button::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.forgot-password {
+  display: block;
+  text-align: center;
+  margin-top: 1rem; /* Cohérent avec home-page.html */
+  color: #A51C30;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: opacity 0.3s ease;
+}
+
+.forgot-password:hover {
+  text-decoration: underline;
+  opacity: 0.8;
+}
+
+.login-footer {
+  text-align: center;
+  padding: 1.5rem;
+  background-color: var(--color-background); /* Même style que home-page.html */
+  color: var(--color-text);
+  font-size: 0.8rem;
+  margin-top: auto;
+}
+
+/* Animations */
+@keyframes spin {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive design - cohérent avec les autres composants */
+@media (max-width: 768px) {
+  .login-container {
+    padding: 1.5rem;
+  }
+  
+  .login-card {
+    padding: 2rem 1.5rem;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-container {
+    padding: 1rem;
+  }
+  
+  .login-card {
+    padding: 1.5rem;
+  }
+  
+  .login-header h1 {
+    font-size: 1.6rem;
+    letter-spacing: 1.5px;
+  }
+  
+  .arc {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .arc-decoration {
+    height: 50px;
+  }
+}
+
+/* Accessibilité - utilisation des standards globaux */
+.login-button:focus-visible,
+.form-group input:focus-visible,
+.forgot-password:focus-visible {
+  outline: 2px solid #A51C30;
+  outline-offset: 2px;
+}
+
+/* États supplémentaires utilisant les couleurs globales */
+.success-message {
+  color: var(--color-success-text);
+  background-color: var(--color-success-bg);
+  border: 1px solid #c3e6cb;
+  padding: 0.75rem;
+  border-radius: var(--border-radius-md);
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Support des thèmes d'accessibilité */
+@media (prefers-reduced-motion: reduce) {
+  .loading-state .login-button::after {
+    animation: none;
+  }
+  
+  .error-message,
+  .success-message {
+    animation: none;
+  }
+}
+
+@media (prefers-contrast: high) {
+  .form-group input {
+    border: 2px solid var(--color-border);
+  }
+  
+  .form-group input:focus {
+    border-color: #A51C30;
+    outline: 2px solid #A51C30;
+  }
+}

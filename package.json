@@ -1,0 +1,65 @@
+{
+  "name": "fact-front",
+  "version": "1.1.0",
+  "private": true,
+  "dependencies": {
+    "axios": "^1.9.0",
+    "date-fns": "^4.1.0",
+    "react": "^18.2.0",
+    "react-datepicker": "^8.3.0",
+    "react-dom": "^18.2.0",
+    "react-feather": "^2.0.10",
+    "react-icons": "^5.5.0",
+    "react-router-dom": "^7.5.3",
+    "react-scripts": "^5.0.1",
+    "recharts": "^2.15.3"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    
+    "validate": "node src/scripts/validate-config.js",
+    "validate:dev": "cross-env REACT_APP_ENV=development npm run validate",
+    "validate:prod": "cross-env REACT_APP_ENV=production npm run validate",
+    
+    "build:dev": "npm run validate:dev && cross-env REACT_APP_ENV=development npm run build",
+    "build:prod": "npm run validate:prod && cross-env REACT_APP_ENV=production npm run build",
+    "build:staging": "cross-env REACT_APP_ENV=staging npm run build",
+    
+    "debug:urls": "cross-env REACT_APP_DEBUG_URLS=true npm start",
+    "test:config": "npm run validate && echo Configuration valide",
+    
+    "env:check": "npx dotenv -e .env node -e \"Object.keys(process.env).filter(k=>k.startsWith('REACT_APP')).forEach(k=>console.log(k+'='+process.env[k]))\"",
+    "env:check:powershell": "powershell \"Write-Host 'Variables REACT_APP:'; Get-ChildItem Env: | Where-Object Name -like 'REACT_APP*' | ForEach-Object { Write-Host ('  ' + $_.Name + '=' + $_.Value) }\"",
+    "env:list": "cross-env-shell \"set\"",
+    
+    "url:test": "echo Ouvrez la console et tapez: window.urlHelperDebug.testBackend()",
+    
+    "predeploy": "npm run validate:prod",
+    "deploy": "npm run build:prod && echo Build prêt pour déploiement",
+    "postdeploy": "echo Testez avec: window.urlHelperDebug.testBackend()"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

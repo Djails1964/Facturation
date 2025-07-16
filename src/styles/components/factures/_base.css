@@ -1,0 +1,127 @@
+/* Base styles et variables pour les composants de facture */
+
+:root {
+    /* Couleurs */
+    --facture-color-primary: #800000;
+    --facture-color-secondary: #600000;
+    
+    /* États */
+    --facture-color-success: #28a745;
+    --facture-color-warning: #ffc107;
+    --facture-color-danger: #dc3545;
+    
+    /* Typographie */
+    --facture-font-size-base: 16px;
+    --facture-font-size-small: 14px;
+    
+    /* Espacements */
+    --facture-spacing-xs: 5px;
+    --facture-spacing-sm: 10px;
+    --facture-spacing-md: 15px;
+    --facture-spacing-lg: 20px;
+    
+    /* Bordures */
+    --facture-border-radius: 4px;
+    
+    /* Transitions */
+    --facture-transition-speed: 0.3s;
+}
+
+/* Styles de base pour les composants de facture */
+.fdf_base-container {
+    font-family: 'Arial', sans-serif;
+    font-size: var(--facture-font-size-base);
+    line-height: 1.5;
+    color: #333;
+}
+
+/* Styles de formulaire */
+.fdf_form-group {
+    margin-bottom: var(--facture-spacing-md);
+}
+
+.fdf_form-label {
+    display: block;
+    margin-bottom: var(--facture-spacing-xs);
+    font-weight: 600;
+    color: var(--facture-color-primary);
+}
+
+.fdf_form-control {
+    width: 100%;
+    padding: var(--facture-spacing-sm);
+    border: 1px solid #ddd;
+    border-radius: var(--facture-border-radius);
+    transition: border-color var(--facture-transition-speed);
+}
+
+.fdf_form-control:focus {
+    outline: none;
+    border-color: var(--facture-color-primary);
+    box-shadow: 0 0 0 2px rgba(128, 0, 0, 0.1);
+}
+
+/* Styles d'erreur */
+.fdf_error-message {
+    color: var(--facture-color-danger);
+    font-size: var(--facture-font-size-small);
+    margin-top: var(--facture-spacing-xs);
+}
+
+/* Boutons */
+.fdf_button {
+    padding: var(--facture-spacing-sm) var(--facture-spacing-md);
+    border: none;
+    border-radius: var(--facture-border-radius);
+    cursor: pointer;
+    transition: background-color var(--facture-transition-speed);
+}
+
+.fdf_button-primary {
+    background-color: var(--facture-color-primary);
+    color: white;
+}
+
+.fdf_button-primary:hover {
+    background-color: var(--facture-color-secondary);
+}
+
+.fdf_button-secondary {
+    background-color: #f4f4f4;
+    color: var(--facture-color-primary);
+    border: 1px solid var(--facture-color-primary);
+}
+
+/* États désactivés */
+.fdf_disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Animations */
+@keyframes fdf_fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fdf_slideDown {
+    from { 
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive basics */
+@media (max-width: 768px) {
+    :root {
+        --facture-font-size-base: 14px;
+    }
+    
+    .fdf_form-control {
+        padding: var(--facture-spacing-sm);
+    }
+}

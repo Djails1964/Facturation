@@ -1,0 +1,120 @@
+/* Styles pour FactureLigneReadOnly */
+@import './_base.css';
+
+.fdf_readonly-line-container {
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: var(--facture-border-radius);
+    padding: var(--facture-spacing-md);
+    margin-bottom: var(--facture-spacing-sm);
+    transition: background-color var(--facture-transition-speed);
+}
+
+.fdf_readonly-line-container:hover {
+    background-color: #f0f0f0;
+}
+
+.fdf_readonly-order-badge {
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    background-color: var(--facture-color-primary);
+    color: white;
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.fdf_readonly-line-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--facture-spacing-sm);
+    padding-bottom: var(--facture-spacing-xs);
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.fdf_readonly-line-service {
+    font-weight: bold;
+    color: var(--facture-color-primary);
+}
+
+.fdf_readonly-line-unite {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.fdf_readonly-line-description {
+    margin: var(--facture-spacing-sm) 0;
+    color: #333;
+}
+
+.fdf_readonly-line-dates {
+    font-style: italic;
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: var(--facture-spacing-sm);
+}
+
+.fdf_readonly-line-details {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.fdf_readonly-line-quantity,
+.fdf_readonly-line-price,
+.fdf_readonly-line-total {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.fdf_readonly-line-quantity span,
+.fdf_readonly-line-price span,
+.fdf_readonly-line-total span {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: var(--facture-spacing-xs);
+}
+
+.fdf_readonly-line-quantity strong,
+.fdf_readonly-line-price strong,
+.fdf_readonly-line-total strong {
+    color: var(--facture-color-primary);
+    font-size: 1rem;
+}
+
+/* Animations et interactions */
+@keyframes fdf_readonly_line_highlight {
+    from { background-color: #f9f9f9; }
+    to { background-color: #f0f0f0; }
+}
+
+.fdf_readonly-line-container:focus-within {
+    outline: 2px solid var(--facture-color-primary);
+    animation: fdf_readonly_line_highlight 0.3s ease;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .fdf_readonly-line-container {
+        padding: var(--facture-spacing-sm);
+    }
+
+    .fdf_readonly-line-details {
+        flex-direction: column;
+        align-items: flex-end;
+    }
+
+    .fdf_readonly-line-quantity,
+    .fdf_readonly-line-price,
+    .fdf_readonly-line-total {
+        margin-bottom: var(--facture-spacing-xs);
+    }
+}

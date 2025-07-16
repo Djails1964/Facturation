@@ -1,0 +1,305 @@
+/* DashboardStats.css */
+
+.dashboard-container {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+  
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  
+  .dashboard-header h2 {
+    margin: 0;
+    color: #800000;
+  }
+  
+  .dashboard-controls {
+    display: flex;
+    align-items: center;
+  }
+  
+  .dashboard-controls label {
+    margin-right: 10px;
+    font-weight: 500;
+  }
+  
+  .dashboard-controls select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: white;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  
+  .dashboard-controls select:focus {
+    outline: none;
+    border-color: #800000;
+    box-shadow: 0 0 0 2px rgba(128, 0, 0, 0.1);
+  }
+
+  
+  
+  /* Notification */
+  .notification {
+    padding: 12px 15px;
+    margin: 0 0 15px 0;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .notification.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+  }
+  
+  .notification.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+  }
+  
+  .notification-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0 5px;
+    color: inherit;
+  }
+  
+  .notification-close:hover {
+    opacity: 0.7;
+}
+
+/* Cartes de statistiques */
+.dashboard-cards {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.stat-card {
+  flex: 1;
+  min-width: 200px;
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.stat-value {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #800000;
+  margin-bottom: 10px;
+}
+
+.stat-title {
+  font-size: 1rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Tableau des dernières factures */
+.recent-invoices {
+  margin-bottom: 30px;
+}
+
+.invoices-table-container {
+  overflow-x: auto;
+}
+
+.invoices-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.invoices-table th, 
+.invoices-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.invoices-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #333;
+}
+
+.invoices-table tbody tr:hover {
+  background-color: #f9f9f9;
+}
+
+.montant-cell {
+  text-align: right;
+}
+
+.etat-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.etat-payée {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.etat-en.attente {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.etat-retard {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.etat-éditée {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+.etat-annulée {
+  background-color: #e2e3e5;
+  color: #383d41;
+}
+
+.etat-envoyée {
+  background-color: #b3e0ff;
+  color: #0056b3;
+}
+
+.btn-view-facture {
+  padding: 5px 12px;
+  background-color: #800000;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-view-facture:hover {
+  background-color: #600000;
+}
+
+.no-data {
+  text-align: center;
+  color: #666;
+  padding: 20px;
+  font-style: italic;
+}
+
+/* Conteneurs de graphiques */
+.dashboard-charts {
+  margin-top: 30px;
+}
+
+.chart-container {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+}
+
+.chart-container h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #800000;
+  font-size: 1.2rem;
+  text-align: center;
+}
+
+.chart-row {
+  display: flex;
+  gap: 30px;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+}
+
+.half-width {
+  flex: 1;
+  min-width: 300px;
+}
+
+/* États de chargement et d'erreur */
+.dashboard-loading,
+.dashboard-error {
+  text-align: center;
+  padding: 40px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+.dashboard-loading {
+  color: #800000;
+  font-weight: 500;
+}
+
+.dashboard-error {
+  color: #721c24;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+}
+
+/* Tooltip personnalisé pour les graphiques */
+.recharts-tooltip-wrapper {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid #ddd !important;
+  border-radius: 4px !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .chart-row {
+    flex-direction: column;
+  }
+  
+  .half-width {
+    width: 100%;
+  }
+  
+  .stat-card {
+    min-width: 140px;
+  }
+  
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .dashboard-controls {
+    margin-top: 10px;
+  }
+  
+  .invoices-table th:nth-child(2),
+  .invoices-table td:nth-child(2) {
+    display: none;
+  }
+}

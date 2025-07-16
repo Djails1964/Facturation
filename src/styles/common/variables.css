@@ -1,0 +1,49 @@
+/* 
+ * Variables CSS globales - couleurs, espacements, etc. 
+ */
+
+:root {
+  /* Couleurs principales */
+  --color-primary: #800000;
+  --color-primary-light: #800020;
+  --color-secondary: #f0f0f0;
+  --color-text: #333;
+  --color-text-light: #757575;
+  --color-border: #ddd;
+  --color-background: white;
+  
+  /* Couleurs d'état */
+  --color-success-bg: #d4edda;
+  --color-success-text: #155724;
+  --color-warning-bg: #fff3cd;
+  --color-warning-text: #856404;
+  --color-error-bg: #f8d7da;
+  --color-error-text: #721c24;
+  --color-info-bg: #cce5ff;
+  --color-info-text: #004085;
+  --color-neutral-bg: #e2e3e5;
+  --color-neutral-text: #383d41;
+  --color-edited-bg: #e1f5fe;
+  --color-edited-text: #0277bd;
+  --color-sent-bg: #b3e0ff;
+  --color-sent-text: #0056b3;
+  
+  /* Espacements */
+  --spacing-xs: 5px;
+  --spacing-sm: 8px;
+  --spacing-md: 15px;
+  --spacing-lg: 20px;
+  --spacing-xl: 40px;
+  
+  /* Bordures et ombres */
+  --border-radius-sm: 4px;
+  --border-radius-md: 5px;
+  --border-radius-lg: 15px;
+  --border-radius-circle: 50%;
+  --box-shadow-on: 0 2px 5px rgba(128, 0, 32, 0.3);
+  --box-shadow-off: 0 2px 5px rgba(0, 0, 0, 0.1);
+  
+  /* Animations */
+  --transition-speed: 0.2s;
+  --transition-ease: ease;
+}

@@ -1,0 +1,139 @@
+/* ==========================================================================
+   DateInputField.css - Styles pour le champ d'entrée de date
+   ========================================================================== */
+
+.date-input-field-wrapper {
+  position: relative;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.dif-floating-label-input {
+  position: relative;
+  width: 100%;
+  display: block;
+  margin-bottom: 20px;
+  margin-top: 10px;
+}
+
+.dif-floating-label-input input {
+  width: 100%;
+  padding: 10px 0;
+  font-size: 16px;
+  border: none;
+  border-bottom: 1px solid #ccc;
+  background-color: transparent;
+  transition: border-color 0.3s;
+  outline: none;
+  height: 38px;
+  box-sizing: border-box;
+}
+
+.dif-floating-label-input input:focus {
+  outline: none;
+  border-bottom: 2px solid #800000;
+}
+
+.dif-form-control {
+  height: 38px;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 0;
+  font-size: 16px;
+  border: none;
+  border-bottom: 1px solid #ccc;
+  background-color: transparent;
+  transition: border-color 0.3s;
+  outline: none;
+}
+
+.dif-form-control:focus {
+  outline: none;
+  border-bottom: 2px solid #800000;
+}
+
+/* Labels */
+.dif-floating-label-input label {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  font-size: 16px;
+  color: #666;
+  transition: all 0.3s ease;
+  pointer-events: none;
+  z-index: 10 !important;
+  background-color: white;
+  padding: 0 4px;
+  margin-left: -4px;
+  line-height: 1.2;
+}
+
+.dif-floating-label-input.dif-focused label,
+.dif-floating-label-input.dif-filled:not(:focus-within) label,
+.dif-floating-label-input.dif-filled label {
+  top: -12px !important;
+  font-size: 12px !important;
+  color: #800000 !important;
+  font-weight: 500 !important;
+  z-index: 10;
+  background-color: white;
+  padding: 0 4px;
+  left: -4px;
+  position: absolute;
+}
+
+/* Icône calendrier */
+.dif-calendar-icon {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  font-size: 14px;
+  z-index: 2;
+  color: #800020;
+  transition: opacity 0.2s ease;
+}
+
+.dif-calendar-icon:hover {
+  opacity: 0.8;
+}
+
+/* Validation */
+.dif-required {
+  color: #d32f2f;
+  margin-left: 3px;
+}
+
+.dif-error-validation {
+  border-bottom: 2px solid #d32f2f !important;
+}
+
+.dif-floating-label-input input.dif-error-validation:focus {
+  border-bottom: 2px solid #d32f2f !important;
+  box-shadow: 0 1px 0 0 #d32f2f !important;
+}
+
+.dif-error-message {
+  color: #d32f2f;
+  font-size: 12px;
+  margin-top: 4px;
+  position: absolute;
+  left: 0;
+  bottom: -20px;
+}
+
+/* Mode lecture seule */
+.dif-floating-label-input input[readonly] {
+  cursor: default;
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Compteur de caractères */
+.dif-char-limit-info {
+  font-size: 0.75rem;
+  color: #666;
+  text-align: right;
+  margin-top: 2px;
+  transition: color 0.3s ease;
+}

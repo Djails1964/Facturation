@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>Centre La Grange - Facturation</title>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const updateTooltipPositions = () => {
+          const tooltipContainers = document.querySelectorAll('.bouton-tooltip-container');
+          
+          tooltipContainers.forEach(container => {
+            const button = container.querySelector('button');
+            const tooltip = container.querySelector('.bouton-tooltip');
+            
+            if (!button || !tooltip) return;
+            
+            button.addEventListener('mouseenter', (e) => {
+              const buttonRect = button.getBoundingClientRect();
+              const tooltipHeight = tooltip.offsetHeight;
+              
+              tooltip.style.left = `${buttonRect.left + buttonRect.width / 2}px`;
+              tooltip.style.top = `${buttonRect.top - tooltipHeight - 5}px`;
+              tooltip.style.transform = 'translateX(-50%)';
+            });
+          });
+        };
+
+        // Première exécution
+        updateTooltipPositions();
+
+        // Réexécuter lors des changements de DOM
+        const observer = new MutationObserver(updateTooltipPositions);
+        observer.observe(document.getElementById('root'), {
+          childList: true,
+          subtree: true
+        });
+      });
+    </script>
+  </body>
+</html>

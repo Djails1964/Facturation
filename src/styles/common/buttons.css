@@ -1,0 +1,409 @@
+/* 
+ * Styles communs pour les boutons
+ */
+
+/* ========== BOUTONS D'ACTION DE BASE ========== */
+.bouton-action {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--border-radius-circle);
+  background-color: var(--color-background);
+  border: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+  transition: all var(--transition-speed) var(--transition-ease);
+  box-shadow: var(--box-shadow-off);
+}
+
+.bouton-action:hover {
+  background-color: rgba(128, 0, 32, 0.1);
+  box-shadow: var(--box-shadow-on);
+  transform: scale(1.05);
+}
+
+.bouton-action:active {
+  transform: scale(0.95);
+}
+
+.bouton-action:focus {
+  outline: 2px solid rgba(128, 0, 32, 0.3);
+  outline-offset: 2px;
+}
+
+/* Ajuster le bouton pour qu'il soit légèrement plus petit dans la liste */
+.lf-table-row .bouton-action,
+.lf-action-buttons-container .bouton-action {
+  width: 30px;
+  height: 30px;
+}
+
+/* Style pour les boutons désactivés */
+.bouton-desactive {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none !important;
+}
+
+.bouton-desactive:hover {
+  background-color: white !important;
+  box-shadow: none !important;
+  transform: scale(1) !important;
+}
+
+/* Style spécifique pour le bouton de retard */
+.bouton-retard {
+  width: 30px;
+  height: 30px;
+}
+
+.bouton-retard svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ========== CONTENEUR DES ACTIONS ========== */
+.lf-actions-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px;
+  min-width: 280px;
+}
+
+/* ========== TOOLTIP COLLÉ AU CURSEUR (GLOBAL) ========== */
+.cursor-tooltip {
+  position: fixed;
+  background-color: #ffffff;
+  color: #333333;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: 1px solid #e0e0e0;
+  pointer-events: none;
+  z-index: 99999;
+  transform: translateX(-50%);
+  min-height: 20px;
+  max-height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  animation: tooltipFadeIn 0.2s ease-out;
+}
+
+.cursor-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #ffffff;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* ========== BOUTON FLOTTANT ========== */
+.lf-floating-button {
+  position: fixed;
+  bottom: 30px;
+  right: 50px;
+  width: 60px;
+  height: 60px;
+  border-radius: var(--border-radius-circle);
+  background-color: var(--color-primary);
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  box-shadow: var(--box-shadow);
+  transition: all var(--transition-speed) var(--transition-ease);
+  z-index: 10;
+}
+
+.lf-floating-button span {
+  font-size: 32px;
+}
+
+.lf-floating-button:hover {
+  transform: scale(1.1);
+}
+
+.lf-floating-tooltip {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--color-text);
+  color: white;
+  padding: 5px 10px;
+  border-radius: var(--border-radius-sm);
+  font-size: 14px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-speed) var(--transition-ease);
+}
+
+.lf-floating-button:hover .lf-floating-tooltip {
+  opacity: 1;
+}
+
+/* ========== BOUTONS DES MODALES ========== */
+.modal-action-button {
+  padding: 8px 15px;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  font-size: 14px;
+  margin-left: 10px;
+}
+
+.modal-action-primary {
+  background-color: #28a745;
+  color: white;
+}
+
+.modal-action-primary:hover {
+  background-color: #218838;
+}
+
+.modal-action-primary:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.modal-action-secondary {
+  background-color: #f1f1f1;
+  color: var(--color-text);
+}
+
+.modal-action-secondary:hover {
+  background-color: #e0e0e0;
+}
+
+.modal-action-secondary:disabled {
+  background-color: #f1f1f1;
+  color: #999;
+  cursor: not-allowed;
+}
+
+/* ========== BOUTON DE PRÉVISUALISATION ========== */
+.facture-preview-button {
+  background-color: var(--color-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-sm);
+  padding: 8px 15px;
+  color: var(--color-text);
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: all var(--transition-speed) var(--transition-ease);
+}
+
+.facture-preview-button:hover {
+  background-color: #e0e0e0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.facture-preview-button:active {
+  background-color: #d0d0d0;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+  .lf-floating-button {
+    bottom: 20px;
+    right: 40px;
+    width: 50px;
+    height: 50px;
+  }
+  
+  .lf-actions-cell {
+    min-width: 240px;
+    gap: 2px;
+  }
+  
+  .lf-table-row .bouton-action {
+    width: 26px;
+    height: 26px;
+    padding: 4px;
+  }
+  
+  .cursor-tooltip {
+    font-size: 11px;
+    padding: 3px 6px;
+    min-height: 18px;
+    max-height: 22px;
+  }
+  
+  .cursor-tooltip::after {
+    border-width: 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .lf-actions-cell {
+    min-width: 200px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .lf-table-row .bouton-action {
+    width: 24px;
+    height: 24px;
+    margin: 0 1px;
+  }
+  
+  .cursor-tooltip {
+    font-size: 10px;
+    padding: 2px 5px;
+    min-height: 16px;
+    max-height: 20px;
+    max-width: 150px;
+  }
+}
+
+/* ========== ACCESSIBILITÉ ========== */
+@media (prefers-reduced-motion: reduce) {
+  .cursor-tooltip {
+    animation: none;
+  }
+  
+  .bouton-action {
+    transition: none;
+  }
+  
+  .bouton-action:hover {
+    transform: none;
+  }
+}
+
+@media (prefers-contrast: high) {
+  .cursor-tooltip {
+    background-color: #ffffff;
+    color: #000000;
+    border: 2px solid #000000;
+  }
+  
+  .bouton-action:focus {
+    outline: 3px solid #000000;
+  }
+}
+
+/* ========== PRINT ========== */
+@media print {
+  .lf-actions-cell,
+  .bouton-action,
+  .cursor-tooltip,
+  .lf-floating-button {
+    display: none;
+  }
+}
+
+/* ========== BOUTONS D'ACTION SPÉCIFIQUES AUX LISTES DE TARIFS ========== */
+.tarif-actions-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px;
+  min-width: 120px;
+  max-width: 150px;
+}
+
+.tarif-actions-cell .bouton-action {
+  width: 30px;
+  height: 30px;
+}
+
+/* ========== STYLES POUR LES ICÔNES D'ACTIONS ========== */
+.action-icon {
+  transition: opacity 0.2s ease;
+}
+
+.bouton-action:hover .action-icon {
+  opacity: 0.8;
+}
+
+.bouton-action:active .action-icon {
+  opacity: 0.6;
+}
+
+/* ========== COULEURS HARMONISÉES POUR LES ACTIONS ========== */
+.action-edit-icon {
+  color: #800020;
+}
+
+.action-delete-icon {
+  color: #800020;
+}
+
+.action-view-icon {
+  color: #800000;
+}
+
+.action-copy-icon {
+  color: #800020;
+}
+
+.action-mail-icon {
+  color: #800020;
+}
+
+.action-pay-icon {
+  color: #800020;
+}
+
+.action-print-icon {
+  color: #800020;
+}
+
+/* ========== ÉTATS DÉSACTIVÉS ========== */
+.bouton-desactive .action-icon {
+  color: #ccc !important;
+}
+
+/* ========== RESPONSIVE POUR LES LISTES DE TARIFS ========== */
+@media (max-width: 768px) {
+  .tarif-actions-cell {
+    min-width: 100px;
+    gap: 6px;
+  }
+  
+  .tarif-actions-cell .bouton-action {
+    width: 26px;
+    height: 26px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tarif-actions-cell {
+    min-width: 80px;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  
+  .tarif-actions-cell .bouton-action {
+    width: 24px;
+    height: 24px;
+  }
+}

@@ -1,0 +1,336 @@
+/* Styles pour la page de facturation */
+.facturation-container {
+  width: 80vw; /* Utiliser 80% de la largeur du viewport */
+  max-width: 1600px; /* Augmenter la largeur maximale */
+  margin: 0 auto; /* Centre horizontalement */
+  font-family: Arial, sans-serif;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1); /* Ajoute une légère ombre pour la profondeur */
+  border: 1px solid #ddd; /* Ajoute une bordure légère */
+}
+
+/* Style pour l'affichage de la version */
+.version-display {
+  padding: 15px 25px;
+  color: #666;
+  font-size: 0.8rem;
+  text-align: center;
+  margin-top: auto;
+  border-top: 1px solid #ddd;
+}
+
+/* En-tête avec le titre principal */
+.facturation-header {
+  background-color: #800000;
+  padding: 20px;
+  border-radius: 5px 5px 0 0;
+  text-align: center;
+  margin-bottom: 0;
+}
+
+.facturation-header h1 {
+  color: white;
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 500;
+}
+
+.facturation-body {
+  display: flex;
+  min-height: 600px;
+  border-top: none;
+  border-radius: 0 0 5px 5px;
+  width: 100%; /* ✅ AJOUT: Largeur fixe */
+  box-sizing: border-box; /* ✅ AJOUT */
+  overflow-x: hidden; /* ✅ AJOUT: Empêcher débordement horizontal */
+}
+
+/* Menu à gauche */
+.facturation-menu {
+  flex: 0 0 260px; /* ✅ CHANGEMENT: Largeur fixe au lieu de flex: 1 */
+  background-color: #f0f0f0;
+  border-right: 1px solid #ddd;
+  padding: 20px 0;
+  box-sizing: border-box; /* ✅ AJOUT */
+  overflow-x: hidden; /* ✅ AJOUT: Cacher scrollbar horizontal */
+}
+
+.facturation-menu ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.facturation-menu li {
+  padding: 15px 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-left: 4px solid transparent;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.facturation-menu li:hover {
+  background-color: #e0e0e0;
+  border-left: 4px solid #a06060;
+}
+
+.facturation-menu li.active {
+  background-color: #e8e8e8;
+  border-left: 4px solid #800000;
+  font-weight: bold;
+  color: #800000;
+}
+
+/* Style pour le libellé du menu aligné à gauche */
+.facturation-menu .menu-label {
+  flex: 1;
+  text-align: left;
+}
+
+
+.facturation-content .cl-floating-button {
+  position: fixed; /* Force le positionnement fixe */
+  bottom: 30px;
+  right: 30px;
+  width: 60px;
+  height: 60px;
+  background-color: #800000;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  margin: 0; /* Supprimer toute marge parasite */
+  padding: 0; /* Supprimer tout padding parasite */
+  border: none; /* Supprimer toute bordure parasite */
+}
+
+.facturation-content {
+    position: relative; /* Pour positionner correctement le bouton flottant */
+}
+
+
+.facturation-content .cl-floating-button span {
+    font-size: 32px;
+    font-weight: 300;
+    margin-top: -2px;
+}
+
+
+.facturation-content .cl-floating-button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
+}
+
+
+.facturation-content .cl-floating-tooltip {
+    position: absolute;
+    right: 70px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+
+.facturation-content .cl-floating-button:hover .cl-floating-tooltip {
+    opacity: 1;
+}
+
+
+/* Zone de contenu à droite */
+.facturation-content {
+  flex: 1; /* ✅ CHANGEMENT: flex: 4 → flex: 1 pour être plus flexible */
+  padding: 20px;
+  background-color: #ffffff;
+  width: 0; /* ✅ AJOUT: Force le conteneur à utiliser flex au lieu de sa largeur naturelle */
+  min-width: 0; /* ✅ AJOUT: Permet le rétrécissement sous flex */
+  box-sizing: border-box; /* ✅ AJOUT: Inclut padding dans la largeur */
+  overflow-x: hidden; /* ✅ AJOUT: Cacher scrollbar horizontal global */
+}
+
+/* Style pour les placeholders de contenu */
+.content-placeholder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 300px;
+  background-color: #f9f9f9;
+  border: 1px dashed #ccc;
+  border-radius: 5px;
+  color: #666;
+  font-size: 1.2rem;
+}
+
+/* Styles communs pour tous les conteneurs de contenu */
+.facturation-content .content-section-container {
+  max-width: 100%;
+  margin: 0;
+}
+
+/* Styles communs pour tous les titres de section */
+.facturation-content .content-section-title {
+  border-radius: 0;
+  background-color: transparent;
+  padding: 0 0 25px 0;
+}
+
+.facturation-content .content-section-title h2 {
+  color: #800000;
+  text-align: left;
+  border-bottom: 2px solid #800000;
+  padding-bottom: 10px;
+}
+
+/* Styles génériques pour les boutons d'action dans les listes */
+.facturation-content .cl-btn-icon {
+    background: white;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.2s;
+}
+
+.facturation-content .cl-btn-icon:hover {
+    background-color: rgba(128, 0, 32, 0.1);
+}
+
+/* Style pour les boutons désactivés */
+.facturation-content .bouton-desactive {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.facturation-content .bouton-desactive:hover {
+    background-color: white !important;
+}
+
+/* Styles pour les menus réservés aux administrateurs et gestionnaires */
+.facturation-menu .menu-privileged {
+  border-top: 1px solid #ddd;
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+.facturation-menu .menu-privileged:first-child {
+  border-top: none;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+/* Style pour les éléments de menu avec icônes */
+.facturation-menu li .menu-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.facturation-menu li .menu-label .menu-icon {
+  font-size: 16px;
+  width: 20px;
+  text-align: center;
+}
+
+/* Animation pour les menus privilégiés */
+.facturation-menu .menu-privileged li {
+  animation: fadeInPrivileged 0.3s ease-in-out;
+}
+
+@keyframes fadeInPrivileged {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Style spécial pour indiquer les sections privilégiées */
+.facturation-menu .menu-privileged li:hover {
+  background-color: #e8e0e0;
+  border-left: 4px solid #b06060;
+}
+
+.facturation-menu .menu-privileged li.active {
+  background-color: #f0e8e8;
+  border-left: 4px solid #800000;
+  font-weight: bold;
+  color: #800000;
+}
+
+/* Responsive design pour les menus privilégiés */
+@media (max-width: 768px) {
+  .facturation-menu .menu-privileged {
+    border-top: none;
+    margin-top: 0;
+    padding-top: 0;
+  }
+  
+  .facturation-menu .menu-privileged li {
+    border-bottom: 3px solid transparent;
+  }
+  
+  .facturation-menu .menu-privileged li:hover,
+  .facturation-menu .menu-privileged li.active {
+    border-left: none;
+    border-bottom: 3px solid #800000;
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .facturation-body {
+    flex-direction: column;
+  }
+
+  @media (max-width: 768px) {
+    
+    .facturation-content .cl-floating-button {
+        bottom: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+    }
+  }
+  
+  .facturation-menu {
+    flex: none;
+    border-right: none;
+    border-bottom: 1px solid #ddd;
+  }
+  
+  .facturation-menu ul {
+    display: flex;
+    overflow-x: auto;
+    flex-wrap: wrap;
+  }
+  
+  .facturation-menu li {
+    white-space: nowrap;
+    border-left: none;
+    border-bottom: 3px solid transparent;
+  }
+  
+  .facturation-menu li:hover,
+  .facturation-menu li.active {
+    border-left: none;
+    border-bottom: 3px solid #800000;
+  }
+}

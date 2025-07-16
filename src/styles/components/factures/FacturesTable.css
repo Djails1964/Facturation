@@ -1,0 +1,115 @@
+/* 
+ * styles/components/factures/FacturesTable.css
+ * Styles pour le tableau de factures
+ */
+
+.factures-table {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-top: none;
+  border-radius: 0 0 var(--border-radius-md) var(--border-radius-md);
+}
+
+/* ========== EN-TÊTE DU TABLEAU ========== */
+.lf-table-header {
+  display: flex;
+  width: 100%;
+  background-color: var(--color-secondary);
+  border-bottom: 2px solid var(--color-border);
+  box-sizing: border-box;
+}
+
+.lf-header-cell {
+  padding: 12px 15px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  overflow: hidden;
+  font-weight: 600;
+  color: var(--color-text);
+  background-color: var(--color-secondary);
+}
+
+/* ========== CORPS DU TABLEAU ========== */
+.lf-table-body {
+  width: 100%;
+  min-height: 400px;
+  overflow-x: auto;
+}
+
+/* ========== MESSAGES ========== */
+.lf-loading-message,
+.lf-error-message,
+.lf-empty-message {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.lf-error-message {
+  color: var(--color-error-text);
+  background-color: var(--color-error-bg);
+}
+
+/* ========== DIMENSIONS DES COLONNES ========== */
+.lf-numero-cell {
+  flex: 1;
+  width: 20%;
+  min-width: 120px;
+  padding-left: 15px;
+}
+
+.lf-client-cell {
+  flex: 2;
+  width: 40%;
+  min-width: 180px;
+  padding-left: 15px;
+}
+
+.lf-montant-cell {
+  flex: 1;
+  width: 15%;
+  min-width: 100px;
+  justify-content: flex-end;
+  text-align: right;
+  padding-right: 15px;
+}
+
+.lf-etat-cell {
+  flex: 1;
+  width: 20%;
+  min-width: 100px;
+  padding-left: 15px;
+}
+
+.lf-actions-cell {
+  flex: 0;
+  width: 240px;
+  min-width: 240px;
+  justify-content: space-between;
+  padding: 8px;
+  display: flex;
+}
+
+/* ========== RESPONSIVE DESIGN ========== */
+@media (max-width: 768px) {
+  .lf-montant-cell {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .lf-header-cell,
+  .lf-table-cell {
+    padding: 8px;
+  }
+  
+  .lf-table-row {
+    flex-wrap: wrap;
+  }
+  
+  .lf-actions-cell {
+    width: 100%;
+    justify-content: space-around;
+    padding-top: 10px;
+  }
+}

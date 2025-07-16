@@ -1,0 +1,102 @@
+/* 
+ * styles/components/factures/FactureRow.css
+ * Styles pour les lignes de factures
+ */
+
+.lf-table-row {
+  display: flex;
+  width: 100%;
+  border-bottom: 1px solid #eee;
+  transition: background-color var(--transition-speed);
+  cursor: pointer;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.lf-table-row:hover {
+  background-color: #f9f9f9;
+}
+
+.lf-table-row.lf-selected {
+  background-color: #e6f0ff;
+}
+
+.lf-table-cell {
+  padding: 12px 15px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* ========== BADGES D'ÉTAT ========== */
+.lf-etat-badge {
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: var(--border-radius-lg);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.lf-etat-payee {
+  background-color: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.lf-etat-attente {
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.lf-etat-retard {
+  background-color: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.lf-etat-annulee {
+  background-color: var(--color-neutral-bg);
+  color: var(--color-neutral-text);
+}
+
+.lf-etat-editee {
+  background-color: var(--color-edited-bg);
+  color: var(--color-edited-text);
+}
+
+.lf-etat-envoyee {
+  background-color: var(--color-sent-bg);
+  color: var(--color-sent-text);
+}
+
+/* Styles pour les tooltips des boutons d'action */
+.bouton-tooltip-container {
+  position: relative;
+}
+
+.bouton-tooltip {
+  display: none;
+  position: fixed;
+  background-color: #ffffff;
+  color: #333;
+  text-align: center;
+  border-radius: 2px;
+  padding: 6px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  border: 1px solid #ddd;
+  z-index: 10000;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.bouton-tooltip-container:hover .bouton-tooltip {
+  display: block;
+}
+
+/* Ajustement pour les petits écrans */
+@media (max-width: 480px) {
+  .bouton-tooltip {
+    display: none; /* Masquer les tooltips sur mobile */
+  }
+}

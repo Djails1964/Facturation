@@ -1,0 +1,937 @@
+/* ==========================================================================
+   FactureDetailsForm.css - Styles pour le formulaire de détails de facture
+   ========================================================================== */
+
+/* ==========================================================================
+
+STYLES DE BASE
+========================================================================== */
+.fdf_facture-details-form {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  }
+  
+  .fdf_lignes-detail-titre {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  }
+  .fdf_tarif-info-badge {
+  display: inline-block;
+  margin-left: 12px;
+  padding: 3px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: white;
+  background-color: #800000;
+  border-radius: 4px;
+  vertical-align: middle;
+  }
+  /* Message de chargement */
+  .fdf_loading-container {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+  }
+  /* ==========================================================================
+2. BOUTONS D'ACTION
+========================================================================== */
+/* 1. Container flex pour les boutons - COMMUN à tous les modes */
+.fdf_line-action-buttons {
+  position: absolute !important;
+  top: 8px !important;
+  right: 8px !important;
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+  z-index: 999 !important;
+  width: auto !important;
+  height: 30px !important;
+  pointer-events: auto !important;
+  }
+  
+  /* 7. S'assurer que le positionnement est identique en mode plié/déplié */
+  .fdf_line-resume-container .fdf_line-action-buttons,
+  .fdf_line-flex-container .fdf_line-action-buttons,
+  .fdf_readonly-mode .fdf_line-action-buttons {
+  top: 8px;
+  right: 8px;
+  }
+  .fdf_readonly-mode .fdf_line-action-buttons {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  }
+  /* Bouton Ajouter Ligne */
+  .fdf_ajouter-ligne-container {
+  display: flex;
+  justify-content: flex-start;
+  padding: 0 16px 16px 16px;
+  margin-top: -5px;
+  }
+  .fdf_ajouter-ligne-container button {
+  padding: 10px 20px;
+  background-color: #800000;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 0;
+  }
+  .fdf_ajouter-ligne-container button {
+  opacity: 0.9;
+  }
+  /* Actions Container pour mode lecture et édition */
+  .fdf_actions_container {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    z-index: 100;
+    align-items: flex-start; /* Alignement en haut */
+    height: auto;
+    padding: 0; /* Supprimer tout padding qui pourrait décaler */
+  }
+
+  .fdf_action_btn {
+    padding: 0 !important;
+    margin: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 4px; /* Garder carré avec coins légèrement arrondis */
+    border: 2px solid #800020;
+    background-color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    align-self: flex-start;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .fdf_action_btn svg {
+    width: 16px;
+    height: 16px;
+    color: #800020;
+    stroke: #800020;
+    stroke-width: 2px;
+  }
+
+  .fdf_action_btn:hover {
+    background-color: #f8f8f8;
+    box-shadow: 0 2px 5px rgba(128, 0, 32, 0.3);
+    transform: translateY(-1px);
+  }
+ 
+  .fdf_action_btn {
+  background-color: #f8f8f8;
+  box-shadow: 0 2px 5px rgba(128, 0, 32, 0.3);
+  }
+
+  .fdf_action_btn.fdf_disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+    pointer-events: none; /* Empêche les interactions */
+  }
+  
+  .fdf_action_btn.fdf_disabled:hover {
+    background-color: white;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .fdf_actions_container,
+  .fdf_actions_container .fdf_action_btn {
+    position: absolute;
+    top: 8px;
+  }
+  .fdf_actions_container .fdf_action_btn {
+    position: relative;
+    top: auto;
+    margin-top: 0;
+    padding-top: 0;
+  }
+  .fdf_line-flex-container .fdf_actions_container {
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+  .fdf_actions_container .fdf_action_btn {
+    align-self: flex-start;
+    margin-top: 0;
+    padding-top: 0;
+  }
+  .fdf_action_btn.fdf_action_btn__copy {
+    background-color: #800020;
+  }
+  .fdf_action_btn.fdf_action_btn__copy svg {
+    color: white;
+    stroke: white;
+  }
+  .fdf_action_btn.fdf_action_btn__copy:hover {
+    background-color: #6a001b;
+  }
+  
+  
+  .fdf_action_btn.fdf_has_error {
+    border-color: #d32f2f;
+    background-color: rgba(211, 47, 47, 0.1);
+  }
+  
+  .fdf_action_btn.fdf_has_error svg {
+    color: #d32f2f;
+    stroke: #d32f2f;
+  }
+
+  .fdf_action_btn.fdf_disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none !important;
+  }
+  
+  .fdf_action_btn.fdf_disabled:hover {
+    background-color: white !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+  
+  /* ==========================================================================
+     3. STRUCTURE DU TABLEAU
+     ========================================================================== */
+  .fdf_table-flex {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    margin: 0 auto;
+    gap: 16px;
+  }
+  
+  .fdf_table-header {
+    padding: 0;
+    visibility: hidden;
+    height: 0;
+    overflow: hidden;
+  }
+  
+  .fdf_line-container {
+    position: relative;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    margin-top: 10px;
+    margin-left: 10px;
+    overflow: visible;
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    padding: 0;
+    padding-right: 40px; /* Espace pour les boutons */
+  }
+  
+  .fdf_line-flex-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    position: relative;
+    animation: fdf_slideDown 0.3s ease-out;
+  }
+  
+  @keyframes fdf_slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* ==========================================================================
+     4. RANGÉES ET CELLULES
+     ========================================================================== */
+  .fdf_table-row {
+    display: flex;
+    width: 100%;
+    align-items: flex-start;
+    padding: 8px 16px;
+    position: relative;
+    margin: 0;
+    box-sizing: border-box;
+  }
+  
+  .fdf_table-cell {
+    flex: 1;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    position: relative;
+    box-sizing: border-box;
+  }
+  
+  /* Padding et alignement */
+  .fdf_table-row.fdf_equal-columns {
+    padding-top: 20px;
+    padding-bottom: 0;
+  }
+  
+  .fdf_table-row.fdf_equal-columns .fdf_table-cell {
+    display: flex;
+    align-items: flex-end;
+    padding-bottom: 0;
+  }
+  
+  .fdf_table-row.fdf_description-row .fdf_table-cell.fdf_description-col.fdf_full-width {
+    flex: 1;
+    width: 100%;
+    max-width: 100%;
+    padding: 8px 16px;
+  }
+  
+  .fdf_table-row.fdf_numeric-row .fdf_table-cell {
+    flex: 1;
+    width: 33.33%;
+    padding: 8px;
+  }
+  
+  /* Tailles spécifiques des colonnes */
+  .fdf_table-cell.fdf_service-col,
+  .fdf_table-cell.fdf_unite-col {
+    max-width: 50% !important;
+    flex: 0 0 50% !important;
+    align-items: flex-end;
+    padding-bottom: 8px;
+  }
+  
+  .fdf_table-cell.fdf_service-col .fdf_floating-label-input,
+  .fdf_table-cell.fdf_unite-col .fdf_floating-label-input {
+    height: 38px;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-top: 0;
+    width: 100%;
+  }
+  
+  .fdf_table-cell.fdf_quantity-col,
+  .fdf_table-cell.fdf_price-col {
+    flex: 1;
+  }
+  
+  .fdf_table-cell.fdf_total-col {
+    flex: 1;
+    justify-content: flex-start;
+    padding-left: 16px;
+  }
+  
+  .fdf_table-cell.fdf_quantity-col .fdf_floating-label-input,
+  .fdf_table-cell.fdf_price-col .fdf_floating-label-input,
+  .fdf_table-cell.fdf_total-col .fdf_floating-label-input {
+    height: 38px;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-top: 0;
+  }
+  
+  /* ==========================================================================
+     5. INPUTS AVEC LABELS FLOTTANTS
+     ========================================================================== */
+  .fdf_facture-details-form .fdf_floating-label-input {
+    position: relative;
+    width: 100%;
+    display: block;
+    margin-bottom: 20px;
+    margin-top: 10px;
+  }
+  
+  .fdf_facture-details-form .fdf_floating-label-input input,
+  .fdf_facture-details-form .fdf_floating-label-input select {
+    width: 100%;
+    padding: 10px 0;
+    font-size: 16px;
+    border: none;
+    border-bottom: 1px solid #ccc;
+    background-color: transparent;
+    transition: border-color 0.3s;
+    outline: none;
+    height: 38px;
+    box-sizing: border-box;
+  }
+  
+  .fdf_facture-details-form .fdf_floating-label-input input:focus,
+  .fdf_facture-details-form .fdf_floating-label-input select:focus {
+    outline: none;
+    border-bottom: 2px solid #800000;
+  }
+  
+  .fdf_facture-details-form .fdf_form-control {
+    height: 38px;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 10px 0;
+    font-size: 16px;
+    border: none;
+    border-bottom: 1px solid #ccc;
+    background-color: transparent;
+    transition: border-color 0.3s;
+    outline: none;
+  }
+  
+  .fdf_facture-details-form .fdf_form-control:focus {
+    outline: none;
+    border-bottom: 2px solid #800000;
+  }
+  
+  /* Labels */
+  .fdf_facture-details-form .fdf_floating-label-input label {
+    position: absolute;
+    top: 10px;
+    left: 0;
+    font-size: 16px;
+    color: #666;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    z-index: 10 !important;
+    background-color: white;
+    padding: 0 4px;
+    margin-left: -4px;
+    line-height: 1.2;
+  }
+  
+  .fdf_facture-details-form .fdf_floating-label-input.fdf_focused label,
+  .fdf_facture-details-form .fdf_floating-label-input.fdf_filled:not(:focus-within) label,
+  .fdf_floating-label-input.fdf_filled label ,
+  .fdf_facture-details-form .fdf_floating-label-input.has-value label {
+    top: -12px !important;
+    font-size: 12px !important;
+    color: #800000 !important;
+    font-weight: 500 !important;
+    z-index: 10;
+    background-color: white;
+    padding: 0 4px;
+    left: -4px;
+    position: absolute;
+  }
+  
+  /* Styles spécifiques pour les selects */
+  .fdf_facture-details-form .fdf_floating-label-input select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding-right: 25px;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    background-size: 1em;
+    z-index: 1;
+  }
+  
+  .fdf_facture-details-form .fdf_floating-label-input select + label {
+    position: absolute;
+    top: -12px !important;
+    font-size: 12px !important;
+    color: #800000 !important;
+    font-weight: 500 !important;
+    z-index: 10;
+    background-color: white;
+    padding: 0 4px;
+    left: -4px;
+    pointer-events: none;
+  }
+  
+  .fdf_facture-details-form .fdf_floating-label-input:not(.fdf_focused) select + label {
+    color: #666 !important;
+  }
+  
+  .fdf_unite-select-container .fdf_unite-label,
+  .fdf_facture-details-form .fdf_floating-label-input select + label {
+    position: absolute;
+    top: -12px !important;
+    font-size: 12px !important;
+    color: #800000 !important;
+    font-weight: 500 !important;
+    z-index: 10;
+    background-color: white;
+    padding: 0 4px;
+    left: -4px;
+    pointer-events: none;
+  }
+  
+  /* Styles pour les inputs numériques */
+  .fdf_facture-details-form .fdf_floating-label-input input[type=number] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+    padding-right: 40px;
+  }
+  
+  .fdf_facture-details-form .fdf_floating-label-input input::-webkit-outer-spin-button,
+  .fdf_facture-details-form .fdf_floating-label-input input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  
+  /* Styles pour le texte aligné à droite */
+  .fdf_text-right {
+    text-align: right !important;
+  }
+  
+  /* Styles pour le suffixe de devise */
+  .fdf_currency-suffix {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #666;
+    pointer-events: none;
+    margin-left: 4px;
+    padding-left: 4px;
+  }
+  
+  .fdf_price-col .fdf_form-control,
+  #ristourne {
+    padding-right: 50px !important;
+  }
+  
+  #ristourne + .fdf_currency-suffix {
+    right: 15px;
+    background-color: transparent;
+  }
+  
+  /* ==========================================================================
+     6. GROUPE DE DESCRIPTION
+     ========================================================================== */
+  .fdf_description-group {
+    position: relative;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .fdf_description-group .fdf_form-control {
+    width: 100%;
+    padding-right: 30px;
+  }
+  
+  .fdf_char-limit-info {
+    font-size: 0.75rem;
+    color: #666;
+    text-align: right;
+    margin-top: 2px;
+    transition: color 0.3s ease;
+  }
+  
+  /* ==========================================================================
+     7. BOUTONS PRINCIPAUX
+     ========================================================================== */
+     .fdf_primary-button {
+      padding: 10px 20px;
+      background-color: #800000;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+    
+    .fdf_primary-button:hover {
+      opacity: 0.9;
+    }
+    
+    .fdf_primary-button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+  
+  /* ==========================================================================
+     8. RÉSUMÉ DE LIGNE
+     ========================================================================== */
+  .fdf_line-resume-container {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding-right: 40px !important; /* Assurer l'espace pour les boutons */
+    width: calc(100% - 40px) !important; /* Ajuster la largeur pour laisser place aux boutons */
+  }
+  
+  .fdf_line-container .ligne-facture-resume {
+    flex: 1;
+    padding-bottom: 0;
+    border-bottom: none;
+    max-width: calc(100% - 40px) !important;
+    width: calc(100% - 40px) !important;
+  }
+  
+  .fdf_line-resume-container > .ligne-facture-resume {
+    width: calc(100% - 40px);
+  }
+  
+  .fdf_line-resume-container .ligne-facture-resume {
+    cursor: pointer;
+  }
+  
+  .fdf_line-resume-container:hover .ligne-facture-resume {
+    background-color: rgba(128, 0, 32, 0.03);
+  }
+  
+  /* ==========================================================================
+     9. VALIDATION ET MESSAGES D'ERREUR
+     ========================================================================== */
+  .fdf_required {
+    color: #d32f2f;
+    margin-left: 3px;
+  }
+  
+  .fdf_error-validation {
+    border-bottom: 2px solid #d32f2f !important;
+  }
+  
+  .fdf_floating-label-input input.fdf_error-validation:focus,
+  .fdf_floating-label-input select.fdf_error-validation:focus {
+    border-bottom: 2px solid #d32f2f !important;
+    box-shadow: 0 1px 0 0 #d32f2f !important;
+  }
+  
+  .fdf_error-message {
+    color: #d32f2f;
+    font-size: 12px;
+    margin-top: 4px;
+    position: absolute;
+    left: 0;
+    bottom: -20px;
+  }
+  
+  .fdf_line-container.fdf_has-errors {
+    border-left: 3px solid #d32f2f;
+    box-shadow: 0 0 8px rgba(211, 47, 47, 0.2);
+  }
+  
+  .fdf_error-indicator {
+    background-color: rgba(211, 47, 47, 0.1);
+    color: #d32f2f;
+    font-size: 12px;
+    padding: 4px 8px;
+    margin-top: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-block;
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    transition: background-color 0.2s ease;
+  }
+  
+  .fdf_error-indicator:hover {
+    background-color: rgba(211, 47, 47, 0.2);
+  }
+  
+  /* ==========================================================================
+     10. MODE LECTURE SEULE
+     ========================================================================== */
+  /* Structure générale en mode lecture seule */
+  .fdf_facture-details-form.fdf_readonly-mode .fdf_readonly-field {
+    position: relative;
+    width: 100%;
+    margin-bottom: 0;
+    margin-top: 8px;
+    border-bottom: 1px solid #ccc;
+  }
+  
+  .fdf_facture-details-form.fdf_readonly-mode .fdf_readonly-field label {
+    position: absolute;
+    left: 0;
+    font-size: 11px;
+    top: -14px;
+    color: #800000;
+    font-weight: 500;
+    background-color: white;
+    padding: 0 4px;
+    margin-left: -4px;
+    z-index: 10;
+  }
+  
+  .fdf_facture-details-form.fdf_readonly-mode .fdf_field-value {
+    width: 100%;
+    padding: 2px 0;
+    min-height: 24px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+  }
+  
+  /* Styles pour les valeurs numériques en mode lecture seule */
+  .fdf_readonly-mode .fdf_table-cell.fdf_quantity-col .fdf_field-value,
+  .fdf_readonly-mode .fdf_table-cell.fdf_price-col .fdf_field-value,
+  .fdf_readonly-mode .fdf_table-cell.fdf_total-col .fdf_field-value {
+    text-align: right;
+  }
+  
+  /* Ajustements pour le mode lecture seule */
+  .fdf_readonly-mode .fdf_line-flex-container {
+    padding: 8px;
+    padding-top: 15px;
+  }
+  
+  .fdf_readonly-mode .fdf_table-row {
+    margin-bottom: 0px;
+    padding: 2px 8px;
+    display: flex;
+    width: 100%;
+  }
+  
+  .fdf_readonly-mode .fdf_table-row.fdf_equal-columns {
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .fdf_readonly-mode .fdf_table-cell.fdf_service-col,
+  .fdf_readonly-mode .fdf_table-cell.fdf_unite-col {
+    max-width: 50%;
+    flex: 0 0 50%;
+  }
+  
+  .fdf_readonly-mode .fdf_table-row.fdf_description-row {
+    margin-top: 5px;
+  }
+  
+  .fdf_readonly-mode .fdf_table-row.fdf_description-row + .fdf_table-row.fdf_description-row {
+    margin-top: 0;
+  }
+  
+  .fdf_readonly-mode .fdf_table-row.fdf_numeric-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 5px;
+  }
+  
+  .fdf_readonly-mode .fdf_table-cell.fdf_quantity-col,
+  .fdf_readonly-mode .fdf_table-cell.fdf_price-col,
+  .fdf_readonly-mode .fdf_table-cell.fdf_total-col {
+    flex: 1;
+    max-width: 33.33%;
+  }
+  
+  /* Alignement du conteneur de résumé en lecture seule */
+  .fdf_readonly-mode .fdf_line-resume-container {
+    position: relative;
+    display: flex;
+    flex: 1;
+    width: 100%;
+  }
+
+  /* Uniformiser le comportement des boutons dans tous les modes */
+  .fdf_line-resume-container .fdf_actions_container {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    z-index: 100;
+    align-items: flex-start;
+    height: auto;
+  }
+
+  /* Uniformiser les styles des boutons entre les différents modes */
+  .fdf_readonly-mode .fdf_line-resume-container .fdf_actions_container,
+  .fdf_line-resume-container .fdf_actions_container {
+    top: 8px;
+    right: 8px;
+  }
+  
+  /* Assurer que le LigneFactureResume n'est pas masqué par le bouton */
+  .fdf_readonly-mode .ligne-facture-resume {
+    width: calc(100% - 40px);
+  }
+  
+  /* ==========================================================================
+     11. NUMÉRO D'ORDRE (PASTILLE)
+     ========================================================================== */
+  .fdf_order-badge {
+    position: absolute;
+    top: -12px;
+    left: -12px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 12px;
+    z-index: 3;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
+  
+  /* Style pour les pastilles en mode normal (édition/création) */
+  .fdf_facture-details-form:not(.fdf_readonly-mode) .fdf_order-badge {
+    background-color: #8B2635;
+  }
+  
+  /* Style pour les pastilles en mode lecture seule */
+  .fdf_facture-details-form.fdf_readonly-mode .fdf_order-badge {
+    background-color: #8B2635;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
+  
+  .fdf_readonly-mode .fdf_order-badge {
+    width: 22px;
+    height: 22px;
+    top: -11px;
+    left: -11px;
+    font-size: 11px;
+  }
+  
+  .fdf_order-badge.fdf_draggable {
+    cursor: grab;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  
+  .fdf_order-badge.fdf_draggable:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(139, 38, 53, 0.4);
+  }
+  
+  .fdf_order-badge.fdf_draggable:active {
+    cursor: grabbing;
+    transform: scale(1.05);
+  }
+  
+  /* Style pour l'icône de déplacement à l'intérieur de la pastille */
+  .fdf_drag-icon {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    opacity: 0.7;
+  }
+  
+  /* ==========================================================================
+     12. GESTION DU DRAG & DROP
+     ========================================================================== */
+  /* Style pour les lignes pendant le déplacement */
+  .fdf_line-container.dragging {
+    opacity: 0.5;
+    border: 1px dashed #8B2635;
+    background-color: rgba(139, 38, 53, 0.05);
+  }
+  
+  /* Style pour indiquer où la ligne sera déposée */
+  .fdf_line-container.drop-target {
+    border-top: 2px solid #8B2635;
+  }
+  
+  /* Style pour l'icône Clipboard - placée sur la ligne description */
+  .fdf_clipboard-icon {
+    position: absolute;
+    right: 8px; /* Positionnement à droite comme l'icône calendar */
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 14px;
+    z-index: 2;
+    color: #800020;
+    transition: opacity 0.2s ease;
+  }
+
+  .fdf_clipboard-icon:hover {
+    opacity: 0.8;
+  }
+
+  /* Style pour l'icône désactivée */
+  .fdf_icon-disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .fdf_icon-disabled:hover {
+    opacity: 0.4;
+  }
+
+  /* Ajuster le padding droit de l'input description pour faire de la place pour l'icône */
+  .fdf_floating-label-input input[id^="description-"] {
+    padding-right: 30px;
+  }
+  
+  /* ==========================================================================
+   14. RESPONSIVE (SUITE)
+   ========================================================================== */
+@media (max-width: 768px) {
+  .fdf_line-action-buttons {
+    gap: 5px;
+  }
+  
+   
+  .fdf_table-cell.fdf_quantity-col,
+  .fdf_table-cell.fdf_price-col,
+  .fdf_table-cell.fdf_total-col {
+    flex: 1;
+    max-width: 100%;
+    width: 100%;
+  }
+  
+  .fdf_line-container {
+    padding-right: 45px; /* Légèrement plus d'espace sur petit écran */
+  }
+}
+
+/* ==========================================================================
+   15. TOTAL DE LA FACTURE
+   ========================================================================== */
+.fdf_total-facture {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px;
+  border-top: 2px solid #ddd;
+  margin-top: 10px;
+}
+
+.fdf_total-facture-label {
+  font-weight: bold;
+  margin-right: 20px;
+}
+
+.fdf_total-facture-value {
+  font-weight: bold;
+  min-width: 100px;
+  text-align: right;
+  padding-right: 20px;
+  margin-right: 0;
+}
+
+/* Styles spécifiques pour le champ de ristourne */
+.fdf_facture-details-form .fdf_table-row.fdf_numeric-row .fdf_table-cell.fdf_total-col {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.fdf_facture-details-form .fdf_table-cell.fdf_total-col .fdf_floating-label-input {
+  width: 100%;
+  max-width: 200px;
+  margin: 0;
+}
+
+.fdf_facture-details-form .fdf_table-cell.fdf_total-col .fdf_form-control {
+  width: 100%;
+  background-color: transparent;
+  padding: 10px 0;
+  box-sizing: border-box;
+  cursor: default;
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.fdf_facture-details-form .fdf_table-cell.fdf_total-col .fdf_floating-label-input input[type="number"] {
+  width: 100%;
+  border-bottom: 1px solid #ccc;
+  text-align: right;
+  padding: 10px 0;
+}

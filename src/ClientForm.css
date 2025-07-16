@@ -1,0 +1,423 @@
+/* 
+ * ClientForm.css - Feuille de style unifiée pour tous les modes d'affichage 
+ * Gère l'apparence du formulaire client en mode affichage, création et modification
+ */
+
+/* ------------------------------ */
+/* --- STRUCTURE DU FORMULAIRE -- */
+/* ------------------------------ */
+
+/* Conteneur principal du formulaire */
+.formulaire-client {
+  width: 100%;
+}
+
+/* Classes pour les différents modes du formulaire */
+.client-form,
+.nouveau-client-form,
+.modifier-client-form,
+.afficher-client-form {
+  padding: 20px 0;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+/* Section gauche du formulaire */
+.form-left-section {
+  width: 30%;
+  padding-right: 20px;
+}
+
+/* Section principale du formulaire */
+.form-main-section {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+/* ------------------------------ */
+/* -- GROUPES DE FORMULAIRES --- */
+/* ------------------------------ */
+
+/* Styles communs pour les groupes de champs */
+.form-group,
+.form-group-NouveauClient,
+.form-group-ModifierClient,
+.form-group-AfficherClient {
+  margin-bottom: 20px;
+  position: relative;
+  width: 100%;
+}
+
+/* ------------------------------ */
+/* --- CHAMP THÉRAPEUTE -------- */
+/* ------------------------------ */
+
+/* Style pour le champ thérapeute avec switch */
+.therapist-field {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 10px;
+}
+
+.field-label {
+  font-size: 16px;
+  color: #333;
+  text-align: left;
+}
+
+/* ------------------------------ */
+/* --- SWITCH THÉRAPEUTE ------- */
+/* ------------------------------ */
+
+/* Conteneur du switch */
+.switch-container {
+  position: relative;
+  display: inline-block;
+}
+
+/* Input du switch (caché) */
+.switch-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* Style du switch */
+.switch-label {
+  display: block;
+  width: 40px;
+  height: 20px;
+  background-color: #ccc;
+  border-radius: 20px;
+  position: relative;
+  transition: background-color 0.3s;
+}
+
+/* Bouton du switch */
+.switch-label::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: white;
+  transition: left 0.3s;
+}
+
+/* État actif du switch */
+.switch-input:checked + .switch-label {
+  background-color: #800000;
+}
+
+.switch-input:checked + .switch-label::after {
+  left: 22px;
+}
+
+/* État désactivé du switch (mode affichage) */
+.switch-input:disabled + .switch-label {
+  opacity: 0.8;
+  cursor: default;
+}
+
+/* ------------------------------ */
+/* --- TITRE DU FORMULAIRE ----- */
+/* ------------------------------ */
+
+.titre-container {
+  position: relative;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+/* ------------------------------ */
+/* --- CHAMPS INPUT ET SELECT -- */
+/* ------------------------------ */
+
+/* Style commun pour tous les champs */
+.form-group input,
+.form-group-NouveauClient input,
+.form-group-ModifierClient input,
+.form-group-AfficherClient input,
+.form-group select,
+.form-group-NouveauClient select,
+.form-group-ModifierClient select,
+.form-group-AfficherClient select,
+.titre-container select,
+.select-container select {
+  width: 100%;
+  padding: 10px 0;
+  border: none;
+  border-bottom: 1px solid #ddd;
+  font-size: 16px;
+  box-sizing: border-box;
+  background-color: transparent;
+}
+
+/* Style spécifique pour les select */
+.form-group select,
+.form-group-NouveauClient select,
+.form-group-ModifierClient select,
+.form-group-AfficherClient select,
+.titre-container select,
+.select-container select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1em;
+}
+
+/* Styles pour les champs d'erreur */
+.has-error input {
+  border-color: #ff3860;
+}
+
+.error-message {
+  color: #ff3860;
+  font-size: 0.85em;
+  margin-top: 4px;
+}
+
+.help-text {
+  color: #757575;
+  font-size: 0.85em;
+  margin-top: 4px;
+}
+
+/* Styles pour les badges de type de téléphone */
+.phone-type-badge {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.7em;
+  font-weight: bold;
+}
+
+.phone-type-badge.swiss {
+  background-color: #ff0000;
+  color: white;
+}
+
+.phone-type-badge.foreign {
+  background-color: #0055b8;
+  color: white;
+}
+
+/* Styles spécifiques pour les groupes de champs par type de téléphone */
+.phone-type-swiss input {
+  border-left: 3px solid #ff0000;
+}
+
+.phone-type-foreign input {
+  border-left: 3px solid #0055b8;
+}
+
+/* ------------------------------ */
+/* --- LABELS FLOTTANTS -------- */
+/* ------------------------------ */
+
+/* Base commune pour les labels flottants */
+.floating-label-input label,
+.titre-container label,
+.select-container label {
+  position: absolute;
+  pointer-events: none;
+  left: 0;
+  transition: all 0.2s ease;
+}
+
+/* Position par défaut pour les labels (centrés dans le champ) */
+.form-group-NouveauClient.floating-label-input:not(.focused) label,
+.form-group-ModifierClient.floating-label-input:not(.focused) label,
+.form-group.floating-label-input:not(.focused) label,
+.titre-container:not(.focused) label,
+.select-container:not(.focused) label {
+  top: 10px;
+  font-size: 16px;
+  color: #999;
+}
+
+/* Position pour les labels quand le champ est focus ou a une valeur */
+.form-group-NouveauClient.floating-label-input.focused label,
+.form-group-NouveauClient.floating-label-input input:focus + label,
+.form-group-NouveauClient.floating-label-input input:not(:placeholder-shown) + label,
+.form-group-NouveauClient.floating-label-input select:focus + label,
+.form-group-NouveauClient.floating-label-input.focused select + label,
+.form-group-ModifierClient.floating-label-input.focused label,
+.form-group-ModifierClient.floating-label-input input:focus + label,
+.form-group-ModifierClient.floating-label-input input:not(:placeholder-shown) + label,
+.form-group-ModifierClient.floating-label-input select:focus + label,
+.form-group-ModifierClient.floating-label-input.focused select + label,
+.form-group.floating-label-input.focused label,
+.form-group.floating-label-input input:focus + label,
+.form-group.floating-label-input input:not(:placeholder-shown) + label,
+.form-group.floating-label-input select:focus + label,
+.form-group.floating-label-input.focused select + label,
+.titre-container.focused label,
+.titre-container select:focus + label,
+.titre-container select:not([value=""]) + label,
+.select-container.focused label,
+.select-container select:focus + label,
+.select-container select:not([value=""]) + label {
+  top: -12px;
+  font-size: 12px;
+  color: #800000;
+  font-weight: 500;
+}
+
+/* Mode Affichage - labels toujours en haut */
+.form-group-AfficherClient.floating-label-input label,
+.form-group-AfficherClient.floating-label-input select + label,
+.afficher-client-form .titre-container label {
+  top: -12px !important;
+  font-size: 12px !important;
+  color: #800000 !important;
+  font-weight: 500 !important;
+}
+
+/* ------------------------------ */
+/* --- INDICATIONS VISUELLES --- */
+/* ------------------------------ */
+
+/* Indication pour les champs requis */
+label.required::after {
+  content: " *";
+  color: #800000;
+}
+
+/* Masquer les placeholders */
+input::placeholder,
+select::placeholder {
+  color: transparent;
+}
+
+/* Style pour les champs en lecture seule (mode affichage) */
+.form-group-AfficherClient input[readonly],
+.form-group-AfficherClient select:disabled {
+  background-color: #f9f9f9;
+  opacity: 0.9;
+  cursor: default;
+}
+
+/* ------------------------------ */
+/* --- BOUTONS ---------------- */
+/* ------------------------------ */
+
+/* Conteneurs de boutons pour les différents modes */
+.client-form-boutons,
+.NouveauClient-boutons,
+.ModifierClient-boutons,
+.AfficherClient-boutons {
+  display: flex;
+  justify-content: flex-start;
+  gap: 10px;
+  margin-top: 20px;
+  width: 100%;
+}
+
+.left-align {
+  justify-content: flex-start;
+}
+
+/* Style commun pour tous les boutons */
+.client-form-boutons button,
+.NouveauClient-boutons button,
+.ModifierClient-boutons button,
+.AfficherClient-boutons button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  min-width: 120px;
+}
+
+/* Boutons de soumission */
+.submit-button,
+.nc-submit-button,
+.mc-submit-button {
+  background-color: #800000;
+  color: white;
+}
+
+/* Boutons d'annulation */
+.cancel-button,
+.nc-cancel-button,
+.mc-cancel-button {
+  background-color: #f1f1f1;
+  color: #333;
+}
+
+/* Bouton de retour en mode affichage */
+.retour-bouton {
+  background-color: #800000;
+  color: white;
+}
+
+/* Effet de survol sur tous les boutons */
+.client-form-boutons button:hover,
+.NouveauClient-boutons button:hover,
+.ModifierClient-boutons button:hover,
+.AfficherClient-boutons button:hover {
+  opacity: 0.9;
+}
+
+/* ------------------------------ */
+/* --- MESSAGES --------------- */
+/* ------------------------------ */
+
+/* Message d'erreur */
+.error-message {
+  color: #d32f2f;
+  background-color: #ffebee;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+/* Message de chargement */
+.loading-message {
+  color: #1976d2;
+  text-align: center;
+  padding: 20px;
+}
+
+/* ------------------------------ */
+/* --- AJUSTEMENTS DIVERS ------ */
+/* ------------------------------ */
+
+/* Supprimer les indicateurs des champs numériques */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Style de focus pour tous les champs */
+.form-group input:focus,
+.form-group-NouveauClient input:focus,
+.form-group-ModifierClient input:focus,
+.form-group select:focus,
+.form-group-NouveauClient select:focus,
+.form-group-ModifierClient select:focus,
+.titre-container select:focus,
+.select-container select:focus {
+  outline: none;
+  border-bottom: 2px solid #800000;
+}

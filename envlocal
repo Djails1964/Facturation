@@ -1,0 +1,8 @@
+﻿PORT=3007
+BROWSER=chrome
+HOST=localhost
+REACT_APP_API_BASE_URL=https://localhost/fact-back/api
+REACT_APP_API_ENDPOINT=https://localhost/fact-back/api
+REACT_APP_BACKEND_URL=https://localhost/fact-back
+REACT_APP_DEBUG=true
+REACT_APP_DEBUG_URLS=true

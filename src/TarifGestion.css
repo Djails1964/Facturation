@@ -1,0 +1,1256 @@
+/* ✅ TARIFGESTION.CSS - VERSION COMPLÈTE ET CORRIGÉE */
+
+.facturation-content .tarif-gestion-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  box-sizing: border-box;
+  padding: 15px;
+}
+
+.facturation-content .tarif-list {
+  width: 100%;
+  min-width: 700px;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Styles pour le module de gestion des tarifs */
+.tarif-gestion-container {
+  width: 100%;
+  max-width: 100%;
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 0 0 5px 5px;
+  box-sizing: border-box;
+  overflow-x: auto;
+}
+
+/* === ONGLETS === */
+.tarif-gestion-tabs {
+  display: flex;
+  margin-bottom: 25px;
+  border-bottom: 1px solid #ddd;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  width: 100%;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tarif-gestion-tabs::-webkit-scrollbar {
+  height: 4px;
+}
+
+.tarif-gestion-tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tarif-gestion-tabs::-webkit-scrollbar-thumb {
+  background: #ddd;
+  border-radius: 2px;
+}
+
+.tarif-gestion-tabs::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
+.tarif-tab {
+  padding: 15px 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-bottom: 3px solid transparent;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tarif-tab:hover {
+  background-color: #f0f0f0;
+  border-bottom: 3px solid #a06060;
+}
+
+.tarif-tab.active {
+  background-color: #f0f0f0;
+  border-bottom: 3px solid #800000;
+  font-weight: bold;
+  color: #800000;
+}
+
+/* === CONTENU DES ONGLETS === */
+.tarif-tab-content {
+  width: 100%;
+}
+
+.tarif-tab-content,
+.service-unite-form {
+  overflow-x: hidden; /* ✅ Empêcher le scroll horizontal */
+  max-width: 100%;
+}
+
+
+/* === FORMULAIRES === */
+.tarif-form {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/*
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.input-group {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.input-group input,
+.input-group select,
+.input-group textarea {
+  width: 100%;
+  padding: 10px 0;
+  font-size: 16px;
+  border: none;
+  border-bottom: 1px solid #ccc;
+  background-color: transparent;
+  transition: border-color 0.3s;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.input-group input:focus,
+.input-group select:focus,
+.input-group textarea:focus {
+  outline: none;
+  border-bottom: 2px solid #800000;
+}
+
+.input-group label {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  font-size: 16px;
+  color: #666;
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+
+.input-group label.required::after {
+  content: " *";
+  color: #dc3545;
+}
+
+.input-group input:focus + label,
+.input-group select:focus + label,
+.input-group textarea:focus + label,
+.input-group input:not(:placeholder-shown) + label,
+.input-group select:not([value=""]) + label,
+.input-group textarea:not(:placeholder-shown) + label {
+  top: -12px;
+  font-size: 12px;
+  color: #800000;
+  font-weight: 500;
+}
+
+.input-group select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1em;
+}
+
+.input-group textarea {
+  min-height: 70px;
+  resize: vertical;
+}
+
+/*
+
+/*
+.form-group {
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.form-floating {
+  position: relative;
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.form-floating input,
+.form-floating select,
+.form-floating textarea {
+  width: 100%;
+  padding: 10px 0;
+  font-size: 16px;
+  border: none;
+  border-bottom: 1px solid #ccc;
+  background-color: transparent;
+  transition: border-color 0.3s;
+  outline: none;
+}
+
+.form-floating input:focus,
+.form-floating select:focus,
+.form-floating textarea:focus {
+  outline: none;
+  border-bottom: 2px solid #800000;
+}
+
+.form-floating label {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  font-size: 16px;
+  color: #666;
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+
+.form-floating.focused label,
+.form-floating input:focus + label,
+.form-floating select:focus + label,
+.form-floating textarea:focus + label,
+.form-floating input:not(:placeholder-shown) + label,
+.form-floating select:not(:placeholder-shown) + label,
+.form-floating textarea:not(:placeholder-shown) + label {
+  top: -12px;
+  font-size: 12px;
+  color: #800000;
+  font-weight: 500;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 25px;
+}
+
+.form-select {
+  width: 100%;
+  padding: 10px 0;
+  font-size: 16px;
+  border: none;
+  border-bottom: 1px solid #ccc;
+  background-color: transparent;
+  transition: border-color 0.3s;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1em;
+}
+
+.form-select:focus {
+  border-bottom: 2px solid #800000;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  margin-top: 15px;
+}
+
+.checkbox-group label {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-group input[type="checkbox"] {
+  width: auto;
+  margin-right: 10px;
+}
+
+*/
+
+/* === LISTES - BASE COMMUNE === */
+.tarif-list {
+  width: 100%;
+  max-width: 100%;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  background-color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
+}
+
+.tarif-list-header,
+.tarif-list-row {
+  display: flex;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.tarif-list-header {
+  background-color: #f5f5f5;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #ddd;
+}
+
+.tarif-list-row {
+  border-bottom: 1px solid #eee;
+  transition: background-color 0.2s;
+}
+
+.tarif-list-row:last-child {
+  border-bottom: none;
+}
+
+.tarif-list-row:hover {
+  background-color: #f9f9f9;
+}
+
+.tarif-list-cell {
+  padding: 10px 8px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+/* === SERVICES - PAR DÉFAUT (5 colonnes : Code, Nom, Description, Statut, Actions) === */
+.tarif-list .tarif-list-header .tarif-list-cell:nth-child(1),
+.tarif-list .tarif-list-row .tarif-list-cell:nth-child(1) {
+  width: 12%;
+  min-width: 80px;
+}
+
+.tarif-list .tarif-list-header .tarif-list-cell:nth-child(2),
+.tarif-list .tarif-list-row .tarif-list-cell:nth-child(2) {
+  width: 23%;
+  min-width: 120px;
+}
+
+.tarif-list .tarif-list-header .tarif-list-cell:nth-child(3),
+.tarif-list .tarif-list-row .tarif-list-cell:nth-child(3) {
+  width: 40%;
+  min-width: 200px;
+}
+
+.tarif-list .tarif-list-header .tarif-list-cell:nth-child(4),
+.tarif-list .tarif-list-row .tarif-list-cell:nth-child(4) {
+  width: 10%;
+  min-width: 60px;
+  justify-content: center;
+  text-align: center;
+}
+
+.tarif-list .tarif-list-header .tarif-list-cell:nth-child(5),
+.tarif-list .tarif-list-row .tarif-list-cell:nth-child(5) {
+  width: 15%;
+  min-width: 80px;
+  justify-content: center;
+}
+
+/* === UNITÉS (4 colonnes : Code, Nom, Description, Actions) === */
+.tarif-list.unite-list .tarif-list-header .tarif-list-cell:nth-child(1),
+.tarif-list.unite-list .tarif-list-row .tarif-list-cell:nth-child(1) {
+  width: 15%;
+  min-width: 80px;
+}
+
+.tarif-list.unite-list .tarif-list-header .tarif-list-cell:nth-child(2),
+.tarif-list.unite-list .tarif-list-row .tarif-list-cell:nth-child(2) {
+  width: 25%;
+  min-width: 120px;
+}
+
+.tarif-list.unite-list .tarif-list-header .tarif-list-cell:nth-child(3),
+.tarif-list.unite-list .tarif-list-row .tarif-list-cell:nth-child(3) {
+  width: 45%;
+  min-width: 200px;
+}
+
+.tarif-list.unite-list .tarif-list-header .tarif-list-cell:nth-child(4),
+.tarif-list.unite-list .tarif-list-row .tarif-list-cell:nth-child(4) {
+  width: 15%;
+  min-width: 80px;
+  justify-content: center;
+}
+
+/* === TYPES DE TARIFS (4 colonnes : Code, Nom, Description, Actions) === */
+.tarif-list.type-tarif-list .tarif-list-header .tarif-list-cell:nth-child(1),
+.tarif-list.type-tarif-list .tarif-list-row .tarif-list-cell:nth-child(1) {
+  width: 15%;
+  min-width: 80px;
+}
+
+.tarif-list.type-tarif-list .tarif-list-header .tarif-list-cell:nth-child(2),
+.tarif-list.type-tarif-list .tarif-list-row .tarif-list-cell:nth-child(2) {
+  width: 25%;
+  min-width: 120px;
+}
+
+.tarif-list.type-tarif-list .tarif-list-header .tarif-list-cell:nth-child(3),
+.tarif-list.type-tarif-list .tarif-list-row .tarif-list-cell:nth-child(3) {
+  width: 45%;
+  min-width: 200px;
+}
+
+.tarif-list.type-tarif-list .tarif-list-header .tarif-list-cell:nth-child(4),
+.tarif-list.type-tarif-list .tarif-list-row .tarif-list-cell:nth-child(4) {
+  width: 15%;
+  min-width: 80px;
+  justify-content: center;
+}
+
+/* === TARIFS STANDARDS (6 colonnes : Service, Unité, Type, Prix, État, Actions) === */
+.tarif-list.tarif-standard-list .tarif-list-header .tarif-list-cell:nth-child(1),
+.tarif-list.tarif-standard-list .tarif-list-row .tarif-list-cell:nth-child(1) {
+  width: 18%;
+  min-width: 100px;
+}
+
+.tarif-list.tarif-standard-list .tarif-list-header .tarif-list-cell:nth-child(2),
+.tarif-list.tarif-standard-list .tarif-list-row .tarif-list-cell:nth-child(2) {
+  width: 18%;
+  min-width: 100px;
+}
+
+.tarif-list.tarif-standard-list .tarif-list-header .tarif-list-cell:nth-child(3),
+.tarif-list.tarif-standard-list .tarif-list-row .tarif-list-cell:nth-child(3) {
+  width: 20%;
+  min-width: 120px;
+}
+
+.tarif-list.tarif-standard-list .tarif-list-header .tarif-list-cell:nth-child(4),
+.tarif-list.tarif-standard-list .tarif-list-row .tarif-list-cell:nth-child(4) {
+  width: 15%;
+  min-width: 80px;
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.tarif-list.tarif-standard-list .tarif-list-header .tarif-list-cell:nth-child(5),
+.tarif-list.tarif-standard-list .tarif-list-row .tarif-list-cell:nth-child(5) {
+  width: 12%;
+  min-width: 70px;
+  justify-content: center;
+  text-align: center;
+}
+
+.tarif-list.tarif-standard-list .tarif-list-header .tarif-list-cell:nth-child(6),
+.tarif-list.tarif-standard-list .tarif-list-row .tarif-list-cell:nth-child(6) {
+  width: 17%;
+  min-width: 80px;
+  justify-content: center;
+}
+
+/* === TARIFS SPÉCIAUX (6 colonnes : Client, Service, Unité, Prix, État, Actions) === */
+.tarif-list.tarif-special-list .tarif-list-header .tarif-list-cell:nth-child(1),
+.tarif-list.tarif-special-list .tarif-list-row .tarif-list-cell:nth-child(1) {
+  width: 22%;
+  min-width: 140px;
+}
+
+.tarif-list.tarif-special-list .tarif-list-header .tarif-list-cell:nth-child(2),
+.tarif-list.tarif-special-list .tarif-list-row .tarif-list-cell:nth-child(2) {
+  width: 20%;
+  min-width: 120px;
+}
+
+.tarif-list.tarif-special-list .tarif-list-header .tarif-list-cell:nth-child(3),
+.tarif-list.tarif-special-list .tarif-list-row .tarif-list-cell:nth-child(3) {
+  width: 18%;
+  min-width: 100px;
+}
+
+.tarif-list.tarif-special-list .tarif-list-header .tarif-list-cell:nth-child(4),
+.tarif-list.tarif-special-list .tarif-list-row .tarif-list-cell:nth-child(4) {
+  width: 15%;
+  min-width: 80px;
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.tarif-list.tarif-special-list .tarif-list-header .tarif-list-cell:nth-child(5),
+.tarif-list.tarif-special-list .tarif-list-row .tarif-list-cell:nth-child(5) {
+  width: 12%;
+  min-width: 70px;
+  justify-content: center;
+  text-align: center;
+}
+
+.tarif-list.tarif-special-list .tarif-list-header .tarif-list-cell:nth-child(6),
+.tarif-list.tarif-special-list .tarif-list-row .tarif-list-cell:nth-child(6) {
+  width: 13%;
+  min-width: 80px;
+  justify-content: center;
+}
+
+.tarif-list-empty {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+  font-style: italic;
+}
+
+/* === BOUTONS === */
+/*
+.btn-edit,
+.btn-delete,
+.btn-link,
+.btn-unlink,
+.btn-cancel {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-edit {
+  background-color: #4285f4;
+  color: white;
+}
+
+.btn-delete {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-link {
+  background-color: #28a745;
+  color: white;
+}
+
+.btn-unlink {
+  background-color: #ffc107;
+  color: #333;
+}
+
+.btn-cancel {
+  background-color: #f1f1f1;
+  color: #333;
+  margin-left: 10px;
+}
+
+.btn-edit:hover {
+  background-color: #3367d6;
+}
+
+.btn-delete:hover {
+  background-color: #c82333;
+}
+
+.btn-link:hover {
+  background-color: #218838;
+}
+
+.btn-unlink:hover {
+  background-color: #e0a800;
+}
+
+.btn-cancel:hover {
+  background-color: #e0e0e0;
+}
+
+.param-submit {
+  background-color: #800000;
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+.param-submit:hover {
+  background-color: #600000;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+*/
+
+/* === BOUTONS ACTIONS HARMONISÉS === */
+.bouton-action {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background-color: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin: 0 2px;
+}
+
+.bouton-action:hover {
+  background-color: #e9ecef;
+  transform: scale(1.05);
+}
+
+.action-icon {
+  color: #800020;
+  transition: color 0.2s ease;
+}
+
+.bouton-action:hover .action-icon {
+  color: #600015;
+}
+
+/* === TOOLTIP === */
+.cursor-tooltip {
+  background-color: #333;
+  color: #fff;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 10000;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* === INDICATEURS DE STATUT === */
+.status-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.status-badge.active {
+  background-color: rgba(40, 167, 69, 0.15);
+  color: #155724;
+  border: 1px solid rgba(40, 167, 69, 0.30);
+}
+
+.status-badge.inactive {
+  background-color: rgba(220, 53, 69, 0.15);
+  color: #721c24;
+  border: 1px solid rgba(220, 53, 69, 0.30);
+}
+
+/* === MESSAGES D'ALERTE === */
+.alert {
+  padding: 12px 15px;
+  margin-bottom: 15px;
+  border-radius: 4px;
+  position: relative;
+  padding-right: 30px;
+}
+
+.alert-success {
+  background-color: #d4edda;
+  color: #155724;
+  border-left: 4px solid #28a745;
+}
+
+.alert-info {
+  background-color: #d1ecf1;
+  color: #0c5460;
+  border-left: 4px solid #17a2b8;
+}
+
+.alert-danger {
+  background-color: #f8d7da;
+  color: #721c24;
+  border-left: 4px solid #dc3545;
+}
+
+.close-message {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.7;
+}
+
+.close-message:hover {
+  opacity: 1;
+}
+
+/* === ASSOCIATIONS SERVICE-UNITÉ === */
+.service-unite-form {
+  margin-top: 15px;
+}
+
+.service-unite-association {
+  margin-top: 20px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 15px;
+  background-color: #f9f9f9;
+}
+
+.unite-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.unite-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+  background-color: white;
+  border: 1px solid #ddd;
+  gap: 10px;
+}
+
+.unite-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+  
+.unite-buttons {
+  margin-bottom: 5px;
+}
+
+.unite-default {
+  display: flex;
+  align-items: center;
+}
+
+.unite-default label {
+  margin-right: 10px;
+  font-size: 0.9em;
+}
+
+.default-unite-select {
+  width: auto;
+  padding: 5px;
+  font-size: 0.9em;
+}
+
+.unite-actions .btn-link,
+.unite-actions .btn-unlink,
+.unite-actions .btn-default {
+  padding: 5px 10px;
+  margin-bottom: 5px;
+  min-width: 90px;
+  text-align: center;
+  font-size: 13px;
+  height: 30px;
+  line-height: 20px;
+  display: inline-block;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.unite-card {
+  padding: 12px 15px;
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.unite-card-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.service-unite-selector {
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.service-unite-selector label {
+  font-weight: bold;
+  min-width: 160px;
+}
+
+.service-unite-selector .form-select {
+  flex: 1;
+  max-width: 400px;
+}
+
+.unites-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.unites-section h4 {
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #ddd;
+}
+
+.unites-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-gap: 15px;
+}
+
+.unite-name {
+  font-weight: 500;
+  max-width: calc(100% - 70px); /* ✅ Réserve espace pour boutons */
+  min-width: 0; /* ✅ IMPORTANT: permet la compression */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-top: 5px;
+}
+
+.btn-default {
+  background-color: #e0e0e0;
+  color: #333;
+}
+
+.btn-default.active {
+  background-color: #28a745;
+  color: white;
+}
+
+.select-service-message {
+  background-color: #f9f9f9;
+  border: 1px dashed #ccc;
+  border-radius: 4px;
+  padding: 30px;
+  text-align: center;
+  color: #666;
+  margin-top: 20px;
+}
+
+.no-unites {
+  font-style: italic;
+  color: #666;
+  padding: 10px 0;
+}
+
+/* === FILTRES === */
+.param-filters,
+.tarif-filters {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f9f9f9;
+  border-radius: 5px;
+  border: 1px solid #ddd;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.param-filters h4,
+.tarif-filters h4 {
+  margin-bottom: 15px;
+  color: #000;
+  font-weight: bold;
+}
+
+.filter-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.filter-group {
+  flex: 1;
+  min-width: 200px;
+  max-width: 300px;
+  position: relative;
+}
+
+.filter-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.filter-floating {
+  position: relative;
+  width: 100%;
+}
+
+.filter-floating label {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  font-size: 16px;
+  color: #666;
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+
+.filter-select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 14px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px;
+}
+
+.filter-select:focus,
+.filter-select:not(:placeholder-shown) {
+  outline: none;
+  border-bottom: 2px solid #800000;
+}
+
+.filter-floating label.floating-label,
+.filter-select:focus + label,
+.filter-select:not(:placeholder-shown) + .floating-label {
+  top: -12px;
+  font-size: 12px;
+  color: #800000;
+  font-weight: 500;
+}
+
+.reset-filters-btn,
+.btn-reset-filter {
+  background-color: #800000;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 15px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+  white-space: nowrap;
+  align-self: flex-end;
+  margin-bottom: 5px;
+}
+
+.reset-filters-btn:hover,
+.btn-reset-filter:hover {
+  background-color: #600000;
+}
+
+/* === TRI AVEC TRIANGLES === */
+.tarif-list-header .sortable {
+  cursor: pointer;
+  position: relative;
+  padding-right: 20px;
+}
+
+.tarif-list-header .sortable:hover {
+  background-color: #f7f7f7;
+}
+
+.tarif-list-header .sortable:after {
+  content: "▲▼";
+  font-size: 0.7em;
+  color: #ccc;
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.tarif-list-header .sortable.sorted-asc:after {
+  content: "▲";
+  color: #800020;
+}
+
+.tarif-list-header .sortable.sorted-desc:after {
+  content: "▼";
+  color: #800020;
+}
+
+/* === CHAMPS DE DATE AVEC ICÔNE CALENDRIER === */
+/*
+.form-floating.facture-header-input {
+  position: relative;
+}
+
+.facture-calendar-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  font-size: 16px;
+  color: #800020;
+  transition: opacity 0.2s ease;
+}
+
+.facture-calendar-icon:hover {
+  opacity: 0.8;
+}
+
+.form-floating.facture-header-input input[type="date"] {
+  padding-right: 35px;
+}
+
+.form-floating.facture-header-input input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.form-floating.facture-header-input.focused label,
+.form-floating.facture-header-input input:not(:placeholder-shown) + label,
+.form-floating.facture-header-input select:not([value=""]) + label {
+  top: -12px;
+  font-size: 12px;
+  color: #800000;
+  font-weight: 500;
+}
+
+*/
+
+/* === LOADING STATE === */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 50px;
+  color: #666;
+}
+
+/* === TOOLTIP POUR TEXTE TRONQUÉ === */
+.truncate-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.tarif-list-cell[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  z-index: 999;
+  background-color: #333;
+  color: #fff;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 14px;
+  max-width: 300px;
+  white-space: normal;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+}
+
+/* === ESPACEMENT ENTRE SECTIONS === */
+.parametre-sous-groupe:not(:last-child) {
+  margin-bottom: 40px;
+}
+
+.parametre-sous-groupe:has(form) {
+  margin-bottom: 40px;
+}
+
+.sous-groupe-titre {
+  margin-bottom: 20px;
+  color: #333;
+  font-weight: 600;
+}
+
+/* === CARTES UNITÉS COMPACTES === */
+
+.unite-card {
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 10px 12px; /* ✅ RÉDUCTION: 15px → 10px vertical */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  min-height: auto; /* ✅ Hauteur automatique */
+}
+
+.unite-card-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center; /* ✅ Centrage vertical */
+  gap: 10px;
+}
+
+.unite-name {
+  font-weight: 500;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1; /* ✅ Prend l'espace disponible */
+  font-size: 14px; /* ✅ RÉDUCTION: taille de police légèrement réduite */
+}
+
+/* === ACTIONS CÔTE À CÔTE === */
+
+.unite-actions {
+  display: flex;
+  flex-direction: row; /* ✅ CHANGEMENT: row au lieu de column */
+  gap: 6px; /* ✅ Espacement horizontal entre les boutons */
+  align-items: center;
+  flex-shrink: 0; /* ✅ Ne se réduit pas */
+}
+
+/* === SURCHARGE SPÉCIFIQUE POUR LES BOUTONS DANS LES CARTES UNITÉS === */
+/* (Les styles de base viennent de buttons.css) */
+
+.unite-actions .bouton-action {
+  width: 26px; /* ✅ RÉDUCTION: plus petit que la taille standard */
+  height: 26px; /* ✅ RÉDUCTION: plus petit que la taille standard */
+  margin: 0; /* ✅ Pas de marge entre les boutons */
+}
+
+/* === GRILLE PLUS COMPACTE === */
+
+.unites-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  grid-gap: 12px; /* ✅ RÉDUCTION: 15px → 12px */
+}
+
+/* === SECTIONS === */
+
+.unites-section {
+  margin-bottom: 25px; /* ✅ RÉDUCTION: 30px → 25px */
+}
+
+.unites-section h4 {
+  margin-bottom: 12px; /* ✅ RÉDUCTION: 15px → 12px */
+  padding-bottom: 6px; /* ✅ RÉDUCTION: 8px → 6px */
+  border-bottom: 1px solid #ddd;
+  font-size: 16px;
+  color: #333;
+  font-weight: 600;
+}
+
+/* === RESPONSIVE === */
+
+@media (max-width: 768px) {
+  .unites-grid {
+    grid-template-columns: 1fr; /* ✅ Une colonne sur mobile */
+    grid-gap: 10px;
+  }
+  
+  .unite-card {
+    padding: 8px 10px; /* ✅ Encore plus compact sur mobile */
+  }
+  
+  .unite-card-content {
+    gap: 8px;
+  }
+  
+  .unite-actions .bouton-action {
+    width: 24px; /* ✅ Plus petit sur mobile */
+    height: 24px;
+  }
+  
+  .unite-name {
+    font-size: 13px;
+    max-width: 140px; /* ✅ Plus étroit sur mobile */
+  }
+}
+
+@media (max-width: 480px) {
+  .unite-card-content {
+    flex-direction: column; /* ✅ Empiler sur très petits écrans */
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .unite-actions {
+    align-self: flex-end; /* ✅ Aligner les boutons à droite */
+  }
+  
+  .unite-name {
+    max-width: 100%;
+  }
+}
+
+/* === RESPONSIVE DESIGN === */
+@media (max-width: 768px) {
+  .tarif-list-header {
+    display: none;
+  }
+  
+  .tarif-list-row {
+    flex-direction: column;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #eee;
+    border-radius: 4px;
+  }
+  
+  .tarif-list-cell {
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  .tarif-list-cell:before {
+    content: attr(data-label);
+    font-weight: bold;
+    padding-right: 10px;
+  }
+  
+  .tarif-actions-cell {
+    flex-direction: row;
+    border-bottom: none;
+  }
+
+  .form-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .btn-cancel {
+    margin-left: 0;
+  }
+
+  .filter-controls {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .filter-group {
+    min-width: 100%;
+    max-width: 100%;
+  }
+
+  .tarif-gestion-container {
+    padding: 10px;
+    box-sizing: border-box; /* ✅ Évite les débordements */
+  }
+  
+  .facturation-content .tarif-gestion-container {
+    padding: 10px;
+  }
+}

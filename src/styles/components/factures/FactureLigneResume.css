@@ -1,0 +1,113 @@
+/* Styles pour FactureLigneResume */
+@import './_base.css';
+
+.ligne-facture-resume {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: var(--facture-spacing-sm);
+    border-radius: var(--facture-border-radius);
+    transition: background-color var(--facture-transition-speed);
+    cursor: pointer;
+}
+
+.ligne-facture-resume:hover {
+    background-color: rgba(128, 0, 0, 0.05);
+}
+
+.ligne-resume-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--facture-spacing-xs);
+}
+
+.ligne-resume-service {
+    font-weight: bold;
+    color: var(--facture-color-primary);
+    margin-right: var(--facture-spacing-xs);
+}
+
+.ligne-resume-unite {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.ligne-resume-description {
+    color: #333;
+    margin-bottom: var(--facture-spacing-sm);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ligne-resume-details {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.ligne-resume-quantite,
+.ligne-resume-prix,
+.ligne-resume-total {
+    display: flex;
+    align-items: center;
+    color: #666;
+}
+
+.ligne-resume-quantite span,
+.ligne-resume-prix span,
+.ligne-resume-total span {
+    margin-left: var(--facture-spacing-xs);
+    color: var(--facture-color-primary);
+    font-weight: bold;
+}
+
+/* Variantes de style */
+.ligne-facture-resume.ligne-active {
+    background-color: rgba(128, 0, 0, 0.1);
+    border-left: 3px solid var(--facture-color-primary);
+}
+
+.ligne-facture-resume.ligne-warning {
+    background-color: rgba(255, 193, 7, 0.1);
+    border-left: 3px solid #ffc107;
+}
+
+.ligne-facture-resume.ligne-error {
+    background-color: rgba(220, 53, 69, 0.1);
+    border-left: 3px solid var(--facture-color-danger);
+}
+
+/* Animations */
+@keyframes ligne-resume-highlight {
+    0% { background-color: transparent; }
+    50% { background-color: rgba(128, 0, 0, 0.1); }
+    100% { background-color: transparent; }
+}
+
+.ligne-facture-resume:active {
+    animation: ligne-resume-highlight 0.5s ease;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .ligne-facture-resume {
+        padding: var(--facture-spacing-xs);
+    }
+
+    .ligne-resume-details {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .ligne-resume-quantite,
+    .ligne-resume-prix,
+    .ligne-resume-total {
+        margin-bottom: var(--facture-spacing-xs);
+    }
+
+    .ligne-resume-description {
+        white-space: normal;
+    }
+}
