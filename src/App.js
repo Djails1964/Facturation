@@ -1,32 +1,48 @@
-// src/App.js - Version complète avec récupération de mot de passe intégrée
+// src/App.js - Version utilisant useGlobalNavigationGuard existant
 import React, { useState, useEffect } from 'react';
 import { createHashRouter, RouterProvider, Navigate, Outlet } from 'react-router-dom';
 import { NotificationProvider } from './services/NotificationService';
 import { DateProvider } from './context/DateContext';
-import authService from './services/authService'; // Votre service existant
+import authService from './services/authService';
 import FacturationPage from './FacturationPage';
 import LoginPage from './components/LoginPage';
-import ForgotPassword from './components/ForgotPassword'; // NOUVEAU
-import ResetPassword from './components/ResetPassword';   // NOUVEAU
+import ForgotPassword from './components/ForgotPassword';
+import ResetPassword from './components/ResetPassword';
 import LoadingSpinner from './components/LoadingSpinner';
 import SessionAlert from './components/SessionAlert';
 import Header from './components/Header';
 import GlobalDatePicker from './context/GlobalDatePicker';
+import { useGlobalNavigationGuard } from './hooks/useGlobalNavigationGuard';
 import './styles/GestionUtilisateurs.css';
-
-// Configuration de l'URL Helper
-import { 
-  configureUrlHelperForEnvironment, 
-  setUrlLogging 
+import {
+  configureUrlHelperForEnvironment,
+  setUrlLogging
 } from './utils/urlHelper';
 
-console.log('🚀 Application React démarrée avec reset password');
-console.log('🌍 Variables d\'environnement:', {
-  API_BASE_URL: process.env.REACT_APP_API_BASE_URL,
-  BACKEND_URL: process.env.REACT_APP_BACKEND_URL,
-  DEBUG: process.env.REACT_APP_DEBUG,
-  NODE_ENV: process.env.NODE_ENV
-});
+console.log('🚀 Application React démarrée avec protection navigation globale');
+
+// Contexte pour partager le guard global
+const NavigationGuardContext = React.createContext();
+
+// Provider pour le guard global
+const NavigationGuardProvider = ({ children }) => {
+  const globalGuard = useGlobalNavigationGuard();
+  
+  return (
+    <NavigationGuardContext.Provider value={globalGuard}>
+      {children}
+    </NavigationGuardContext.Provider>
+  );
+};
+
+// Hook pour utiliser le guard global
+export const useNavigationGuard = () => {
+  const context = React.useContext(NavigationGuardContext);
+  if (!context) {
+    throw new Error('useNavigationGuard must be used within NavigationGuardProvider');
+  }
+  return context;
+};
 
 function App() {
   const [user, setUser] = useState(null);
@@ -35,6 +51,7 @@ function App() {
     appVersion: process.env.REACT_APP_VERSION || '5.0.0',
     sessionTimeout: parseInt(process.env.REACT_APP_SESSION_TIMEOUT) || 1800
   };
+
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
 
@@ -42,7 +59,6 @@ function App() {
   useEffect(() => {
     console.log('🔧 Configuration UrlHelper...');
     configureUrlHelperForEnvironment();
-    
     if (process.env.REACT_APP_DEBUG === 'true') {
       setUrlLogging(true);
       console.log('🔍 Mode debug activé');
@@ -53,13 +69,9 @@ function App() {
   useEffect(() => {
     const checkAuthentication = async () => {
       console.log('🔐 Vérification de l\'authentification...');
-      
       try {
-        // Utiliser votre authService existant
         if (authService.isAuthenticated()) {
           const currentUser = authService.getCurrentUser();
-          
-          // Optionnel : Vérifier la validité de la session côté serveur
           if (authService.checkAuth) {
             const authData = await authService.checkAuth();
             if (authData && authData.user) {
@@ -71,7 +83,6 @@ function App() {
               setAuthenticated(false);
             }
           } else {
-            // Fallback si pas de méthode checkAuth
             console.log('✅ Utilisateur trouvé en localStorage:', currentUser);
             setUser(currentUser);
             setAuthenticated(true);
@@ -90,7 +101,6 @@ function App() {
 
     checkAuthentication();
 
-    // Écouter les événements d'expiration de session
     const handleAuthExpired = () => {
       console.log('🚨 Session expirée détectée');
       setAuthenticated(false);
@@ -98,7 +108,6 @@ function App() {
     };
 
     window.addEventListener('auth-expired', handleAuthExpired);
-    
     return () => {
       window.removeEventListener('auth-expired', handleAuthExpired);
     };
@@ -106,45 +115,32 @@ function App() {
 
   useEffect(() => {
     console.log('🔄 useEffect authentification - authenticated:', authenticated, 'user:', user);
-    
     if (authenticated && user) {
       console.log('✅ Utilisateur authentifié détecté, forçage de la navigation...');
-      
-      // Forcer un re-render complet
       setTimeout(() => {
         console.log('🚀 Tentative de navigation vers dashboard');
-        // Si vous êtes sur la page de login, forcer la navigation
         if (window.location.hash.includes('login')) {
           window.location.hash = '#/';
         }
       }, 200);
     }
-  }, [authenticated, user]); // Écouter les changements de ces deux états
+  }, [authenticated, user]);
 
   // Gestion de la connexion
   const handleLogin = async (username, password) => {
     try {
       console.log('🔐 Début handleLogin pour:', username);
       setLoading(true);
-      
-      // Utiliser votre authService existant
       const loginData = await authService.login(username, password);
-      
       console.log('📊 Réponse login complète:', loginData);
       
       if (loginData.success && loginData.user) {
         console.log('✅ Login success détecté, mise à jour des états...');
-        
-        // Mettre à jour les états dans le bon ordre
         setUser(loginData.user);
         setAuthenticated(true);
-        
         console.log('🎯 États mis à jour - User:', loginData.user);
-        console.log('🎯 Authenticated sera:', true);
         
-        // Petite pause pour s'assurer que React a traité les changements d'état
         await new Promise(resolve => setTimeout(resolve, 100));
-        
         console.log('✅ Connexion terminée avec succès');
       } else {
         console.error('❌ Login failed - données:', loginData);
@@ -160,23 +156,37 @@ function App() {
     }
   };
 
-  // Gestion de la déconnexion
-  const handleLogout = async () => {
-    console.log('🚪 Déconnexion...');
-    
-    try {
-      // Utiliser votre authService existant
-      await authService.logout();
-      
-      setUser(null);
-      setAuthenticated(false);
-      console.log('✅ Déconnexion réussie');
-    } catch (error) {
-      console.error('❌ Erreur de déconnexion:', error);
-      // Forcer la déconnexion côté client même en cas d'erreur
-      setUser(null);
-      setAuthenticated(false);
-    }
+  // Composant Header protégé
+  const ProtectedHeader = () => {
+    const { interceptNavigation } = useNavigationGuard();
+
+    const handleLogout = () => {
+      interceptNavigation(
+        async () => {
+          console.log('🚪 Déconnexion...');
+          try {
+            await authService.logout();
+            setUser(null);
+            setAuthenticated(false);
+            console.log('✅ Déconnexion réussie');
+          } catch (error) {
+            console.error('❌ Erreur de déconnexion:', error);
+            setUser(null);
+            setAuthenticated(false);
+          }
+        },
+        'logout'
+      );
+    };
+
+    return (
+      <Header
+        appName={appConfig.appName}
+        appVersion={appConfig.appVersion}
+        user={user}
+        onLogout={handleLogout}
+      />
+    );
   };
 
   // Rafraîchissement de session
@@ -202,25 +212,17 @@ function App() {
     appConfig
   };
 
-  // Layout principal pour les pages authentifiées
+  // Layout principal pour les pages authentifiées avec protection globale
   const AuthenticatedLayout = () => (
-    <>
-      <SessionAlert 
-        sessionExpire={user?.sessionExpire} 
-        onRefresh={refreshSession} 
+    <NavigationGuardProvider>
+      <SessionAlert
+        sessionExpire={user?.sessionExpire}
+        onRefresh={refreshSession}
       />
-      
-      <Header 
-        appName={appConfig.appName} 
-        appVersion={appConfig.appVersion}
-        user={user} 
-        onLogout={handleLogout} 
-      />
-      
+      <ProtectedHeader />
       <main className="app-main">
         <Outlet context={userContext} />
       </main>
-      
       <GlobalDatePicker />
       
       {/* Indicateur mode développement */}
@@ -239,15 +241,13 @@ function App() {
           {process.env.REACT_APP_API_BASE_URL ? 'REACT SÉPARÉ' : 'REACT DEV'}
         </div>
       )}
-    </>
+    </NavigationGuardProvider>
   );
 
   // Layout simple pour les pages non authentifiées
   const PublicLayout = () => (
     <>
       <Outlet />
-      
-      {/* Indicateur mode développement */}
       {process.env.NODE_ENV === 'development' && (
         <div style={{
           position: 'fixed',
@@ -266,7 +266,7 @@ function App() {
     </>
   );
 
-  // Configuration du routeur avec nouvelles routes
+  // Configuration du routeur
   const router = createHashRouter([
     // Routes publiques (non authentifiées)
     {
@@ -278,16 +278,15 @@ function App() {
           element: <LoginPage onLogin={handleLogin} loading={loading} />
         },
         {
-          path: "forgot-password", // NOUVELLE ROUTE
+          path: "forgot-password",
           element: <ForgotPassword />
         },
         {
-          path: "reset-password", // NOUVELLE ROUTE
+          path: "reset-password",
           element: <ResetPassword />
         }
       ]
     },
-    
     // Routes authentifiées
     {
       path: "/",
@@ -311,18 +310,17 @@ function App() {
         }
       ]
     },
-    
     // Redirections
     {
       path: "/login",
       element: <Navigate to="/public/login" replace />
     },
     {
-      path: "/forgot-password", // Support URL directe
+      path: "/forgot-password",
       element: <Navigate to="/public/forgot-password" replace />
     },
     {
-      path: "/reset-password", // Support URL directe
+      path: "/reset-password",
       element: <Navigate to="/public/reset-password" replace />
     },
     {
