@@ -129,6 +129,9 @@ function FactureForm({
   const initialLoadCompleted = useRef(false);
   const clientIdRef = useRef(null);
 
+  // Données initiales (seront mises à jour après chargement)
+  const [initialFormData, setInitialFormData] = useState({});
+
   // Fonction pour obtenir les données actuelles du formulaire
   const getFormData = useCallback(() => {
     return {
@@ -142,8 +145,8 @@ function FactureForm({
     };
   }, [facture]);
 
-  // Données initiales (seront mises à jour après chargement)
-  const [initialFormData, setInitialFormData] = useState({});
+  // Désactiver la détection pendant l'initialisation
+  const shouldDetectChanges = !isLoading && isFullyInitialized && Object.keys(initialFormData).length > 0;
 
   // Fonction pour vérifier si les données sont stables
   const checkDataStability = useCallback(() => {
@@ -201,9 +204,6 @@ function FactureForm({
     isSubmitting,        // isSaving
     false                // hasJustSaved - géré manuellement
   );
-
-  // Désactiver la détection pendant l'initialisation
-  const shouldDetectChanges = !isLoading && isFullyInitialized && Object.keys(initialFormData).length > 0;
 
   useEffect(() => {
     initialLoadCompleted.current = false;
