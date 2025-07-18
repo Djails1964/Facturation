@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useGlobalNavigationGuard } from './hooks/useGlobalNavigationGuard';
 // Remplacer l'import de ParametresForm par ParametresContent
 import ParametresContent from './admin/ParametresContent';
 import ClientGestion from './ClientGestion';
@@ -12,9 +13,11 @@ import './FacturationPage.css';
 
 const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
   const [activeSection, setActiveSection] = useState(initialSection);
-  
   const [clientCreatedId, setClientCreatedId] = useState(null);
   const [factureCreatedId, setFactureCreatedId] = useState(null);
+
+  // ✅ NOUVEAU : Hook de protection globale
+  const { interceptNavigation } = useGlobalNavigationGuard();
   
   // Effet pour mettre à jour la section active quand initialSection change
   useEffect(() => {
@@ -35,6 +38,62 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
     setFactureCreatedId(factureId);
     setActiveSection('factures');
   };
+
+  const handleSectionChange = async (newSection) => {
+    const navigation = () => {
+      setActiveSection(newSection);
+      // Réinitialiser les IDs lors du changement de section
+      setClientCreatedId(null);
+      setFactureCreatedId(null);
+    };
+
+    // Vérifier s'il y a des modifications non sauvegardées
+    const canNavigate = await interceptNavigation(navigation, `menu-${newSection}`);
+    
+    if (!canNavigate) {
+      console.log(`🚫 Navigation vers ${newSection} bloquée`);
+      // La modal sera gérée par le composant qui a des modifications
+      return;
+    }
+  };
+
+  // ✅ MODIFIÉ : Gestionnaires de menu avec protection
+  const menuItems = [
+    {
+      key: 'factures',
+      label: 'Factures',
+      onClick: () => handleSectionChange('factures')
+    },
+    {
+      key: 'clients', 
+      label: 'Clients',
+      onClick: () => handleSectionChange('clients')
+    },
+    {
+      key: 'dashboard',
+      label: 'Dashboard', 
+      onClick: () => handleSectionChange('dashboard')
+    }
+  ];
+
+  // Menus privilégiés avec protection
+  const privilegedMenuItems = canAccessParams ? [
+    {
+      key: 'tarifs',
+      label: 'Tarifs',
+      onClick: () => handleSectionChange('tarifs')
+    },
+    {
+      key: 'parametres',
+      label: 'Paramètres', 
+      onClick: () => handleSectionChange('parametres')
+    },
+    {
+      key: 'utilisateurs',
+      label: 'Utilisateurs',
+      onClick: () => handleSectionChange('utilisateurs')
+    }
+  ] : [];
 
   const renderContent = () => {
     switch (activeSection) {
@@ -100,81 +159,52 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
       <div className="facturation-header">
         <h1>{getPageTitle()}</h1>
       </div>
-      
       <div className="facturation-body">
         <div className="facturation-menu">
           <ul>
-            <li 
-              className={activeSection === 'factures' ? 'active' : ''}
-              onClick={() => setActiveSection('factures')}
-            >
-              <span className="menu-label">Factures</span>
-            </li>
-            <li 
-              className={activeSection === 'clients' ? 'active' : ''}
-              onClick={() => setActiveSection('clients')}
-            >
-              <span className="menu-label">Clients</span>
-            </li>
-            <li 
-              className={activeSection === 'dashboard' ? 'active' : ''}
-              onClick={() => setActiveSection('dashboard')}
-            >
-              <span className="menu-label">Dashboard</span>
-            </li>
-            
-            {/* Séparateur visuel pour les menus privilégiés */}
+            {/* ✅ MODIFIÉ : Utiliser les gestionnaires protégés */}
+            {menuItems.map(item => (
+              <li
+                key={item.key}
+                className={activeSection === item.key ? 'active' : ''}
+                onClick={item.onClick}
+              >
+                <span className="menu-label">{item.label}</span>
+              </li>
+            ))}
+
+            {/* Séparateur et menus privilégiés */}
             {canAccessParams && (
               <>
-                {/* Ligne de séparation */}
-                <li style={{ 
-                  height: '1px', 
-                  backgroundColor: '#ddd', 
-                  margin: '10px 0', 
+                <li style={{
+                  height: '1px',
+                  backgroundColor: '#ddd',
+                  margin: '10px 0',
                   pointerEvents: 'none',
                   padding: 0
                 }}></li>
                 
-                {/* Menu Tarifs - Visible pour Admin et Gestionnaire */}
-                <li 
-                  className={`menu-privileged ${activeSection === 'tarifs' ? 'active' : ''}`}
-                  onClick={() => setActiveSection('tarifs')}
-                  title="Gestion des tarifs et prix"
-                >
-                  <span className="menu-label">
-                    <span className="menu-icon">💰</span>
-                    <span>Tarifs</span>
-                  </span>
-                </li>
-                
-                {/* Menu Paramètres - Visible pour Admin et Gestionnaire */}
-                <li 
-                  className={`menu-privileged ${activeSection === 'parametres' ? 'active' : ''}`}
-                  onClick={() => setActiveSection('parametres')}
-                  title="Configuration de l'application"
-                >
-                  <span className="menu-label">
-                    <span className="menu-icon">⚙️</span>
-                    <span>Paramètres</span>
-                  </span>
-                </li>
-                
-                {/* Menu Utilisateurs - Visible pour Admin et Gestionnaire */}
-                <li 
-                  className={`menu-privileged ${activeSection === 'utilisateurs' ? 'active' : ''}`}
-                  onClick={() => setActiveSection('utilisateurs')}
-                  title="Gestion des comptes utilisateur"
-                >
-                  <span className="menu-label">
-                    <span className="menu-icon">👥</span>
-                    <span>Utilisateurs</span>
-                  </span>
-                </li>
+                {privilegedMenuItems.map(item => (
+                  <li
+                    key={item.key}
+                    className={`menu-privileged ${activeSection === item.key ? 'active' : ''}`}
+                    onClick={item.onClick}
+                    title={`Gestion ${item.label.toLowerCase()}`}
+                  >
+                    <span className="menu-label">
+                      <span className="menu-icon">
+                        {item.key === 'tarifs' && '💰'}
+                        {item.key === 'parametres' && '⚙️'}
+                        {item.key === 'utilisateurs' && '👥'}
+                      </span>
+                      <span>{item.label}</span>
+                    </span>
+                  </li>
+                ))}
               </>
             )}
           </ul>
         </div>
-        
         <div className="facturation-content">
           {renderContent()}
         </div>

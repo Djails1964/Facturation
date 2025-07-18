@@ -12,6 +12,7 @@ import { useTraceUpdate } from './useTraceUpdate'; // Importer le hook de traça
 import TarificationService from './services/TarificationService';
 import { useUnsavedChanges } from './hooks/useUnsavedChanges';
 import UnsavedChangesModal from './components/shared/UnsavedChangesModal';
+import { useGlobalNavigationGuard } from './hooks/useGlobalNavigationGuard';
 
 // Constantes pour les modes de formulaire
 const FORM_MODES = {
@@ -65,14 +66,14 @@ const validateFactureLines = (lignes) => {
     return result;
 };
 
-function FactureForm({ 
-  mode = FORM_MODES.VIEW, 
-  factureId = null, 
-  onRetourListe, 
-  onFactureCreated, 
-  clients = [], 
-  clientsLoading = false, 
-  onRechargerClients = null 
+function FactureForm({
+  mode = FORM_MODES.VIEW,
+  factureId = null,
+  onRetourListe,
+  onFactureCreated,
+  clients = [],
+  clientsLoading = false,
+  onRechargerClients = null
 }) {
     useTraceUpdate({ mode, factureId, clients }, 'FactureForm');
     // États pour le formulaire
@@ -114,8 +115,15 @@ function FactureForm({
 
     // ✅ NOUVEAU : Données pour la détection des modifications
     const [initialFormData, setInitialFormData] = useState({});
-    
-    // ✅ NOUVEAU : Hook de détection des modifications non sauvegardées
+    // ✅ NOUVEAU : Hook de protection globale
+    const {
+        registerGuard,
+        unregisterGuard,
+        confirmPendingNavigation,
+        cancelPendingNavigation
+    } = useGlobalNavigationGuard();
+
+    // Données actuelles du formulaire
     const currentFormData = useMemo(() => ({
         numeroFacture: facture.numeroFacture,
         dateFacture: facture.dateFacture,
@@ -125,6 +133,7 @@ function FactureForm({
         totalFacture: facture.totalFacture
     }), [facture]);
 
+
     const {
         hasUnsavedChanges,
         showUnsavedModal,
@@ -132,28 +141,70 @@ function FactureForm({
         confirmNavigation,
         cancelNavigation,
         requestNavigation,
-        resetChanges
+        resetChanges,
+        setShowUnsavedModal // ✅ AJOUT pour contrôle externe
     } = useUnsavedChanges(
         initialFormData,
         currentFormData,
         isSubmitting,
-        false // hasJustSaved - sera géré manuellement
+        false
     );
 
-    // ✅ NOUVEAU : Initialiser les données initiales quand la facture est chargée
+    // ✅ NOUVEAU : Identifiant unique pour ce guard
+    const guardId = `facture-form-${mode}-${factureId || 'new'}`;
+
+    // ✅ NOUVEAU : Fonction guard pour vérification externe
+    const guardFunction = useCallback(async () => {
+        if (isReadOnly || !hasUnsavedChanges) {
+        return false; // Pas de modifications
+        }
+
+        // Déclencher l'affichage de la modal
+        setShowUnsavedModal(true);
+        return true; // Il y a des modifications
+    }, [isReadOnly, hasUnsavedChanges, setShowUnsavedModal]);
+
+    // ✅ NOUVEAU : Enregistrer/désenregistrer le guard
     useEffect(() => {
-        if (!isLoading && facture.id) {
+        if (!isReadOnly) {
+        registerGuard(guardId, guardFunction);
+        console.log(`🔒 FactureForm guard enregistré: ${guardId}`);
+        }
+
+        return () => {
+        unregisterGuard(guardId);
+        console.log(`🔓 FactureForm guard supprimé: ${guardId}`);
+        };
+    }, [guardId, guardFunction, isReadOnly, registerGuard, unregisterGuard]);
+
+    // ✅ NOUVEAU : Gérer la confirmation depuis navigation externe
+    const handleConfirmNavigationFromExternal = () => {
+        resetChanges();
+        confirmNavigation();
+        confirmPendingNavigation(); // ✅ Confirmer la navigation globale
+    };
+
+    // ✅ NOUVEAU : Gérer l'annulation depuis navigation externe  
+    const handleCancelNavigationFromExternal = () => {
+        cancelNavigation();
+        cancelPendingNavigation(); // ✅ Annuler la navigation globale
+    };
+
+    // ✅ Initialiser les données initiales quand la facture est chargée
+    useEffect(() => {
+        if (!isLoading && (facture.id || mode === FORM_MODES.CREATE)) {
         const initialData = {
-            numeroFacture: facture.numeroFacture,
-            dateFacture: facture.dateFacture,
-            clientId: facture.clientId,
-            lignes: [...facture.lignes], // Copie profonde
-            ristourne: facture.ristourne,
-            totalFacture: facture.totalFacture
+            numeroFacture: facture.numeroFacture || '',
+            dateFacture: facture.dateFacture || '',
+            clientId: facture.clientId || null,
+            lignes: facture.lignes ? [...facture.lignes] : [],
+            ristourne: facture.ristourne || 0,
+            totalFacture: facture.totalFacture || 0
         };
         setInitialFormData(initialData);
+        console.log('📋 Données initiales définies:', initialData);
         }
-    }, [isLoading, facture.id, facture]);
+    }, [isLoading, facture, mode]);
 
     useEffect(() => {
         initialLoadCompleted.current = false;
@@ -689,9 +740,7 @@ function FactureForm({
         }
 
         setIsSubmitting(true);
-
-        setIsSubmitting(true);
-        console.log('Données de la facture à soumettre:', facture);
+        console.log('💾 Sauvegarde de la facture...');
         
         try {
         const factureData = {
@@ -711,7 +760,8 @@ function FactureForm({
         }
 
         if (result && result.success) {
-            // ✅ NOUVEAU : Marquer comme sauvegardé
+            console.log('✅ Sauvegarde réussie');
+            // ✅ Marquer comme sauvegardé
             markAsSaved();
             resetChanges();
             
@@ -725,7 +775,7 @@ function FactureForm({
             throw new Error(result?.message || 'Une erreur est survenue');
         }
         } catch (error) {
-        console.error('Erreur:', error);
+        console.error('❌ Erreur sauvegarde:', error);
         setConfirmModal({
             isOpen: true,
             title: 'Erreur',
@@ -756,6 +806,8 @@ function FactureForm({
         // Pas de modifications, navigation directe
         navigation();
     };
+
+    
 
     // Détermine le style des boutons
     const getButtonsContainerClass = () => {
@@ -789,6 +841,7 @@ function FactureForm({
     // ✅ NOUVEAU : Gestion de la sauvegarde depuis la modal
     const handleSaveAndExit = async () => {
         try {
+        console.log('💾 Sauvegarde et sortie...');
         // Déclencher la sauvegarde
         const formElement = document.querySelector('.ff-formulaire-facture');
         if (formElement) {
@@ -796,27 +849,36 @@ function FactureForm({
             formElement.dispatchEvent(submitEvent);
         }
         } catch (error) {
-        console.error('Erreur lors de la sauvegarde:', error);
+        console.error('❌ Erreur lors de la sauvegarde:', error);
         // En cas d'erreur, laisser l'utilisateur choisir
-        cancelNavigation();
+        handleCancelNavigationFromExternal();
         }
     };
 
     // ✅ NOUVEAU : Gestion de la sortie sans sauvegarde
     const handleDiscardAndExit = () => {
-        resetChanges();
-        confirmNavigation();
+        console.log('🗑️ Abandon des modifications et sortie');
+        handleConfirmNavigationFromExternal();
     };
 
+    // Debug des modifications
+    useEffect(() => {
+        if (hasUnsavedChanges) {
+        console.log('⚠️ Modifications non sauvegardées détectées dans FactureForm');
+        }
+    }, [hasUnsavedChanges]);
 
     return (
 		<div className="content-section-container">
 			<div className="content-section-title">
 				<h2>
                     {getTitreFormulaire()}
-                    {/* ✅ NOUVEAU : Indicateur de modifications non sauvegardées */}
+                    {/* ✅ Indicateur visuel des modifications */}
                     {hasUnsavedChanges && !isReadOnly && (
-                        <span className="unsaved-indicator" title="Modifications non sauvegardées">
+                        <span 
+                        className="unsaved-indicator" 
+                        title="Modifications non sauvegardées"
+                        >
                         ●
                         </span>
                     )}
@@ -936,11 +998,16 @@ function FactureForm({
                     {/* ✅ NOUVEAU : Modal de confirmation des modifications non sauvegardées */}
                     <UnsavedChangesModal
                         isOpen={showUnsavedModal}
-                        onSave={handleSaveAndExit}
+                        onSave={!isReadOnly ? handleSaveAndExit : null}
                         onDiscard={handleDiscardAndExit}
-                        onCancel={cancelNavigation}
+                        onCancel={handleCancelNavigationFromExternal}
                         entityType="facture"
                         showSaveOption={!isReadOnly}
+                        customMessage={
+                        mode === FORM_MODES.CREATE 
+                            ? "Vous avez commencé à créer une nouvelle facture. Voulez-vous sauvegarder avant de quitter ?"
+                            : "Vous avez modifié cette facture. Voulez-vous sauvegarder vos modifications avant de quitter ?"
+                        }
                     />
 
 					<ConfirmationModal
