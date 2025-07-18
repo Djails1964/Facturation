@@ -1,4 +1,4 @@
-// src/hooks/useUnsavedChanges.js - Version améliorée
+// src/hooks/useUnsavedChanges.js - Version corrigée
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 /**
@@ -21,10 +21,10 @@ export const useUnsavedChanges = (
   const [pendingNavigation, setPendingNavigation] = useState(null);
 
   // Références
-  const initialDataRef = useRef(initialData);
+  const lastSavedData = useRef(null);
   const isInitialized = useRef(false);
-  const lastSavedData = useRef(initialData);
-  const initializationTimeout = useRef(null);
+  const initialDataString = JSON.stringify(initialData);
+  const currentDataString = JSON.stringify(currentData);
 
   // Fonction de comparaison profonde optimisée
   const deepCompare = useCallback((obj1, obj2) => {
@@ -64,72 +64,88 @@ export const useUnsavedChanges = (
     return true;
   }, []);
 
-  // Mettre à jour les données initiales quand elles changent
+  // Initialiser les données de référence au premier chargement
   useEffect(() => {
-    // Vérifier que les données initiales sont complètes et cohérentes
+    // Vérifier que les données initiales sont valides et complètes
     const hasValidInitialData = initialData && 
       Object.keys(initialData).length > 0 && 
-      // Pour une facture, vérifier qu'on a au moins un numéro ou un ID
       (initialData.numeroFacture || initialData.id || initialData.clientId);
 
-    if (hasValidInitialData && (!isInitialized.current || hasJustSaved)) {
-      // Délai pour s'assurer que toutes les mises à jour sont terminées
-      if (initializationTimeout.current) {
-        clearTimeout(initializationTimeout.current);
-      }
+    if (hasValidInitialData && !isInitialized.current) {
+      console.log('🔧 Initialisation données useUnsavedChanges:', initialData);
+      lastSavedData.current = { ...initialData };
+      isInitialized.current = true;
+      setHasUnsavedChanges(false);
+    }
+  }, [initialDataString]); // Utiliser la version sérialisée pour éviter les re-renders
 
-      initializationTimeout.current = setTimeout(() => {
-        // Vérifier une dernière fois que les données sont stables
-        const currentKeys = Object.keys(currentData);
-        const initialKeys = Object.keys(initialData);
-        
-        // Si les structures sont différentes, attendre encore
-        if (currentKeys.length !== initialKeys.length) {
-          console.log('🔄 Données pas encore stables, attendre...');
-          return;
-        }
-
-        console.log('🔧 Initialisation données useUnsavedChanges:', initialData);
-        initialDataRef.current = { ...initialData };
-        lastSavedData.current = { ...initialData };
-        isInitialized.current = true;
-        setHasUnsavedChanges(false);
-      }, 200); // Délai plus conservateur
+  // Détecter les changements seulement après initialisation et avec des données valides
+  useEffect(() => {
+    // Ne pas détecter les changements si :
+    // - Pas encore initialisé
+    // - En cours de sauvegarde
+    // - Pas de données actuelles valides
+    // - Données actuelles vides
+    if (!isInitialized.current || 
+        isSaving || 
+        !currentData || 
+        Object.keys(currentData).length === 0) {
+      return;
     }
 
-    return () => {
-      if (initializationTimeout.current) {
-        clearTimeout(initializationTimeout.current);
-      }
-    };
-  }, [initialData, hasJustSaved, currentData]);
-
-  // Détecter les changements seulement après initialisation complète et stable
-  useEffect(() => {
-    if (!isInitialized.current || isSaving) return;
-
-    // Vérifier que les données actuelles sont valides et stables
-    const hasValidCurrentData = currentData && Object.keys(currentData).length > 0;
-    
-    if (!hasValidCurrentData) return;
-
-    // Attendre un court délai pour s'assurer que ce n'est pas un changement transitoire
-    const comparisonTimer = setTimeout(() => {
+    // Attendre un délai plus long pour éviter les détections transitoires
+    const detectionTimer = setTimeout(() => {
       const hasChanges = !deepCompare(lastSavedData.current, currentData);
       
-      console.log('🔍 Comparaison modifications:', {
-        hasChanges,
-        isInitialized: isInitialized.current,
-        isSaving,
-        lastSaved: lastSavedData.current,
-        current: currentData
-      });
+      // Vérification supplémentaire : ignorer les changements minimes
+      if (hasChanges) {
+        // Si c'est juste un changement de format ou de structure sans changement de contenu réel
+        const currentDataFiltered = {
+          numeroFacture: currentData.numeroFacture,
+          dateFacture: currentData.dateFacture,
+          clientId: currentData.clientId,
+          ristourne: currentData.ristourne || 0,
+          lignes: currentData.lignes?.map(l => ({
+            description: l.description,
+            quantite: l.quantite,
+            prixUnitaire: l.prixUnitaire,
+            serviceId: l.serviceId,
+            uniteId: l.uniteId
+          })) || []
+        };
+        
+        const savedDataFiltered = {
+          numeroFacture: lastSavedData.current.numeroFacture,
+          dateFacture: lastSavedData.current.dateFacture,
+          clientId: lastSavedData.current.clientId,
+          ristourne: lastSavedData.current.ristourne || 0,
+          lignes: lastSavedData.current.lignes?.map(l => ({
+            description: l.description,
+            quantite: l.quantite,
+            prixUnitaire: l.prixUnitaire,
+            serviceId: l.serviceId,
+            uniteId: l.uniteId
+          })) || []
+        };
+        
+        const realChanges = !deepCompare(savedDataFiltered, currentDataFiltered);
+        
+        console.log('🔍 Comparaison modifications useUnsavedChanges:', {
+          hasChanges: realChanges,
+          isInitialized: isInitialized.current,
+          isSaving,
+          lastSaved: savedDataFiltered,
+          current: currentDataFiltered
+        });
 
-      setHasUnsavedChanges(hasChanges);
-    }, 50); // Court délai pour éviter les détections transitoires
+        setHasUnsavedChanges(realChanges);
+      } else {
+        setHasUnsavedChanges(false);
+      }
+    }, 300); // Délai plus long pour la stabilité
 
-    return () => clearTimeout(comparisonTimer);
-  }, [currentData, deepCompare, isSaving]);
+    return () => clearTimeout(detectionTimer);
+  }, [currentDataString, deepCompare, isSaving]); // Utiliser la version sérialisée
 
   // Bloquer la navigation du navigateur si modifications non sauvegardées
   useEffect(() => {
@@ -149,10 +165,12 @@ export const useUnsavedChanges = (
 
   // Fonctions utilitaires
   const markAsSaved = useCallback(() => {
-    lastSavedData.current = { ...currentData };
-    setHasUnsavedChanges(false);
-    console.log('✅ Marqué comme sauvegardé');
-  }, [currentData]);
+    if (currentData && Object.keys(currentData).length > 0) {
+      lastSavedData.current = { ...currentData };
+      setHasUnsavedChanges(false);
+      console.log('✅ Marqué comme sauvegardé');
+    }
+  }, [currentDataString]);
 
   const confirmNavigation = useCallback(() => {
     setShowUnsavedModal(false);
@@ -180,7 +198,7 @@ export const useUnsavedChanges = (
     setHasUnsavedChanges(false);
     setShowUnsavedModal(false);
     setPendingNavigation(null);
-    isInitialized.current = false;
+    // NE PAS réinitialiser isInitialized - laisser les données de référence
     console.log('🔄 Reset des changements');
   }, []);
 
@@ -197,7 +215,6 @@ export const useUnsavedChanges = (
     // État d'initialisation pour debug
     isInitialized: isInitialized.current,
     // Données de debug
-    initialData: initialDataRef.current,
     lastSavedData: lastSavedData.current
   };
 };

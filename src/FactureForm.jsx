@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import ConfirmationModal from './components/shared/ConfirmationModal';
-// Mise à jour du chemin d'importation pour le nouveau FactureDetailsForm
 import FactureDetailsForm from './FactureDetailsForm';
 import FactureTotauxDisplay from './FactureTotauxDisplay';
 import { FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
@@ -8,10 +7,10 @@ import FactureHeader from './FactureHeader';
 import FactureService from './services/FactureService';
 import ClientService from './services/ClientService';
 import './FactureForm.css';
-import { useTraceUpdate } from './useTraceUpdate'; // Importer le hook de traçage
+import { useTraceUpdate } from './useTraceUpdate';
 import TarificationService from './services/TarificationService';
-import { useNavigationGuard } from './App'; // Import du contexte global
-import { useUnsavedChanges } from './hooks/useUnsavedChanges'; // Hook local pour détecter les modifications
+import { useNavigationGuard } from './App';
+import { useUnsavedChanges } from './hooks/useUnsavedChanges';
 
 // Constantes pour les modes de formulaire
 const FORM_MODES = {
@@ -23,13 +22,11 @@ const FORM_MODES = {
 // Fonction utilitaire pour valider les lignes de facture
 const validateFactureLines = (lignes) => {
   console.log('Validation détaillée des lignes:', lignes);
-  // Pas de lignes = invalide
   if (!lignes || lignes.length === 0) {
     console.log('Pas de lignes');
     return false;
   }
 
-  // Vérifier que chaque ligne a tous les champs obligatoires
   const result = lignes.every(ligne => {
     const descriptionValide = ligne.description && ligne.description.trim() !== '';
     const serviceTypeValide = !!ligne.serviceType;
@@ -81,12 +78,11 @@ function FactureForm({
   // ID unique pour ce guard
   const guardId = `facture-form-${factureId || 'new'}`;
 
-  // États pour tracker l'initialisation complète avec observateur de stabilité
+  // États pour tracker l'initialisation complète
   const [isFullyInitialized, setIsFullyInitialized] = useState(false);
-  const stabilityTimer = useRef(null);
-  const lastStableData = useRef(null);
+  const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
 
-  // État pour la modal de navigation externe (différent de la modal locale)
+  // État pour la modal de navigation externe
   const [showGlobalModal, setShowGlobalModal] = useState(false);
   const [globalNavigationCallback, setGlobalNavigationCallback] = useState(null);
 
@@ -126,10 +122,9 @@ function FactureForm({
   const factureService = useMemo(() => new FactureService(), []);
   const clientService = useMemo(() => new ClientService(), []);
 
-  const initialLoadCompleted = useRef(false);
   const clientIdRef = useRef(null);
 
-  // Données initiales (seront mises à jour après chargement)
+  // Données initiales (seront mises à jour SEULEMENT après chargement initial complet)
   const [initialFormData, setInitialFormData] = useState({});
 
   // Fonction pour obtenir les données actuelles du formulaire
@@ -145,51 +140,17 @@ function FactureForm({
     };
   }, [facture]);
 
-  // Désactiver la détection pendant l'initialisation
-  const shouldDetectChanges = !isLoading && isFullyInitialized && Object.keys(initialFormData).length > 0;
+  // Fonction pour vérifier si on peut commencer la détection
+  const canDetectChanges = useCallback(() => {
+    return !isLoading && 
+           !isSubmitting && 
+           isInitialLoadDone && 
+           isFullyInitialized && 
+           Object.keys(initialFormData).length > 0 &&
+           mode !== FORM_MODES.VIEW;
+  }, [isLoading, isSubmitting, isInitialLoadDone, isFullyInitialized, initialFormData, mode]);
 
-  // Fonction pour vérifier si les données sont stables
-  const checkDataStability = useCallback(() => {
-    const currentData = getFormData();
-    const currentDataString = JSON.stringify(currentData);
-    
-    // Si les données n'ont pas changé depuis la dernière vérification
-    if (lastStableData.current === currentDataString) {
-      console.log('📝 Données stables détectées, initialisation...');
-      
-      // Double vérification : attendre encore un peu pour s'assurer de la stabilité
-      setTimeout(() => {
-        const finalData = getFormData();
-        const finalDataString = JSON.stringify(finalData);
-        
-        // Si les données sont encore identiques après le délai supplémentaire
-        if (currentDataString === finalDataString) {
-          console.log('📝 Stabilité confirmée après double vérification');
-          setInitialFormData(finalData);
-          setIsFullyInitialized(true);
-        } else {
-          console.log('📝 Données encore instables, nouvelle vérification...');
-          // Redémarrer le processus si les données ont encore changé
-          lastStableData.current = finalDataString;
-          setTimeout(checkDataStability, 200);
-        }
-      }, 300); // Délai supplémentaire pour confirmation
-      
-      return;
-    }
-    
-    // Stocker les données actuelles et redémarrer le timer
-    lastStableData.current = currentDataString;
-    
-    if (stabilityTimer.current) {
-      clearTimeout(stabilityTimer.current);
-    }
-    
-    // Vérifier à nouveau dans 200ms
-    stabilityTimer.current = setTimeout(checkDataStability, 200);
-  }, [getFormData]);
-
-  // Hook local pour détecter les modifications - attendre l'initialisation complète
+  // Hook local pour détecter les modifications
   const {
     hasUnsavedChanges,
     showUnsavedModal,
@@ -199,79 +160,91 @@ function FactureForm({
     requestNavigation,
     resetChanges
   } = useUnsavedChanges(
-    initialFormData,     // Données initiales
-    shouldDetectChanges ? getFormData() : {}, // Données actuelles seulement si détection active
-    isSubmitting,        // isSaving
-    false                // hasJustSaved - géré manuellement
+    initialFormData,
+    canDetectChanges() ? getFormData() : {},
+    isSubmitting,
+    false
   );
 
+  // Effet pour charger la facture au montage
   useEffect(() => {
-    initialLoadCompleted.current = false;
-  }, [factureId]);
-
-  useEffect(() => {
-    console.log('État de validité des lignes:', isLignesValid);
-    console.log('Lignes du formulaire:', facture.lignes);
-    console.log('Validité du formulaire:', isFormValid);
-  }, [isLignesValid, facture.lignes]);
-
-  // Forcer la synchronisation quand l'initialisation est complète
-  useEffect(() => {
-    if (isFullyInitialized && Object.keys(initialFormData).length > 0) {
-      // Attendre un petit délai puis forcer la synchronisation
-      const syncTimer = setTimeout(() => {
-        console.log('🔄 Synchronisation forcée après initialisation complète');
-        markAsSaved(); // Marquer comme sauvegardé pour éviter les faux positifs
-        resetChanges(); // Reset l'état du hook
-      }, 100);
-
-      return () => clearTimeout(syncTimer);
-    }
-  }, [isFullyInitialized, initialFormData, markAsSaved, resetChanges]);
-  useEffect(() => {
-    if (!isLoading && !isFullyInitialized) {
-      const isEditModeReady = mode === FORM_MODES.EDIT && 
-        facture.id && 
-        facture.lignes && 
-        facture.lignes.length > 0 &&
-        facture.clientId &&
-        facture.numeroFacture;
-        
-      const isCreateModeReady = mode === FORM_MODES.CREATE && 
-        facture.numeroFacture;
-        
-      const isViewModeReady = mode === FORM_MODES.VIEW && 
-        facture.id;
-
-      if (isEditModeReady || isCreateModeReady || isViewModeReady) {
-        console.log('🔄 Démarrage observateur de stabilité des données');
-        // Démarrer l'observateur après un délai initial
-        setTimeout(() => {
-          checkDataStability();
-        }, 1000); // Délai initial plus long
+    console.log('⭐ Effet de chargement appelé, mode:', mode, 'factureId:', factureId);
+    
+    const loadData = async () => {
+      if ((mode === FORM_MODES.EDIT || mode === FORM_MODES.VIEW) && factureId) {
+        await chargerFacture(factureId);
+        if (mode === FORM_MODES.VIEW && (!clients || clients.length === 0) && !clientsLoading) {
+          await chargerClients();
+        }
+      } else if (mode === FORM_MODES.CREATE) {
+        const today = new Date();
+        setFacture(prev => ({
+          ...prev,
+          dateFacture: today.toISOString().split('T')[0],
+          numeroFacture: '',
+          clientId: null,
+          lignes: []
+        }));
+        await fetchProchainNumeroFacture(today.getFullYear());
+        setIsLoading(false);
       }
-    }
-
-    return () => {
-      if (stabilityTimer.current) {
-        clearTimeout(stabilityTimer.current);
-      }
+      
+      // Marquer le chargement initial comme terminé
+      setIsInitialLoadDone(true);
     };
-  }, [isLoading, facture.id, mode, facture.lignes, facture.numeroFacture, facture.clientId, isFullyInitialized, checkDataStability]);
 
-  // Enregistrer le guard global seulement quand la détection est active
+    loadData();
+  }, [mode, factureId]);
+
+  // Effet pour finaliser l'initialisation après que toutes les données soient chargées
   useEffect(() => {
-    if (mode !== FORM_MODES.VIEW && shouldDetectChanges) {
-      // Fonction guard qui retourne true si des modifications existent
+    if (isInitialLoadDone && !isLoading && !isFullyInitialized) {
+      // Attendre un délai plus long pour s'assurer que toutes les données sont stables
+      const timer = setTimeout(() => {
+        console.log('🔧 Finalisation de l\'initialisation');
+        const currentFormData = getFormData();
+        
+        // Vérifier que nous avons des données valides et complètes
+        const hasValidData = mode === FORM_MODES.CREATE ? 
+          currentFormData.numeroFacture :
+          currentFormData.numeroFacture && 
+          currentFormData.lignes?.length > 0 && 
+          currentFormData.totalFacture > 0;
+        
+        if (hasValidData) {
+          // Double vérification de stabilité après un délai supplémentaire
+          setTimeout(() => {
+            const finalFormData = getFormData();
+            const isStable = JSON.stringify(currentFormData) === JSON.stringify(finalFormData);
+            
+            if (isStable) {
+              setInitialFormData(finalFormData);
+              setIsFullyInitialized(true);
+              console.log('✅ Initialisation complète avec données stables:', finalFormData);
+            } else {
+              console.log('⏳ Données pas encore stables, attente...');
+              // Redéclencher la vérification
+              setTimeout(() => {
+                const stabilizedData = getFormData();
+                setInitialFormData(stabilizedData);
+                setIsFullyInitialized(true);
+                console.log('✅ Initialisation forcée après délai supplémentaire:', stabilizedData);
+              }, 1000);
+            }
+          }, 300);
+        }
+      }, 1000); // Délai initial plus long
+
+      return () => clearTimeout(timer);
+    }
+  }, [isInitialLoadDone, isLoading, isFullyInitialized, getFormData, mode]);
+
+  // Enregistrer le guard global seulement quand tout est prêt
+  useEffect(() => {
+    if (canDetectChanges()) {
       const guardFunction = async () => {
         console.log(`🔍 Vérification modifications pour ${guardId}:`, hasUnsavedChanges);
-        
-        // Si des modifications existent, on doit gérer la modal
-        if (hasUnsavedChanges) {
-          return true;
-        }
-        
-        return false;
+        return hasUnsavedChanges;
       };
 
       registerGuard(guardId, guardFunction);
@@ -282,16 +255,14 @@ function FactureForm({
         console.log(`🔓 Guard désenregistré pour ${guardId}`);
       };
     }
-  }, [mode, hasUnsavedChanges, shouldDetectChanges, guardId, registerGuard, unregisterGuard]);
+  }, [canDetectChanges, hasUnsavedChanges, guardId, registerGuard, unregisterGuard]);
 
-  // Intercepter les navigations externes seulement si la détection est active
+  // Intercepter les navigations externes
   useEffect(() => {
-    if (mode !== FORM_MODES.VIEW && shouldDetectChanges && hasUnsavedChanges) {
-      // Écouter les tentatives de navigation externe
+    if (canDetectChanges() && hasUnsavedChanges) {
       const handleGlobalNavigation = (event) => {
         console.log('🚨 Navigation externe détectée avec modifications non sauvegardées');
         
-        // Vérifier si c'est une navigation qui nous concerne
         if (event.detail && event.detail.source && event.detail.callback) {
           console.log('🔄 Affichage modal pour navigation externe:', event.detail.source);
           setGlobalNavigationCallback(() => event.detail.callback);
@@ -299,44 +270,22 @@ function FactureForm({
         }
       };
 
-      // Écouter les événements de navigation bloquée
       window.addEventListener('navigation-blocked', handleGlobalNavigation);
 
       return () => {
         window.removeEventListener('navigation-blocked', handleGlobalNavigation);
       };
     }
-  }, [mode, shouldDetectChanges, hasUnsavedChanges]);
-
-  // Gérer la confirmation de navigation externe
-  const handleConfirmGlobalNavigation = () => {
-    console.log('✅ Confirmation navigation externe');
-    setShowGlobalModal(false);
-    
-    // Désenregistrer le guard avant de naviguer
-    unregisterGuard(guardId);
-    
-    // Exécuter la navigation
-    if (globalNavigationCallback) {
-      globalNavigationCallback();
-      setGlobalNavigationCallback(null);
-    }
-  };
-
-  // Gérer l'annulation de navigation externe
-  const handleCancelGlobalNavigation = () => {
-    console.log('❌ Annulation navigation externe');
-    setShowGlobalModal(false);
-    setGlobalNavigationCallback(null);
-  };
+  }, [canDetectChanges, hasUnsavedChanges]);
 
   // Debug: Afficher l'état des modifications
   useEffect(() => {
     console.log('🔍 État modifications FactureForm:', {
       guardId,
       hasUnsavedChanges,
-      shouldDetectChanges,
+      canDetectChanges: canDetectChanges(),
       isFullyInitialized,
+      isInitialLoadDone,
       showGlobalModal,
       mode,
       isLoading,
@@ -344,59 +293,27 @@ function FactureForm({
       initialDataKeys: Object.keys(initialFormData),
       currentDataKeys: Object.keys(getFormData())
     });
-  }, [guardId, hasUnsavedChanges, shouldDetectChanges, isFullyInitialized, showGlobalModal, mode, isLoading, isSubmitting, initialFormData]);
-
-  // Effet pour charger la facture au montage ou changement de mode/ID
-  useEffect(() => {
-    console.log('⭐ Effet de chargement appelé, mode:', mode, 'factureId:', factureId);
-    if ((mode === FORM_MODES.EDIT || mode === FORM_MODES.VIEW) && factureId) {
-      chargerFacture(factureId);
-      // En mode VIEW, chargeons également la liste des clients pour pouvoir afficher le nom du client
-      if (mode === FORM_MODES.VIEW && (!clients || clients.length === 0) && !clientsLoading) {
-        chargerClients();
-      }
-    } else if (mode === FORM_MODES.CREATE) {
-      const today = new Date();
-      setFacture(prev => ({
-        ...prev,
-        dateFacture: today.toISOString().split('T')[0],
-        numeroFacture: '',
-        clientId: null,
-        lignes: []
-      }));
-      // Si mode création, on initialise le prochain numéro de facture
-      if (mode === FORM_MODES.CREATE) {
-        fetchProchainNumeroFacture(today.getFullYear());
-      }
-      setIsLoading(false);
-    }
-  }, [mode, factureId]);
+  }, [guardId, hasUnsavedChanges, canDetectChanges, isFullyInitialized, isInitialLoadDone, showGlobalModal, mode, isLoading, isSubmitting, initialFormData]);
 
   useEffect(() => {
-    // Ne rien faire si nous ne sommes pas en mode édition ou si nous n'avons pas de client
     if (mode !== FORM_MODES.EDIT || !clientData || !clientData.id) {
       return;
     }
 
-    // Ne rien faire au premier rendu
     if (clientIdRef.current === null) {
       clientIdRef.current = clientData.id;
       return;
     }
 
-    // Vérifier si le client a changé
     if (clientIdRef.current !== clientData.id) {
       console.log('⭐ Client changé dans useEffect, de', clientIdRef.current, 'à', clientData.id);
-      // Mettre à jour la référence du client
       clientIdRef.current = clientData.id;
-      // Utiliser directement la fonction de recalcul
       recalculerTarifsAvecNouveauClient(clientData.id);
     }
-  }, [mode, clientData, facture.lignes]); // Ajouter facture.lignes pour réagir aux changements de lignes
+  }, [mode, clientData, facture.lignes]);
 
   const resetRistourne = useCallback(() => {
     console.log('⭐ resetRistourne appelé dans FactureForm');
-    // Force la mise à jour synchrone
     setFacture(prev => {
       const newState = {
         ...prev,
@@ -413,7 +330,6 @@ function FactureForm({
     if (clientsLoading) return;
     try {
       const clientsData = await clientService.chargerClients();
-      // Si un callback de rechargement est fourni, l'appeler
       if (onRechargerClients && typeof onRechargerClients === 'function') {
         onRechargerClients();
       }
@@ -450,27 +366,22 @@ function FactureForm({
         throw new Error('Aucune donnée de facture trouvée');
       }
 
-      // Calculer le montant brut correct en additionnant le net et la ristourne
       const ristourne = factureData.ristourne || 0;
       const totalNet = factureData.totalAvecRistourne || 0;
       const totalBrut = totalNet + ristourne;
 
-      // Mettre à jour les données avec le total brut recalculé
       setFacture({
         ...factureData,
-        totalFacture: totalBrut // Stocker le total brut recalculé
+        totalFacture: totalBrut
       });
 
-      // Charger les détails du client
       if (factureData.clientId) {
         await fetchClientDetails(factureData.clientId);
       }
 
-      // En mode vue, considérer que les lignes sont valides
       if (mode === FORM_MODES.VIEW) {
         setIsLignesValid(true);
       } else {
-        // Sinon vérifier la validité des lignes
         setIsLignesValid(validateFactureLines(factureData.lignes));
       }
     } catch (error) {
@@ -566,15 +477,11 @@ function FactureForm({
     const newClientId = value;
     const currentClientId = facture.clientId;
 
-    // Vérifier s'il y a un vrai changement de client
     if (newClientId !== currentClientId) {
       console.log('⭐ Changement de client détecté:', currentClientId, '->', newClientId);
-      // Mettre à jour l'état de la facture avec le nouveau client
       setFacture(prev => ({ ...prev, clientId: newClientId }));
-      // Charger les détails du nouveau client et déclencher le recalcul
       fetchClientDetails(newClientId)
         .then(() => {
-          // Recalculer les prix après que le client soit complètement chargé
           setTimeout(() => {
             recalculerTarifsAvecNouveauClient(newClientId);
           }, 200);
@@ -589,7 +496,6 @@ function FactureForm({
           });
         });
     } else {
-      // Même client, juste mettre à jour l'état
       setFacture(prev => ({ ...prev, clientId: newClientId }));
       fetchClientDetails(newClientId);
     }
@@ -604,7 +510,6 @@ function FactureForm({
     console.log('⭐ Début du recalcul des tarifs avec le client ID:', clientId);
     setIsLoading(true);
     try {
-      // Récupérer les détails du client si nous ne les avons pas encore
       const clientDetails = clientData && clientData.id === clientId
         ? clientData
         : await clientService.getClient(clientId);
@@ -613,26 +518,21 @@ function FactureForm({
         throw new Error('Impossible de récupérer les détails du client');
       }
 
-      // Créer une nouvelle instance du service de tarification
       const tarificationSvc = new TarificationService();
       await tarificationSvc.initialiser();
 
-      // Charger les services et unités
       const services = await tarificationSvc.chargerServices();
       const unites = await tarificationSvc.getUnitesApplicablesPourClient(clientId);
 
       console.log(`⭐ Services (${services.length}) et unités (${unites.length}) chargés pour le client ID:`, clientId);
 
-      // Recalculer le prix pour chaque ligne avec promesses parallèles
       const lignesRecalculees = await Promise.all(facture.lignes.map(async (ligne, index) => {
         try {
-          // Vérifier si on a tous les IDs nécessaires
           if (!ligne.serviceId || !ligne.uniteId) {
             console.log(`⭐ Ligne ${index} sans serviceId ou uniteId:`, ligne);
             return ligne;
           }
 
-          // Rechercher le service et l'unité pour cette ligne
           const service = services.find(s => s.id === ligne.serviceId);
           const unite = unites.find(u => u.id === ligne.uniteId);
 
@@ -646,7 +546,6 @@ function FactureForm({
             return ligne;
           }
 
-          // Appel explicite à calculerPrix pour obtenir le nouveau prix
           const nouveauPrix = await tarificationSvc.calculerPrix({
             clientId: clientId,
             serviceId: ligne.serviceId,
@@ -661,7 +560,6 @@ function FactureForm({
             nouveauPrix: nouveauPrix
           });
 
-          // Mettre à jour le prix et le total
           const quantite = parseFloat(ligne.quantite) || 0;
           const nouveauTotal = nouveauPrix * quantite;
 
@@ -676,7 +574,6 @@ function FactureForm({
         }
       }));
 
-      // Calculer le nouveau total général
       const nouveauTotal = lignesRecalculees.reduce(
         (sum, ligne) => sum + parseFloat(ligne.total || 0),
         0
@@ -684,23 +581,19 @@ function FactureForm({
 
       console.log('⭐ Nouveau total calculé:', nouveauTotal);
 
-      // Mettre à jour l'état avec les nouvelles lignes et le nouveau total
       setFacture(prev => {
         const newState = {
           ...prev,
           lignes: lignesRecalculees,
           totalFacture: nouveauTotal,
-          ristourne: 0, // Réinitialiser la ristourne
-          totalAvecRistourne: nouveauTotal // Nouveau total sans ristourne
+          ristourne: 0,
+          totalAvecRistourne: nouveauTotal
         };
         console.log('⭐ Mise à jour de la facture avec les prix recalculés');
         return newState;
       });
 
-      // Force explicitement la propagation des changements aux composants enfants
       handleLignesChange(lignesRecalculees);
-
-      // Vérifier la validité des lignes recalculées
       setIsLignesValid(validateFactureLines(lignesRecalculees));
     } catch (error) {
       console.error('Erreur lors du recalcul des tarifs:', error);
@@ -719,7 +612,6 @@ function FactureForm({
     console.log('⭐ handleLignesChange appelé, validité:', isValid);
     if (mode === FORM_MODES.VIEW) return;
 
-    // Important: Vérifier si lignes est défini et non vide avant traitement
     if (!lignes || lignes.length === 0) return;
 
     console.log('Lignes de facture reçues:', lignes);
@@ -741,39 +633,22 @@ function FactureForm({
 
     const totalBrut = lignesFormatees.reduce((sum, ligne) => sum + ligne.total, 0);
 
-    // Utilisez une référence pour traquer si c'est la première mise à jour après chargement
-    if (!initialLoadCompleted.current) {
-      console.log('⭐ Chargement initial - la ristourne est conservée');
-      initialLoadCompleted.current = true;
-      setFacture(prev => ({
-        ...prev,
-        lignes: lignesFormatees,
-        totalFacture: totalBrut,
-        // Conserver la ristourne existante
-        totalAvecRistourne: Math.max(0, totalBrut - (prev.ristourne || 0))
-      }));
-      return;
-    }
-
-    // Si ce n'est pas le chargement initial, vérifier s'il y a eu changement significatif
     setFacture(prev => {
       const prevTotal = prev.totalFacture || 0;
       const diff = Math.abs(prevTotal - totalBrut);
       console.log('⭐ Différence entre totaux:', diff, 'prevTotal:', prevTotal, 'newTotal:', totalBrut);
 
-      // Si différence significative après le chargement initial, réinitialiser la ristourne
-      if (diff > 0.01) {
+      if (diff > 0.01 && isFullyInitialized) {
         console.log('⭐ Forçage de la réinitialisation de la ristourne dans handleLignesChange');
         return {
           ...prev,
           lignes: lignesFormatees,
           totalFacture: totalBrut,
-          ristourne: 0, // FORCER à 0
-          totalAvecRistourne: totalBrut // Nouveau total sans ristourne
+          ristourne: 0,
+          totalAvecRistourne: totalBrut
         };
       }
 
-      // Si pas de changement significatif, conserver la ristourne
       return {
         ...prev,
         lignes: lignesFormatees,
@@ -781,7 +656,7 @@ function FactureForm({
         totalAvecRistourne: Math.max(0, totalBrut - (prev.ristourne || 0))
       };
     });
-  }, [mode]);
+  }, [mode, isFullyInitialized]);
 
   const handleRistourneChange = useCallback((totauxData) => {
     console.log('⭐ handleRistourneChange appelé', totauxData);
@@ -803,11 +678,11 @@ function FactureForm({
     markAsSaved();
     resetChanges();
     
-    // Mettre à jour les données initiales
+    // Mettre à jour les données initiales avec l'état actuel
     const newFormData = getFormData();
     setInitialFormData(newFormData);
 
-    // Désenregistrer le guard temporairement (sera re-enregistré si nécessaire)
+    // Désenregistrer le guard temporairement
     unregisterGuard(guardId);
 
     // Fermer toute modal ouverte
@@ -822,7 +697,7 @@ function FactureForm({
     }
   }, [mode, onFactureCreated, onRetourListe, markAsSaved, resetChanges, getFormData, guardId, unregisterGuard]);
 
-  // Vérifier si le formulaire est valide (pour activer/désactiver le bouton submit)
+  // Vérifier si le formulaire est valide
   const isFormValid = mode === FORM_MODES.VIEW ||
     (facture.numeroFacture &&
       facture.clientId &&
@@ -832,7 +707,7 @@ function FactureForm({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Validations de base
+    
     if (!facture.numeroFacture) {
       setConfirmModal({
         isOpen: true,
@@ -863,7 +738,6 @@ function FactureForm({
       return;
     }
 
-    // Vérifier si toutes les lignes sont valides
     if (!isLignesValid) {
       setConfirmModal({
         isOpen: true,
@@ -898,7 +772,6 @@ function FactureForm({
         const newFactureId = result.id || facture.id;
         const message = mode === FORM_MODES.CREATE ? 'Facture créée avec succès' : 'Facture modifiée avec succès';
         
-        // Utiliser la fonction qui nettoie tout
         handleSuccessfulSave(newFactureId, message);
       } else {
         throw new Error(result?.message || 'Une erreur est survenue');
@@ -916,11 +789,10 @@ function FactureForm({
     }
   };
 
-  // Modifier handleAnnuler pour utiliser requestNavigation local
+  // Gérer l'annulation avec protection
   const handleAnnuler = () => {
     const canNavigate = requestNavigation(() => {
       console.log('🔙 Navigation retour autorisée');
-      // Désenregistrer le guard avant de partir
       unregisterGuard(guardId);
       
       if (typeof onRetourListe === 'function') {
@@ -933,6 +805,28 @@ function FactureForm({
     if (!canNavigate) {
       console.log('🔒 Navigation retour bloquée par des modifications non sauvegardées');
     }
+  };
+
+  // Gérer la confirmation de navigation externe
+  const handleConfirmGlobalNavigation = () => {
+    console.log('✅ Confirmation navigation externe');
+    setShowGlobalModal(false);
+    
+    // Désenregistrer le guard avant de naviguer
+    unregisterGuard(guardId);
+    
+    // Exécuter la navigation
+    if (globalNavigationCallback) {
+      globalNavigationCallback();
+      setGlobalNavigationCallback(null);
+    }
+  };
+
+  // Gérer l'annulation de navigation externe
+  const handleCancelGlobalNavigation = () => {
+    console.log('❌ Annulation navigation externe');
+    setShowGlobalModal(false);
+    setGlobalNavigationCallback(null);
   };
 
   // Détermine le style des boutons
@@ -972,11 +866,6 @@ function FactureForm({
         unregisterGuard(guardId);
         resetChanges();
         setIsFullyInitialized(false);
-        
-        // Nettoyer les timers
-        if (stabilityTimer.current) {
-          clearTimeout(stabilityTimer.current);
-        }
       }
     };
   }, [mode, guardId, unregisterGuard, resetChanges]);
@@ -1125,7 +1014,7 @@ function FactureForm({
             singleButton={false}
           />
 
-          {/* Modal pour les erreurs (gardez celle existante) */}
+          {/* Modal pour les erreurs */}
           <ConfirmationModal
             isOpen={confirmModal.isOpen}
             title={confirmModal.title}
