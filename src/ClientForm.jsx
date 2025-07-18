@@ -1,12 +1,15 @@
 /**
  * Composant de formulaire client qui gère l'affichage, la création et la modification des clients
  * Le composant s'adapte à trois modes : affichage, création et modification
- * VERSION MISE À JOUR avec gestion sécurisée des booléens
+ * VERSION MISE À JOUR avec gestion sécurisée des booléens et protection des modifications non sauvegardées
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './ClientForm.css';
 import ClientService from './services/ClientService';
-import { toBoolean, normalizeBooleanFields } from './utils/booleanHelper'; // ✅ IMPORT du helper
+import { toBoolean, normalizeBooleanFields } from './utils/booleanHelper';
+import { useNavigationGuard } from './App';
+import { useUnsavedChanges } from './hooks/useUnsavedChanges';
+import ConfirmationModal from './components/shared/ConfirmationModal';
 
 // Constantes pour les différents modes du formulaire
 const FORM_MODES = {
@@ -23,25 +26,35 @@ const PHONE_TYPES = {
 
 /**
  * Composant ClientForm - Gère l'affichage, la création et la modification des clients
- * @param {string} mode - Mode du formulaire (view, create, edit)
- * @param {string|null} clientId - ID du client (uniquement pour les modes view et edit)
- * @param {function} onRetourListe - Callback pour retourner à la liste des clients
- * @param {function} onClientCreated - Callback appelé après la création d'un client
  */
 const ClientForm = ({ 
   mode = FORM_MODES.VIEW, 
   clientId = null, 
   onRetourListe, 
   onClientCreated,
-  clientService: propClientService // Nouveau prop pour le service
+  clientService: propClientService
 }) => {
-  // Remplacer l'instanciation existante par une logique qui utilise le prop s'il est fourni
+  // Hook global pour s'enregistrer
+  const { registerGuard, unregisterGuard } = useNavigationGuard();
+
+  // ID unique pour ce guard
+  const guardId = `client-form-${clientId || 'new'}`;
+
+  // États pour tracker l'initialisation complète
+  const [isFullyInitialized, setIsFullyInitialized] = useState(false);
+  const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
+
+  // État pour la modal de navigation externe
+  const [showGlobalModal, setShowGlobalModal] = useState(false);
+  const [globalNavigationCallback, setGlobalNavigationCallback] = useState(null);
+
+  // Service client
   const [clientService] = useState(() => {
-      return propClientService || new ClientService();
+    return propClientService || new ClientService();
   });
 
-  // ✅ FONCTION DE NORMALISATION DU CLIENT
-  const normalizeClientData = React.useCallback((clientData) => {
+  // Fonction de normalisation du client
+  const normalizeClientData = useCallback((clientData) => {
     if (!clientData || typeof clientData !== 'object') return clientData;
     return normalizeBooleanFields(clientData, ['estTherapeute']);
   }, []);
@@ -63,9 +76,10 @@ const ClientForm = ({
 
   // États pour le chargement et les erreurs
   const [isLoading, setIsLoading] = useState(clientId !== null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   
-  // État pour le type de téléphone (suisse ou étranger)
+  // État pour le type de téléphone
   const [phoneType, setPhoneType] = useState(null);
   
   // États pour les erreurs de validation par champ
@@ -87,64 +101,209 @@ const ClientForm = ({
     email: false
   });
 
-  // Chargement des données du client au montage du composant ou changement de mode/clientId
+  // Données initiales pour la détection des modifications
+  const [initialFormData, setInitialFormData] = useState({});
+
+  // Fonction pour obtenir les données actuelles du formulaire
+  const getFormData = useCallback(() => {
+    return {
+      titre: client.titre,
+      nom: client.nom,
+      prenom: client.prenom,
+      rue: client.rue,
+      numero: client.numero,
+      code_postal: client.code_postal,
+      localite: client.localite,
+      telephone: client.telephone,
+      email: client.email,
+      estTherapeute: client.estTherapeute
+    };
+  }, [client]);
+
+  // Fonction pour vérifier si on peut commencer la détection
+  const canDetectChanges = useCallback(() => {
+    return !isLoading && 
+           !isSubmitting && 
+           isInitialLoadDone && 
+           isFullyInitialized && 
+           Object.keys(initialFormData).length > 0 &&
+           mode !== FORM_MODES.VIEW;
+  }, [isLoading, isSubmitting, isInitialLoadDone, isFullyInitialized, initialFormData, mode]);
+
+  // Hook local pour détecter les modifications
+  const {
+    hasUnsavedChanges,
+    showUnsavedModal,
+    markAsSaved,
+    confirmNavigation,
+    cancelNavigation,
+    requestNavigation,
+    resetChanges
+  } = useUnsavedChanges(
+    initialFormData,
+    canDetectChanges() ? getFormData() : {},
+    isSubmitting,
+    false
+  );
+
+  // Chargement des données du client au montage
   useEffect(() => {
-    if (clientId && (mode === FORM_MODES.VIEW || mode === FORM_MODES.EDIT)) {
-      chargerClient(clientId);
-    } else if (mode === FORM_MODES.CREATE) {
-      // Réinitialiser le formulaire pour la création
-      setClient({
-        id: '',
-        titre: '',
-        nom: '',
-        prenom: '',
-        rue: '',
-        numero: '',
-        code_postal: '',
-        localite: '',
-        telephone: '',
-        email: '',
-        estTherapeute: false
-      });
+    const loadData = async () => {
+      if (clientId && (mode === FORM_MODES.VIEW || mode === FORM_MODES.EDIT)) {
+        await chargerClient(clientId);
+      } else if (mode === FORM_MODES.CREATE) {
+        // Réinitialiser le formulaire pour la création
+        const defaultClient = {
+          id: '',
+          titre: '',
+          nom: '',
+          prenom: '',
+          rue: '',
+          numero: '',
+          code_postal: '',
+          localite: '',
+          telephone: '',
+          email: '',
+          estTherapeute: false
+        };
+        
+        setClient(defaultClient);
+        
+        // Réinitialiser les autres états
+        setFocusStates({
+          titre: false,
+          prenom: false,
+          nom: false,
+          rue: false,
+          numero: false,
+          code_postal: false,
+          localite: false,
+          telephone: false,
+          email: false
+        });
+        
+        setFieldErrors({
+          email: null,
+          telephone: null
+        });
+        setPhoneType(null);
+        setIsLoading(false);
+      }
       
-      // Réinitialiser les états de focus
-      setFocusStates({
-        titre: false,
-        prenom: false,
-        nom: false,
-        rue: false,
-        numero: false,
-        code_postal: false,
-        localite: false,
-        telephone: false,
-        email: false
-      });
-      
-      // Réinitialiser les erreurs de champ et le type de téléphone
-      setFieldErrors({
-        email: null,
-        telephone: null
-      });
-      setPhoneType(null);
-      
-      setIsLoading(false);
+      // Marquer le chargement initial comme terminé
+      setIsInitialLoadDone(true);
+    };
+
+    loadData();
+  }, [clientId, mode]);
+
+  // Effet pour finaliser l'initialisation après que toutes les données soient chargées
+  useEffect(() => {
+    if (isInitialLoadDone && !isLoading && !isFullyInitialized) {
+      // Attendre un délai pour s'assurer que toutes les données sont stables
+      const timer = setTimeout(() => {
+        console.log('🔧 Finalisation de l\'initialisation ClientForm');
+        const currentFormData = getFormData();
+        
+        // Vérifier que nous avons des données valides
+        const hasValidData = mode === FORM_MODES.CREATE ? 
+          true : // Pour la création, pas besoin de données spécifiques
+          currentFormData.nom && currentFormData.prenom; // Pour modification/vue, besoin des champs obligatoires
+        
+        if (hasValidData) {
+          // Double vérification de stabilité
+          setTimeout(() => {
+            const finalFormData = getFormData();
+            const isStable = JSON.stringify(currentFormData) === JSON.stringify(finalFormData);
+            
+            if (isStable) {
+              setInitialFormData(finalFormData);
+              setIsFullyInitialized(true);
+              console.log('✅ Initialisation ClientForm complète avec données stables:', finalFormData);
+            } else {
+              console.log('⏳ Données ClientForm pas encore stables, attente...');
+              setTimeout(() => {
+                const stabilizedData = getFormData();
+                setInitialFormData(stabilizedData);
+                setIsFullyInitialized(true);
+                console.log('✅ Initialisation ClientForm forcée après délai supplémentaire:', stabilizedData);
+              }, 1000);
+            }
+          }, 300);
+        }
+      }, 500); // Délai initial
+
+      return () => clearTimeout(timer);
     }
-  }, [clientId, mode, clientService]);
-  
+  }, [isInitialLoadDone, isLoading, isFullyInitialized, getFormData, mode]);
+
+  // Enregistrer le guard global seulement quand tout est prêt
+  useEffect(() => {
+    if (canDetectChanges()) {
+      const guardFunction = async () => {
+        console.log(`🔍 Vérification modifications pour ${guardId}:`, hasUnsavedChanges);
+        return hasUnsavedChanges;
+      };
+
+      registerGuard(guardId, guardFunction);
+      console.log(`🔒 Guard enregistré pour ${guardId}`);
+
+      return () => {
+        unregisterGuard(guardId);
+        console.log(`🔓 Guard désenregistré pour ${guardId}`);
+      };
+    }
+  }, [canDetectChanges, hasUnsavedChanges, guardId, registerGuard, unregisterGuard]);
+
+  // Intercepter les navigations externes
+  useEffect(() => {
+    if (canDetectChanges() && hasUnsavedChanges) {
+      const handleGlobalNavigation = (event) => {
+        console.log('🚨 Navigation externe détectée avec modifications non sauvegardées');
+        
+        if (event.detail && event.detail.source && event.detail.callback) {
+          console.log('🔄 Affichage modal pour navigation externe:', event.detail.source);
+          setGlobalNavigationCallback(() => event.detail.callback);
+          setShowGlobalModal(true);
+        }
+      };
+
+      window.addEventListener('navigation-blocked', handleGlobalNavigation);
+
+      return () => {
+        window.removeEventListener('navigation-blocked', handleGlobalNavigation);
+      };
+    }
+  }, [canDetectChanges, hasUnsavedChanges]);
+
+  // Debug: Afficher l'état des modifications
+  useEffect(() => {
+    console.log('🔍 État modifications ClientForm:', {
+      guardId,
+      hasUnsavedChanges,
+      canDetectChanges: canDetectChanges(),
+      isFullyInitialized,
+      isInitialLoadDone,
+      showGlobalModal,
+      mode,
+      isLoading,
+      isSubmitting,
+      initialDataKeys: Object.keys(initialFormData),
+      currentDataKeys: Object.keys(getFormData())
+    });
+  }, [guardId, hasUnsavedChanges, canDetectChanges, isFullyInitialized, isInitialLoadDone, showGlobalModal, mode, isLoading, isSubmitting, initialFormData]);
+
   /**
    * Charge les données d'un client depuis le service client
-   * @param {string} id - ID du client à charger
    */
   const chargerClient = async (id) => {
     setIsLoading(true);
     setError(null);
     
     try {
-      // Utiliser le service client pour récupérer les données
       const clientData = await clientService.getClient(id);
       
       if (clientData) {
-        // ✅ NORMALISATION PRÉVENTIVE DES DONNÉES CLIENT
         const normalizedClient = normalizeClientData(clientData);
         
         console.log('Client avant normalisation:', clientData);
@@ -179,17 +338,13 @@ const ClientForm = ({
 
   /**
    * Valide une adresse email
-   * @param {string} email - Email à valider
-   * @returns {boolean} - True si l'email est valide
    */
   const validateEmail = (email) => {
-    // Si le champ est vide et n'est pas obligatoire, pas d'erreur
     if (!email) {
       setFieldErrors(prev => ({ ...prev, email: null }));
       return true;
     }
     
-    // Utiliser le service client pour valider l'email
     const isValid = clientService.isValidEmail(email);
     
     if (!isValid) {
@@ -206,21 +361,15 @@ const ClientForm = ({
   
   /**
    * Valide un numéro de téléphone
-   * @param {string} phone - Téléphone à valider
-   * @returns {boolean} - True si le téléphone est valide
    */
   const validatePhone = (phone) => {
-    // Si le champ est vide et n'est pas obligatoire, pas d'erreur
     if (!phone) {
       setFieldErrors(prev => ({ ...prev, telephone: null }));
       setPhoneType(null);
       return true;
     }
     
-    // Utiliser le service client pour détecter le type de téléphone
     const phoneInfo = clientService.detectPhoneType(phone);
-    
-    // Mettre à jour l'état du type de téléphone
     setPhoneType(phoneInfo.type);
     
     if (!phoneInfo.isValid) {
@@ -230,7 +379,6 @@ const ClientForm = ({
       }));
       return false;
     } else {
-      // Mettre à jour le numéro formaté
       setClient(prev => ({
         ...prev,
         telephone: phoneInfo.formattedNumber
@@ -243,23 +391,20 @@ const ClientForm = ({
 
   /**
    * Gère les changements de valeurs des champs du formulaire
-   * @param {Event} e - Événement de changement
    */
   const handleChange = (e) => {
-    if (mode === FORM_MODES.VIEW) return; // Pas de modification en mode affichage
+    if (mode === FORM_MODES.VIEW) return;
     
     const { name, type, checked, value } = e.target;
     let newValue = type === 'checkbox' ? checked : value;
     
     // Pour les numéros de téléphone, limiter la taille et éviter les caractères invalides
     if (name === 'telephone') {
-      // Limiter à 20 caractères pour les numéros internationaux
       if (value.length <= 20) {
-        // Autoriser uniquement chiffres, +, espaces et parenthèses
         newValue = value.replace(/[^\d\s+()-]/g, '');
       } else {
         newValue = client.telephone;
-        return; // Ne pas mettre à jour si dépassement de longueur
+        return;
       }
     }
     
@@ -287,7 +432,6 @@ const ClientForm = ({
   
   /**
    * Gère le focus des champs
-   * @param {Event} e - Événement de focus
    */
   const handleFocus = (e) => {
     const { name } = e.target;
@@ -301,7 +445,6 @@ const ClientForm = ({
   
   /**
    * Gère la perte de focus des champs
-   * @param {Event} e - Événement de blur
    */
   const handleBlur = (e) => {
     const { name, value } = e.target;
@@ -311,18 +454,15 @@ const ClientForm = ({
       const phoneInfo = clientService.detectPhoneType(value);
       setPhoneType(phoneInfo.type);
       
-      // Mettre à jour avec le numéro formaté
       setClient(prev => ({
         ...prev,
         telephone: phoneInfo.formattedNumber
       }));
       
-      // Valider le numéro formaté
       validatePhone(phoneInfo.formattedNumber);
     }
     
     if (name in focusStates) {
-      // Garder l'état "focused" si le champ a une valeur
       const shouldKeepFocus = value !== '';
       setFocusStates(prev => ({
         ...prev,
@@ -338,55 +478,64 @@ const ClientForm = ({
 
   /**
    * Vérifie si tous les champs sont valides avant la soumission
-   * @returns {boolean} - True si le formulaire est valide
    */
   const validateForm = () => {
-    // Vérifier l'email et le téléphone
     const isEmailValid = validateEmail(client.email);
     const isPhoneValid = validatePhone(client.telephone);
     
-    // Retourner true si tous les champs sont valides
     return isEmailValid && isPhoneValid;
   };
 
+  // Fonction pour gérer une sauvegarde réussie
+  const handleSuccessfulSave = useCallback((clientId, message) => {
+    console.log('✅ Sauvegarde réussie ClientForm - nettoyage des modifications');
+    
+    markAsSaved();
+    resetChanges();
+    
+    const newFormData = getFormData();
+    setInitialFormData(newFormData);
+
+    unregisterGuard(guardId);
+
+    setShowGlobalModal(false);
+    setGlobalNavigationCallback(null);
+
+    if (mode === FORM_MODES.CREATE && onClientCreated) {
+      onClientCreated(clientId, message);
+    } else if (onRetourListe) {
+      onRetourListe(clientId, true, message, 'success');
+    }
+  }, [mode, onClientCreated, onRetourListe, markAsSaved, resetChanges, getFormData, guardId, unregisterGuard]);
+
   /**
    * Gère la soumission du formulaire
-   * @param {Event} e - Événement de soumission
    */
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Valider le formulaire avant soumission
     if (!validateForm()) {
       return;
     }
+    
+    setIsSubmitting(true);
     
     try {
       let result;
       
       if (mode === FORM_MODES.CREATE) {
-        // Création d'un nouveau client
         result = await clientService.createClient(client);
         
         if (result.success) {
-          if (onClientCreated) {
-            // Passer l'ID du client créé et le message à la fonction de callback
-            onClientCreated(result.id, result.message);
-          } else if (onRetourListe) {
-            // Fallback si onClientCreated n'est pas fourni
-            onRetourListe(result.id, result.message, 'success');
-          }
+          handleSuccessfulSave(result.id, result.message);
         } else {
           throw new Error(result.message || 'Une erreur est survenue lors de la création');
         }
       } else if (mode === FORM_MODES.EDIT) {
-        // Modification d'un client existant
         result = await clientService.updateClient(clientId, client);
         
         if (result.success) {
-          if (onRetourListe) {
-            onRetourListe(clientId, result.message, 'success');
-          }
+          handleSuccessfulSave(clientId, result.message);
         } else {
           throw new Error(result.message || 'Une erreur est survenue lors de la modification');
         }
@@ -394,34 +543,63 @@ const ClientForm = ({
     } catch (error) {
       console.error('Erreur:', error.message);
       setError('Erreur: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   /**
-   * Gère le retour à la liste des clients
+   * Gère le retour à la liste des clients avec protection
    */
   const handleRetour = () => {
-    if (onRetourListe) {
-      onRetourListe();
+    const canNavigate = requestNavigation(() => {
+      console.log('🔙 Navigation retour autorisée ClientForm');
+      unregisterGuard(guardId);
+      
+      if (onRetourListe) {
+        onRetourListe();
+      }
+    });
+
+    if (!canNavigate) {
+      console.log('🔒 Navigation retour bloquée par des modifications non sauvegardées');
     }
+  };
+
+  // Gérer la confirmation de navigation externe
+  const handleConfirmGlobalNavigation = () => {
+    console.log('✅ Confirmation navigation externe ClientForm');
+    setShowGlobalModal(false);
+    
+    unregisterGuard(guardId);
+    
+    if (globalNavigationCallback) {
+      globalNavigationCallback();
+      setGlobalNavigationCallback(null);
+    }
+  };
+
+  // Gérer l'annulation de navigation externe
+  const handleCancelGlobalNavigation = () => {
+    console.log('❌ Annulation navigation externe ClientForm');
+    setShowGlobalModal(false);
+    setGlobalNavigationCallback(null);
   };
 
   /**
    * Bascule l'état thérapeute du client
    */
   const toggleTherapeute = () => {
-    if (mode === FORM_MODES.VIEW) return; // Pas de modification en mode affichage
+    if (mode === FORM_MODES.VIEW) return;
     
     setClient(prevClient => ({
       ...prevClient,
-      // ✅ UTILISATION SÉCURISÉE DU HELPER BOOLÉEN
       estTherapeute: !toBoolean(prevClient.estTherapeute)
     }));
   };
 
   /**
    * Détermine le titre du formulaire en fonction du mode
-   * @returns {string} Titre du formulaire
    */
   const getTitreFormulaire = () => {
     switch (mode) {
@@ -436,13 +614,22 @@ const ClientForm = ({
     }
   };
 
+  // Cleanup lors du démontage
+  useEffect(() => {
+    return () => {
+      if (mode !== FORM_MODES.VIEW) {
+        console.log(`🧹 Nettoyage ${guardId} lors du démontage`);
+        unregisterGuard(guardId);
+        resetChanges();
+        setIsFullyInitialized(false);
+      }
+    };
+  }, [mode, guardId, unregisterGuard, resetChanges]);
+
   // Lecture seule en mode affichage
   const isReadOnly = mode === FORM_MODES.VIEW;
   
-  /**
-   * Détermine la classe CSS pour le conteneur du formulaire selon le mode
-   * @returns {string} Classe CSS
-   */
+  // Classes CSS et méthodes utilitaires
   const getFormContainerClass = () => {
     switch (mode) {
       case FORM_MODES.CREATE:
@@ -456,10 +643,6 @@ const ClientForm = ({
     }
   };
   
-  /**
-   * Détermine la classe CSS pour les groupes de champs selon le mode
-   * @returns {string} Classe CSS
-   */
   const getFormGroupClass = () => {
     switch (mode) {
       case FORM_MODES.CREATE:
@@ -470,6 +653,54 @@ const ClientForm = ({
         return "form-group-AfficherClient";
       default:
         return "form-group";
+    }
+  };
+
+  const getButtonsContainerClass = () => {
+    switch (mode) {
+      case FORM_MODES.CREATE:
+        return "NouveauClient-boutons left-align";
+      case FORM_MODES.EDIT:
+        return "ModifierClient-boutons left-align";
+      case FORM_MODES.VIEW:
+        return "AfficherClient-boutons left-align";
+      default:
+        return "client-form-boutons left-align";
+    }
+  };
+
+  const getSubmitButtonClass = () => {
+    switch (mode) {
+      case FORM_MODES.CREATE:
+        return "nc-submit-button";
+      case FORM_MODES.EDIT:
+        return "mc-submit-button";
+      default:
+        return "submit-button";
+    }
+  };
+
+  const getCancelButtonClass = () => {
+    switch (mode) {
+      case FORM_MODES.CREATE:
+        return "nc-cancel-button";
+      case FORM_MODES.EDIT:
+        return "mc-cancel-button";
+      case FORM_MODES.VIEW:
+        return "retour-bouton";
+      default:
+        return "cancel-button";
+    }
+  };
+
+  const getSubmitButtonText = () => {
+    switch (mode) {
+      case FORM_MODES.CREATE:
+        return "Créer client";
+      case FORM_MODES.EDIT:
+        return "Modifier";
+      default:
+        return "Enregistrer";
     }
   };
 
@@ -497,7 +728,7 @@ const ClientForm = ({
         <div className={getFormContainerClass()}>
           <p className="error-message">{error}</p>
           <div className="client-form-boutons">
-            <button type="button" className="cancel-button" onClick={handleRetour}>
+            <button type="button" className="cancel-button" onClick={() => onRetourListe && onRetourListe()}>
               Retour à la liste
             </button>
           </div>
@@ -505,70 +736,6 @@ const ClientForm = ({
       </div>
     );
   }
-
-  /**
-   * Détermine la classe CSS pour le conteneur des boutons
-   * @returns {string} Classe CSS
-   */
-  const getButtonsContainerClass = () => {
-    switch (mode) {
-      case FORM_MODES.CREATE:
-        return "NouveauClient-boutons left-align";
-      case FORM_MODES.EDIT:
-        return "ModifierClient-boutons left-align";
-      case FORM_MODES.VIEW:
-        return "AfficherClient-boutons left-align";
-      default:
-        return "client-form-boutons left-align";
-    }
-  };
-
-  /**
-   * Détermine la classe CSS pour le bouton de soumission
-   * @returns {string} Classe CSS
-   */
-  const getSubmitButtonClass = () => {
-    switch (mode) {
-      case FORM_MODES.CREATE:
-        return "nc-submit-button";
-      case FORM_MODES.EDIT:
-        return "mc-submit-button";
-      default:
-        return "submit-button";
-    }
-  };
-
-  /**
-   * Détermine la classe CSS pour le bouton d'annulation
-   * @returns {string} Classe CSS
-   */
-  const getCancelButtonClass = () => {
-    switch (mode) {
-      case FORM_MODES.CREATE:
-        return "nc-cancel-button";
-      case FORM_MODES.EDIT:
-        return "mc-cancel-button";
-      case FORM_MODES.VIEW:
-        return "retour-bouton";
-      default:
-        return "cancel-button";
-    }
-  };
-
-  /**
-   * Détermine le texte du bouton principal
-   * @returns {string} Texte du bouton
-   */
-  const getSubmitButtonText = () => {
-    switch (mode) {
-      case FORM_MODES.CREATE:
-        return "Créer client";
-      case FORM_MODES.EDIT:
-        return "Modifier";
-      default:
-        return "Enregistrer";
-    }
-  };
 
   // Définition des champs du formulaire pour éviter la répétition
   const formFields = [
@@ -602,7 +769,6 @@ const ClientForm = ({
                   id="estTherapeute"
                   name="estTherapeute"
                   className="switch-input"
-                  // ✅ UTILISATION SÉCURISÉE DU HELPER BOOLÉEN
                   checked={toBoolean(client.estTherapeute)}
                   onChange={toggleTherapeute}
                   disabled={isReadOnly}
@@ -693,7 +859,7 @@ const ClientForm = ({
                 onBlur={handleBlur}
                 readOnly={isReadOnly}
                 placeholder=" "
-                maxLength="20" // Pour accommoder les numéros internationaux
+                maxLength="20"
               />
               <label htmlFor="telephone">Téléphone</label>
               
@@ -750,15 +916,16 @@ const ClientForm = ({
                 <button 
                   type="submit" 
                   className={getSubmitButtonClass()}
-                  disabled={hasErrors}
+                  disabled={hasErrors || isSubmitting}
                 >
-                  {getSubmitButtonText()}
+                  {isSubmitting ? 'Enregistrement en cours...' : getSubmitButtonText()}
                 </button>
               )}
               <button 
                 type="button" 
                 className={getCancelButtonClass()} 
                 onClick={handleRetour}
+                disabled={isSubmitting}
               >
                 {mode === FORM_MODES.VIEW ? "Retour à la liste" : "Annuler"}
               </button>
@@ -766,6 +933,32 @@ const ClientForm = ({
           </div>
         </div>
       </form>
+
+      {/* Modal pour les modifications non sauvegardées (navigation locale via bouton Annuler) */}
+      <ConfirmationModal
+        isOpen={showUnsavedModal}
+        title="Modifications non sauvegardées"
+        message="Vous avez des modifications non sauvegardées dans le formulaire client. Souhaitez-vous vraiment quitter sans sauvegarder ?"
+        type="warning"
+        onConfirm={confirmNavigation}
+        onCancel={cancelNavigation}
+        confirmText="Quitter sans sauvegarder"
+        cancelText="Continuer l'édition"
+        singleButton={false}
+      />
+
+      {/* Modal pour les modifications non sauvegardées (navigation externe via menu/déconnexion) */}
+      <ConfirmationModal
+        isOpen={showGlobalModal}
+        title="Modifications non sauvegardées"
+        message="Vous avez des modifications non sauvegardées dans le formulaire client. Souhaitez-vous vraiment quitter sans sauvegarder ?"
+        type="warning"
+        onConfirm={handleConfirmGlobalNavigation}
+        onCancel={handleCancelGlobalNavigation}
+        confirmText="Quitter sans sauvegarder"
+        cancelText="Continuer l'édition"
+        singleButton={false}
+      />
     </div>
   );
 };
