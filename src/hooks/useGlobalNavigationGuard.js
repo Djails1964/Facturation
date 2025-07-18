@@ -1,4 +1,4 @@
-// src/hooks/useGlobalNavigationGuard.js
+// src/hooks/useGlobalNavigationGuard.js - Version améliorée
 import { useEffect, useRef } from 'react';
 
 /**
@@ -42,11 +42,21 @@ export const useGlobalNavigationGuard = () => {
     
     if (hasChanges) {
       console.log(`🚫 Navigation bloquée par: ${guardId}`);
+      
       // Stocker la navigation en attente
       pendingNavigation.current = navigationFunction;
       isNavigationBlocked.current = true;
       
-      // Le guard spécifique gérera l'affichage de la modal
+      // Émettre un événement pour que le composant concerné puisse afficher sa modal
+      const event = new CustomEvent('navigation-blocked', {
+        detail: {
+          source,
+          guardId,
+          callback: navigationFunction
+        }
+      });
+      window.dispatchEvent(event);
+      
       return false; // Navigation bloquée
     }
     
