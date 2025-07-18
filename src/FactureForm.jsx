@@ -153,8 +153,25 @@ function FactureForm({
     // Si les données n'ont pas changé depuis la dernière vérification
     if (lastStableData.current === currentDataString) {
       console.log('📝 Données stables détectées, initialisation...');
-      setInitialFormData(currentData);
-      setIsFullyInitialized(true);
+      
+      // Double vérification : attendre encore un peu pour s'assurer de la stabilité
+      setTimeout(() => {
+        const finalData = getFormData();
+        const finalDataString = JSON.stringify(finalData);
+        
+        // Si les données sont encore identiques après le délai supplémentaire
+        if (currentDataString === finalDataString) {
+          console.log('📝 Stabilité confirmée après double vérification');
+          setInitialFormData(finalData);
+          setIsFullyInitialized(true);
+        } else {
+          console.log('📝 Données encore instables, nouvelle vérification...');
+          // Redémarrer le processus si les données ont encore changé
+          lastStableData.current = finalDataString;
+          setTimeout(checkDataStability, 200);
+        }
+      }, 300); // Délai supplémentaire pour confirmation
+      
       return;
     }
     
@@ -180,7 +197,7 @@ function FactureForm({
     resetChanges
   } = useUnsavedChanges(
     initialFormData,     // Données initiales
-    getFormData(),       // Données actuelles
+    shouldDetectChanges ? getFormData() : {}, // Données actuelles seulement si détection active
     isSubmitting,        // isSaving
     false                // hasJustSaved - géré manuellement
   );
@@ -198,7 +215,19 @@ function FactureForm({
     console.log('Validité du formulaire:', isFormValid);
   }, [isLignesValid, facture.lignes]);
 
-  // Démarrer l'observateur de stabilité quand le chargement est terminé
+  // Forcer la synchronisation quand l'initialisation est complète
+  useEffect(() => {
+    if (isFullyInitialized && Object.keys(initialFormData).length > 0) {
+      // Attendre un petit délai puis forcer la synchronisation
+      const syncTimer = setTimeout(() => {
+        console.log('🔄 Synchronisation forcée après initialisation complète');
+        markAsSaved(); // Marquer comme sauvegardé pour éviter les faux positifs
+        resetChanges(); // Reset l'état du hook
+      }, 100);
+
+      return () => clearTimeout(syncTimer);
+    }
+  }, [isFullyInitialized, initialFormData, markAsSaved, resetChanges]);
   useEffect(() => {
     if (!isLoading && !isFullyInitialized) {
       const isEditModeReady = mode === FORM_MODES.EDIT && 
