@@ -104,26 +104,31 @@ export const useUnsavedChanges = (
     };
   }, [initialData, hasJustSaved, currentData]);
 
-  // Détecter les changements seulement après initialisation complète
+  // Détecter les changements seulement après initialisation complète et stable
   useEffect(() => {
     if (!isInitialized.current || isSaving) return;
 
-    // Vérifier que les données actuelles sont valides
+    // Vérifier que les données actuelles sont valides et stables
     const hasValidCurrentData = currentData && Object.keys(currentData).length > 0;
     
     if (!hasValidCurrentData) return;
 
-    const hasChanges = !deepCompare(lastSavedData.current, currentData);
-    
-    console.log('🔍 Comparaison modifications:', {
-      hasChanges,
-      isInitialized: isInitialized.current,
-      isSaving,
-      lastSaved: lastSavedData.current,
-      current: currentData
-    });
+    // Attendre un court délai pour s'assurer que ce n'est pas un changement transitoire
+    const comparisonTimer = setTimeout(() => {
+      const hasChanges = !deepCompare(lastSavedData.current, currentData);
+      
+      console.log('🔍 Comparaison modifications:', {
+        hasChanges,
+        isInitialized: isInitialized.current,
+        isSaving,
+        lastSaved: lastSavedData.current,
+        current: currentData
+      });
 
-    setHasUnsavedChanges(hasChanges);
+      setHasUnsavedChanges(hasChanges);
+    }, 50); // Court délai pour éviter les détections transitoires
+
+    return () => clearTimeout(comparisonTimer);
   }, [currentData, deepCompare, isSaving]);
 
   // Bloquer la navigation du navigateur si modifications non sauvegardées

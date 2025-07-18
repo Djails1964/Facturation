@@ -159,16 +159,41 @@ function FactureForm({
     );
 
    
-    // Désactiver la détection pendant le chargement initial
-    const shouldDetectChanges = !isLoading && Object.keys(initialFormData).length > 0;
-    
-    // État pour tracker l'initialisation complète
-    const [isFullyInitialized, setIsFullyInitialized] = useState(false);
+    // Désactiver la détection pendant l'initialisation
+    const shouldDetectChanges = !isLoading && isFullyInitialized && Object.keys(initialFormData).length > 0;
 
-    // Mettre à jour les données initiales seulement après stabilisation complète
+    // États pour tracker l'initialisation complète avec observateur de stabilité
+    const [isFullyInitialized, setIsFullyInitialized] = useState(false);
+    const stabilityTimer = useRef(null);
+    const lastStableData = useRef(null);
+    
+    // Fonction pour vérifier si les données sont stables
+    const checkDataStability = useCallback(() => {
+        const currentData = getFormData();
+        const currentDataString = JSON.stringify(currentData);
+        
+        // Si les données n'ont pas changé depuis la dernière vérification
+        if (lastStableData.current === currentDataString) {
+        console.log('📝 Données stables détectées, initialisation...');
+        setInitialFormData(currentData);
+        setIsFullyInitialized(true);
+        return;
+        }
+        
+        // Stocker les données actuelles et redémarrer le timer
+        lastStableData.current = currentDataString;
+        
+        if (stabilityTimer.current) {
+        clearTimeout(stabilityTimer.current);
+        }
+        
+        // Vérifier à nouveau dans 200ms
+        stabilityTimer.current = setTimeout(checkDataStability, 200);
+    }, [getFormData]);
+    
+    // Démarrer l'observateur de stabilité quand le chargement est terminé
     useEffect(() => {
         if (!isLoading && !isFullyInitialized) {
-        // Attendre que les données soient complètes et stabilisées
         const isEditModeReady = mode === FORM_MODES.EDIT && 
             facture.id && 
             facture.lignes && 
@@ -183,42 +208,46 @@ function FactureForm({
             facture.id;
 
         if (isEditModeReady || isCreateModeReady || isViewModeReady) {
-            // Délai supplémentaire pour s'assurer que toutes les transformations sont terminées
-            const initTimer = setTimeout(() => {
-            const formData = getFormData();
-            setInitialFormData(formData);
-            setIsFullyInitialized(true);
-            console.log('📝 Données initiales FactureForm stabilisées:', formData);
-            }, 500); // Délai plus long pour stabilisation complète
-
-            return () => clearTimeout(initTimer);
+            console.log('🔄 Démarrage observateur de stabilité des données');
+            // Démarrer l'observateur après un délai initial
+            setTimeout(() => {
+            checkDataStability();
+            }, 1000); // Délai initial plus long
         }
         }
-    }, [isLoading, facture.id, mode, facture.lignes, facture.numeroFacture, facture.clientId, isFullyInitialized]);
-  
-    // Intercepter les navigations externes seulement si la détection est active
-    useEffect(() => {
-        if (mode !== FORM_MODES.VIEW && shouldDetectChanges && hasUnsavedChanges) {
-        // Écouter les tentatives de navigation externe
-        const handleGlobalNavigation = (event) => {
-            console.log('🚨 Navigation externe détectée avec modifications non sauvegardées');
-            
-            // Vérifier si c'est une navigation qui nous concerne
-            if (event.detail && event.detail.source && event.detail.callback) {
-            console.log('🔄 Affichage modal pour navigation externe:', event.detail.source);
-            setGlobalNavigationCallback(() => event.detail.callback);
-            setShowGlobalModal(true);
-            }
-        };
-
-        // Écouter les événements de navigation bloquée
-        window.addEventListener('navigation-blocked', handleGlobalNavigation);
 
         return () => {
-            window.removeEventListener('navigation-blocked', handleGlobalNavigation);
+        if (stabilityTimer.current) {
+            clearTimeout(stabilityTimer.current);
+        }
+        };
+    }, [isLoading, facture.id, mode, facture.lignes, facture.numeroFacture, facture.clientId, isFullyInitialized, checkDataStability]);
+
+    // Enregistrer le guard global seulement quand la détection est active
+    useEffect(() => {
+        if (mode !== FORM_MODES.VIEW && shouldDetectChanges) {
+        // Fonction guard qui retourne true si des modifications existent
+        const guardFunction = async () => {
+            console.log(`🔍 Vérification modifications pour ${guardId}:`, hasUnsavedChanges);
+            
+            // Si des modifications existent, on doit gérer la modal
+            if (hasUnsavedChanges) {
+            return true;
+            }
+            
+            return false;
+        };
+
+        registerGuard(guardId, guardFunction);
+        console.log(`🔒 Guard enregistré pour ${guardId}`);
+
+        return () => {
+            unregisterGuard(guardId);
+            console.log(`🔓 Guard désenregistré pour ${guardId}`);
         };
         }
-    }, [mode, shouldDetectChanges, hasUnsavedChanges]);
+    }, [mode, hasUnsavedChanges, shouldDetectChanges, guardId, registerGuard, unregisterGuard]);
+
 
     // Gérer la confirmation de navigation externe
     const handleConfirmGlobalNavigation = () => {
@@ -255,31 +284,6 @@ function FactureForm({
         console.log('📝 Données initiales FactureForm création mises à jour:', formData);
         }
     }, [isLoading, facture.id, mode, facture.lignes, facture.numeroFacture]);
-
-    // Enregistrer le guard global seulement quand la détection est active
-    useEffect(() => {
-        if (mode !== FORM_MODES.VIEW && shouldDetectChanges) {
-        // Fonction guard qui retourne true si des modifications existent
-        const guardFunction = async () => {
-            console.log(`🔍 Vérification modifications pour ${guardId}:`, hasUnsavedChanges);
-            
-            // Si des modifications existent, on doit gérer la modal
-            if (hasUnsavedChanges) {
-            return true;
-            }
-            
-            return false;
-        };
-
-        registerGuard(guardId, guardFunction);
-        console.log(`🔒 Guard enregistré pour ${guardId}`);
-
-        return () => {
-            unregisterGuard(guardId);
-            console.log(`🔓 Guard désenregistré pour ${guardId}`);
-        };
-        }
-    }, [mode, hasUnsavedChanges, shouldDetectChanges, guardId, registerGuard, unregisterGuard]);
 
     useEffect(() => {
         initialLoadCompleted.current = false;
