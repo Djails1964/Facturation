@@ -66,7 +66,7 @@ export const useUnsavedChanges = (
 
   // Mettre à jour les données initiales quand elles changent
   useEffect(() => {
-    // Vérifier que les données initiales sont complètes
+    // Vérifier que les données initiales sont complètes et cohérentes
     const hasValidInitialData = initialData && 
       Object.keys(initialData).length > 0 && 
       // Pour une facture, vérifier qu'on a au moins un numéro ou un ID
@@ -79,12 +79,22 @@ export const useUnsavedChanges = (
       }
 
       initializationTimeout.current = setTimeout(() => {
+        // Vérifier une dernière fois que les données sont stables
+        const currentKeys = Object.keys(currentData);
+        const initialKeys = Object.keys(initialData);
+        
+        // Si les structures sont différentes, attendre encore
+        if (currentKeys.length !== initialKeys.length) {
+          console.log('🔄 Données pas encore stables, attendre...');
+          return;
+        }
+
         console.log('🔧 Initialisation données useUnsavedChanges:', initialData);
         initialDataRef.current = { ...initialData };
         lastSavedData.current = { ...initialData };
         isInitialized.current = true;
         setHasUnsavedChanges(false);
-      }, 100); // Petit délai pour laisser React finir ses mises à jour
+      }, 200); // Délai plus conservateur
     }
 
     return () => {
@@ -92,7 +102,7 @@ export const useUnsavedChanges = (
         clearTimeout(initializationTimeout.current);
       }
     };
-  }, [initialData, hasJustSaved]);
+  }, [initialData, hasJustSaved, currentData]);
 
   // Détecter les changements seulement après initialisation complète
   useEffect(() => {

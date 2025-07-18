@@ -162,6 +162,40 @@ function FactureForm({
     // Désactiver la détection pendant le chargement initial
     const shouldDetectChanges = !isLoading && Object.keys(initialFormData).length > 0;
     
+    // État pour tracker l'initialisation complète
+    const [isFullyInitialized, setIsFullyInitialized] = useState(false);
+
+    // Mettre à jour les données initiales seulement après stabilisation complète
+    useEffect(() => {
+        if (!isLoading && !isFullyInitialized) {
+        // Attendre que les données soient complètes et stabilisées
+        const isEditModeReady = mode === FORM_MODES.EDIT && 
+            facture.id && 
+            facture.lignes && 
+            facture.lignes.length > 0 &&
+            facture.clientId &&
+            facture.numeroFacture;
+            
+        const isCreateModeReady = mode === FORM_MODES.CREATE && 
+            facture.numeroFacture;
+            
+        const isViewModeReady = mode === FORM_MODES.VIEW && 
+            facture.id;
+
+        if (isEditModeReady || isCreateModeReady || isViewModeReady) {
+            // Délai supplémentaire pour s'assurer que toutes les transformations sont terminées
+            const initTimer = setTimeout(() => {
+            const formData = getFormData();
+            setInitialFormData(formData);
+            setIsFullyInitialized(true);
+            console.log('📝 Données initiales FactureForm stabilisées:', formData);
+            }, 500); // Délai plus long pour stabilisation complète
+
+            return () => clearTimeout(initTimer);
+        }
+        }
+    }, [isLoading, facture.id, mode, facture.lignes, facture.numeroFacture, facture.clientId, isFullyInitialized]);
+  
     // Intercepter les navigations externes seulement si la détection est active
     useEffect(() => {
         if (mode !== FORM_MODES.VIEW && shouldDetectChanges && hasUnsavedChanges) {
@@ -223,7 +257,7 @@ function FactureForm({
     }, [isLoading, facture.id, mode, facture.lignes, facture.numeroFacture]);
 
     // Enregistrer le guard global seulement quand la détection est active
-  useEffect(() => {
+    useEffect(() => {
         if (mode !== FORM_MODES.VIEW && shouldDetectChanges) {
         // Fonction guard qui retourne true si des modifications existent
         const guardFunction = async () => {
