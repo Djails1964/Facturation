@@ -138,6 +138,10 @@ function FactureForm({
     // Données initiales (seront mises à jour après chargement)
     const [initialFormData, setInitialFormData] = useState({});
 
+    // État pour la modal de navigation externe (différent de la modal locale)
+    const [showGlobalModal, setShowGlobalModal] = useState(false);
+    const [globalNavigationCallback, setGlobalNavigationCallback] = useState(null);
+
     // Hook local pour détecter les modifications
     const {
         hasUnsavedChanges,
@@ -161,7 +165,15 @@ function FactureForm({
         // Fonction guard qui retourne true si des modifications existent
         const guardFunction = async () => {
             console.log(`🔍 Vérification modifications pour ${guardId}:`, hasUnsavedChanges);
-            return hasUnsavedChanges;
+            
+            // Si des modifications existent, on doit gérer la modal
+            if (hasUnsavedChanges) {
+            // Retourner true pour indiquer qu'il faut bloquer, 
+            // mais on va gérer la modal nous-mêmes
+            return true;
+            }
+            
+            return false;
         };
 
         registerGuard(guardId, guardFunction);
@@ -173,6 +185,52 @@ function FactureForm({
         };
         }
     }, [mode, hasUnsavedChanges, guardId, registerGuard, unregisterGuard]);
+
+    // Intercepter les navigations externes et afficher notre modal
+    useEffect(() => {
+        if (mode !== FORM_MODES.VIEW && hasUnsavedChanges) {
+        // Écouter les tentatives de navigation externe
+        const handleGlobalNavigation = (event) => {
+            console.log('🚨 Navigation externe détectée avec modifications non sauvegardées');
+            
+            // Vérifier si c'est une navigation qui nous concerne
+            if (event.detail && event.detail.source && event.detail.callback) {
+            console.log('🔄 Affichage modal pour navigation externe:', event.detail.source);
+            setGlobalNavigationCallback(() => event.detail.callback);
+            setShowGlobalModal(true);
+            }
+        };
+
+        // Écouter les événements de navigation bloquée
+        window.addEventListener('navigation-blocked', handleGlobalNavigation);
+
+        return () => {
+            window.removeEventListener('navigation-blocked', handleGlobalNavigation);
+        };
+        }
+    }, [mode, hasUnsavedChanges]);
+
+    // Gérer la confirmation de navigation externe
+    const handleConfirmGlobalNavigation = () => {
+        console.log('✅ Confirmation navigation externe');
+        setShowGlobalModal(false);
+        
+        // Désenregistrer le guard avant de naviguer
+        unregisterGuard(guardId);
+        
+        // Exécuter la navigation
+        if (globalNavigationCallback) {
+        globalNavigationCallback();
+        setGlobalNavigationCallback(null);
+        }
+    };
+
+    // Gérer l'annulation de navigation externe
+    const handleCancelGlobalNavigation = () => {
+        console.log('❌ Annulation navigation externe');
+        setShowGlobalModal(false);
+        setGlobalNavigationCallback(null);
+    };
 
 
     // Mettre à jour les données initiales après chargement
@@ -687,6 +745,10 @@ function FactureForm({
         // Désenregistrer le guard temporairement (sera re-enregistré si nécessaire)
         unregisterGuard(guardId);
 
+        // Fermer toute modal ouverte
+        setShowGlobalModal(false);
+        setGlobalNavigationCallback(null);
+
         // Appeler le callback approprié
         if (mode === FORM_MODES.CREATE && onFactureCreated) {
         onFactureCreated(factureId, message);
@@ -744,41 +806,41 @@ function FactureForm({
         console.log('Données de la facture à soumettre:', facture);
         
         try {
-        const factureData = {
-            numeroFacture: facture.numeroFacture,
-            dateFacture: facture.dateFacture || new Date().toISOString().split('T')[0],
-            clientId: facture.clientId,
-            totalFacture: facture.totalFacture,
-            ristourne: facture.ristourne || 0,
-            lignes: facture.lignes
-        };
+            const factureData = {
+                numeroFacture: facture.numeroFacture,
+                dateFacture: facture.dateFacture || new Date().toISOString().split('T')[0],
+                clientId: facture.clientId,
+                totalFacture: facture.totalFacture,
+                ristourne: facture.ristourne || 0,
+                lignes: facture.lignes
+            };
 
-        let result;
-        if (mode === FORM_MODES.CREATE) {
-            result = await factureService.createFacture(factureData);
-        } else if (mode === FORM_MODES.EDIT) {
-            result = await factureService.updateFacture(factureId, factureData);
-        }
+            let result;
+            if (mode === FORM_MODES.CREATE) {
+                result = await factureService.createFacture(factureData);
+            } else if (mode === FORM_MODES.EDIT) {
+                result = await factureService.updateFacture(factureId, factureData);
+            }
 
-        if (result && result.success) {
-            const newFactureId = result.id || facture.id;
-            const message = mode === FORM_MODES.CREATE ? 'Facture créée avec succès' : 'Facture modifiée avec succès';
-            
-            // Utiliser la fonction qui nettoie tout
-            handleSuccessfulSave(newFactureId, message);
-        } else {
-            throw new Error(result?.message || 'Une erreur est survenue');
-        }
+            if (result && result.success) {
+                const newFactureId = result.id || facture.id;
+                const message = mode === FORM_MODES.CREATE ? 'Facture créée avec succès' : 'Facture modifiée avec succès';
+                
+                // Utiliser la fonction qui nettoie tout
+                handleSuccessfulSave(newFactureId, message);
+            } else {
+                throw new Error(result?.message || 'Une erreur est survenue');
+            }
         } catch (error) {
-        console.error('Erreur:', error);
-        setConfirmModal({
-            isOpen: true,
-            title: 'Erreur',
-            message: error.message || 'Une erreur est survenue lors de l\'enregistrement',
-            type: 'warning'
-        });
+            console.error('Erreur:', error);
+            setConfirmModal({
+                isOpen: true,
+                title: 'Erreur',
+                message: error.message || 'Une erreur est survenue lors de l\'enregistrement',
+                type: 'warning'
+            });
         } finally {
-        setIsSubmitting(false);
+            setIsSubmitting(false);
         }
     };
 
@@ -849,11 +911,13 @@ function FactureForm({
         console.log('🔍 État modifications FactureForm:', {
         guardId,
         hasUnsavedChanges,
+        showGlobalModal,
         mode,
         isLoading,
         isSubmitting
         });
-    }, [guardId, hasUnsavedChanges, mode, isLoading, isSubmitting]);
+    }, [guardId, hasUnsavedChanges, showGlobalModal, mode, isLoading, isSubmitting]);
+
 
     return (
 		<div className="content-section-container">
@@ -982,29 +1046,42 @@ function FactureForm({
 						</div>
 					</form>
 
-                    {/* Modal pour les modifications non sauvegardées (locale au formulaire) */}
-                        <ConfirmationModal
-                            isOpen={showUnsavedModal}
-                            title="Modifications non sauvegardées"
-                            message="Vous avez des modifications non sauvegardées dans le formulaire de facture. Souhaitez-vous vraiment quitter sans sauvegarder ?"
-                            type="warning"
-                            onConfirm={confirmNavigation}
-                            onCancel={cancelNavigation}
-                            confirmText="Quitter sans sauvegarder"
-                            cancelText="Continuer l'édition"
-                            singleButton={false}
-                        />
+                    {/* Modal pour les modifications non sauvegardées (navigation locale via bouton Annuler) */}
+                    <ConfirmationModal
+                        isOpen={showUnsavedModal}
+                        title="Modifications non sauvegardées"
+                        message="Vous avez des modifications non sauvegardées dans le formulaire de facture. Souhaitez-vous vraiment quitter sans sauvegarder ?"
+                        type="warning"
+                        onConfirm={confirmNavigation}
+                        onCancel={cancelNavigation}
+                        confirmText="Quitter sans sauvegarder"
+                        cancelText="Continuer l'édition"
+                        singleButton={false}
+                    />
 
+                    {/* Modal pour les modifications non sauvegardées (navigation externe via menu/déconnexion) */}
+                    <ConfirmationModal
+                        isOpen={showGlobalModal}
+                        title="Modifications non sauvegardées"
+                        message="Vous avez des modifications non sauvegardées dans le formulaire de facture. Souhaitez-vous vraiment quitter sans sauvegarder ?"
+                        type="warning"
+                        onConfirm={handleConfirmGlobalNavigation}
+                        onCancel={handleCancelGlobalNavigation}
+                        confirmText="Quitter sans sauvegarder"
+                        cancelText="Continuer l'édition"
+                        singleButton={false}
+                    />
 
-					<ConfirmationModal
-						isOpen={confirmModal.isOpen}
-						title={confirmModal.title}
-						message={confirmModal.message}
-						type={confirmModal.type}
-						onConfirm={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
-						onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
-						singleButton={true}
-					/>
+                    {/* Modal pour les erreurs (gardez celle existante) */}
+                    <ConfirmationModal
+                        isOpen={confirmModal.isOpen}
+                        title={confirmModal.title}
+                        message={confirmModal.message}
+                        type={confirmModal.type}
+                        onConfirm={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                        onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                        singleButton={true}
+                    />
 				</>
 			)}
 		</div>
