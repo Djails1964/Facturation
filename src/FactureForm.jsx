@@ -10,7 +10,7 @@ import ClientService from './services/ClientService';
 import './FactureForm.css';
 import { useTraceUpdate } from './useTraceUpdate'; // Importer le hook de traçage
 import TarificationService from './services/TarificationService';
-import { useUnsavedChanges } from '../hooks/useUnsavedChanges';
+import { useUnsavedChanges } from './hooks/useUnsavedChanges';
 import UnsavedChangesModal from './components/shared/UnsavedChangesModal';
 
 // Constantes pour les modes de formulaire
