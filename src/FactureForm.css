@@ -335,6 +335,18 @@
     align-items: center;
 }
 
+.unsaved-indicator {
+  color: #ff6b35;
+  font-size: 24px;
+  margin-left: 8px;
+  animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0.3; }
+}
+
 
 
 /* ==== RESPONSIVE ==== */

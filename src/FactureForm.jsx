@@ -10,6 +10,8 @@ import ClientService from './services/ClientService';
 import './FactureForm.css';
 import { useTraceUpdate } from './useTraceUpdate'; // Importer le hook de traçage
 import TarificationService from './services/TarificationService';
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges';
+import UnsavedChangesModal from './components/shared/UnsavedChangesModal';
 
 // Constantes pour les modes de formulaire
 const FORM_MODES = {
@@ -64,13 +66,13 @@ const validateFactureLines = (lignes) => {
 };
 
 function FactureForm({ 
-    mode = FORM_MODES.VIEW, 
-    factureId = null, 
-    onRetourListe, 
-    onFactureCreated,
-    clients = [],
-    clientsLoading = false,
-    onRechargerClients = null
+  mode = FORM_MODES.VIEW, 
+  factureId = null, 
+  onRetourListe, 
+  onFactureCreated, 
+  clients = [], 
+  clientsLoading = false, 
+  onRechargerClients = null 
 }) {
     useTraceUpdate({ mode, factureId, clients }, 'FactureForm');
     // États pour le formulaire
@@ -109,6 +111,49 @@ function FactureForm({
     const clientService = useMemo(() => new ClientService(), []);
     const initialLoadCompleted = useRef(false);
     const clientIdRef = useRef(null);
+
+    // ✅ NOUVEAU : Données pour la détection des modifications
+    const [initialFormData, setInitialFormData] = useState({});
+    
+    // ✅ NOUVEAU : Hook de détection des modifications non sauvegardées
+    const currentFormData = useMemo(() => ({
+        numeroFacture: facture.numeroFacture,
+        dateFacture: facture.dateFacture,
+        clientId: facture.clientId,
+        lignes: facture.lignes,
+        ristourne: facture.ristourne,
+        totalFacture: facture.totalFacture
+    }), [facture]);
+
+    const {
+        hasUnsavedChanges,
+        showUnsavedModal,
+        markAsSaved,
+        confirmNavigation,
+        cancelNavigation,
+        requestNavigation,
+        resetChanges
+    } = useUnsavedChanges(
+        initialFormData,
+        currentFormData,
+        isSubmitting,
+        false // hasJustSaved - sera géré manuellement
+    );
+
+    // ✅ NOUVEAU : Initialiser les données initiales quand la facture est chargée
+    useEffect(() => {
+        if (!isLoading && facture.id) {
+        const initialData = {
+            numeroFacture: facture.numeroFacture,
+            dateFacture: facture.dateFacture,
+            clientId: facture.clientId,
+            lignes: [...facture.lignes], // Copie profonde
+            ristourne: facture.ristourne,
+            totalFacture: facture.totalFacture
+        };
+        setInitialFormData(initialData);
+        }
+    }, [isLoading, facture.id, facture]);
 
     useEffect(() => {
         initialLoadCompleted.current = false;
@@ -645,55 +690,71 @@ function FactureForm({
 
         setIsSubmitting(true);
 
+        setIsSubmitting(true);
         console.log('Données de la facture à soumettre:', facture);
-
+        
         try {
-            const factureData = {
-                numeroFacture: facture.numeroFacture,
-                dateFacture: facture.dateFacture || new Date().toISOString().split('T')[0],
-                clientId: facture.clientId,
-                totalFacture: facture.totalFacture,
-                ristourne: facture.ristourne || 0,
-                lignes: facture.lignes
-            };
+        const factureData = {
+            numeroFacture: facture.numeroFacture,
+            dateFacture: facture.dateFacture || new Date().toISOString().split('T')[0],
+            clientId: facture.clientId,
+            totalFacture: facture.totalFacture,
+            ristourne: facture.ristourne || 0,
+            lignes: facture.lignes
+        };
 
-            let result;
-            if (mode === FORM_MODES.CREATE) {
-                result = await factureService.createFacture(factureData);
-            } else if (mode === FORM_MODES.EDIT) {
-                result = await factureService.updateFacture(factureId, factureData);
-            }
+        let result;
+        if (mode === FORM_MODES.CREATE) {
+            result = await factureService.createFacture(factureData);
+        } else if (mode === FORM_MODES.EDIT) {
+            result = await factureService.updateFacture(factureId, factureData);
+        }
 
-            if (result && result.success) {
-                const newFactureId = result.id || facture.id;
-                
-                if (mode === FORM_MODES.CREATE && onFactureCreated) {
-                    onFactureCreated(newFactureId, 'Facture créée avec succès');
-                } else if (onRetourListe) {
-                    onRetourListe(newFactureId, true, 'Facture modifiée avec succès', 'success');
-                }
-            } else {
-                throw new Error(result?.message || 'Une erreur est survenue');
+        if (result && result.success) {
+            // ✅ NOUVEAU : Marquer comme sauvegardé
+            markAsSaved();
+            resetChanges();
+            
+            const newFactureId = result.id || facture.id;
+            if (mode === FORM_MODES.CREATE && onFactureCreated) {
+            onFactureCreated(newFactureId, 'Facture créée avec succès');
+            } else if (onRetourListe) {
+            onRetourListe(newFactureId, true, 'Facture modifiée avec succès', 'success');
             }
+        } else {
+            throw new Error(result?.message || 'Une erreur est survenue');
+        }
         } catch (error) {
-            console.error('Erreur:', error);
-            setConfirmModal({
-                isOpen: true,
-                title: 'Erreur',
-                message: error.message || 'Une erreur est survenue lors de l\'enregistrement',
-                type: 'warning'
-            });
+        console.error('Erreur:', error);
+        setConfirmModal({
+            isOpen: true,
+            title: 'Erreur',
+            message: error.message || 'Une erreur est survenue lors de l\'enregistrement',
+            type: 'warning'
+        });
         } finally {
-            setIsSubmitting(false);
+        setIsSubmitting(false);
         }
     };
 
+    // ✅ MODIFIÉ : Gestion du retour avec vérification des modifications
     const handleAnnuler = () => {
+        const navigation = () => {
         if (typeof onRetourListe === 'function') {
             onRetourListe(null, false, '', '');
         } else {
             window.history.back();
         }
+        };
+
+        // Vérifier s'il y a des modifications non sauvegardées
+        if (!requestNavigation(navigation)) {
+        // La navigation a été bloquée, la modal s'affichera
+        return;
+        }
+        
+        // Pas de modifications, navigation directe
+        navigation();
     };
 
     // Détermine le style des boutons
@@ -725,11 +786,41 @@ function FactureForm({
         }
     };
 
+    // ✅ NOUVEAU : Gestion de la sauvegarde depuis la modal
+    const handleSaveAndExit = async () => {
+        try {
+        // Déclencher la sauvegarde
+        const formElement = document.querySelector('.ff-formulaire-facture');
+        if (formElement) {
+            const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+            formElement.dispatchEvent(submitEvent);
+        }
+        } catch (error) {
+        console.error('Erreur lors de la sauvegarde:', error);
+        // En cas d'erreur, laisser l'utilisateur choisir
+        cancelNavigation();
+        }
+    };
+
+    // ✅ NOUVEAU : Gestion de la sortie sans sauvegarde
+    const handleDiscardAndExit = () => {
+        resetChanges();
+        confirmNavigation();
+    };
+
 
     return (
 		<div className="content-section-container">
 			<div className="content-section-title">
-				<h2>{getTitreFormulaire()}</h2>
+				<h2>
+                    {getTitreFormulaire()}
+                    {/* ✅ NOUVEAU : Indicateur de modifications non sauvegardées */}
+                    {hasUnsavedChanges && !isReadOnly && (
+                        <span className="unsaved-indicator" title="Modifications non sauvegardées">
+                        ●
+                        </span>
+                    )}
+                </h2>
 			</div>
 			
 			{/* État de chargement */}
@@ -841,6 +932,16 @@ function FactureForm({
 							)}
 						</div>
 					</form>
+
+                    {/* ✅ NOUVEAU : Modal de confirmation des modifications non sauvegardées */}
+                    <UnsavedChangesModal
+                        isOpen={showUnsavedModal}
+                        onSave={handleSaveAndExit}
+                        onDiscard={handleDiscardAndExit}
+                        onCancel={cancelNavigation}
+                        entityType="facture"
+                        showSaveOption={!isReadOnly}
+                    />
 
 					<ConfirmationModal
 						isOpen={confirmModal.isOpen}
