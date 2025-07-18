@@ -1,4 +1,4 @@
-// src/hooks/useUnsavedChanges.js
+// src/hooks/useUnsavedChanges.js - Version améliorée
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 /**
@@ -24,6 +24,7 @@ export const useUnsavedChanges = (
   const initialDataRef = useRef(initialData);
   const isInitialized = useRef(false);
   const lastSavedData = useRef(initialData);
+  const initializationTimeout = useRef(null);
 
   // Fonction de comparaison profonde optimisée
   const deepCompare = useCallback((obj1, obj2) => {
@@ -38,7 +39,6 @@ export const useUnsavedChanges = (
 
     for (let key of keys1) {
       if (!keys2.includes(key)) return false;
-      
       const val1 = obj1[key];
       const val2 = obj2[key];
 
@@ -66,19 +66,53 @@ export const useUnsavedChanges = (
 
   // Mettre à jour les données initiales quand elles changent
   useEffect(() => {
-    if (!isInitialized.current || hasJustSaved) {
-      initialDataRef.current = { ...currentData };
-      lastSavedData.current = { ...currentData };
-      isInitialized.current = true;
-      setHasUnsavedChanges(false);
-    }
-  }, [hasJustSaved, currentData]);
+    // Vérifier que les données initiales sont complètes
+    const hasValidInitialData = initialData && 
+      Object.keys(initialData).length > 0 && 
+      // Pour une facture, vérifier qu'on a au moins un numéro ou un ID
+      (initialData.numeroFacture || initialData.id || initialData.clientId);
 
-  // Détecter les changements
+    if (hasValidInitialData && (!isInitialized.current || hasJustSaved)) {
+      // Délai pour s'assurer que toutes les mises à jour sont terminées
+      if (initializationTimeout.current) {
+        clearTimeout(initializationTimeout.current);
+      }
+
+      initializationTimeout.current = setTimeout(() => {
+        console.log('🔧 Initialisation données useUnsavedChanges:', initialData);
+        initialDataRef.current = { ...initialData };
+        lastSavedData.current = { ...initialData };
+        isInitialized.current = true;
+        setHasUnsavedChanges(false);
+      }, 100); // Petit délai pour laisser React finir ses mises à jour
+    }
+
+    return () => {
+      if (initializationTimeout.current) {
+        clearTimeout(initializationTimeout.current);
+      }
+    };
+  }, [initialData, hasJustSaved]);
+
+  // Détecter les changements seulement après initialisation complète
   useEffect(() => {
     if (!isInitialized.current || isSaving) return;
 
+    // Vérifier que les données actuelles sont valides
+    const hasValidCurrentData = currentData && Object.keys(currentData).length > 0;
+    
+    if (!hasValidCurrentData) return;
+
     const hasChanges = !deepCompare(lastSavedData.current, currentData);
+    
+    console.log('🔍 Comparaison modifications:', {
+      hasChanges,
+      isInitialized: isInitialized.current,
+      isSaving,
+      lastSaved: lastSavedData.current,
+      current: currentData
+    });
+
     setHasUnsavedChanges(hasChanges);
   }, [currentData, deepCompare, isSaving]);
 
@@ -102,6 +136,7 @@ export const useUnsavedChanges = (
   const markAsSaved = useCallback(() => {
     lastSavedData.current = { ...currentData };
     setHasUnsavedChanges(false);
+    console.log('✅ Marqué comme sauvegardé');
   }, [currentData]);
 
   const confirmNavigation = useCallback(() => {
@@ -130,20 +165,22 @@ export const useUnsavedChanges = (
     setHasUnsavedChanges(false);
     setShowUnsavedModal(false);
     setPendingNavigation(null);
+    isInitialized.current = false;
+    console.log('🔄 Reset des changements');
   }, []);
 
   return {
     // États
     hasUnsavedChanges,
     showUnsavedModal,
-    
     // Fonctions
     markAsSaved,
     confirmNavigation,
     cancelNavigation,
     requestNavigation,
     resetChanges,
-    
+    // État d'initialisation pour debug
+    isInitialized: isInitialized.current,
     // Données de debug
     initialData: initialDataRef.current,
     lastSavedData: lastSavedData.current

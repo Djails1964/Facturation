@@ -122,6 +122,10 @@ function FactureForm({
     // ID unique pour ce guard
     const guardId = `facture-form-${factureId || 'new'}`;
 
+    // État pour la modal de navigation externe (différent de la modal locale)
+    const [showGlobalModal, setShowGlobalModal] = useState(false);
+    const [globalNavigationCallback, setGlobalNavigationCallback] = useState(null);
+
     // Fonction pour obtenir les données actuelles du formulaire
     const getFormData = useCallback(() => {
         return {
@@ -138,11 +142,7 @@ function FactureForm({
     // Données initiales (seront mises à jour après chargement)
     const [initialFormData, setInitialFormData] = useState({});
 
-    // État pour la modal de navigation externe (différent de la modal locale)
-    const [showGlobalModal, setShowGlobalModal] = useState(false);
-    const [globalNavigationCallback, setGlobalNavigationCallback] = useState(null);
-
-    // Hook local pour détecter les modifications
+    // Hook local pour détecter les modifications - attendre l'initialisation complète
     const {
         hasUnsavedChanges,
         showUnsavedModal,
@@ -159,36 +159,12 @@ function FactureForm({
     );
 
    
-    // Enregistrer le guard global quand en mode édition
+    // Désactiver la détection pendant le chargement initial
+    const shouldDetectChanges = !isLoading && Object.keys(initialFormData).length > 0;
+    
+    // Intercepter les navigations externes seulement si la détection est active
     useEffect(() => {
-        if (mode !== FORM_MODES.VIEW) {
-        // Fonction guard qui retourne true si des modifications existent
-        const guardFunction = async () => {
-            console.log(`🔍 Vérification modifications pour ${guardId}:`, hasUnsavedChanges);
-            
-            // Si des modifications existent, on doit gérer la modal
-            if (hasUnsavedChanges) {
-            // Retourner true pour indiquer qu'il faut bloquer, 
-            // mais on va gérer la modal nous-mêmes
-            return true;
-            }
-            
-            return false;
-        };
-
-        registerGuard(guardId, guardFunction);
-        console.log(`🔒 Guard enregistré pour ${guardId}`);
-
-        return () => {
-            unregisterGuard(guardId);
-            console.log(`🔓 Guard désenregistré pour ${guardId}`);
-        };
-        }
-    }, [mode, hasUnsavedChanges, guardId, registerGuard, unregisterGuard]);
-
-    // Intercepter les navigations externes et afficher notre modal
-    useEffect(() => {
-        if (mode !== FORM_MODES.VIEW && hasUnsavedChanges) {
+        if (mode !== FORM_MODES.VIEW && shouldDetectChanges && hasUnsavedChanges) {
         // Écouter les tentatives de navigation externe
         const handleGlobalNavigation = (event) => {
             console.log('🚨 Navigation externe détectée avec modifications non sauvegardées');
@@ -208,7 +184,7 @@ function FactureForm({
             window.removeEventListener('navigation-blocked', handleGlobalNavigation);
         };
         }
-    }, [mode, hasUnsavedChanges]);
+    }, [mode, shouldDetectChanges, hasUnsavedChanges]);
 
     // Gérer la confirmation de navigation externe
     const handleConfirmGlobalNavigation = () => {
@@ -232,15 +208,44 @@ function FactureForm({
         setGlobalNavigationCallback(null);
     };
 
-
-    // Mettre à jour les données initiales après chargement
     useEffect(() => {
-        if (!isLoading && (factureId || mode === FORM_MODES.CREATE)) {
+        // Attendre que le chargement soit terminé ET que les données soient complètes
+        if (!isLoading && facture.id && mode === FORM_MODES.EDIT && facture.lignes && facture.lignes.length > 0) {
         const formData = getFormData();
         setInitialFormData(formData);
-        console.log('📝 Données initiales FactureForm mises à jour:', formData);
+        console.log('📝 Données initiales FactureForm mises à jour après chargement complet:', formData);
+        } else if (!isLoading && mode === FORM_MODES.CREATE && facture.numeroFacture) {
+        // En mode création, attendre que le numéro de facture soit généré
+        const formData = getFormData();
+        setInitialFormData(formData);
+        console.log('📝 Données initiales FactureForm création mises à jour:', formData);
         }
-    }, [isLoading, factureId, mode, getFormData]);
+    }, [isLoading, facture.id, mode, facture.lignes, facture.numeroFacture]);
+
+    // Enregistrer le guard global seulement quand la détection est active
+  useEffect(() => {
+        if (mode !== FORM_MODES.VIEW && shouldDetectChanges) {
+        // Fonction guard qui retourne true si des modifications existent
+        const guardFunction = async () => {
+            console.log(`🔍 Vérification modifications pour ${guardId}:`, hasUnsavedChanges);
+            
+            // Si des modifications existent, on doit gérer la modal
+            if (hasUnsavedChanges) {
+            return true;
+            }
+            
+            return false;
+        };
+
+        registerGuard(guardId, guardFunction);
+        console.log(`🔒 Guard enregistré pour ${guardId}`);
+
+        return () => {
+            unregisterGuard(guardId);
+            console.log(`🔓 Guard désenregistré pour ${guardId}`);
+        };
+        }
+    }, [mode, hasUnsavedChanges, shouldDetectChanges, guardId, registerGuard, unregisterGuard]);
 
     useEffect(() => {
         initialLoadCompleted.current = false;
@@ -844,7 +849,7 @@ function FactureForm({
         }
     };
 
-    // ✅ MODIFIÉ : Gestion du retour avec vérification des modifications
+    // Modifier handleAnnuler pour utiliser requestNavigation local
     const handleAnnuler = () => {
         const canNavigate = requestNavigation(() => {
         console.log('🔙 Navigation retour autorisée');
@@ -906,17 +911,19 @@ function FactureForm({
     };
 
 
-    // Debug: Afficher l'état des modifications
     useEffect(() => {
         console.log('🔍 État modifications FactureForm:', {
         guardId,
         hasUnsavedChanges,
+        shouldDetectChanges,
         showGlobalModal,
         mode,
         isLoading,
-        isSubmitting
+        isSubmitting,
+        initialDataKeys: Object.keys(initialFormData),
+        currentDataKeys: Object.keys(getFormData())
         });
-    }, [guardId, hasUnsavedChanges, showGlobalModal, mode, isLoading, isSubmitting]);
+    }, [guardId, hasUnsavedChanges, shouldDetectChanges, showGlobalModal, mode, isLoading, isSubmitting, initialFormData]);
 
 
     return (
