@@ -3,7 +3,7 @@
  * Le composant s'adapte à trois modes : affichage, création et modification
  * VERSION MISE À JOUR avec gestion sécurisée des booléens et protection des modifications non sauvegardées
  */
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import './ClientForm.css';
 import ClientService from './services/ClientService';
 import { toBoolean, normalizeBooleanFields } from './utils/booleanHelper';
