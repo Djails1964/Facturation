@@ -34,6 +34,7 @@ const ClientForm = ({
   onClientCreated,
   clientService: propClientService
 }) => {
+  console.log('🆔 ClientForm s\'exécute avec mode:', mode, 'clientId:', clientId); // ⬅️ AJOUTEZ CETTE LIGNE
   // Hook global pour s'enregistrer
   const { registerGuard, unregisterGuard } = useNavigationGuard();
 
@@ -148,10 +149,14 @@ const ClientForm = ({
 
   // Chargement des données du client au montage
   useEffect(() => {
+    console.log('🚀 ClientForm useEffect chargement appelé, mode:', mode, 'clientId:', clientId);
+    
     const loadData = async () => {
       if (clientId && (mode === FORM_MODES.VIEW || mode === FORM_MODES.EDIT)) {
+        console.log('📥 Chargement du client:', clientId);
         await chargerClient(clientId);
       } else if (mode === FORM_MODES.CREATE) {
+        console.log('✨ Mode création - initialisation du formulaire vide');
         // Réinitialiser le formulaire pour la création
         const defaultClient = {
           id: '',
@@ -191,6 +196,7 @@ const ClientForm = ({
       }
       
       // Marquer le chargement initial comme terminé
+      console.log('✅ Chargement initial ClientForm terminé');
       setIsInitialLoadDone(true);
     };
 
@@ -289,9 +295,14 @@ const ClientForm = ({
       isLoading,
       isSubmitting,
       initialDataKeys: Object.keys(initialFormData),
-      currentDataKeys: Object.keys(getFormData())
+      currentDataKeys: Object.keys(getFormData()),
+      clientData: {
+        nom: client.nom,
+        prenom: client.prenom,
+        titre: client.titre
+      }
     });
-  }, [guardId, hasUnsavedChanges, canDetectChanges, isFullyInitialized, isInitialLoadDone, showGlobalModal, mode, isLoading, isSubmitting, initialFormData]);
+  }, [guardId, hasUnsavedChanges, canDetectChanges, isFullyInitialized, isInitialLoadDone, showGlobalModal, mode, isLoading, isSubmitting, initialFormData, client]);
 
   /**
    * Charge les données d'un client depuis le service client
@@ -397,6 +408,8 @@ const ClientForm = ({
     
     const { name, type, checked, value } = e.target;
     let newValue = type === 'checkbox' ? checked : value;
+    
+    console.log('📝 ClientForm handleChange:', { name, value: newValue, mode });
     
     // Pour les numéros de téléphone, limiter la taille et éviter les caractères invalides
     if (name === 'telephone') {

@@ -97,9 +97,10 @@ export const useUnsavedChanges = (
     const detectionTimer = setTimeout(() => {
       const hasChanges = !deepCompare(lastSavedData.current, currentData);
       
-      // Vérification supplémentaire : ignorer les changements minimes
-      if (hasChanges) {
-        // Si c'est juste un changement de format ou de structure sans changement de contenu réel
+      // Pour les formulaires simples (comme ClientForm), utiliser la comparaison directe
+      // Pour les formulaires complexes (comme FactureForm), utiliser le filtrage
+      if (hasChanges && currentData.lignes !== undefined) {
+        // C'est probablement FactureForm - utiliser le filtrage avancé
         const currentDataFiltered = {
           numeroFacture: currentData.numeroFacture,
           dateFacture: currentData.dateFacture,
@@ -130,7 +131,7 @@ export const useUnsavedChanges = (
         
         const realChanges = !deepCompare(savedDataFiltered, currentDataFiltered);
         
-        console.log('🔍 Comparaison modifications useUnsavedChanges:', {
+        console.log('🔍 Comparaison modifications useUnsavedChanges (FactureForm):', {
           hasChanges: realChanges,
           isInitialized: isInitialized.current,
           isSaving,
@@ -140,7 +141,16 @@ export const useUnsavedChanges = (
 
         setHasUnsavedChanges(realChanges);
       } else {
-        setHasUnsavedChanges(false);
+        // C'est probablement ClientForm ou autre - utiliser la comparaison directe
+        console.log('🔍 Comparaison modifications useUnsavedChanges (simple):', {
+          hasChanges,
+          isInitialized: isInitialized.current,
+          isSaving,
+          lastSaved: lastSavedData.current,
+          current: currentData
+        });
+
+        setHasUnsavedChanges(hasChanges);
       }
     }, 300); // Délai plus long pour la stabilité
 
