@@ -34,7 +34,6 @@ const ClientForm = ({
   onClientCreated,
   clientService: propClientService
 }) => {
-  console.log('🆔 ClientForm s\'exécute avec mode:', mode, 'clientId:', clientId); // ⬅️ AJOUTEZ CETTE LIGNE
   // Hook global pour s'enregistrer
   const { registerGuard, unregisterGuard } = useNavigationGuard();
 
@@ -131,6 +130,11 @@ const ClientForm = ({
            mode !== FORM_MODES.VIEW;
   }, [isLoading, isSubmitting, isInitialLoadDone, isFullyInitialized, initialFormData, mode]);
 
+  // Données actuelles pour la détection (calculées à chaque render)
+  const currentFormData = useMemo(() => {
+    return canDetectChanges() ? getFormData() : {};
+  }, [canDetectChanges, getFormData]);
+
   // Hook local pour détecter les modifications
   const {
     hasUnsavedChanges,
@@ -142,10 +146,23 @@ const ClientForm = ({
     resetChanges
   } = useUnsavedChanges(
     initialFormData,
-    canDetectChanges() ? getFormData() : {},
+    currentFormData, // ⬅️ MAINTENANT ÇA SE MET À JOUR !
     isSubmitting,
     false
   );
+
+  // Debug: Log des données pour voir ce qui change
+  useEffect(() => {
+    if (canDetectChanges()) {
+      console.log('📊 ClientForm données comparaison:', {
+        canDetectChanges: canDetectChanges(),
+        initialFormData,
+        currentFormData,
+        sonIdentiques: JSON.stringify(initialFormData) === JSON.stringify(currentFormData),
+        hasUnsavedChanges
+      });
+    }
+  }, [client, initialFormData, canDetectChanges, currentFormData, hasUnsavedChanges]);
 
   // Chargement des données du client au montage
   useEffect(() => {
