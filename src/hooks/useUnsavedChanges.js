@@ -1,4 +1,4 @@
-// src/hooks/useUnsavedChanges.js - Version corrigée
+// src/hooks/useUnsavedChanges.js - Version corrigée pour gérer la création
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 /**
@@ -25,6 +25,24 @@ export const useUnsavedChanges = (
   const isInitialized = useRef(false);
   const initialDataString = JSON.stringify(initialData);
   const currentDataString = JSON.stringify(currentData);
+
+  // Fonction pour vérifier si les données sont "vides" (état initial pour création)
+  const isEmptyFormData = useCallback((data) => {
+    if (!data || typeof data !== 'object') return true;
+    
+    const keys = Object.keys(data);
+    if (keys.length === 0) return true;
+    
+    // Vérifier si tous les champs sont vides/falsy (sauf les booléens qui peuvent être false)
+    return keys.every(key => {
+      const value = data[key];
+      if (typeof value === 'boolean') return false; // Les booléens comptent comme "non vides"
+      if (typeof value === 'number') return value === 0; // Les nombres 0 sont considérés comme vides
+      if (Array.isArray(value)) return value.length === 0;
+      if (typeof value === 'string') return value.trim() === '';
+      return !value; // null, undefined, etc.
+    });
+  }, []);
 
   // Fonction de comparaison profonde optimisée
   const deepCompare = useCallback((obj1, obj2) => {
@@ -66,96 +84,60 @@ export const useUnsavedChanges = (
 
   // Initialiser les données de référence au premier chargement
   useEffect(() => {
-    // Vérifier que les données initiales sont valides et complètes
-    const hasValidInitialData = initialData && 
-      Object.keys(initialData).length > 0 && 
-      (initialData.numeroFacture || initialData.id || initialData.clientId);
+    // Initialiser dès qu'on a des données initiales (même vides)
+    const shouldInitialize = !isInitialized.current && 
+      initialData && 
+      Object.keys(initialData).length > 0;
 
-    if (hasValidInitialData && !isInitialized.current) {
-      console.log('🔧 Initialisation données useUnsavedChanges:', initialData);
+    if (shouldInitialize) {
+      console.log('🔧 Initialisation données useUnsavedChanges:', {
+        initialData,
+        isEmpty: isEmptyFormData(initialData),
+        keys: Object.keys(initialData)
+      });
+      
       lastSavedData.current = { ...initialData };
       isInitialized.current = true;
       setHasUnsavedChanges(false);
     }
-  }, [initialDataString]); // Utiliser la version sérialisée pour éviter les re-renders
+  }, [initialDataString, isEmptyFormData]);
 
-  // Détecter les changements seulement après initialisation et avec des données valides
+  // Détecter les changements seulement après initialisation
   useEffect(() => {
+    console.log('🔍 useUnsavedChanges effect déclenché:', {
+      isInitialized: isInitialized.current,
+      isSaving,
+      currentDataKeys: Object.keys(currentData),
+      isEmpty: isEmptyFormData(currentData)
+    });
+
     // Ne pas détecter les changements si :
     // - Pas encore initialisé
     // - En cours de sauvegarde
     // - Pas de données actuelles valides
-    // - Données actuelles vides
-    if (!isInitialized.current || 
-        isSaving || 
-        !currentData || 
-        Object.keys(currentData).length === 0) {
+    if (!isInitialized.current || isSaving || !currentData) {
+      console.log('🚫 Détection bloquée - conditions non remplies');
       return;
     }
 
-    // Attendre un délai plus long pour éviter les détections transitoires
+    // Attendre un délai pour éviter les détections transitoires
     const detectionTimer = setTimeout(() => {
+      // ✅ LOGIQUE SIMPLIFIÉE : comparer directement les données
       const hasChanges = !deepCompare(lastSavedData.current, currentData);
       
-      // Pour les formulaires simples (comme ClientForm), utiliser la comparaison directe
-      // Pour les formulaires complexes (comme FactureForm), utiliser le filtrage
-      if (hasChanges && currentData.lignes !== undefined) {
-        // C'est probablement FactureForm - utiliser le filtrage avancé
-        const currentDataFiltered = {
-          numeroFacture: currentData.numeroFacture,
-          dateFacture: currentData.dateFacture,
-          clientId: currentData.clientId,
-          ristourne: currentData.ristourne || 0,
-          lignes: currentData.lignes?.map(l => ({
-            description: l.description,
-            quantite: l.quantite,
-            prixUnitaire: l.prixUnitaire,
-            serviceId: l.serviceId,
-            uniteId: l.uniteId
-          })) || []
-        };
-        
-        const savedDataFiltered = {
-          numeroFacture: lastSavedData.current.numeroFacture,
-          dateFacture: lastSavedData.current.dateFacture,
-          clientId: lastSavedData.current.clientId,
-          ristourne: lastSavedData.current.ristourne || 0,
-          lignes: lastSavedData.current.lignes?.map(l => ({
-            description: l.description,
-            quantite: l.quantite,
-            prixUnitaire: l.prixUnitaire,
-            serviceId: l.serviceId,
-            uniteId: l.uniteId
-          })) || []
-        };
-        
-        const realChanges = !deepCompare(savedDataFiltered, currentDataFiltered);
-        
-        console.log('🔍 Comparaison modifications useUnsavedChanges (FactureForm):', {
-          hasChanges: realChanges,
-          isInitialized: isInitialized.current,
-          isSaving,
-          lastSaved: savedDataFiltered,
-          current: currentDataFiltered
-        });
+      console.log('🔍 useUnsavedChanges - Détection de modifications:', {
+        hasChanges,
+        lastSaved: lastSavedData.current,
+        current: currentData,
+        isLastSavedEmpty: isEmptyFormData(lastSavedData.current),
+        isCurrentEmpty: isEmptyFormData(currentData)
+      });
 
-        setHasUnsavedChanges(realChanges);
-      } else {
-        // C'est probablement ClientForm ou autre - utiliser la comparaison directe
-        console.log('🔍 Comparaison modifications useUnsavedChanges (simple):', {
-          hasChanges,
-          isInitialized: isInitialized.current,
-          isSaving,
-          lastSaved: lastSavedData.current,
-          current: currentData
-        });
-
-        setHasUnsavedChanges(hasChanges);
-      }
-    }, 300); // Délai plus long pour la stabilité
+      setHasUnsavedChanges(hasChanges);
+    }, 300);
 
     return () => clearTimeout(detectionTimer);
-  }, [currentDataString, deepCompare, isSaving]); // Utiliser la version sérialisée
+  }, [currentDataString, deepCompare, isSaving, isEmptyFormData]);
 
   // Bloquer la navigation du navigateur si modifications non sauvegardées
   useEffect(() => {
@@ -175,7 +157,7 @@ export const useUnsavedChanges = (
 
   // Fonctions utilitaires
   const markAsSaved = useCallback(() => {
-    if (currentData && Object.keys(currentData).length > 0) {
+    if (currentData) {
       lastSavedData.current = { ...currentData };
       setHasUnsavedChanges(false);
       console.log('✅ Marqué comme sauvegardé');
@@ -208,7 +190,6 @@ export const useUnsavedChanges = (
     setHasUnsavedChanges(false);
     setShowUnsavedModal(false);
     setPendingNavigation(null);
-    // NE PAS réinitialiser isInitialized - laisser les données de référence
     console.log('🔄 Reset des changements');
   }, []);
 

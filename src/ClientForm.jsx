@@ -132,8 +132,14 @@ const ClientForm = ({
 
   // Données actuelles pour la détection (calculées à chaque render)
   const currentFormData = useMemo(() => {
-    return canDetectChanges() ? getFormData() : {};
-  }, [canDetectChanges, getFormData]);
+    const data = canDetectChanges() ? getFormData() : {};
+    console.log('🔄 useMemo currentFormData recalculé:', {
+      canDetectChanges: canDetectChanges(),
+      data,
+      clientNumero: client.numero
+    });
+    return data;
+  }, [canDetectChanges, client]); // ⬅️ CHANGEMENT : dépendre directement de `client` au lieu de `getFormData`
 
   // Hook local pour détecter les modifications
   const {
@@ -228,10 +234,12 @@ const ClientForm = ({
         console.log('🔧 Finalisation de l\'initialisation ClientForm');
         const currentFormData = getFormData();
         
-        // Vérifier que nous avons des données valides
+        // ✅ NOUVELLE LOGIQUE : similaire à FactureForm
         const hasValidData = mode === FORM_MODES.CREATE ? 
-          true : // Pour la création, pas besoin de données spécifiques
-          currentFormData.nom && currentFormData.prenom; // Pour modification/vue, besoin des champs obligatoires
+          // Pour la création, vérifier qu'on a au moins les données de base initialisées
+          (currentFormData.titre !== undefined && currentFormData.nom !== undefined) :
+          // Pour modification/vue, besoin des champs obligatoires remplis
+          (currentFormData.nom && currentFormData.prenom);
         
         if (hasValidData) {
           // Double vérification de stabilité
@@ -242,7 +250,11 @@ const ClientForm = ({
             if (isStable) {
               setInitialFormData(finalFormData);
               setIsFullyInitialized(true);
-              console.log('✅ Initialisation ClientForm complète avec données stables:', finalFormData);
+              console.log('✅ Initialisation ClientForm complète avec données stables:', {
+                mode,
+                finalFormData,
+                isEmpty: mode === FORM_MODES.CREATE && Object.values(finalFormData).every(v => !v || v === false)
+              });
             } else {
               console.log('⏳ Données ClientForm pas encore stables, attente...');
               setTimeout(() => {
@@ -253,6 +265,12 @@ const ClientForm = ({
               }, 1000);
             }
           }, 300);
+        } else {
+          console.log('❌ Données ClientForm pas encore valides pour initialisation:', {
+            mode,
+            currentFormData,
+            hasValidData
+          });
         }
       }, 500); // Délai initial
 
