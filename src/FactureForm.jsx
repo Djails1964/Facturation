@@ -204,36 +204,48 @@ function FactureForm({
         console.log('🔧 Finalisation de l\'initialisation');
         const currentFormData = getFormData();
         
-        // Vérifier que nous avons des données valides et complètes
+        // ✅ MODIFICATION : Pour la modification, attendre que les lignes soient complètement chargées
         const hasValidData = mode === FORM_MODES.CREATE ? 
           currentFormData.numeroFacture :
           currentFormData.numeroFacture && 
           currentFormData.lignes?.length > 0 && 
-          currentFormData.totalFacture > 0;
+          // ✅ S'assurer que les lignes ont leurs serviceId et uniteId (complètement transformées)
+          currentFormData.lignes.every(ligne => ligne.serviceId && ligne.uniteId);
         
         if (hasValidData) {
-          // Double vérification de stabilité après un délai supplémentaire
+          // ✅ Délai plus long pour permettre aux transformations de données de se terminer
           setTimeout(() => {
             const finalFormData = getFormData();
-            const isStable = JSON.stringify(currentFormData) === JSON.stringify(finalFormData);
             
-            if (isStable) {
-              setInitialFormData(finalFormData);
-              setIsFullyInitialized(true);
-              console.log('✅ Initialisation complète avec données stables:', finalFormData);
-            } else {
-              console.log('⏳ Données pas encore stables, attente...');
-              // Redéclencher la vérification
-              setTimeout(() => {
-                const stabilizedData = getFormData();
-                setInitialFormData(stabilizedData);
+            // ✅ Vérifier la stabilité sur plusieurs cycles
+            setTimeout(() => {
+              const ultraFinalFormData = getFormData();
+              const isStable = JSON.stringify(finalFormData) === JSON.stringify(ultraFinalFormData);
+              
+              if (isStable) {
+                setInitialFormData(ultraFinalFormData);
                 setIsFullyInitialized(true);
-                console.log('✅ Initialisation forcée après délai supplémentaire:', stabilizedData);
-              }, 1000);
-            }
-          }, 300);
+                console.log('✅ Initialisation complète avec données ultra-stables:', ultraFinalFormData);
+              } else {
+                console.log('⏳ Données pas encore ultra-stables, dernière tentative...');
+                setTimeout(() => {
+                  const lastFormData = getFormData();
+                  setInitialFormData(lastFormData);
+                  setIsFullyInitialized(true);
+                  console.log('✅ Initialisation forcée après délai maximum:', lastFormData);
+                }, 1000);
+              }
+            }, 500); // Délai supplémentaire pour la stabilité
+          }, 800); // Délai pour les transformations
+        } else {
+          console.log('❌ Données pas encore complètes pour initialisation:', {
+            mode,
+            currentFormData,
+            hasValidData,
+            lignesComplete: currentFormData.lignes?.every(ligne => ligne.serviceId && ligne.uniteId)
+          });
         }
-      }, 1000); // Délai initial plus long
+      }, 1500); // ✅ Délai initial encore plus long
 
       return () => clearTimeout(timer);
     }
@@ -802,9 +814,30 @@ function FactureForm({
       return;
     }
 
-    // Pour les modes EDIT et CREATE, utiliser la protection
+    // ✅ DEBUG : Afficher l'état actuel
+    console.log('🔍 État avant navigation Annuler:', {
+      hasUnsavedChanges,
+      canDetectChanges: canDetectChanges(),
+      mode,
+      isSubmitting
+    });
+
+    // ✅ Vérification directe : si pas de modifications, naviguer directement
+    if (!hasUnsavedChanges) {
+      console.log('✅ Aucune modification détectée, navigation directe');
+      unregisterGuard(guardId);
+      
+      if (typeof onRetourListe === 'function') {
+        onRetourListe(null, false, '', '');
+      } else {
+        window.history.back();
+      }
+      return;
+    }
+
+    // Pour les modes EDIT et CREATE avec modifications, utiliser la protection
     const canNavigate = requestNavigation(() => {
-      console.log('🔙 Navigation retour autorisée');
+      console.log('🔙 Navigation retour autorisée après confirmation');
       unregisterGuard(guardId);
       
       if (typeof onRetourListe === 'function') {

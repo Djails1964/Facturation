@@ -122,8 +122,44 @@ export const useUnsavedChanges = (
 
     // Attendre un délai pour éviter les détections transitoires
     const detectionTimer = setTimeout(() => {
-      // ✅ LOGIQUE SIMPLIFIÉE : comparer directement les données
-      const hasChanges = !deepCompare(lastSavedData.current, currentData);
+      // ✅ LOGIQUE AMÉLIORÉE : Pour les factures, utiliser une comparaison filtrée
+      let hasChanges = false;
+      
+      if (currentData.lignes !== undefined) {
+        // C'est probablement FactureForm - utiliser une comparaison plus intelligente
+        const currentFiltered = {
+          numeroFacture: currentData.numeroFacture,
+          dateFacture: currentData.dateFacture,
+          clientId: currentData.clientId,
+          ristourne: currentData.ristourne || 0,
+          lignes: currentData.lignes?.map(l => ({
+            description: l.description,
+            quantite: parseFloat(l.quantite) || 0,
+            prixUnitaire: parseFloat(l.prixUnitaire) || 0,
+            serviceId: l.serviceId,
+            uniteId: l.uniteId
+          })) || []
+        };
+        
+        const savedFiltered = {
+          numeroFacture: lastSavedData.current.numeroFacture,
+          dateFacture: lastSavedData.current.dateFacture,
+          clientId: lastSavedData.current.clientId,
+          ristourne: lastSavedData.current.ristourne || 0,
+          lignes: lastSavedData.current.lignes?.map(l => ({
+            description: l.description,
+            quantite: parseFloat(l.quantite) || 0,
+            prixUnitaire: parseFloat(l.prixUnitaire) || 0,
+            serviceId: l.serviceId,
+            uniteId: l.uniteId
+          })) || []
+        };
+        
+        hasChanges = !deepCompare(savedFiltered, currentFiltered);
+      } else {
+        // Comparaison directe pour les autres formulaires
+        hasChanges = !deepCompare(lastSavedData.current, currentData);
+      }
       
       console.log('🔍 useUnsavedChanges - Détection de modifications:', {
         hasChanges,
@@ -134,7 +170,7 @@ export const useUnsavedChanges = (
       });
 
       setHasUnsavedChanges(hasChanges);
-    }, 300);
+    }, 500); // ✅ Délai plus long pour la stabilité
 
     return () => clearTimeout(detectionTimer);
   }, [currentDataString, deepCompare, isSaving, isEmptyFormData]);
