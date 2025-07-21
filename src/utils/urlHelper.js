@@ -327,6 +327,23 @@ class UrlHelper {
     return this.backendUrl(`api/${endpoint}`, params);
   }
 
+  // 🔧 AJOUT DE LA MÉTHODE MANQUANTE
+  facturesUrl(filename) {
+    log('facturesUrl', 'Construction URL facture pour:', filename);
+    
+    if (!filename) {
+      console.warn('⚠️ facturesUrl: filename manquant');
+      return this.backendUrl('storage/factures/');
+    }
+    
+    // Encoder le nom de fichier pour gérer les caractères spéciaux
+    const encodedFilename = encodeURIComponent(filename);
+    const factureUrl = this.backendUrl(`storage/factures/${encodedFilename}`);
+    
+    log('facturesUrl', 'URL facture construite:', factureUrl);
+    return factureUrl;
+  }
+
   static setLogging(enabled, methods = null) {
     LOG_CONFIG.enabled = enabled;
     if (methods && Array.isArray(methods)) {
