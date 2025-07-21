@@ -18,6 +18,91 @@ const ParametresForm = () => {
   const [currentYear, _] = useState(new Date().getFullYear().toString());
   const [loading, setLoading] = useState(true);
 
+  /**
+   * Fonction utilitaire pour déboguer et analyser la structure des données
+   */
+  const analyzeDataStructure = (data, path = '') => {
+    console.log(`📊 Structure à ${path || 'racine'}:`, data);
+    
+    if (data && typeof data === 'object') {
+      Object.keys(data).forEach(key => {
+        const currentPath = path ? `${path}.${key}` : key;
+        console.log(`📊 Clé ${currentPath}:`, typeof data[key], data[key]);
+        
+        // Si c'est un objet, analyser plus en profondeur
+        if (data[key] && typeof data[key] === 'object' && !Array.isArray(data[key])) {
+          analyzeDataStructure(data[key], currentPath);
+        }
+        
+        // Si c'est un tableau, montrer le premier élément
+        if (Array.isArray(data[key]) && data[key].length > 0) {
+          console.log(`📊 Premier élément de ${currentPath}:`, data[key][0]);
+        }
+      });
+    }
+  };
+
+  /**
+   * Fonction pour normaliser la structure des données reçues de l'API
+   */
+  const normalizeParametresStructure = (rawParametres) => {
+    console.log('🔄 Normalisation structure - Données brutes:', rawParametres);
+    
+    const normalized = {};
+    
+    Object.entries(rawParametres || {}).forEach(([groupeNom, groupeData]) => {
+      console.log(`🔄 Traitement groupe: ${groupeNom}`, groupeData);
+      
+      normalized[groupeNom] = {};
+      
+      // Traiter chaque sous-groupe
+      if (groupeData && typeof groupeData === 'object') {
+        Object.entries(groupeData).forEach(([sousGroupeNom, sousGroupeData]) => {
+          console.log(`🔄 Traitement sous-groupe: ${groupeNom}.${sousGroupeNom}`, sousGroupeData);
+          
+          normalized[groupeNom][sousGroupeNom] = {};
+          
+          // Traiter chaque catégorie/paramètre dans le sous-groupe
+          if (sousGroupeData && typeof sousGroupeData === 'object') {
+            Object.entries(sousGroupeData).forEach(([categorieNom, parametreData]) => {
+              console.log(`🔄 Traitement élément: ${groupeNom}.${sousGroupeNom}.${categorieNom}`, parametreData);
+              
+              // 🔧 CORRECTION: Vérifier si c'est un paramètre direct ou une catégorie
+              if (parametreData && typeof parametreData === 'object' && parametreData.Nom_parametre) {
+                // C'est un paramètre direct - créer une catégorie "Default" avec ce paramètre
+                if (!normalized[groupeNom][sousGroupeNom]['Default']) {
+                  normalized[groupeNom][sousGroupeNom]['Default'] = [];
+                }
+                normalized[groupeNom][sousGroupeNom]['Default'].push(parametreData);
+                console.log(`✅ Paramètre ajouté à ${groupeNom}.${sousGroupeNom}.Default: ${parametreData.Nom_parametre}`);
+              }
+              // Sinon, traiter comme une catégorie qui contient des paramètres
+              else if (parametreData && typeof parametreData === 'object') {
+                normalized[groupeNom][sousGroupeNom][categorieNom] = [];
+                
+                Object.entries(parametreData).forEach(([paramNom, paramObj]) => {
+                  if (paramObj && typeof paramObj === 'object' && paramObj.Nom_parametre) {
+                    normalized[groupeNom][sousGroupeNom][categorieNom].push(paramObj);
+                    console.log(`✅ Paramètre ajouté à ${groupeNom}.${sousGroupeNom}.${categorieNom}: ${paramObj.Nom_parametre}`);
+                  }
+                });
+                
+                // Si aucun paramètre trouvé dans cette approche, peut-être que parametreData est lui-même le paramètre
+                if (normalized[groupeNom][sousGroupeNom][categorieNom].length === 0 && parametreData.Nom_parametre) {
+                  normalized[groupeNom][sousGroupeNom][categorieNom].push(parametreData);
+                  console.log(`✅ Paramètre direct ajouté à ${groupeNom}.${sousGroupeNom}.${categorieNom}: ${parametreData.Nom_parametre}`);
+                }
+              }
+            });
+          }
+        });
+      }
+    });
+    
+    console.log('🔄 Structure normalisée finale:', normalized);
+    return normalized;
+  };
+
   // Charger les paramètres au montage du composant
   useEffect(() => {
     fetchAllParametres();
@@ -26,18 +111,30 @@ const ParametresForm = () => {
   // Logger les IDs des champs pour debug
   useEffect(() => {
     if (!loading && Object.keys(parametresStructure).length > 0) {
-      const factureSousGroupes = parametresStructure['Facture']?.sousGroupes || parametresStructure['Facture'] || {};
+      console.log('🎯 DEBUGGING - Structure finale dans le state:', parametresStructure);
       
-      Object.entries(factureSousGroupes).forEach(([sousGroupe, data]) => {
-        const categories = data.categories || data;
-        Object.entries(categories).forEach(([categorie, parametres]) => {
-          if (Array.isArray(parametres)) {
-            parametres.forEach(param => {
-              const fieldId = `Facture-${sousGroupe}-${categorie}-${param.Nom_parametre}`;
-              console.log(`Champ détecté: ${fieldId}`);
-            });
-          }
-        });
+      // Analyser ce qui est disponible pour le rendu
+      Object.entries(parametresStructure).forEach(([groupeNom, groupeData]) => {
+        console.log(`🎯 GROUPE: ${groupeNom}`, groupeData);
+        
+        if (groupeData && typeof groupeData === 'object') {
+          Object.entries(groupeData).forEach(([sousGroupeNom, sousGroupeData]) => {
+            console.log(`🎯 SOUS-GROUPE: ${groupeNom}.${sousGroupeNom}`, sousGroupeData);
+            
+            if (sousGroupeData && typeof sousGroupeData === 'object') {
+              Object.entries(sousGroupeData).forEach(([categorieNom, categorieData]) => {
+                console.log(`🎯 CATÉGORIE: ${groupeNom}.${sousGroupeNom}.${categorieNom}`, categorieData);
+                
+                if (Array.isArray(categorieData)) {
+                  console.log(`✅ ${categorieData.length} paramètres dans ${groupeNom}.${sousGroupeNom}.${categorieNom}`);
+                  categorieData.forEach(param => {
+                    console.log(`   - ${param.Nom_parametre}: ${param.Valeur_parametre}`);
+                  });
+                }
+              });
+            }
+          });
+        }
       });
     }
   }, [loading, parametresStructure]);
@@ -217,14 +314,17 @@ const ParametresForm = () => {
   const fetchAllParametres = async () => {
     setLoading(true);
     try {
+      console.log('🚀 Début chargement des paramètres...');
       const result = await parametreService.getAllParametres();
+      
+      console.log('📥 Résultat brut du service:', result);
       
       if (!result.success) {
         setMessage(result.message || 'Erreur lors du chargement des paramètres');
         setMessageType('error');
         return;
       }
-  
+
       const parametres = result.parametres;
       
       if (!parametres || Object.keys(parametres).length === 0) {
@@ -232,9 +332,37 @@ const ParametresForm = () => {
         setMessageType('info');
         return;
       }
-  
-      setParametresStructure({ ...parametres });
+
+      console.log('📊 Données reçues:', parametres);
+      
+      // 🔧 SIMPLIFICATION: Les données sont déjà dans le bon format après la correction du service
+      // Plus besoin de normalisation supplémentaire
+      
+      console.log('✅ Vérification de la structure:');
+      Object.entries(parametres).forEach(([groupe, groupeData]) => {
+        console.log(`✅ Groupe ${groupe}:`, groupeData);
+        if (groupeData && typeof groupeData === 'object') {
+          Object.entries(groupeData).forEach(([sousGroupe, sousGroupeData]) => {
+            console.log(`  └─ Sous-groupe ${sousGroupe}:`, sousGroupeData);
+            if (sousGroupeData && typeof sousGroupeData === 'object') {
+              Object.entries(sousGroupeData).forEach(([categorie, categorieData]) => {
+                console.log(`    └─ Catégorie ${categorie}:`, Array.isArray(categorieData) ? `${categorieData.length} paramètres` : 'non-tableau');
+                if (Array.isArray(categorieData)) {
+                  categorieData.forEach(param => {
+                    console.log(`      └─ ${param.Nom_parametre}: ${param.Valeur_parametre}`);
+                  });
+                }
+              });
+            }
+          });
+        }
+      });
+      
+      // Directement utiliser les données reçues
+      setParametresStructure(parametres);
+      
     } catch (error) {
+      console.error('❌ Erreur lors du chargement:', error);
       setMessage(`Erreur de chargement: ${error.message}`);
       setMessageType('error');
     } finally {
@@ -304,44 +432,59 @@ const ParametresForm = () => {
    */
   // Rendu des groupes de paramètres
   const renderParametreGroups = () => {
+    console.log('🎨 Début du rendu des groupes');
+    console.log('🎨 Structure à rendre:', parametresStructure);
+    
     return Object.entries(parametresStructure || {}).map(([groupe, groupeData]) => {
+      console.log(`🎨 Rendu groupe: ${groupe}`, groupeData);
+      
       if (!groupeData || groupe === 'Tarifs') {
+        console.log(`⏭️ Groupe ${groupe} ignoré`);
         return null;
       }
-      
-      const sousGroupes = groupeData.sousGroupes || groupeData;
       
       return (
         <div key={groupe} className="parametre-groupe">
           <h3 className="groupe-titre">{groupe}</h3>
           
-          {Object.entries(sousGroupes).map(([sousGroupe, sousGroupeData]) => {
+          {Object.entries(groupeData).map(([sousGroupe, sousGroupeData]) => {
+            console.log(`🎨 Rendu sous-groupe: ${groupe}.${sousGroupe}`, sousGroupeData);
+            
             if (!sousGroupeData) {
+              console.log(`⏭️ Sous-groupe ${groupe}.${sousGroupe} ignoré`);
               return null;
             }
-  
-            const categories = sousGroupeData.categories || sousGroupeData;
-  
+
             return (
               <div key={`${groupe}-${sousGroupe}`} className="parametre-sous-groupe">
                 <h4 className="sous-groupe-titre">{sousGroupe}</h4>
                 
-                {Object.entries(categories).map(([categorie, parametres]) => {
+                {Object.entries(sousGroupeData).map(([categorie, parametres]) => {
+                  console.log(`🎨 Rendu catégorie: ${groupe}.${sousGroupe}.${categorie}`, parametres);
+                  
                   if (!Array.isArray(parametres)) {
+                    console.warn(`⚠️ ${groupe}.${sousGroupe}.${categorie} n'est pas un tableau:`, typeof parametres, parametres);
                     return null;
                   }
-  
+                  
+                  if (parametres.length === 0) {
+                    console.log(`⏭️ Catégorie ${groupe}.${sousGroupe}.${categorie} vide`);
+                    return null;
+                  }
+
                   return (
                     <div key={`${groupe}-${sousGroupe}-${categorie}`} className="parametre-categorie">
                       {categorie !== 'Default' && <h5 className="categorie-titre">{categorie}</h5>}
                       
                       {parametres.map((parametre) => {
+                        console.log(`🎨 Rendu paramètre:`, parametre.Nom_parametre, parametre.Valeur_parametre);
+                        
                         const fieldId = `${groupe}-${sousGroupe}-${categorie}-${parametre.Nom_parametre}`;
                         const isFacturationParam = parametre.Nom_parametre === 'Prochain Numéro Facture';
                         const isDelaiPaiement = groupe === 'Facture' && sousGroupe === 'Paiement' && parametre.Nom_parametre === 'Delai Paiement';
-                        const isEmailCorps = groupe === 'Email' && sousGroupe === 'Corps' && parametre.Nom_parametre === 'Corps';
+                        const isEmailCorps = groupe === 'Email' && sousGroupe === 'Corps' && parametre.Nom_parametre === 'texte_corps';
                         
-                        // Valeur à afficher, avec traitement spécial pour le délai de paiement
+                        // Valeur à afficher
                         let displayValue;
                         if (isDelaiPaiement) {
                           const rawValue = modifiedValues[fieldId]?.valeurParametre !== undefined 
@@ -360,19 +503,19 @@ const ParametresForm = () => {
                         
                         const isFieldFocused = focusedFields[fieldId] || Boolean(displayValue);
                         
-                        // Obtenir la description dynamique avec l'année actuelle
                         const description = getFieldDescription(groupe, sousGroupe, categorie, parametre.Nom_parametre, displayAnnee);
                         const hasDescription = description !== null;
                         
-                        // Déterminer si on doit appliquer l'alignement à gauche (tous les champs du groupe Facture)
                         const isFactureGroup = groupe === 'Facture';
                         const alignLeftClass = isFactureGroup ? 'align-left' : '';
+                        
+                        console.log(`✅ Rendu paramètre ${parametre.Nom_parametre} avec valeur:`, displayValue);
                         
                         return (
                           <div key={parametre.Nom_parametre} className="parametre-item">
                             <div className="parametre-nom">{parametre.Nom_parametre}</div>
                             
-                            {/* Gérer les champs spéciaux qui nécessitent un textarea */}
+                            {/* Gérer les champs spéciaux */}
                             {(parametre.Nom_parametre === 'Beneficiaire' || isEmailCorps) ? (
                               <div className="parametre-valeur relations-bancaires-valeur">
                                 <div className={`form-floating ${isFieldFocused ? 'focused' : ''}`}>
@@ -382,7 +525,6 @@ const ParametresForm = () => {
                                       ? (displayValue ? formatBeneficiaireDisplay(displayValue) : '')
                                       : displayValue}
                                     onChange={(e) => {
-                                      // Pour le bénéficiaire, appliquer le formatage spécial
                                       const newValue = parametre.Nom_parametre === 'Beneficiaire' 
                                         ? reformatBeneficiaire(e.target.value)
                                         : e.target.value;
@@ -397,7 +539,6 @@ const ParametresForm = () => {
                                   />
                                   <label htmlFor={fieldId}>Valeur</label>
                                   
-                                  {/* Description spécifique pour les corps d'email */}
                                   {isEmailCorps && (
                                     <small className="field-description email-corps-description">
                                       {categorie === 'tu' 
@@ -411,24 +552,20 @@ const ParametresForm = () => {
                               <div className={`parametre-valeur ${groupe === 'Relations Bancaires' || isFactureGroup ? 'relations-bancaires-valeur' : ''}`}>
                                 <div className={`form-floating ${isFieldFocused ? 'focused' : ''}`}>
                                   <input
-                                    type={isDelaiPaiement ? "text" : "text"}
+                                    type="text"
                                     id={fieldId}
                                     value={displayValue}
                                     onChange={(e) => {
                                       let newValue = e.target.value;
                                       
-                                      // Pour le délai de paiement, formatter en temps réel
                                       if (isDelaiPaiement) {
-                                        // Si l'utilisateur efface tout le contenu, permettre une entrée vide
                                         if (newValue === '') {
                                           handleInputChange(groupe, sousGroupe, categorie, parametre.Nom_parametre, '');
                                           return;
                                         }
                                         
-                                        // Sinon, extraire les chiffres et reformater
                                         const numericValue = newValue.replace(/[^\d]/g, '');
                                         if (numericValue) {
-                                          // Reformater avec "jour" ou "jours"
                                           newValue = formatDelaiPaiement(numericValue);
                                         }
                                       }

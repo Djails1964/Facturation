@@ -58,7 +58,7 @@ class ParametreService {
   }
 
   /**
-   * ✅ NORMALISE UN GROUPE DE PARAMÈTRES
+   * ✅ NORMALISE UN GROUPE DE PARAMÈTRES - VERSION CORRIGÉE
    * @param {Object} parametresGroup - Groupe de paramètres à normaliser
    * @returns {Object} - Groupe avec valeurs normalisées
    */
@@ -67,29 +67,77 @@ class ParametreService {
       return parametresGroup;
     }
 
+    // 🔧 CORRECTION: Ne pas traiter les tableaux comme des objets à normaliser
+    if (Array.isArray(parametresGroup)) {
+      console.log('⚠️ normalizeParametresGroup reçoit un tableau, traitement des éléments individuellement');
+      return parametresGroup.map(param => {
+        if (param && typeof param === 'object') {
+          return {
+            ...param,
+            Valeur_parametre: this.normalizeParametreValue(
+              param.Valeur_parametre, 
+              param.Type_parametre || param.type
+            ),
+            Actif: param.Actif !== undefined ? toBoolean(param.Actif) : undefined,
+            Obligatoire: param.Obligatoire !== undefined ? toBoolean(param.Obligatoire) : undefined,
+            Visible: param.Visible !== undefined ? toBoolean(param.Visible) : undefined,
+          };
+        }
+        return param;
+      });
+    }
+
     const normalized = {};
     
     for (const [key, parametre] of Object.entries(parametresGroup)) {
-      if (parametre && typeof parametre === 'object') {
-        normalized[key] = {
-          ...parametre,
-          // Normaliser la valeur selon le type si disponible
-          Valeur_parametre: this.normalizeParametreValue(
-            parametre.Valeur_parametre, 
-            parametre.Type_parametre || parametre.type
-          ),
-          // Normaliser d'autres propriétés booléennes communes
-          Actif: parametre.Actif !== undefined ? toBoolean(parametre.Actif) : undefined,
-          Obligatoire: parametre.Obligatoire !== undefined ? toBoolean(parametre.Obligatoire) : undefined,
-          Visible: parametre.Visible !== undefined ? toBoolean(parametre.Visible) : undefined,
-        };
+      // 🔧 CORRECTION: Vérifier si c'est un tableau avant de le traiter
+      if (Array.isArray(parametre)) {
+        console.log(`✅ Traitement tableau pour ${key}:`, parametre.length, 'éléments');
+        // Si c'est un tableau, traiter chaque élément individuellement
+        normalized[key] = parametre.map(param => {
+          if (param && typeof param === 'object') {
+            return {
+              ...param,
+              Valeur_parametre: this.normalizeParametreValue(
+                param.Valeur_parametre, 
+                param.Type_parametre || param.type
+              ),
+              Actif: param.Actif !== undefined ? toBoolean(param.Actif) : undefined,
+              Obligatoire: param.Obligatoire !== undefined ? toBoolean(param.Obligatoire) : undefined,
+              Visible: param.Visible !== undefined ? toBoolean(param.Visible) : undefined,
+            };
+          }
+          return param;
+        });
+      }
+      // Si c'est un objet avec des propriétés de paramètre
+      else if (parametre && typeof parametre === 'object') {
+        // Vérifier si c'est un paramètre direct (a Nom_parametre) ou un conteneur
+        if (parametre.Nom_parametre) {
+          // C'est un paramètre direct
+          normalized[key] = {
+            ...parametre,
+            Valeur_parametre: this.normalizeParametreValue(
+              parametre.Valeur_parametre, 
+              parametre.Type_parametre || parametre.type
+            ),
+            Actif: parametre.Actif !== undefined ? toBoolean(parametre.Actif) : undefined,
+            Obligatoire: parametre.Obligatoire !== undefined ? toBoolean(parametre.Obligatoire) : undefined,
+            Visible: parametre.Visible !== undefined ? toBoolean(parametre.Visible) : undefined,
+          };
+        } else {
+          // C'est un conteneur, traiter récursivement
+          normalized[key] = this.normalizeParametresGroup(parametre);
+        }
       } else {
+        // Pour tous les autres types, garder tel quel
         normalized[key] = parametre;
       }
     }
 
     return normalized;
   }
+
 
   /**
    * ✅ PRÉPARE UN PARAMÈTRE POUR L'ENVOI À L'API
@@ -133,18 +181,15 @@ class ParametreService {
       if (response && response.success) {
         const parametres = response.parametres || {};
         
-        // ✅ NORMALISATION DE TOUS LES GROUPES DE PARAMÈTRES
+        // ✅ NORMALISATION DE TOUS LES GROUPES DE PARAMÈTRES - VERSION SIMPLIFIÉE
         const parametresNormalises = {};
         
         for (const [groupeName, groupeData] of Object.entries(parametres)) {
           console.log(`✅ Normalisation du groupe: ${groupeName}`);
           
           if (groupeData && typeof groupeData === 'object') {
-            parametresNormalises[groupeName] = {};
-            
-            for (const [sGroupeName, sGroupeData] of Object.entries(groupeData)) {
-              parametresNormalises[groupeName][sGroupeName] = this.normalizeParametresGroup(sGroupeData);
-            }
+            // 🔧 CORRECTION: Traitement plus intelligent de la structure
+            parametresNormalises[groupeName] = this.normalizeParametresGroup(groupeData);
           } else {
             parametresNormalises[groupeName] = groupeData;
           }
