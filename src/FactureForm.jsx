@@ -789,8 +789,20 @@ function FactureForm({
     }
   };
 
-  // Gérer l'annulation avec protection
+  // Gérer l'annulation avec protection (seulement pour les modes EDIT et CREATE)
   const handleAnnuler = () => {
+    // En mode VIEW, navigation directe sans protection
+    if (mode === FORM_MODES.VIEW) {
+      console.log('🔙 Navigation directe en mode VIEW');
+      if (typeof onRetourListe === 'function') {
+        onRetourListe(null, false, '', '');
+      } else {
+        window.history.back();
+      }
+      return;
+    }
+
+    // Pour les modes EDIT et CREATE, utiliser la protection
     const canNavigate = requestNavigation(() => {
       console.log('🔙 Navigation retour autorisée');
       unregisterGuard(guardId);
