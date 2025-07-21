@@ -32,15 +32,22 @@ function ClientGestion({ section = 'liste', clientId = null, onClientCreated = n
     }, [activeView, onSectionChange]);
 
     // Fonction pour gérer le retour à la liste des clients
-    const handleRetourListe = async (clientId = null, message = '', type = '') => {
+    const handleRetourListe = async (clientId = null, success = false, message = '', type = '') => {
+        console.log('🔄 handleRetourListe appelé avec:', { clientId, success, message, type });
+        
         if (clientId) {
             setSelectedClientId(clientId);
         }
-        if (message) {
-            setNotification({ message, type: type || 'success' });
+        
+        // ✅ CORRECTION : Gérer correctement les paramètres dans l'ordre
+        if (message && message.trim() !== '') {
+            const notificationType = type || (success ? 'success' : 'error');
+            console.log('📢 Notification définie:', { message, type: notificationType });
+            setNotification({ message, type: notificationType });
         }
+        
         setActiveView('liste');
-    };
+        };
 
     // Fonction pour gérer la création réussie d'un client
     const handleClientCreated = async (clientId, message = 'Client créé avec succès') => {

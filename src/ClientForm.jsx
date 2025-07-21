@@ -600,6 +600,37 @@ const ClientForm = ({
    * Gère le retour à la liste des clients avec protection
    */
   const handleRetour = () => {
+    // En mode VIEW, navigation directe sans protection
+    if (mode === FORM_MODES.VIEW) {
+      console.log('🔙 Navigation directe en mode VIEW (ClientForm)');
+      unregisterGuard(guardId);
+      
+      if (onRetourListe) {
+        onRetourListe();
+      }
+      return;
+    }
+
+    // ✅ DEBUG : Afficher l'état actuel
+    console.log('🔍 État avant navigation Retour ClientForm:', {
+      hasUnsavedChanges,
+      canDetectChanges: canDetectChanges(),
+      mode,
+      isSubmitting
+    });
+
+    // ✅ Vérification directe : si pas de modifications, naviguer directement
+    if (!hasUnsavedChanges || !canDetectChanges()) {
+      console.log('✅ Aucune modification détectée, navigation directe (ClientForm)');
+      unregisterGuard(guardId);
+      
+      if (onRetourListe) {
+        onRetourListe();
+      }
+      return;
+    }
+
+    // Pour les modes EDIT et CREATE avec modifications, utiliser la protection
     const canNavigate = requestNavigation(() => {
       console.log('🔙 Navigation retour autorisée ClientForm');
       unregisterGuard(guardId);
@@ -610,7 +641,7 @@ const ClientForm = ({
     });
 
     if (!canNavigate) {
-      console.log('🔒 Navigation retour bloquée par des modifications non sauvegardées');
+      console.log('🔒 Navigation retour bloquée par des modifications non sauvegardées (ClientForm)');
     }
   };
 
