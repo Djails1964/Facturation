@@ -61,3 +61,157 @@
 .notification-close:hover {
   opacity: 0.7;
 }
+
+/* ========== ✅ NOUVEAU : BADGES D'ÉTAT UNIVERSELS ========== */
+
+/* Badge de base - utilisé partout dans l'application */
+.etat-badge {
+  display: inline-block;
+  padding: var(--badge-padding);
+  border-radius: var(--badge-border-radius);
+  font-size: var(--badge-font-size);
+  font-weight: var(--badge-font-weight);
+  text-transform: none;
+  letter-spacing: normal;
+  text-align: center;
+  white-space: nowrap;
+  border: 1px solid;
+  min-width: var(--badge-min-width);
+  transition: var(--badge-transition);
+  cursor: default;
+}
+
+/* ✅ États spécifiques des badges */
+.etat-badge.etat-payee {
+  background-color: var(--badge-payee-bg);
+  color: var(--badge-payee-text);
+  border-color: var(--badge-payee-border);
+}
+
+.etat-badge.etat-payee:hover {
+  background-color: var(--badge-payee-hover-bg);
+}
+
+.etat-badge.etat-partiellement-payee {
+  background-color: var(--badge-partiellement-payee-bg);
+  color: var(--badge-partiellement-payee-text);
+  border-color: var(--badge-partiellement-payee-border);
+}
+
+.etat-badge.etat-partiellement-payee:hover {
+  background-color: var(--badge-partiellement-payee-hover-bg);
+  border-color: #8A2BE2;
+}
+
+.etat-badge.etat-attente {
+  background-color: var(--badge-attente-bg);
+  color: var(--badge-attente-text);
+  border-color: var(--badge-attente-border);
+}
+
+.etat-badge.etat-attente:hover {
+  background-color: var(--badge-attente-hover-bg);
+}
+
+.etat-badge.etat-retard {
+  background-color: var(--badge-retard-bg);
+  color: var(--badge-retard-text);
+  border-color: var(--badge-retard-border);
+}
+
+.etat-badge.etat-retard:hover {
+  background-color: var(--badge-retard-hover-bg);
+}
+
+.etat-badge.etat-annulee {
+  background-color: var(--badge-annulee-bg);
+  color: var(--badge-annulee-text);
+  border-color: var(--badge-annulee-border);
+}
+
+.etat-badge.etat-annulee:hover {
+  background-color: var(--badge-annulee-hover-bg);
+}
+
+.etat-badge.etat-editee {
+  background-color: var(--badge-editee-bg);
+  color: var(--badge-editee-text);
+  border-color: var(--badge-editee-border);
+}
+
+.etat-badge.etat-editee:hover {
+  background-color: var(--badge-editee-hover-bg);
+}
+
+.etat-badge.etat-envoyee {
+  background-color: var(--badge-envoyee-bg);
+  color: var(--badge-envoyee-text);
+  border-color: var(--badge-envoyee-border);
+}
+
+.etat-badge.etat-envoyee:hover {
+  background-color: var(--badge-envoyee-hover-bg);
+}
+
+.etat-badge.etat-default {
+  background-color: var(--badge-default-bg);
+  color: var(--badge-default-text);
+  border-color: var(--badge-default-border);
+}
+
+.etat-badge.etat-default:hover {
+  background-color: var(--badge-default-hover-bg);
+}
+
+/* ✅ VARIANTES DE TAILLE */
+.etat-badge.badge-small {
+  padding: var(--badge-padding-mobile);
+  font-size: var(--badge-font-size-mobile);
+  min-width: 60px;
+}
+
+.etat-badge.badge-large {
+  padding: 8px 16px;
+  font-size: 14px;
+  min-width: 100px;
+}
+
+/* ✅ RESPONSIVE */
+@media (max-width: 768px) {
+  .etat-badge {
+    padding: var(--badge-padding-mobile);
+    font-size: var(--badge-font-size-mobile);
+    min-width: 60px;
+  }
+}
+
+@media (max-width: 480px) {
+  .etat-badge {
+    padding: 3px 6px;
+    font-size: 10px;
+    min-width: 50px;
+  }
+}
+
+/* ✅ ACCESSIBILITÉ */
+@media (prefers-reduced-motion: reduce) {
+  .etat-badge {
+    transition: none;
+  }
+}
+
+@media (prefers-contrast: high) {
+  .etat-badge {
+    border-width: 2px;
+    font-weight: 600;
+  }
+}
+
+/* ✅ PRINT */
+@media print {
+  .etat-badge {
+    background: white !important;
+    color: black !important;
+    border: 1px solid black !important;
+  }
+}

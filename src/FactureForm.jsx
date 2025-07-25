@@ -4,6 +4,7 @@ import FactureDetailsForm from './FactureDetailsForm';
 import FactureTotauxDisplay from './FactureTotauxDisplay';
 import { FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
 import FactureHeader from './FactureHeader';
+import FactureHistoriquePaiements from './FactureHistoriquePaiements';
 import FactureService from './services/FactureService';
 import ClientService from './services/ClientService';
 import './FactureForm.css';
@@ -958,6 +959,7 @@ function FactureForm({
 
           <form onSubmit={handleSubmit} className="ff-formulaire-facture">
             <div className={getFormContainerClass()}>
+              {/* ✅ HEADER MODIFIÉ avec les nouvelles props */}
               <FactureHeader
                 numeroFacture={facture.numeroFacture}
                 dateFacture={facture.dateFacture}
@@ -970,6 +972,9 @@ function FactureForm({
                 onClientChange={handleClientChange}
                 documentPath={facture.documentPath}
                 mode={mode}
+                etat={facture.etat}
+                factureId={factureId || facture.id}
+                factureData={facture}
               />
 
               {console.log('Facture data envoyée:', facture)}
@@ -988,6 +993,7 @@ function FactureForm({
                 )}
               </div>
 
+              {/* ✅ SECTION TOTAUX */}
               {clientData && (
                 <div className="ff-facture-totals-container">
                   <FactureTotauxDisplay
@@ -997,6 +1003,16 @@ function FactureForm({
                     onChange={handleRistourneChange}
                   />
                 </div>
+              )}
+
+              {/* ✅ NOUVEAU : Historique des paiements après les totaux */}
+              {isReadOnly && (
+                <FactureHistoriquePaiements
+                  etat={facture.etat}
+                  factureId={factureId || facture.id}
+                  formatMontant={(montant) => factureService.formatMontant(montant)}
+                  formatDate={(dateStr) => factureService.formatDate(dateStr)}
+                />
               )}
 
               {!isReadOnly && (

@@ -1,6 +1,5 @@
 // src/utils/formatters.js
 
-
 /**
  * Formate un montant avec séparateur de milliers
  * @param {number|string} montant - Le montant à formater 
@@ -122,9 +121,54 @@ export const formatAdresse = (adresse) => {
 };
 
 /**
- * Formatage pour les étiquettes d'état des factures
+ * ✅ MODIFIÉ : Retourne la classe CSS correspondant à l'état de la facture
+ * @param {string} etat - L'état de la facture
+ * @returns {string} La classe CSS correspondante pour les nouveaux badges universels
+ */
+export const getEtatClass = (etat) => {
+    if (!etat) return 'etat-default';
+    
+    switch (etat.toLowerCase()) {
+        case 'payée':
+            return 'etat-payee';
+        case 'partiellement payée':
+            return 'etat-partiellement-payee';
+        case 'en attente':
+            return 'etat-attente';
+        case 'éditée':
+            return 'etat-editee';
+        case 'retard':
+            return 'etat-retard';
+        case 'annulée':
+            return 'etat-annulee';
+        case 'envoyée':
+            return 'etat-envoyee';
+        default:
+            return 'etat-default';
+    }
+};
+
+/**
+ * ✅ NOUVEAU : Retourne les classes CSS complètes pour un badge d'état
+ * @param {string} etat - L'état de la facture
+ * @param {string} variant - Variante optionnelle ('small', 'large')
+ * @returns {string} Les classes CSS complètes
+ */
+export const getBadgeClasses = (etat, variant = '') => {
+    const baseClass = 'etat-badge';
+    const etatClass = getEtatClass(etat);
+    const variantClass = variant ? `badge-${variant}` : '';
+    
+    return [baseClass, etatClass, variantClass]
+        .filter(Boolean)
+        .join(' ');
+};
+
+/**
+ * ✅ CONSERVÉ : Formatage pour les étiquettes d'état des factures (ancienne version pour rétrocompatibilité)
  * @param {string} etat - État de la facture
  * @returns {Object} Objet avec la classe CSS et la couleur correspondantes
+ * @deprecated Utiliser getEtatClass() et getBadgeClasses() à la place
  */
 export const formatEtatFacture = (etat) => {
     if (!etat) return { class: '', color: '' };
@@ -132,8 +176,8 @@ export const formatEtatFacture = (etat) => {
     switch(etat.toLowerCase()) {
         case 'payée':
             return { class: 'lf-etat-payee', color: '#155724' };
-        case 'partiellement payée':  // ✅ NOUVEAU
-            return { class: 'lf-etat-partiellement-payee', color: '#4B0082' }; // Violet indigo
+        case 'partiellement payée':
+            return { class: 'lf-etat-partiellement-payee', color: '#4B0082' };
         case 'en attente':
             return { class: 'lf-etat-attente', color: '#856404' };
         case 'éditée':
@@ -150,7 +194,7 @@ export const formatEtatFacture = (etat) => {
 };
 
 /**
- * ✅ NOUVEAU : Formate le texte d'affichage des états pour les badges
+ * ✅ CONSERVÉ : Formate le texte d'affichage des états pour les badges
  * @param {string} etat - État de la facture
  * @returns {string} Texte formaté pour affichage
  */
@@ -158,9 +202,36 @@ export const formatEtatText = (etat) => {
     if (!etat) return '';
     
     switch(etat.toLowerCase()) {
-        case 'partiellement payée': return 'Part. Payée'; // ✅ TEXTE COURT
-        default: return etat; // Garder le texte original pour les autres états
+        case 'partiellement payée': return 'Part. Payée';
+        default: return etat;
     }
+};
+
+/**
+ * ✅ NOUVEAU : Vérifie si un état est considéré comme "payé" (complètement ou partiellement)
+ * @param {string} etat - L'état de la facture
+ * @returns {boolean} True si l'état indique un paiement
+ */
+export const isEtatPaye = (etat) => {
+    if (!etat) return false;
+    
+    const etatLower = etat.toLowerCase();
+    return etatLower === 'payée' || etatLower === 'partiellement payée';
+};
+
+/**
+ * ✅ NOUVEAU : Vérifie si un état est considéré comme "en cours" (non finalisé)
+ * @param {string} etat - L'état de la facture
+ * @returns {boolean} True si l'état indique que la facture est en cours
+ */
+export const isEtatEnCours = (etat) => {
+    if (!etat) return false;
+    
+    const etatLower = etat.toLowerCase();
+    return etatLower === 'en attente' || 
+           etatLower === 'éditée' || 
+           etatLower === 'envoyée' ||
+           etatLower === 'retard';
 };
 
 /**
@@ -256,8 +327,12 @@ const formatters = {
     truncateString,
     formatAdresse,
     formatEtatFacture,
+    formatEtatText,
+    getEtatClass,
+    getBadgeClasses,
+    isEtatPaye,
+    isEtatEnCours,
     montantEnLettres
 };
-
 
 export default formatters;

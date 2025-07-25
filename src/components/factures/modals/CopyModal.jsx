@@ -166,7 +166,7 @@ const CopyModal = ({
                         <div className="facture-info-label">Facture source:</div>
                         <div className="facture-info-value">
                             {factureSource.numeroFacture} 
-                            <span className="facture-etat-badge">{factureSource.etat}</span>
+                            <span className="etat-badge">{factureSource.etat}</span>
                         </div>
                     </div>
                     
@@ -193,7 +193,7 @@ const CopyModal = ({
                     <div className="facture-info-row">
                         <div className="facture-info-label">Nouvel état:</div>
                         <div className="facture-info-value">
-                            <span className="facture-etat-badge etat-en-attente">En attente</span>
+                            <span className="etat-badge etat-en-attente">En attente</span>
                         </div>
                     </div>
                     
