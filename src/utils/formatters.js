@@ -165,35 +165,6 @@ export const getBadgeClasses = (etat, variant = '') => {
 };
 
 /**
- * ✅ CONSERVÉ : Formatage pour les étiquettes d'état des factures (ancienne version pour rétrocompatibilité)
- * @param {string} etat - État de la facture
- * @returns {Object} Objet avec la classe CSS et la couleur correspondantes
- * @deprecated Utiliser getEtatClass() et getBadgeClasses() à la place
- */
-export const formatEtatFacture = (etat) => {
-    if (!etat) return { class: '', color: '' };
-
-    switch(etat.toLowerCase()) {
-        case 'payée':
-            return { class: 'lf-etat-payee', color: '#155724' };
-        case 'partiellement payée':
-            return { class: 'lf-etat-partiellement-payee', color: '#4B0082' };
-        case 'en attente':
-            return { class: 'lf-etat-attente', color: '#856404' };
-        case 'éditée':
-            return { class: 'lf-etat-editee', color: '#0277bd' };
-        case 'retard':
-            return { class: 'lf-etat-retard', color: '#721c24' };
-        case 'annulée':
-            return { class: 'lf-etat-annulee', color: '#383d41' };
-        case 'envoyée':
-            return { class: 'lf-etat-envoyee', color: '#0056b3' };
-        default:
-            return { class: '', color: '#333' };
-    }
-};
-
-/**
  * ✅ CONSERVÉ : Formate le texte d'affichage des états pour les badges
  * @param {string} etat - État de la facture
  * @returns {string} Texte formaté pour affichage
@@ -326,7 +297,6 @@ const formatters = {
     toTitleCase,
     truncateString,
     formatAdresse,
-    formatEtatFacture,
     formatEtatText,
     getEtatClass,
     getBadgeClasses,
