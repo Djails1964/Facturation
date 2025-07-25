@@ -1,8 +1,9 @@
 /* 
- * Styles communs pour les boutons
+ * Styles communs pour les boutons - VERSION MISE À JOUR
+ * Ajout des styles de boutons de formulaires et modales
  */
 
-/* ========== BOUTONS D'ACTION DE BASE ========== */
+/* ========== BOUTONS D'ACTION DE BASE (RONDS) ========== */
 .bouton-action {
   width: 40px;
   height: 40px;
@@ -64,6 +65,166 @@
   height: 16px;
 }
 
+/* ========== NOUVEAU: BOUTONS DE FORMULAIRES ET MODALES (RECTANGULAIRES) ========== */
+
+/* Bouton principal (Enregistrer, Confirmer, Valider, etc.) */
+.btn-primary,
+.modal-action-primary {
+  padding: 10px 20px;
+  background-color: var(--color-primary, #800000);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-sm, 5px);
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: normal;
+  transition: background-color 0.3s ease;
+  min-width: 100px;
+  font-family: inherit;
+}
+
+.btn-primary:hover,
+.modal-action-primary:hover {
+  background-color: #600000;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.btn-primary:disabled,
+.modal-action-primary:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Bouton secondaire (Annuler, Retour, etc.) */
+.btn-secondary,
+.modal-action-secondary {
+  padding: 10px 20px;
+  background-color: #f8f9fa;
+  color: var(--color-primary, #800000);
+  border: 1px solid var(--color-primary, #800000);
+  border-radius: var(--border-radius-sm, 5px);
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: normal;
+  transition: background-color 0.3s ease;
+  min-width: 100px;
+  font-family: inherit;
+}
+
+.btn-secondary:hover,
+.modal-action-secondary:hover {
+  background-color: #f1f3f5;
+}
+
+.btn-secondary:disabled,
+.modal-action-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #e0e0e0;
+  color: #777;
+  border-color: #ccc;
+}
+
+/* Bouton de succès (ancien style vert) */
+.btn-success {
+  padding: 10px 20px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-sm, 5px);
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: normal;
+  transition: background-color 0.3s ease;
+  min-width: 100px;
+  font-family: inherit;
+}
+
+.btn-success:hover {
+  background-color: #218838;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.btn-success:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+/* Bouton de danger (Supprimer, etc.) */
+.btn-danger,
+.modal-action-danger {
+  padding: 10px 20px;
+  background-color: var(--color-error-text, #dc3545);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-sm, 5px);
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: normal;
+  transition: background-color 0.3s ease;
+  min-width: 100px;
+  font-family: inherit;
+}
+
+.btn-danger:hover,
+.modal-action-danger:hover {
+  background-color: #c82333;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.btn-danger:disabled,
+.modal-action-danger:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+/* ========== ANCIENS STYLES MODAL-ACTION-BUTTON (RÉTROCOMPATIBILITÉ) ========== */
+.modal-action-button {
+  padding: 8px 15px;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  font-size: 14px;
+  margin-left: 10px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+/* Redirection vers les nouveaux styles */
+.modal-action-button.modal-action-primary {
+  padding: 8px 15px;
+  background-color: #28a745;
+  color: white;
+  font-size: 14px;
+}
+
+.modal-action-button.modal-action-primary:hover {
+  background-color: #218838;
+}
+
+.modal-action-button.modal-action-primary:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.modal-action-button.modal-action-secondary {
+  padding: 8px 15px;
+  background-color: #f1f1f1;
+  color: var(--color-text);
+  font-size: 14px;
+}
+
+.modal-action-button.modal-action-secondary:hover {
+  background-color: #e0e0e0;
+}
+
+.modal-action-button.modal-action-secondary:disabled {
+  background-color: #f1f1f1;
+  color: #999;
+  cursor: not-allowed;
+}
+
 /* ========== CONTENEUR DES ACTIONS ========== */
 .lf-actions-cell {
   display: flex;
@@ -72,6 +233,24 @@
   gap: 4px;
   padding: 8px;
   min-width: 280px;
+}
+
+/* Conteneur pour les boutons de formulaires */
+.form-actions,
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 20px;
+  padding: 15px 0;
+}
+
+.form-actions.align-left {
+  justify-content: flex-start;
+}
+
+.form-actions.center {
+  justify-content: center;
 }
 
 /* ========== TOOLTIP COLLÉ AU CURSEUR (GLOBAL) ========== */
@@ -166,45 +345,6 @@
   opacity: 1;
 }
 
-/* ========== BOUTONS DES MODALES ========== */
-.modal-action-button {
-  padding: 8px 15px;
-  border: none;
-  border-radius: var(--border-radius-sm);
-  cursor: pointer;
-  font-size: 14px;
-  margin-left: 10px;
-}
-
-.modal-action-primary {
-  background-color: #28a745;
-  color: white;
-}
-
-.modal-action-primary:hover {
-  background-color: #218838;
-}
-
-.modal-action-primary:disabled {
-  background-color: #6c757d;
-  cursor: not-allowed;
-}
-
-.modal-action-secondary {
-  background-color: #f1f1f1;
-  color: var(--color-text);
-}
-
-.modal-action-secondary:hover {
-  background-color: #e0e0e0;
-}
-
-.modal-action-secondary:disabled {
-  background-color: #f1f1f1;
-  color: #999;
-  cursor: not-allowed;
-}
-
 /* ========== BOUTON DE PRÉVISUALISATION ========== */
 .facture-preview-button {
   background-color: var(--color-secondary);
@@ -258,6 +398,36 @@
   .cursor-tooltip::after {
     border-width: 4px;
   }
+  
+  /* Responsive pour boutons de formulaires */
+  .form-actions,
+  .modal-actions {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+  
+  .btn-primary,
+  .btn-secondary,
+  .btn-success,
+  .btn-danger,
+  .modal-action-primary,
+  .modal-action-secondary,
+  .modal-action-danger {
+    width: 100%;
+    min-width: auto;
+  }
+  
+  /* Ordre des boutons sur mobile */
+  .btn-primary,
+  .modal-action-primary {
+    order: 1;
+  }
+  
+  .btn-secondary,
+  .modal-action-secondary {
+    order: 2;
+  }
 }
 
 @media (max-width: 480px) {
@@ -295,6 +465,13 @@
   .bouton-action:hover {
     transform: none;
   }
+  
+  .btn-primary,
+  .btn-secondary,
+  .btn-success,
+  .btn-danger {
+    transition: none;
+  }
 }
 
 @media (prefers-contrast: high) {
@@ -304,7 +481,9 @@
     border: 2px solid #000000;
   }
   
-  .bouton-action:focus {
+  .bouton-action:focus,
+  .btn-primary:focus,
+  .btn-secondary:focus {
     outline: 3px solid #000000;
   }
 }
@@ -314,7 +493,9 @@
   .lf-actions-cell,
   .bouton-action,
   .cursor-tooltip,
-  .lf-floating-button {
+  .lf-floating-button,
+  .form-actions,
+  .modal-actions {
     display: none;
   }
 }

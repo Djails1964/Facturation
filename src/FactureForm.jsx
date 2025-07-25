@@ -880,15 +880,15 @@ function FactureForm({
   };
 
   const getSubmitButtonClass = () => {
-    return "ff-submit-button";
+    return "btn-primary";
   };
 
   const getCancelButtonClass = () => {
     switch (mode) {
       case FORM_MODES.VIEW:
-        return "ff-button-retour";
+        return "btn-primary";
       default:
-        return "ff-cancel-button";
+        return "btn-secondary";
     }
   };
 

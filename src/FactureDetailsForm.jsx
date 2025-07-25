@@ -889,7 +889,7 @@ function FactureDetailsForm({
                                     e.stopPropagation();
                                     ajouterLigne();
                                 }}
-                                className="fdf_primary-button"
+                                className="btn-primary"
                             >
                                 + Ajouter une ligne
                             </button>

@@ -751,24 +751,24 @@ const ClientForm = ({
   const getSubmitButtonClass = () => {
     switch (mode) {
       case FORM_MODES.CREATE:
-        return "nc-submit-button";
+        return "btn-primary";
       case FORM_MODES.EDIT:
-        return "mc-submit-button";
+        return "btn-primary";
       default:
-        return "submit-button";
+        return "btn-primary";
     }
   };
 
   const getCancelButtonClass = () => {
     switch (mode) {
       case FORM_MODES.CREATE:
-        return "nc-cancel-button";
+        return "btn-secondary";
       case FORM_MODES.EDIT:
-        return "mc-cancel-button";
+        return "btn-secondary";
       case FORM_MODES.VIEW:
-        return "retour-bouton";
+        return "btn-primary";
       default:
-        return "cancel-button";
+        return "btn-secondary";
     }
   };
 

@@ -330,7 +330,7 @@ select::placeholder {
   justify-content: flex-start;
 }
 
-/* Style commun pour tous les boutons */
+/* Style commun pour tous les boutons 
 .client-form-boutons button,
 .NouveauClient-boutons button,
 .ModifierClient-boutons button,
@@ -341,37 +341,37 @@ select::placeholder {
   cursor: pointer;
   font-weight: 500;
   min-width: 120px;
-}
+} */
 
-/* Boutons de soumission */
+/* Boutons de soumission 
 .submit-button,
 .nc-submit-button,
 .mc-submit-button {
   background-color: #800000;
   color: white;
-}
+} */
 
-/* Boutons d'annulation */
+/* Boutons d'annulation 
 .cancel-button,
 .nc-cancel-button,
 .mc-cancel-button {
   background-color: #f1f1f1;
   color: #333;
-}
+} */
 
-/* Bouton de retour en mode affichage */
+/* Bouton de retour en mode affichage 
 .retour-bouton {
   background-color: #800000;
   color: white;
-}
+} */
 
-/* Effet de survol sur tous les boutons */
+/* Effet de survol sur tous les boutons 
 .client-form-boutons button:hover,
 .NouveauClient-boutons button:hover,
 .ModifierClient-boutons button:hover,
 .AfficherClient-boutons button:hover {
   opacity: 0.9;
-}
+} */
 
 /* ------------------------------ */
 /* --- MESSAGES --------------- */
