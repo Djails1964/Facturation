@@ -1,5 +1,5 @@
-import React from 'react';
-import ConfirmationModal from '../../shared/ConfirmationModal';
+import React, { useEffect } from 'react';
+import { showConfirm, showError, showWarning, showInfo } from '../../../utils/modalSystem';
 
 export const FactureFormModals = ({
   showUnsavedModal,
@@ -11,46 +11,73 @@ export const FactureFormModals = ({
   confirmModal,
   onCloseConfirmModal
 }) => {
-  return (
-    <>
-      {/* Modal pour les modifications non sauvegardées (navigation locale via bouton Annuler) */}
-      <ConfirmationModal
-        isOpen={showUnsavedModal}
-        title="Modifications non sauvegardées"
-        message="Vous avez des modifications non sauvegardées dans le formulaire de facture. Souhaitez-vous vraiment quitter sans sauvegarder ?"
-        type="warning"
-        onConfirm={confirmNavigation}
-        onCancel={cancelNavigation}
-        confirmText="Quitter sans sauvegarder"
-        cancelText="Continuer l'édition"
-        singleButton={false}
-      />
+  
+  // Gérer la modal de modifications non sauvegardées (navigation locale)
+  // ✅ VRAIE CONFIRMATION = 2 boutons
+  useEffect(() => {
+    if (showUnsavedModal) {
+      showConfirm({
+        title: 'Modifications non sauvegardées',
+        message: 'Vous avez des modifications non sauvegardées dans le formulaire de facture. Souhaitez-vous vraiment quitter sans sauvegarder ?',
+        confirmText: 'Quitter sans sauvegarder',
+        cancelText: 'Continuer l\'édition',
+        type: 'warning'
+      }).then((result) => {
+        if (result.action === 'confirm') {
+          confirmNavigation();
+        } else {
+          cancelNavigation();
+        }
+      });
+    }
+  }, [showUnsavedModal, confirmNavigation, cancelNavigation]);
 
-      {/* Modal pour les modifications non sauvegardées (navigation externe via menu/déconnexion) */}
-      <ConfirmationModal
-        isOpen={showGlobalModal}
-        title="Modifications non sauvegardées"
-        message="Vous avez des modifications non sauvegardées dans le formulaire de facture. Souhaitez-vous vraiment quitter sans sauvegarder ?"
-        type="warning"
-        onConfirm={onConfirmGlobal}
-        onCancel={onCancelGlobal}
-        confirmText="Quitter sans sauvegarder"
-        cancelText="Continuer l'édition"
-        singleButton={false}
-      />
+  // Gérer la modal de modifications non sauvegardées (navigation externe)
+  // ✅ VRAIE CONFIRMATION = 2 boutons
+  useEffect(() => {
+    if (showGlobalModal) {
+      showConfirm({
+        title: 'Modifications non sauvegardées',
+        message: 'Vous avez des modifications non sauvegardées dans le formulaire de facture. Souhaitez-vous vraiment quitter sans sauvegarder ?',
+        confirmText: 'Quitter sans sauvegarder',
+        cancelText: 'Continuer l\'édition',
+        type: 'warning'
+      }).then((result) => {
+        if (result.action === 'confirm') {
+          onConfirmGlobal();
+        } else {
+          onCancelGlobal();
+        }
+      });
+    }
+  }, [showGlobalModal, onConfirmGlobal, onCancelGlobal]);
 
-      {/* Modal pour les erreurs générales */}
-      {confirmModal && (
-        <ConfirmationModal
-          isOpen={confirmModal.isOpen}
-          title={confirmModal.title}
-          message={confirmModal.message}
-          type={confirmModal.type}
-          onConfirm={onCloseConfirmModal}
-          onCancel={onCloseConfirmModal}
-          singleButton={true}
-        />
-      )}
-    </>
-  );
+  // Gérer les modales d'information/erreur/avertissement
+  // ✅ INFORMATION = 1 bouton (OK seulement)
+  useEffect(() => {
+    if (confirmModal?.isOpen) {
+      let modalPromise;
+      
+      // Choisir la bonne fonction selon le type
+      switch (confirmModal.type) {
+        case 'error':
+          modalPromise = showError(confirmModal.message, confirmModal.title);
+          break;
+        case 'warning':
+          modalPromise = showWarning(confirmModal.message, confirmModal.title);
+          break;
+        case 'info':
+        default:
+          modalPromise = showInfo(confirmModal.message, confirmModal.title);
+          break;
+      }
+      
+      modalPromise.then(() => {
+        onCloseConfirmModal();
+      });
+    }
+  }, [confirmModal, onCloseConfirmModal]);
+
+  // Ce composant ne rend rien dans le DOM, tout est géré par le système modal unifié
+  return null;
 };
