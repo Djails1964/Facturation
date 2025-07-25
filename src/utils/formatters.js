@@ -132,6 +132,8 @@ export const formatEtatFacture = (etat) => {
     switch(etat.toLowerCase()) {
         case 'payée':
             return { class: 'lf-etat-payee', color: '#155724' };
+        case 'partiellement payée':  // ✅ NOUVEAU
+            return { class: 'lf-etat-partiellement-payee', color: '#4B0082' }; // Violet indigo
         case 'en attente':
             return { class: 'lf-etat-attente', color: '#856404' };
         case 'éditée':
@@ -144,6 +146,20 @@ export const formatEtatFacture = (etat) => {
             return { class: 'lf-etat-envoyee', color: '#0056b3' };
         default:
             return { class: '', color: '#333' };
+    }
+};
+
+/**
+ * ✅ NOUVEAU : Formate le texte d'affichage des états pour les badges
+ * @param {string} etat - État de la facture
+ * @returns {string} Texte formaté pour affichage
+ */
+export const formatEtatText = (etat) => {
+    if (!etat) return '';
+    
+    switch(etat.toLowerCase()) {
+        case 'partiellement payée': return 'Part. Payée'; // ✅ TEXTE COURT
+        default: return etat; // Garder le texte original pour les autres états
     }
 };
 

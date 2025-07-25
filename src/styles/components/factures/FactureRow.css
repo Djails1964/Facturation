@@ -68,6 +68,55 @@
   color: var(--color-sent-text);
 }
 
+/* Style de base pour l'état "Partiellement payée" */
+.lf-etat-partiellement-payee {
+    background-color: #E6E6FA; /* Lavande clair */
+    color: #4B0082; /* Indigo foncé pour le texte */
+    border: 1px solid #9370DB; /* Bordure violet moyen */
+    
+    /* ✅ MÊME STYLE QUE LES AUTRES BADGES */
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: none; /* ✅ PAS DE TRANSFORMATION, garde "Part. Payée" */
+    letter-spacing: normal; /* ✅ ESPACEMENT NORMAL */
+    display: inline-block;
+    text-align: center;
+    transition: all 0.2s ease;
+    white-space: nowrap; /* ✅ ÉVITE LA COUPURE DU TEXTE */
+}
+
+/* Effet au survol cohérent */
+.lf-etat-partiellement-payee:hover {
+    background-color: #DDA0DD;
+    border-color: #8A2BE2;
+}
+
+/* Pour assurer la cohérence avec les autres états */
+.lf-etat-badge.lf-etat-partiellement-payee {
+    /* Hérite automatiquement des styles de base de .lf-etat-badge */
+}
+
+/* Responsive - cohérent avec les autres badges */
+@media (max-width: 768px) {
+    .lf-etat-partiellement-payee {
+        font-size: 0.7rem;
+        padding: 3px 6px;
+    }
+}
+
+/* Version alternative avec dégradé subtil */
+.lf-etat-partiellement-payee.gradient {
+    background: linear-gradient(135deg, #E6E6FA 0%, #DDA0DD 100%);
+    box-shadow: 0 1px 3px rgba(75, 0, 130, 0.2);
+}
+
+/* Pour assurer la cohérence avec les autres états */
+.lf-etat-badge.lf-etat-partiellement-payee {
+    /* Hérite des styles de base ci-dessus */
+}
+
 /* Styles pour les tooltips des boutons d'action */
 .bouton-tooltip-container {
   position: relative;

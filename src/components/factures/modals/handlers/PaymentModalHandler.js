@@ -26,6 +26,9 @@ export class PaymentModalHandler {
             event.stopPropagation();
         }
         
+        // ✅ AJOUT : Stocker l'ID de la facture comme propriété de l'instance
+        this.currentFactureId = factureId;
+        
         const anchorRef = this.createAnchorRef(event);
         
         try {
@@ -51,7 +54,7 @@ export class PaymentModalHandler {
         } catch (error) {
             console.error('❌ Erreur préparation paiement:', error);
             
-            // ✅ CORRECTION : Essayer de récupérer factureData même en cas d'erreur
+            // Essayer de récupérer factureData même en cas d'erreur
             let factureData = null;
             try {
                 factureData = await this.factureService.getFacture(factureId);
@@ -61,7 +64,7 @@ export class PaymentModalHandler {
             
             await this.showError(
                 `Erreur lors du chargement de la facture : ${error.message}`,
-                factureData, // ✅ Passer factureData
+                factureData,
                 anchorRef
             );
         }
@@ -187,7 +190,42 @@ export class PaymentModalHandler {
             factureData.numeroFacture
         );
         
-        // Détails de la facture
+        // ✅ NOUVEAU: Affichage de l'état des paiements
+        const montantPaye = factureData.montantPayeTotal || 0;
+        const montantRestant = montantAvecRistourne - montantPaye;
+        const nbPaiements = factureData.nbPaiements || 0;
+        
+        if (nbPaiements > 0) {
+            const pourcentagePaye = Math.round((montantPaye / montantAvecRistourne) * 100);
+            
+            content += `
+                <div class="payment-status-container" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 10px 0; color: #495057;">📊 État des paiements</h4>
+                    <div class="payment-progress">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span>Progression</span>
+                            <span><strong>${pourcentagePaye}%</strong></span>
+                        </div>
+                        <div style="background: #e9ecef; border-radius: 10px; height: 8px; overflow: hidden;">
+                            <div style="background: ${pourcentagePaye >= 100 ? '#28a745' : '#007bff'}; height: 100%; width: ${pourcentagePaye}%; transition: width 0.3s ease;"></div>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                        <div>
+                            <div style="font-size: 12px; color: #6c757d;">Déjà payé</div>
+                            <div style="font-weight: bold; color: #28a745;">${this.formatMontant(montantPaye)} CHF</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: #6c757d;">Reste à payer</div>
+                            <div style="font-weight: bold; color: ${montantRestant > 0 ? '#dc3545' : '#28a745'};">${this.formatMontant(montantRestant)} CHF</div>
+                        </div>
+                    </div>
+                    ${nbPaiements > 0 ? `<div style="margin-top: 10px; font-size: 12px; color: #6c757d;">Nombre de paiements : ${nbPaiements}</div>` : ''}
+                </div>
+            `;
+        }
+        
+        // Détails de la facture (existant)
         content += `
             <div class="details-container">
                 <div class="info-row">
@@ -208,15 +246,39 @@ export class PaymentModalHandler {
                     <div class="info-value">-${this.formatMontant(factureData.ristourne)} CHF</div>
                 </div>
                 <div class="info-row">
-                    <div class="info-label">Montant à payer:</div>
+                    <div class="info-label">Montant net:</div>
                     <div class="info-value" style="font-weight: bold; color: var(--color-primary);">${this.formatMontant(montantAvecRistourne)} CHF</div>
+                </div>
+                ` : ''}
+                ${nbPaiements > 0 ? `
+                <div class="info-row">
+                    <div class="info-label">Déjà payé:</div>
+                    <div class="info-value" style="color: #28a745;">${this.formatMontant(montantPaye)} CHF</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Reste à payer:</div>
+                    <div class="info-value" style="font-weight: bold; color: ${montantRestant > 0 ? '#dc3545' : '#28a745'};">${this.formatMontant(montantRestant)} CHF</div>
                 </div>
                 ` : ''}
             </div>
         `;
         
-        // Formulaire de paiement
-        content += this.createPaymentForm(montantAvecRistourne);
+        // ✅ NOUVEAU: Bouton pour voir l'historique si des paiements existent
+        if (nbPaiements > 0) {
+            content += `
+                <div style="text-align: center; margin: 15px 0;">
+                    <button type="button" id="voirHistoriquePaiements" style="
+                        background: #6c757d; color: white; border: none; padding: 8px 16px; 
+                        border-radius: 5px; cursor: pointer; font-size: 14px;
+                    ">
+                        📋 Voir l'historique des paiements (${nbPaiements})
+                    </button>
+                </div>
+            `;
+        }
+        
+        // Formulaire de paiement (modifié pour le montant restant)
+        content += this.createPaymentForm(montantRestant > 0 ? montantRestant : montantAvecRistourne);
         
         return content;
     }
@@ -284,11 +346,21 @@ export class PaymentModalHandler {
     setupPaymentModalEvents(container, montantAvecRistourne, montantFacture) {
         const montantInput = container.querySelector('#montantPaye');
         const dateInput = container.querySelector('#datePaiement');
+        const historiqueBtn = container.querySelector('#voirHistoriquePaiements');
         
-        // Suggestions de montant avec style
+        // ✅ NOUVEAU: Gestionnaire pour l'historique des paiements
+        if (historiqueBtn) {
+            historiqueBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                // ✅ CORRECTION : Utiliser l'ID stocké dans l'instance
+                await this.showHistoriquePaiements(this.currentFactureId, e.target);
+            });
+        }
+        
+        // Suggestions de montant avec style (existant)
         this.addAmountSuggestions(container, montantInput, montantAvecRistourne, montantFacture);
         
-        // Validation montant
+        // Validation montant (existant)
         montantInput.addEventListener('blur', (e) => {
             const value = parseFloat(e.target.value);
             if (isNaN(value) || value <= 0) {
@@ -300,7 +372,7 @@ export class PaymentModalHandler {
             }
         });
         
-        // Validation date
+        // Validation date (existant)
         dateInput.addEventListener('change', (e) => {
             const selectedDate = new Date(e.target.value);
             const today = new Date();
@@ -382,7 +454,7 @@ export class PaymentModalHandler {
         const montantPayeNum = parseFloat(formData.montantPaye);
         
         if (isNaN(montantPayeNum) || montantPayeNum <= 0) {
-            await this.showValidationError("Le montant payé doit être un nombre positif.", factureData, anchorRef); // ✅ Ajouter factureData
+            await this.showValidationError("Le montant payé doit être un nombre positif.", factureData, anchorRef);
             return;
         }
         
@@ -391,26 +463,189 @@ export class PaymentModalHandler {
         today.setHours(23, 59, 59, 999);
         
         if (datePayment > today) {
-            await this.showValidationError("La date de paiement ne peut pas être dans le futur.", factureData, anchorRef); // ✅ Ajouter factureData
+            await this.showValidationError("La date de paiement ne peut pas être dans le futur.", factureData, anchorRef);
             return;
         }
         
-        // Confirmation si montant différent
+        // ✅ NOUVEAU: Calculer le montant restant avec les paiements existants
         const montantFacture = parseFloat(factureData.totalFacture);
         const montantAvecRistourne = factureData.ristourne 
             ? montantFacture - parseFloat(factureData.ristourne || 0)
             : montantFacture;
-            
-        if (Math.abs(montantPayeNum - montantAvecRistourne) > 0.01) {
-            const shouldContinue = await this.confirmDifferentAmount(montantPayeNum, montantAvecRistourne, anchorRef);
+        const montantDejaPaye = factureData.montantPayeTotal || 0;
+        const montantRestant = montantAvecRistourne - montantDejaPaye;
+        
+        // Vérifier que le paiement ne dépasse pas le montant restant
+        if (montantPayeNum > montantRestant + 0.01) { // +0.01 pour les erreurs d'arrondi
+            await this.showValidationError(
+                `Le montant saisi (${this.formatMontant(montantPayeNum)} CHF) dépasse le montant restant à payer (${this.formatMontant(montantRestant)} CHF).`,
+                factureData, 
+                anchorRef
+            );
+            return;
+        }
+        
+        // Confirmation si paiement partiel
+        if (montantPayeNum < montantRestant - 0.01) {
+            const pourcentagePaye = Math.round(((montantDejaPaye + montantPayeNum) / montantAvecRistourne) * 100);
+            const shouldContinue = await this.confirmPartialPayment(
+                montantPayeNum, 
+                montantRestant, 
+                pourcentagePaye,
+                anchorRef
+            );
             if (!shouldContinue) {
                 return;
             }
         }
         
-        // Enregistrer le paiement
-        await this.savePayment(factureId, formData, montantPayeNum, anchorRef);
+        // Enregistrer le paiement avec la nouvelle API
+        await this.savePayment(factureId, formData, montantPayeNum, factureData, anchorRef);
     }
+
+    // Confirmation pour paiement partiel
+    async confirmPartialPayment(montantPaye, montantRestant, pourcentagePaye, anchorRef) {
+        const montantRestantApres = montantRestant - montantPaye;
+        
+        const confirmResult = await this.showCustom({
+            title: "Paiement partiel",
+            content: ModalComponents.createWarningSection(
+                "⚠️ Paiement partiel détecté",
+                `Vous allez enregistrer un paiement partiel :<br><br>
+                <strong>Montant de ce paiement :</strong> ${this.formatMontant(montantPaye)} CHF<br>
+                <strong>Montant restant après :</strong> ${this.formatMontant(montantRestantApres)} CHF<br>
+                <strong>Progression :</strong> ${pourcentagePaye}% payé<br><br>
+                La facture restera à l'état "Partiellement payée" jusqu'au paiement complet.<br><br>
+                Voulez-vous continuer ?`,
+                "warning"
+            ),
+            anchorRef,
+            size: 'medium',
+            position: 'smart',
+            buttons: [
+                {
+                    text: "Annuler",
+                    action: "cancel",
+                    className: "secondary"
+                },
+                {
+                    text: "Confirmer le paiement partiel",
+                    action: "confirm",
+                    className: "primary"
+                }
+            ]
+        });
+        
+        return confirmResult.action === 'confirm';
+    }
+
+    // Afficher l'historique des paiements
+    async showHistoriquePaiements(factureId, anchorRef) {
+        try {
+            // Récupérer l'historique via l'API
+            const historique = await this.factureService.getHistoriquePaiements(factureId);
+            
+            if (!historique.success) {
+                throw new Error(historique.message);
+            }
+            
+            const paiements = historique.paiements || [];
+            
+            let content = `
+                <div class="historique-paiements">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 0; color: #495057;">📋 Historique des paiements</h4>
+                        <p style="margin: 5px 0 0 0; color: #6c757d; font-size: 14px;">
+                            ${paiements.length} paiement(s) enregistré(s)
+                        </p>
+                    </div>
+            `;
+            
+            if (paiements.length === 0) {
+                content += `
+                    <div style="text-align: center; padding: 40px; color: #6c757d;">
+                        <div style="font-size: 48px; margin-bottom: 10px;">💳</div>
+                        <div>Aucun paiement enregistré</div>
+                    </div>
+                `;
+            } else {
+                content += `<div class="paiements-liste">`;
+                
+                paiements.forEach((paiement, index) => {
+                    const datePaiement = this.formatDate(paiement.date_paiement);
+                    const montant = this.formatMontant(paiement.montant_paye);
+                    
+                    content += `
+                        <div class="paiement-item" style="
+                            border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; margin-bottom: 10px;
+                            background: ${index === paiements.length - 1 ? '#f8f9fa' : 'white'};
+                        ">
+                            <div style="display: flex; justify-content: space-between; align-items: start;">
+                                <div style="flex: 1;">
+                                    <div style="font-weight: bold; color: #495057; margin-bottom: 5px;">
+                                        💰 Paiement #${paiement.numero_paiement}
+                                        ${index === paiements.length - 1 ? '<span style="font-size: 12px; background: #007bff; color: white; padding: 2px 6px; border-radius: 10px; margin-left: 8px;">DERNIER</span>' : ''}
+                                    </div>
+                                    <div style="font-size: 14px; color: #6c757d; margin-bottom: 8px;">
+                                        📅 ${datePaiement} • 💳 ${paiement.methode_paiement}
+                                    </div>
+                                    ${paiement.commentaire ? `
+                                    <div style="font-size: 12px; color: #6c757d; font-style: italic; background: #f8f9fa; padding: 5px 8px; border-radius: 4px;">
+                                        💬 ${paiement.commentaire}
+                                    </div>
+                                    ` : ''}
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="font-size: 18px; font-weight: bold; color: #28a745;">
+                                        ${montant} CHF
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                content += `</div>`;
+                
+                // Résumé
+                const totalPaye = paiements.reduce((sum, p) => sum + parseFloat(p.montant_paye), 0);
+                content += `
+                    <div style="border-top: 2px solid #e9ecef; padding-top: 15px; margin-top: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 16px;">
+                            <span>Total payé :</span>
+                            <span style="color: #28a745;">${this.formatMontant(totalPaye)} CHF</span>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            content += `</div>`;
+            
+            await this.showCustom({
+                title: "Historique des paiements",
+                content,
+                anchorRef,
+                size: 'large',
+                position: 'smart',
+                buttons: [
+                    {
+                        text: "Fermer",
+                        action: "close",
+                        className: "primary"
+                    }
+                ]
+            });
+            
+        } catch (error) {
+            console.error('❌ Erreur historique paiements:', error);
+            await this.showError(
+                `Erreur lors du chargement de l'historique : ${error.message}`,
+                null,
+                anchorRef
+            );
+        }
+    }
+
 
     /**
      * Confirmation pour montant différent
@@ -451,7 +686,7 @@ export class PaymentModalHandler {
     /**
      * Enregistrer le paiement
      */
-    async savePayment(factureId, formData, montantPayeNum, anchorRef) {
+    async savePayment(factureId, formData, montantPayeNum, factureData, anchorRef) {
         try {
             const paiementResult = await this.showLoading(
                 {
@@ -470,10 +705,10 @@ export class PaymentModalHandler {
             );
             
             if (paiementResult.success) {
-                // ✅ CORRECTION : Récupérer les données fraîches de la facture après paiement
+                // Récupérer les données fraîches de la facture après paiement
                 const factureData = await this.factureService.getFacture(factureId);
                 
-                await this.showPaymentSuccess(formData, montantPayeNum, factureData, anchorRef); // ✅ Passer factureData
+                await this.showPaymentSuccess(formData, montantPayeNum, factureData, paiementResult, anchorRef);
                 this.onSetNotification('Paiement enregistré avec succès', 'success');
                 this.chargerFactures();
             } else {
@@ -483,7 +718,6 @@ export class PaymentModalHandler {
         } catch (paymentError) {
             console.error('❌ Erreur enregistrement paiement:', paymentError);
             
-            // ✅ CORRECTION : Récupérer factureData pour l'affichage d'erreur
             let factureData = null;
             try {
                 factureData = await this.factureService.getFacture(factureId);
@@ -498,20 +732,25 @@ export class PaymentModalHandler {
     /**
      * Modal de succès de paiement
      */
-    async showPaymentSuccess(formData, montantPayeNum, factureData, anchorRef) { // ✅ Ajouter factureData en paramètre
+    async showPaymentSuccess(formData, montantPayeNum, factureData, paiementResult, anchorRef) {
         const config = ModalComponents.createSimpleModalConfig(
             "Paiement enregistré !",
-            factureData, // ✅ CORRECTION : passer les données de la facture
+            factureData,
             {
                 intro: "",
                 content: `<div class="modal-success">
-                    Le paiement de ${this.formatMontant(montantPayeNum)} CHF a été enregistré avec succès.
+                    💰 Le paiement de ${this.formatMontant(montantPayeNum)} CHF a été enregistré avec succès.
                     <br><br>
-                    <strong>Méthode:</strong> ${formData.methodePaiement || 'virement'}
+                    <strong>📅 Date :</strong> ${this.formatDate(formData.datePaiement)}<br>
+                    <strong>💳 Méthode :</strong> ${formData.methodePaiement || 'virement'}<br>
+                    ${formData.commentaire ? `<strong>💬 Commentaire :</strong> ${formData.commentaire}<br>` : ''}
+                    ${paiementResult.numeroPaiement ? `<strong>📋 N° Paiement :</strong> #${paiementResult.numeroPaiement}<br>` : ''}
                     <br>
-                    <strong>Date:</strong> ${this.formatDate(formData.datePaiement)}
+                    <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-top: 10px;">
+                        <strong>État de la facture :</strong> ${factureData.etat || 'En cours de mise à jour'}
+                    </div>
                 </div>`,
-                formatMontant: this.formatMontant, // ✅ Ajouter les fonctions de formatage
+                formatMontant: this.formatMontant,
                 formatDate: this.formatDate,
                 buttons: ModalComponents.createModalButtons({
                     submitText: "OK",

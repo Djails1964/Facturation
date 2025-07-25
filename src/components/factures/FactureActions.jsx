@@ -26,9 +26,9 @@ const FactureActions = ({
     // Conditions d'activation des boutons
     const canModify = ['En attente', 'Éditée'].includes(etat);
     const canSendEmail = etat === 'Éditée';
-    const canPay = ['Envoyée', 'Retard'].includes(etat);
+    const canPay = ['Envoyée', 'Retard', 'Partiellement payée'].includes(etat); // ✅ AJOUT
     const canDelete = etat === 'En attente';
-    const canCancel = ['Envoyée', 'Éditée', 'Retard'].includes(etat);
+    const canCancel = ['Envoyée', 'Éditée', 'Retard', 'Partiellement payée'].includes(etat); // ✅ AJOUT
 
     // ✅ VARIABLES SUPPRIMÉES car non utilisées :
     // - deleteOrCancelMessage
@@ -181,7 +181,7 @@ const FactureActions = ({
                     onClick={(e) => {
                         e.stopPropagation();
                         if (!canPay) {
-                            onSetNotification('Seules les factures envoyées ou en retard peuvent être payées', 'error');
+                            onSetNotification('Seules les factures envoyées, en retard ou partiellement payées peuvent être payées', 'error');
                             return;
                         }
                         onPayerFacture(id, e);

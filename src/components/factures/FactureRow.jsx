@@ -22,12 +22,21 @@ const FactureRow = ({
     const getEtatClass = (etat) => {
         switch(etat.toLowerCase()) {
             case 'payée': return 'lf-etat-payee';
+            case 'partiellement payée': return 'lf-etat-partiellement-payee'; // ✅ NOUVEAU
             case 'en attente': return 'lf-etat-attente';
             case 'éditée': return 'lf-etat-editee';
             case 'retard': return 'lf-etat-retard';
             case 'annulée': return 'lf-etat-annulee';
             case 'envoyée': return 'lf-etat-envoyee';
             default: return '';
+        }
+    };
+
+    // ✅ NOUVEAU : Helper pour formater le texte d'affichage des états
+    const formatEtatText = (etat) => {
+        switch(etat.toLowerCase()) {
+            case 'partiellement payée': return 'Part. Payée'; // ✅ TEXTE COURT
+            default: return etat; // Garder le texte original pour les autres états
         }
     };
 
@@ -56,7 +65,7 @@ const FactureRow = ({
                 onClick={() => onSelectionFacture(facture.id)}
             >
                 <span className={`lf-etat-badge ${getEtatClass(facture.etat)}`}>
-                    {facture.etat}
+                    {formatEtatText(facture.etat)} {/* ✅ UTILISE LE TEXTE FORMATÉ */}
                 </span>
             </div>
 

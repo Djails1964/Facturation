@@ -97,92 +97,99 @@ class FactureService {
   }
 
   async getFacture(id) {
-    try {
-      console.log('Récupération de la facture:', id);
-      if (id in this._cacheFacture) {
-        console.log('Facture trouvée dans le cache:', id);
-        return this._cacheFacture[id];
-      } else {
-        console.log('Facture non trouvée dans le cache, appel API:', id);
-      }
-      
-      const response = await api.get(`facture-api.php?id=${id}`);
-      console.log('Réponse de l\'API:', response);
-      
-      if (response && response.success && response.facture) {
-        const factureData = response.facture;
-        
-        // ✅ NORMALISATION PRÉVENTIVE DES BOOLÉENS
-        const factureNormalisee = this.normalizeFacture(factureData);
-        console.log('Facture avant normalisation:', factureData);
-        console.log('Facture après normalisation:', factureNormalisee);
-        
-        // 🔧 FIX PERMANENT: Gérer le chemin du document avec URL correcte
-        let documentPath = null;
-        if (factureNormalisee.factfilename) {
-          try {
-            const outputDirResponse = await api.get('parametre-api.php?nomParametre=OutputDir&groupe=Facture&sGroupe=Chemin');
-            
-            let outputDir = 'storage/factures';
-            if (outputDirResponse && outputDirResponse.success) {
-              outputDir = outputDirResponse.parametre?.Valeur_parametre || outputDir;
-            }
-            
-            // 🔧 UTILISER utiliser urlHelper
-            documentPath = backendUrl(`${outputDir}/${factureNormalisee.factfilename}`);
-            console.log('Chemin du document de facture (FIX PERMANENT):', documentPath);
-          } catch (e) {
-            console.warn('Erreur lors de la récupération du chemin du document:', e);
+      try {
+          console.log('Récupération de la facture:', id);
+          if (id in this._cacheFacture) {
+              console.log('Facture trouvée dans le cache:', id);
+              return this._cacheFacture[id];
+          } else {
+              console.log('Facture non trouvée dans le cache, appel API:', id);
           }
-        }
+          
+          const response = await api.get(`facture-api.php?id=${id}`);
+          console.log('Réponse de l\'API:', response);
+          
+          if (response && response.success && response.facture) {
+              const factureData = response.facture;
+              
+              // Normalisation préventive des booléens
+              const factureNormalisee = this.normalizeFacture(factureData);
+              console.log('Facture avant normalisation:', factureData);
+              console.log('Facture après normalisation:', factureNormalisee);
+              
+              // Gestion du chemin du document avec URL correcte
+              let documentPath = null;
+              if (factureNormalisee.factfilename) {
+                  try {
+                      const outputDirResponse = await api.get('parametre-api.php?nomParametre=OutputDir&groupe=Facture&sGroupe=Chemin');
+                      
+                      let outputDir = 'storage/factures';
+                      if (outputDirResponse && outputDirResponse.success) {
+                          outputDir = outputDirResponse.parametre?.Valeur_parametre || outputDir;
+                      }
+                      
+                      documentPath = backendUrl(`${outputDir}/${factureNormalisee.factfilename}`);
+                      console.log('Chemin du document de facture (FIX PERMANENT):', documentPath);
+                  } catch (e) {
+                      console.warn('Erreur lors de la récupération du chemin du document:', e);
+                  }
+              }
 
-        const factureFormattee = {
-          id: factureNormalisee.id_facture || '',
-          numeroFacture: factureNormalisee.numero_facture || '',
-          dateFacture: factureNormalisee.date_facture || '',
-          clientId: factureNormalisee.id_client,
-          totalFacture: parseFloat(factureNormalisee.montant_total || 0),
-          ristourne: parseFloat(factureNormalisee.ristourne || 0),
-          totalAvecRistourne: parseFloat(factureNormalisee.montant_total || 0) - parseFloat(factureNormalisee.ristourne || 0),
-          lignes: (factureNormalisee.lignes || []).map(ligne => ({
-            id: ligne.id_ligne,
-            description: ligne.description,
-            unite: ligne.unite,
-            quantite: parseFloat(ligne.quantite || 0),
-            prixUnitaire: parseFloat(ligne.prix_unitaire || 0),
-            total: parseFloat(ligne.total_ligne || 0),
-            serviceId: ligne.service_id || null,
-            uniteId: ligne.unite_id || null,
-            serviceType: ligne.service_type || ligne.serviceType || null,
-            noOrdre: ligne.no_ordre || null,
-            descriptionDates: ligne.description_dates || null
-          })),
-          etat: factureNormalisee.etat || '',
-          documentPath: documentPath,
-          factfilename: factureNormalisee.factfilename || null,
-          date_annulation: factureNormalisee.date_annulation || null,
-          date_paiement: factureNormalisee.date_paiement || null,
-          // ✅ PROPRIÉTÉS BOOLÉENNES NORMALISÉES
-          est_imprimee: toBoolean(factureNormalisee.est_imprimee),
-          est_envoyee: toBoolean(factureNormalisee.est_envoyee),
-          est_annulee: toBoolean(factureNormalisee.est_annulee),
-          est_payee: toBoolean(factureNormalisee.est_payee),
-          client: factureNormalisee.nom ? {
-            id: factureNormalisee.id_client,
-            prenom: factureNormalisee.prenom,
-            nom: factureNormalisee.nom,
-            email: factureNormalisee.email || null,
-          } : null
-        };
-        
-        this._cacheFacture[id] = factureFormattee;
-        return factureFormattee;
+              const factureFormattee = {
+                  id: factureNormalisee.id_facture || '',
+                  numeroFacture: factureNormalisee.numero_facture || '',
+                  dateFacture: factureNormalisee.date_facture || '',
+                  clientId: factureNormalisee.id_client,
+                  totalFacture: parseFloat(factureNormalisee.montant_total || 0),
+                  ristourne: parseFloat(factureNormalisee.ristourne || 0),
+                  totalAvecRistourne: parseFloat(factureNormalisee.montant_total || 0) - parseFloat(factureNormalisee.ristourne || 0),
+                  
+                  // ✅ NOUVEAU: Données des paiements multiples
+                  montantPayeTotal: parseFloat(factureNormalisee.montant_paye_total || 0),
+                  montantRestant: parseFloat(factureNormalisee.montant_restant || 0),
+                  nbPaiements: parseInt(factureNormalisee.nb_paiements || 0),
+                  dateDernierPaiement: factureNormalisee.date_dernier_paiement || null,
+                  
+                  lignes: (factureNormalisee.lignes || []).map(ligne => ({
+                      id: ligne.id_ligne,
+                      description: ligne.description,
+                      unite: ligne.unite,
+                      quantite: parseFloat(ligne.quantite || 0),
+                      prixUnitaire: parseFloat(ligne.prix_unitaire || 0),
+                      total: parseFloat(ligne.total_ligne || 0),
+                      serviceId: ligne.service_id || null,
+                      uniteId: ligne.unite_id || null,
+                      serviceType: ligne.service_type || ligne.serviceType || null,
+                      noOrdre: ligne.no_ordre || null,
+                      descriptionDates: ligne.description_dates || null
+                  })),
+                  etat: factureNormalisee.etat || '',
+                  documentPath: documentPath,
+                  factfilename: factureNormalisee.factfilename || null,
+                  date_annulation: factureNormalisee.date_annulation || null,
+                  date_paiement: factureNormalisee.date_paiement || null,
+                  
+                  // Propriétés booléennes normalisées
+                  est_imprimee: toBoolean(factureNormalisee.est_imprimee),
+                  est_envoyee: toBoolean(factureNormalisee.est_envoyee),
+                  est_annulee: toBoolean(factureNormalisee.est_annulee),
+                  est_payee: toBoolean(factureNormalisee.est_payee),
+                  client: factureNormalisee.nom ? {
+                      id: factureNormalisee.id_client,
+                      prenom: factureNormalisee.prenom,
+                      nom: factureNormalisee.nom,
+                      email: factureNormalisee.email || null,
+                  } : null
+              };
+              
+              this._cacheFacture[id] = factureFormattee;
+              return factureFormattee;
+          }
+          return null;
+      } catch (error) {
+          console.error(`Erreur lors de la récupération de la facture ${id}:`, error);
+          return null;
       }
-      return null;
-    } catch (error) {
-      console.error(`Erreur lors de la récupération de la facture ${id}:`, error);
-      return null;
-    }
   }
 
   async getProchainNumeroFacture(annee) {
@@ -317,29 +324,106 @@ class FactureService {
     }
   }
 
-  async enregistrerPaiement(id, paiementData) {
-    try {
-      const response = await api.post(`facture-api.php?paiement&id=${id}`, paiementData);
-      
-      if (response && response.success) {
-        delete this._cacheFacture[id];
-
-        const facture = await this.getFacture(id);
-        if (facture && parseFloat(paiementData.montantPaye) >= facture.totalFacture) {
-          await this.changerEtatFacture(id, 'Payée');
-        }
-
-        return {
-          success: true,
-          message: response.message || 'Paiement enregistré avec succès'
-        };
-      } else {
-        throw new Error(response?.message || 'Erreur lors de l\'enregistrement du paiement');
+  /**
+   * Enregistre un paiement avec le nouveau système de paiements multiples
+   * @param int id ID de la facture
+   * @param array data Données du paiement
+   * @return array Résultat de l'opération
+   */
+  async enregistrerPaiement(id, data) {
+      try {
+          const response = await api.post(`facture-api.php?paiement&id=${id}`, data);
+          
+          if (response && response.success) {
+              delete this._cacheFacture[id];
+              return {
+                  success: true,
+                  message: response.message || 'Paiement enregistré avec succès',
+                  paiementId: response.paiementId,
+                  numeroPaiement: response.numeroPaiement
+              };
+          } else {
+              throw new Error(response?.message || 'Erreur lors de l\'enregistrement du paiement');
+          }
+      } catch (error) {
+          console.error(`Erreur lors de l'enregistrement du paiement pour la facture ${id}:`, error);
+          throw error;
       }
-    } catch (error) {
-      console.error(`Erreur lors de l'enregistrement du paiement pour la facture ${id}:`, error);
-      throw error;
-    }
+  }
+
+  /**
+   * Récupère l'historique des paiements d'une facture
+   * @param int factureId ID de la facture
+   * @return array Historique des paiements
+   */
+  async getHistoriquePaiements(factureId) {
+      try {
+          const response = await api.get(`facture-api.php?historiquePaiements&id=${factureId}`);
+          
+          if (response && response.success) {
+              return {
+                  success: true,
+                  paiements: response.paiements || []
+              };
+          } else {
+              throw new Error(response?.message || 'Erreur lors de la récupération de l\'historique');
+          }
+      } catch (error) {
+          console.error(`Erreur lors de la récupération de l'historique des paiements pour la facture ${factureId}:`, error);
+          throw error;
+      }
+  }
+
+  /**
+   * Supprime un paiement (annulation)
+   * @param int paiementId ID du paiement à supprimer
+   * @return array Résultat de l'opération
+   */
+  async supprimerPaiement(paiementId) {
+      try {
+          const response = await api.delete(`facture-api.php?supprimerPaiement&id=${paiementId}`);
+          
+          if (response && response.success) {
+              // Nettoyer le cache de la facture concernée
+              if (response.factureId) {
+                  delete this._cacheFacture[response.factureId];
+              }
+              
+              return {
+                  success: true,
+                  message: response.message || 'Paiement supprimé avec succès',
+                  factureId: response.factureId
+              };
+          } else {
+              throw new Error(response?.message || 'Erreur lors de la suppression du paiement');
+          }
+      } catch (error) {
+          console.error(`Erreur lors de la suppression du paiement ${paiementId}:`, error);
+          throw error;
+      }
+  }
+
+  /**
+   * Récupère les statistiques de paiement d'une facture
+   * @param int factureId ID de la facture
+   * @return array Statistiques de paiement
+   */
+  async getStatistiquesPaiement(factureId) {
+      try {
+          const response = await api.get(`facture-api.php?statistiquesPaiement&id=${factureId}`);
+          
+          if (response && response.success) {
+              return {
+                  success: true,
+                  statistiques: response.statistiques
+              };
+          } else {
+              throw new Error(response?.message || 'Erreur lors de la récupération des statistiques');
+          }
+      } catch (error) {
+          console.error(`Erreur lors de la récupération des statistiques de paiement pour la facture ${factureId}:`, error);
+          throw error;
+      }
   }
 
   async getFactureUrl(id) {

@@ -23,7 +23,16 @@ export const useFactureFilters = (facturesNonFiltrees, chargerFactures) => {
     const [filteredFactures, setFilteredFactures] = useState([]);
 
     // Listes pour les filtres
-    const etats = useMemo(() => ['Tous', 'Payée', 'Éditée', 'En attente', 'Retard', 'Annulée', 'Envoyée'], []);
+    const etats = useMemo(() => [
+        'Tous', 
+        'Payée', 
+        'Partiellement payée',  // ✅ NOUVEAU
+        'Éditée', 
+        'En attente', 
+        'Retard', 
+        'Annulée', 
+        'Envoyée'
+    ], []);
     
     // Générer les options d'années (année courante - 5 ans)
     const anneesOptions = useMemo(() => {
