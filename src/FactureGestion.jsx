@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import FacturesListe from './components/factures/FacturesListe';
-import { FactureForm, FORM_MODES } from './FactureForm';
+import FactureForm from './FactureForm'; // ✅ Import simple du composant
+import { FORM_MODES } from './constants/factureConstants'; // ✅ Import depuis les constantes
 import ClientService from './services/ClientService';
 
 function FactureGestion({ 
