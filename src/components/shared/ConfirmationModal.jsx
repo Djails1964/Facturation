@@ -1,5 +1,6 @@
 import React from 'react';
 import '../../styles/shared/ConfirmationModal.css';
+import { formatMontant, formatDate } from '../../utils/formatters';
 
 /**
  * Composant de modal de confirmation personnalisé
@@ -47,22 +48,6 @@ function ConfirmationModal({
     // Empêcher la propagation des clics depuis la boîte de dialogue
     const handleDialogClick = (e) => {
         e.stopPropagation();
-    };
-
-    // Formater les montants en CHF
-    const formatMontant = (montant) => {
-        if (!montant) return "";
-        return new Intl.NumberFormat('fr-CH', { 
-            style: 'currency', 
-            currency: 'CHF' 
-        }).format(montant);
-    };
-    
-    // Formater les dates
-    const formatDate = (dateString) => {
-        if (!dateString) return "";
-        const date = new Date(dateString);
-        return date.toLocaleDateString('fr-CH');
     };
 
     return (

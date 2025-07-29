@@ -1,13 +1,14 @@
-// FactureTotauxDisplay.js
 import React, { useState, useEffect, useRef } from 'react';
 import './FactureTotauxDisplay.css';
-import { useTraceUpdate } from './useTraceUpdate'; // Importer le hook de traçage
+import { useTraceUpdate } from './useTraceUpdate';
+// ✅ AJOUT: Import du formatter centralisé
+import { formatMontant } from './utils/formatters';
 
 function FactureTotauxDisplay({
-    lignes = [],                   // Tableau des lignes de facture
-    ristourneInitiale = 0,         // Valeur initiale de la ristourne
-    readOnly = false,              // Mode lecture seule
-    onChange = null                // Callback pour notifier le parent des changements
+    lignes = [],
+    ristourneInitiale = 0,
+    readOnly = false,
+    onChange = null
 }) {
     
     useTraceUpdate({ lignes, ristourneInitiale, readOnly, onChange }, 'FactureTotauxDisplay');
@@ -15,7 +16,7 @@ function FactureTotauxDisplay({
     
     const isUpdatingFromProp = useRef(false);
     const [ristourne, setRistourne] = useState(parseFloat(ristourneInitiale) || 0);
-    const [ristourneDisplay, setRistourneDisplay] = useState(''); // Valeur affichée dans l'input
+    const [ristourneDisplay, setRistourneDisplay] = useState('');
     const isInitialValueUpdate = useRef(false);
     const debounceTimeout = useRef(null);
 
@@ -29,30 +30,15 @@ function FactureTotauxDisplay({
     // Calculer le total net (après ristourne)
     const totalNet = Math.max(0, totalBrut - ristourne);
     
-    // Fonction pour formater les montants
-    const formatMontant = (montant) => {
-        return new Intl.NumberFormat('fr-CH', { 
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2 
-        }).format(parseFloat(montant) || 0);
-    };
+    // ✅ SUPPRESSION: formatMontant local (utilise maintenant le centralisé)
 
-    // Formater la valeur de ristourne pour l'affichage avec 2 décimales
-    const formatRistourneInput = (valeur) => {
-        return new Intl.NumberFormat('fr-CH', { 
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-            useGrouping: false
-        }).format(parseFloat(valeur) || 0);
-    };
-    
     // Mise à jour quand ristourneInitiale change
     useEffect(() => {
         console.log('⭐ Effet de synchronisation ristourneInitiale:', ristourneInitiale);
         isUpdatingFromProp.current = true;
         const nouveauMontant = parseFloat(ristourneInitiale) || 0;
         setRistourne(nouveauMontant);
-        setRistourneDisplay(formatRistourneInput(nouveauMontant));
+        setRistourneDisplay(formatMontant(nouveauMontant));
         setTimeout(() => {
             isUpdatingFromProp.current = false;
         }, 50);
@@ -60,12 +46,10 @@ function FactureTotauxDisplay({
     
     // Notifier le parent avec debounce
     const notifyParentWithDelay = (nouvelleRistourne) => {
-        // Annuler le timeout précédent s'il existe
         if (debounceTimeout.current) {
             clearTimeout(debounceTimeout.current);
         }
         
-        // Programmer la notification après 500ms de pause dans la saisie
         debounceTimeout.current = setTimeout(() => {
             if (onChange && !readOnly && !isUpdatingFromProp.current) {
                 console.log('⭐ Notifier le parent du changement de ristourne (avec délai):', nouvelleRistourne);
@@ -75,7 +59,7 @@ function FactureTotauxDisplay({
                     totalNet: Math.max(0, totalBrut - nouvelleRistourne)
                 });
             }
-        }, 500); // Délai de 500ms
+        }, 500);
     };
 
     // Nettoyer le timeout au démontage du composant
@@ -91,27 +75,21 @@ function FactureTotauxDisplay({
     const handleRistourneChange = (e) => {
         const valeurSaisie = e.target.value;
         
-        // Mettre à jour immédiatement l'affichage
         setRistourneDisplay(valeurSaisie);
         
-        // Convertir pour les calculs internes
         const valeurNumerique = valeurSaisie.replace(',', '.');
         const nouvelleValeur = valeurNumerique === '' ? 0 : parseFloat(valeurNumerique);
         
         if (!isNaN(nouvelleValeur)) {
             setRistourne(nouvelleValeur);
-            
-            // Notifier le parent avec délai
             notifyParentWithDelay(nouvelleValeur);
         }
     };
 
     // Gérer la perte de focus pour formater correctement
     const handleRistourneBlur = () => {
-        // Formater la valeur affichée quand l'utilisateur sort du champ
-        setRistourneDisplay(formatRistourneInput(ristourne));
+        setRistourneDisplay(formatMontant(ristourne));
         
-        // Forcer la notification immédiate si pas encore envoyée
         if (debounceTimeout.current) {
             clearTimeout(debounceTimeout.current);
             if (onChange && !readOnly && !isUpdatingFromProp.current) {
@@ -141,9 +119,8 @@ function FactureTotauxDisplay({
         }
         
         setRistourne(nouvelleRistourne);
-        setRistourneDisplay(formatRistourneInput(nouvelleRistourne));
+        setRistourneDisplay(formatMontant(nouvelleRistourne));
         
-        // Notification immédiate pour les suggestions (pas de délai)
         if (onChange && !readOnly) {
             onChange({
                 totalBrut,
@@ -200,11 +177,9 @@ function FactureTotauxDisplay({
                                 onChange={handleRistourneChange}
                                 onBlur={handleRistourneBlur}
                                 onFocus={(e) => {
-                                    // Suggestion automatique au focus si ristourne est à 0
                                     if (parseFloat(ristourne) === 0 && totalBrut > 0) {
                                         suggererRistourne();
                                     }
-                                    // Sélectionner tout le texte lors du focus
                                     e.target.select();
                                 }}
                                 disabled={readOnly}

@@ -26,8 +26,11 @@ const DashboardWrapper = () => {
     };
 
     const handleFilterByStatus = (status) => {
-        // Logique de filtrage des factures par statut
+        // ✅ MODIFIÉ: Amélioration de la logique de filtrage
         console.log(`Filtrer par statut : ${status}`);
+        // Ici vous pourriez implémenter une navigation vers la liste des factures
+        // avec un filtre appliqué sur l'état sélectionné
+        // Exemple : setActiveView('liste') avec un paramètre de filtre
     };
 
     // Rendu conditionnel selon la vue active

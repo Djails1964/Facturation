@@ -16,6 +16,7 @@ import { useFactures } from './hooks/useFactures';
 import { useFactureFilters } from './hooks/useFactureFilters';
 import { useTemplates } from './hooks/useTemplates';
 import { useFactureModals } from './hooks/useFactureModals';
+import { formatMontant, formatDate } from '../../utils/formatters';
 
 function FacturesListe({ 
     nouvelleFactureId,
@@ -80,8 +81,8 @@ function FacturesListe({
         factureService,
         showCustom,
         showLoading,
-        formatMontant: (montant) => factureService.formatMontant(montant),
-        formatDate: (dateStr) => factureService.formatDate(dateStr),
+        formatMontant: (montant) => formatMontant(montant),
+        formatDate: (dateStr) => formatDate(dateStr),
         formatEmailMessage: (template, facture) => {
             if (!template) {
                 console.warn("Template vide ou non défini");
@@ -99,15 +100,15 @@ function FacturesListe({
                 message = message.replace(/\[Numéro de facture\]/g, facture.numeroFacture || '');
                 
                 if (facture.totalAvecRistourne !== undefined) {
-                    const montant = factureService.formatMontant(facture.totalAvecRistourne);
+                    const montant = formatMontant(facture.totalAvecRistourne);
                     message = message.replace(/\[montant\]/g, montant);
                 } else if (facture.totalFacture !== undefined) {
-                    const montant = factureService.formatMontant(facture.totalFacture);
+                    const montant = formatMontant(facture.totalFacture);
                     message = message.replace(/\[montant\]/g, montant);
                 }
                 
                 if (facture.dateFacture) {
-                    const dateFormattee = factureService.formatDate(facture.dateFacture);
+                    const dateFormattee = formatDate(facture.dateFacture);
                     message = message.replace(/\[date\]/g, dateFormattee);
                 }
 
@@ -160,23 +161,7 @@ function FacturesListe({
         setFloatingButtonTooltip({ visible: false, position: { x: 0, y: 0 } });
     };
 
-    // ✅ NOUVEAUTÉ: Handler pour mise à jour des retards (simplifié)
-    const handleMettreAJourRetards = async () => {
-        onSetNotification('Mise à jour des factures en retard en cours...', 'info');
-        
-        try {
-            const result = await factureService.mettreAJourRetards();
-            if (result.success) {
-                onSetNotification(`${result.facturesModifiees} facture(s) mise(s) à jour en état "Retard"`, 'success');
-                chargerFactures();
-            } else {
-                throw new Error(result.message || 'Erreur lors de la mise à jour des factures en retard');
-            }
-        } catch (error) {
-            console.error('Erreur:', error);
-            onSetNotification('Une erreur est survenue lors de la mise à jour des factures en retard', 'error');
-        }
-    };
+    // ✅ SUPPRIMÉ: handleMettreAJourRetards (calculé automatiquement maintenant)
 
     // Effects
     useEffect(() => {
@@ -215,7 +200,7 @@ function FacturesListe({
                 clients={clients}
                 isLoadingClients={isLoadingClients}
                 etats={etats}
-                onMettreAJourRetards={handleMettreAJourRetards}
+                // ✅ SUPPRIMÉ: onMettreAJourRetards (calculé automatiquement)
             />
             
             {/* ✅ NOUVEAUTÉ: Utilisation des handlers externalisés */}
@@ -283,6 +268,7 @@ function FacturesListe({
             ✓ Performance préservée
             ✓ Positionnement intelligent conservé
             ✓ Drag & drop conservé
+            ✓ Calcul automatique des retards (plus de mise à jour manuelle)
             
             🚀 RÉSULTAT: Architecture propre et scalable !
             */}

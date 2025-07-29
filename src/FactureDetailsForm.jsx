@@ -8,6 +8,7 @@ import { useFactureDetailsForm } from './components/factures/hooks/useFactureDet
 // Utilitaires
 import CustomDatePickerModal from './components/shared/CustomDatePickerModal';
 import DateInputField from './components/shared/DateInputField';
+// ✅ CORRECTION: Import du formatter centralisé
 import { formatMontant } from './utils/formatters';
 
 /**
@@ -80,8 +81,7 @@ function FactureDetailsForm({
         handleDateSelect,
         addSelectedDatesToDescription,
         
-        // Utilitaires
-        formatCurrency,
+        // ✅ SUPPRESSION: formatCurrency (remplacé par formatMontant centralisé)
         
         // Références
         prixModifiesManuel,
@@ -102,7 +102,7 @@ function FactureDetailsForm({
      * Rend un champ en mode lecture seule
      */
     function renderReadOnlyField(label, value, className = "") {
-        // Pour les champs de prix, utiliser l'utilitaire de formatage
+        // ✅ CORRECTION: Utilisation du formatter centralisé pour tous les prix
         if (label === "Prix unitaire" || label === "Total") {
             if (typeof value === 'number') {
                 value = `${formatMontant(value)} CHF`;
@@ -469,7 +469,8 @@ function FactureDetailsForm({
                 <input
                     type="text"
                     id={`total-${index}`}
-                    value={`${formatCurrency(ligne.total)} CHF`}
+                    // ✅ CORRECTION: Utilisation du formatter centralisé
+                    value={`${formatMontant(ligne.total)} CHF`}
                     readOnly
                     onFocus={() => handleFocus(index, 'total')}
                     onBlur={() => handleBlur(index, 'total', ligne.total)}

@@ -1,9 +1,12 @@
+// ================== DashboardStats.jsx ==================
 import React, { useState, useEffect } from 'react';
 import { 
   BarChart, Bar, PieChart, Pie, LineChart, Line, XAxis, YAxis, 
   CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell 
 } from 'recharts';
 import FactureService from './services/FactureService';
+// ✅ AJOUT: Import des formatters centralisés
+import { formatMontant, formatDate, getBadgeClasses, isEtatEnCours } from './utils/formatters';
 import './DashboardStats.css';
 
 const DashboardStats = ({ 
@@ -32,11 +35,31 @@ const DashboardStats = ({
   const COLORS = ['#800000', '#a06060', '#c08080', '#e0a0a0', '#f0c0c0'];
   const STATUS_COLORS = {
     'Payée': '#28a745',
+    'Partiellement payée': '#fd7e14',
     'En attente': '#ffc107',
     'Retard': '#dc3545',
     'Éditée': '#17a2b8',
-    'Envoyée': '#0056b3', // Ajout de l'état "Envoyée" avec une couleur bleue
+    'Envoyée': '#0056b3',
     'Annulée': '#6c757d'
+  };
+
+  // ✅ SIMPLIFIÉ: Fonction pour calculer la distribution des états depuis les données du service
+  const calculateStatusDistributionFromFactures = (factures) => {
+    const statusCounts = {};
+    
+    // Compter les occurrences de chaque état d'affichage
+    factures.forEach(facture => {
+      const etat = facture.etatAffichage || facture.etat;
+      statusCounts[etat] = (statusCounts[etat] || 0) + 1;
+    });
+
+    // Convertir en format pour le graphique
+    const totalFactures = factures.length;
+    return Object.entries(statusCounts).map(([etat, count]) => ({
+      name: etat,
+      value: totalFactures > 0 ? Math.round((count / totalFactures) * 100) : 0,
+      count: count
+    }));
   };
 
   // Effet pour gérer les notifications
@@ -53,33 +76,38 @@ const DashboardStats = ({
 
   // Effet pour charger les statistiques et les factures lorsque l'année change
   useEffect(() => {
-    loadStats();
-    loadFactures();
+    loadStatsAndFactures();
   }, [selectedYear]);
 
-  // Fonction pour charger les statistiques
-  const loadStats = async () => {
+  // ✅ NOUVEAU: Fonction pour charger les stats et factures de manière coordonnée
+  const loadStatsAndFactures = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
+      // Charger les factures d'abord pour avoir les états calculés
+      const facturesData = await factureService.chargerFactures(selectedYear);
+      setFacturesData(facturesData);
+
+      // Ensuite charger les stats
       const result = await factureService.getStatistiques(selectedYear);
       console.log("Données reçues de l'API:", result);
 
       if (result.success) {
-        // Les données sont maintenant complètes depuis l'API PHP
         const statsData = result.statistiques || {};
+        
+        // Calculer la distribution réelle des états depuis les factures chargées
+        const realStatusDistribution = calculateStatusDistributionFromFactures(facturesData);
         
         const processedStats = {
           ...statsData,
-          // Calculer le montant restant
           montantRestant: parseFloat(statsData.montantTotal || 0) - parseFloat(statsData.montantPaye || 0),
-          // Les données mensuelles et de distribution viennent maintenant directement de l'API
           monthlySales: statsData.monthlySales || [],
-          statusDistribution: statsData.statusDistribution || []
+          // ✅ CORRECTION: Utiliser la distribution calculée depuis les factures réelles
+          statusDistribution: realStatusDistribution.length > 0 ? realStatusDistribution : (statsData.statusDistribution || [])
         };
         
-        console.log('Données réelles traitées:', processedStats);
+        console.log('Distribution des états calculée:', realStatusDistribution);
         setStats(processedStats);
       } else {
         throw new Error(result.message || 'Erreur lors du chargement des statistiques');
@@ -105,27 +133,83 @@ const DashboardStats = ({
     }
   };
 
-  // Fonction pour charger les factures
+  // ✅ CONSERVÉ: Fonction pour charger les statistiques (utilisée si besoin séparé)
+  const loadStats = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await factureService.getStatistiques(selectedYear);
+      console.log("Données reçues de l'API:", result);
+
+      if (result.success) {
+        const statsData = result.statistiques || {};
+        
+        const processedStats = {
+          ...statsData,
+          montantRestant: parseFloat(statsData.montantTotal || 0) - parseFloat(statsData.montantPaye || 0),
+          monthlySales: statsData.monthlySales || [],
+          statusDistribution: statsData.statusDistribution || []
+        };
+        
+        console.log('Données réelles traitées:', processedStats);
+        setStats(processedStats);
+      } else {
+        throw new Error(result.message || 'Erreur lors du chargement des statistiques');
+      }
+    } catch (error) {
+      console.error('Erreur:', error);
+      setError(`Erreur lors du chargement des statistiques: ${error.message}`);
+      
+      const mockStats = {
+        totalFactures: 125,
+        montantTotal: 45820,
+        montantPaye: 32450,
+        facturesImpayees: 43,
+        montantRestant: 13370,
+        monthlySales: generateMonthlySalesData(selectedYear),
+        statusDistribution: generateStatusDistribution()
+      };
+      
+      setStats(mockStats);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ✅ SIMPLIFIÉ: Fonction pour charger les factures (utilisée si besoin séparé)
   const loadFactures = async () => {
     try {
       const facturesData = await factureService.chargerFactures(selectedYear);
       setFacturesData(facturesData);
+      
+      // Si les stats sont déjà chargées, mettre à jour la distribution
+      if (stats && facturesData.length > 0) {
+        const newStatusDistribution = calculateStatusDistributionFromFactures(facturesData);
+        console.log('Mise à jour distribution depuis loadFactures:', newStatusDistribution);
+        setStats(prevStats => ({
+          ...prevStats,
+          statusDistribution: newStatusDistribution
+        }));
+      }
     } catch (error) {
       console.error('Erreur lors du chargement des factures:', error);
       // En mode développement, générer des données fictives
       const mockFactures = [];
       for (let i = 1; i <= 10; i++) {
-        mockFactures.push({
+        const facture = {
           id: i,
           numeroFacture: `${selectedYear}.${i.toString().padStart(3, '0')}`,
           dateFacture: `${selectedYear}-${Math.ceil(i/2)}-${i*3}`,
           montantTotal: 1000 + i * 500,
-          etat: ['Payée', 'En attente', 'Retard', 'Éditée', 'Envoyée'][i % 5], // Ajout de l'état "Envoyée"
+          etat: ['Payée', 'En attente', 'Éditée', 'Envoyée'][i % 4],
+          etatAffichage: ['Payée', 'En attente', 'Éditée', 'Retard'][i % 4], // Mock avec retard
           client: {
             prenom: 'Prénom',
             nom: 'Nom'
           }
-        });
+        };
+        mockFactures.push(facture);
       }
       setFacturesData(mockFactures);
     }
@@ -161,18 +245,18 @@ const DashboardStats = ({
   // Fonction pour générer une distribution fictive des états des factures
   const generateStatusDistribution = () => {
     return [
-      { name: 'Payée', value: 60 },
-      { name: 'En attente', value: 18 },
-      { name: 'Retard', value: 7 },
-      { name: 'Éditée', value: 5 },
-      { name: 'Envoyée', value: 8 }, // Ajout de l'état "Envoyée"
-      { name: 'Annulée', value: 2 }
+      { name: 'Payée', value: 60, count: 75 },
+      { name: 'En attente', value: 18, count: 23 },
+      { name: 'Retard', value: 7, count: 9 },
+      { name: 'Éditée', value: 5, count: 6 },
+      { name: 'Envoyée', value: 8, count: 10 },
+      { name: 'Annulée', value: 2, count: 2 }
     ];
   };
 
-  // Formateur personnalisé pour le tooltip des graphiques
+  // ✅ MODIFIÉ: Formateur personnalisé pour le tooltip des graphiques utilisant le formatter centralisé
   const customTooltipFormatter = (value, name) => {
-    return [`${factureService.formatMontant(value)} CHF`, name];
+    return [`${formatMontant(value)} CHF`, name];
   };
 
   if (isLoading) {
@@ -217,12 +301,14 @@ const DashboardStats = ({
         </div>
         
         <div className="stat-card">
-          <div className="stat-value">{factureService.formatMontant(stats.montantTotal)} CHF</div>
+          {/* ✅ MODIFIÉ: Utilisation du formatter centralisé */}
+          <div className="stat-value">{formatMontant(stats.montantTotal)} CHF</div>
           <div className="stat-title">Facturé (Envoyée + Payée)</div>
         </div>
         
         <div className="stat-card">
-          <div className="stat-value">{factureService.formatMontant(stats.montantPaye)} CHF</div>
+          {/* ✅ MODIFIÉ: Utilisation du formatter centralisé */}
+          <div className="stat-value">{formatMontant(stats.montantPaye)} CHF</div>
           <div className="stat-title">Montant encaissé</div>
         </div>
         
@@ -250,11 +336,14 @@ const DashboardStats = ({
               {facturesData.slice(0, 5).map(facture => (
                 <tr key={facture.id}>
                   <td>{facture.numeroFacture}</td>
-                  <td>{factureService.formatDate(facture.dateFacture)}</td>
-                  <td className="montant-cell">{factureService.formatMontant(facture.montantTotal)} CHF</td>
+                  {/* ✅ MODIFIÉ: Utilisation du formatter centralisé */}
+                  <td>{formatDate(facture.dateFacture)}</td>
+                  {/* ✅ MODIFIÉ: Utilisation du formatter centralisé */}
+                  <td className="montant-cell">{formatMontant(facture.montantTotal)} CHF</td>
                   <td>
-                    <span className={`etat-badge etat-${facture.etat?.toLowerCase()}`}>
-                      {facture.etat || 'En attente'}
+                    {/* ✅ MODIFIÉ: Utilisation du helper de badges avec l'état calculé */}
+                    <span className={getBadgeClasses(facture.etatAffichage || facture.etat)}>
+                      {facture.etatAffichage || facture.etat || 'En attente'}
                     </span>
                   </td>
                   <td>

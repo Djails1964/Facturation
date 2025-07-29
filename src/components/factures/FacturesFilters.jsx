@@ -1,8 +1,7 @@
 // src/components/factures/FacturesFilters.jsx
 
-import React, { useState } from 'react';
+import React from 'react';
 import '../../styles/components/factures/FacturesFilters.css';
-import { FiClock } from 'react-icons/fi';
 
 const FacturesFilters = ({
     anneeSelectionnee,
@@ -14,34 +13,8 @@ const FacturesFilters = ({
     anneesOptions,
     clients,
     isLoadingClients,
-    etats,
-    onMettreAJourRetards
+    etats
 }) => {
-    const [tooltipVisible, setTooltipVisible] = useState(false);
-    const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-
-    const handleMouseEnter = (e) => {
-        setTooltipVisible(true);
-        updateTooltipPosition(e);
-    };
-
-    const handleMouseMove = (e) => {
-        if (tooltipVisible) {
-            updateTooltipPosition(e);
-        }
-    };
-
-    const handleMouseLeave = () => {
-        setTooltipVisible(false);
-    };
-
-    const updateTooltipPosition = (e) => {
-        setTooltipPosition({
-            x: e.clientX,
-            y: e.clientY - 40 // Position au-dessus du curseur
-        });
-    };
-
     return (
         <div className="factures-table">
             <div className="lf-filters-row">
@@ -94,33 +67,9 @@ const FacturesFilters = ({
                 </div>
                 
                 <div className="lf-filter-cell lf-actions-cell">
-                    <div className="lf-action-buttons-container">
-                        <button 
-                            className="bouton-action"
-                            aria-label="Mettre à jour les factures en retard"
-                            onClick={onMettreAJourRetards}
-                            onMouseEnter={handleMouseEnter}
-                            onMouseMove={handleMouseMove}
-                            onMouseLeave={handleMouseLeave}
-                        >
-                            <FiClock size={16} color="#800020" />
-                        </button>
-                    </div>
+                    {/* ✅ SUPPRIMÉ: Bouton de mise à jour des retards (maintenant calculé dynamiquement) */}
                 </div>
             </div>
-
-            {/* Tooltip utilisant le système de buttons.css */}
-            {tooltipVisible && (
-                <div 
-                    className="cursor-tooltip"
-                    style={{
-                        left: tooltipPosition.x,
-                        top: tooltipPosition.y
-                    }}
-                >
-                    Mettre à jour les factures en retard
-                </div>
-            )}
         </div>
     );
 };

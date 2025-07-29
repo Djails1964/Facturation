@@ -1,8 +1,9 @@
-// FactureHistoriquePaiements.jsx - Nouveau fichier séparé
 import React, { useState, useEffect } from 'react';
 import { FiDollarSign, FiCreditCard, FiClock } from 'react-icons/fi';
 import FactureService from './services/FactureService';
-import './FactureHistoriquePaiements.css'; // Vous pouvez créer un CSS dédié
+// ✅ AJOUT: Import des formatters centralisés
+import { formatMontant, formatDate } from './utils/formatters';
+import './FactureHistoriquePaiements.css';
 
 /**
  * Composant pour afficher l'historique des paiements d'une facture
@@ -10,9 +11,8 @@ import './FactureHistoriquePaiements.css'; // Vous pouvez créer un CSS dédié
  */
 function FactureHistoriquePaiements({ 
   etat, 
-  factureId, 
-  formatMontant, 
-  formatDate 
+  factureId
+  // ✅ SUPPRESSION: formatMontant et formatDate ne sont plus des props
 }) {
   const [historiquePaiements, setHistoriquePaiements] = useState([]);
   const [loadingHistorique, setLoadingHistorique] = useState(false);
@@ -56,11 +56,11 @@ function FactureHistoriquePaiements({
 
   // ✅ POINT CLÉ : Ne rien afficher s'il n'y a pas de données
   if (loadingHistorique) {
-    return null; // Ou un petit indicateur si vous voulez
+    return null;
   }
 
   if (!hasData || historiquePaiements.length === 0) {
-    return null; // Le composant ne s'affiche pas du tout
+    return null;
   }
 
   // Afficher seulement s'il y a des paiements

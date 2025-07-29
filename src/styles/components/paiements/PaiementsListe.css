@@ -1,0 +1,237 @@
+.filters-panel {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #dee2e6;
+}
+
+.filter-row {
+  display: flex;
+  gap: 15px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+/* ✅ AJUSTEMENT: Style spécifique pour les input-group dans les filtres */
+.filter-row .input-group {
+  min-width: 150px;
+  flex: 1;
+  margin-bottom: 0; /* ✅ Pas de marge en bas pour les filtres */
+}
+
+/* ✅ SUPPRESSION des styles .filter-group, .filter-group label, .filter-group select - utilisation de .input-group */
+
+.filter-actions {
+  display: flex;
+  align-items: end;
+  margin-bottom: 10px; /* ✅ AJOUT: Alignement vertical avec les input-group */
+}/* PaiementsListe.css - VERSION NETTOYÉE */
+/* ✅ SUPPRESSION de tous les styles redondants qui existent déjà dans buttons.css et layout.css */
+
+/* Filtres - styles spécifiques à cette page */
+.paiements-filters {
+  background: white;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* ✅ AJOUT: Style pour aligner l'icône et le texte dans le bouton filtres */
+.paiements-filters .btn-primary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ✅ SUPPRESSION des styles .filter-toggle-btn et .btn-reset-filters - utilisation des classes standardisées */
+
+/* Contenu principal */
+.paiements-content {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.error-message, .loading-message {
+  padding: 40px;
+  text-align: center;
+  font-size: 16px;
+}
+
+.error-message {
+  color: #dc3545;
+}
+
+.loading-message {
+  color: #6c757d;
+}
+
+/* Tableau des paiements - styles spécifiques */
+.paiements-table-container {
+  overflow-x: auto;
+}
+
+.paiements-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.paiements-table-header {
+  background: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+  display: grid;
+  grid-template-columns: 120px 150px 2fr 120px 150px 220px; /* ✅ AJUSTEMENT: 120px → 220px pour la colonne Actions */
+  gap: 10px;
+  padding: 15px;
+  font-weight: 600;
+  color: #495057;
+  font-size: 14px;
+}
+
+.paiements-table-body {
+  display: contents;
+}
+
+.table-row {
+  display: grid;
+  grid-template-columns: 120px 150px 2fr 120px 150px 220px; /* ✅ AJUSTEMENT: 120px → 220px pour la colonne Actions */
+  gap: 10px;
+  padding: 15px;
+  border-bottom: 1px solid #dee2e6;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.table-row:hover {
+  background-color: #f8f9fa;
+}
+
+.table-row.selected {
+  background-color: #e3f2fd;
+  border-left: 4px solid #2196f3;
+}
+
+.table-cell {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: #495057;
+}
+
+/* ✅ SUPPRESSION des styles .actions-cell, .action-btn, etc. - ils sont maintenant dans buttons.css */
+
+.no-data-message {
+  padding: 40px;
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+  grid-column: 1 / -1;
+}
+
+/* Pagination */
+.pagination {
+  padding: 15px;
+  background: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+  text-align: center;
+  color: #6c757d;
+  font-size: 14px;
+}
+
+/* ✅ SUPPRESSION du style .floating-add-btn - utilisation de .lf-floating-button */
+
+/* Modal de confirmation - styles spécifiques */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  padding: 30px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+
+.modal-content h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 1.4rem;
+}
+
+.modal-content p {
+  margin: 0 0 15px 0;
+  color: #666;
+  line-height: 1.5;
+}
+
+.paiement-details {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 6px;
+  margin: 15px 0;
+}
+
+.paiement-details p {
+  margin: 5px 0;
+  font-size: 14px;
+}
+
+.paiement-details strong {
+  color: #333;
+}
+
+/* ✅ SUPPRESSION des styles .btn-cancel et .btn-confirm-delete - utilisation de .btn-secondary et .btn-danger */
+
+/* Responsive */
+@media (max-width: 768px) {
+  .paiements-table-header,
+  .table-row {
+    grid-template-columns: 1fr;
+    text-align: left;
+  }
+  
+  .table-cell {
+    padding: 5px 0;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .table-cell:before {
+    content: attr(data-label);
+    font-weight: bold;
+    display: inline-block;
+    width: 120px;
+  }
+  
+  /* ✅ AJUSTEMENT: Utilisation de .lf-actions-cell au lieu de .actions-cell */
+  .table-cell.lf-actions-cell {
+    justify-content: flex-start;
+    padding-top: 10px;
+  }
+  
+  .filter-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  /* ✅ CHANGEMENT: Utilisation de .input-group au lieu de .filter-group */
+  .filter-row .input-group {
+    min-width: auto;
+    margin-bottom: 15px; /* ✅ Marge normale sur mobile */
+  }
+  
+  .filter-actions {
+    margin-bottom: 0; /* ✅ Pas de marge sur mobile */
+  }
+}

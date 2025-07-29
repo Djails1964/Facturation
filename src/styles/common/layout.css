@@ -6,19 +6,54 @@
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
+  background-color: transparent; /* ✅ Pas de fond par défaut */
+  border: none; /* ✅ Pas de bordure par défaut */
+  box-shadow: none; /* ✅ Pas d'ombre par défaut */
 }
 
+/* ✅ NOUVEAU: Variante avec titre bordeaux simple (utilisée dans FacturationPage) */
 .content-section-title {
+  background-color: transparent; /* ✅ Fond transparent par défaut */
+  padding: 0 0 25px 0; /* ✅ Padding uniquement en bas */
+  border-radius: 0; /* ✅ Pas d'arrondi par défaut */
+  text-align: left; /* ✅ Alignement à gauche par défaut */
+  border: none;
+  margin: 0;
+}
+
+.content-section-title h2 {
+  color: var(--color-primary); /* ✅ Couleur bordeaux */
+  text-align: left;
+  border-bottom: 2px solid var(--color-primary); /* ✅ Soulignement bordeaux */
+  padding-bottom: 10px;
+  margin: 0;
+  font-size: 1.5rem;
+  width: 100%; /* ✅ Largeur complète pour le soulignement */
+}
+
+/* ✅ NOUVEAU: Variante avec fond bordeaux (pour modales, sections spéciales) */
+.content-section-title.with-background {
   background-color: var(--color-primary);
   padding: 15px;
   border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;
   text-align: center;
 }
-  
-.content-section-title h2 {
+
+.content-section-title.with-background h2 {
   color: white;
-  margin: 0;
-  font-size: 1.5rem;
+  border-bottom: none; /* ✅ Pas de soulignement sur fond bordeaux */
+  padding-bottom: 0;
+}
+
+/* ✅ VARIANTE: Titre centré */
+.content-section-title.centered h2 {
+  text-align: center;
+}
+
+/* ✅ VARIANTE: Titre sans soulignement */
+.content-section-title.no-underline h2 {
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
 /* Notification */
@@ -62,7 +97,7 @@
   opacity: 0.7;
 }
 
-/* ========== ✅ NOUVEAU : BADGES D'ÉTAT UNIVERSELS ========== */
+/* ========== ✅ BADGES D'ÉTAT UNIVERSELS ========== */
 
 /* Badge de base - utilisé partout dans l'application */
 .etat-badge {

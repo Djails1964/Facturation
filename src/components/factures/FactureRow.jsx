@@ -20,6 +20,9 @@ const FactureRow = ({
     onSetNotification
 }) => {
     
+    // ✅ CORRECTION: Utiliser etatAffichage en priorité, puis etat en fallback
+    const etatAUtiliser = facture.etatAffichage || facture.etat;
+    
     return (
         <div className={`lf-table-row ${isSelected ? 'lf-selected' : ''}`}>
             <div 
@@ -44,8 +47,8 @@ const FactureRow = ({
                 className="lf-table-cell lf-etat-cell"
                 onClick={() => onSelectionFacture(facture.id)}
             >
-                <span className={getBadgeClasses(facture.etat)}>
-                    {formatEtatText(facture.etat)} {/* ✅ UTILISE LE TEXTE FORMATÉ */}
+                <span className={getBadgeClasses(etatAUtiliser)}>
+                    {formatEtatText(etatAUtiliser)} {/* ✅ CORRIGÉ: Utilise etatAffichage */}
                 </span>
             </div>
 

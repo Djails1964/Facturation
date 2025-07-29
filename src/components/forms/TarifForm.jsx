@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiCalendar } from 'react-icons/fi';
 import { useDateContext } from '../../context/DateContext';
+import { formatDateToYYYYMMDD } from '../../utils/formatters';
 
 const TarifForm = ({ 
   tarif, 
@@ -17,14 +18,6 @@ const TarifForm = ({
   
   const { openDatePicker } = useDateContext();
 
-
-  // Vos fonctions existantes de formatage et DatePicker...
-  const formatDateToYYYYMMDD = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
 
   const handleOpenDateDebutPicker = () => {
     let initialDate = null;

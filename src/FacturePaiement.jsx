@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './FacturePaiement.css';
 import { FiX } from 'react-icons/fi';
 import FactureService from './services/FactureService';
+import { formatMontant, formatDate } from './utils/formatters';
 
 function FacturePaiement({ factureId, onClose, onFacturePayee, position }) {
     const [facture, setFacture] = useState(null);
@@ -29,7 +30,7 @@ function FacturePaiement({ factureId, onClose, onFacturePayee, position }) {
                     // Initialiser le montant payé avec le montant total de la facture
                     const montant = parseFloat(factureData.totalFacture).toFixed(2);
                     setMontantPaye(montant);
-                    setMontantPayeFormatted(factureService.formatMontant(montant));
+                    setMontantPayeFormatted(formatMontant(montant));
                     
                     // Initialiser la date de paiement avec la date du jour
                     const today = new Date();
@@ -74,7 +75,7 @@ function FacturePaiement({ factureId, onClose, onFacturePayee, position }) {
         setMontantPaye(value);
         
         // Formater pour l'affichage
-        setMontantPayeFormatted(factureService.formatMontant(value));
+        setMontantPayeFormatted(formatMontant(value));
         
         // Restaurer la position du curseur après la mise à jour du state
         // (doit être fait après le rendu, donc dans un setTimeout)
@@ -167,12 +168,12 @@ function FacturePaiement({ factureId, onClose, onFacturePayee, position }) {
                             )}
                             <div className="facture-info-row">
                                 <div className="facture-info-label">Date facture:</div>
-                                <div className="facture-info-value">{factureService.formatDate(facture.dateFacture)}</div>
+                                <div className="facture-info-value">{formatDate(facture.dateFacture)}</div>
                             </div>
                             <div className="facture-info-row">
                                 <div className="facture-info-label">Montant facture:</div>
                                 <div className="facture-info-value">
-                                    {factureService.formatMontant(facture.totalFacture)} CHF
+                                    {formatMontant(facture.totalFacture)} CHF
                                 </div>
                             </div>
                         </div>

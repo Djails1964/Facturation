@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiFile, FiCalendar, FiCreditCard, FiDollarSign, FiClock } from 'react-icons/fi';
 import { useDateContext } from './context/DateContext';
-import { getBadgeClasses, formatEtatText, formatDate } from './utils/formatters';
+import { getBadgeClasses, formatEtatText, formatDate, formatDateToYYYYMMDD } from './utils/formatters';
 import FactureService from './services/FactureService';
 import './FactureHeader.css';
 
@@ -21,10 +21,11 @@ function FactureHeader({
   documentPath = null,
   mode = 'view',
   etat = '',
+  etatAffichage = '', // ✅ NOUVEAU: Paramètre pour l'état d'affichage
   factureId = null,
   factureData = null
 }) {
-    console.log(`[HEADER] FactureHeader initialisé - mode: ${mode}, état: ${etat}, factureId: ${factureId}`);
+    console.log(`[HEADER] FactureHeader initialisé - mode: ${mode}, état: ${etat}, etatAffichage: ${etatAffichage}, factureId: ${factureId}`);
 
   // États existants
   const [numeroFactureFocused, setNumeroFactureFocused] = useState(false);
@@ -36,6 +37,9 @@ function FactureHeader({
 
   // Accéder au contexte de dates pour utiliser le DatePicker
   const { openDatePicker } = useDateContext();
+
+  // ✅ CORRECTION: Déterminer l'état à utiliser pour l'affichage
+  const etatAUtiliser = etatAffichage || etat;
 
   // Gestion des changements (existants)
   const handleNumeroFactureChange = (e) => {
@@ -82,14 +86,6 @@ function FactureHeader({
     openDatePicker(config, callback, initialDate ? [initialDate] : []);
   };
   
-  // Fonction utilitaire pour formater une date au format YYYY-MM-DD pour l'input HTML
-  const formatDateToYYYYMMDD = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
   // Calcul des classes CSS conditionnelles
   const getNumeroFactureInputClass = () => {
     return `facture-header-input ${numeroFacture || numeroFactureFocused ? 'focused' : ''}`;
@@ -103,20 +99,14 @@ function FactureHeader({
     return `facture-header-input ${clientId || clientFocused ? 'focused' : ''}`;
   };
 
-  // Fonction pour afficher la date au format localisé
-  const getFormattedDateDisplay = (dateStr) => {
-    if (!dateStr) return '';
-    return formatDate(dateStr);
-  };
-
   return (
     <div className="facture-header-container">
       
-      {/* ✅ Badge d'état simple (seulement en mode VIEW) */}
-      {readOnly && etat && (
+      {/* ✅ CORRIGÉ: Badge d'état utilise etatAUtiliser (etatAffichage en priorité) */}
+      {readOnly && etatAUtiliser && (
         <div className="facture-header-etat-simple">
-          <span className={getBadgeClasses(etat)}>
-            {formatEtatText(etat)}
+          <span className={getBadgeClasses(etatAUtiliser)}>
+            {formatEtatText(etatAUtiliser)}
           </span>
         </div>
       )}
@@ -149,7 +139,7 @@ function FactureHeader({
           <div className={getDateFactureInputClass()}>
             {readOnly ? (
               <div className="facture-header-readonly-field">
-                {getFormattedDateDisplay(dateFacture)}
+                {formatDate(dateFacture)}
               </div>
             ) : (
               <>

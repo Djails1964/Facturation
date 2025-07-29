@@ -172,25 +172,6 @@
   font-size: 1.2rem;
 }
 
-/* Styles communs pour tous les conteneurs de contenu */
-.facturation-content .content-section-container {
-  max-width: 100%;
-  margin: 0;
-}
-
-/* Styles communs pour tous les titres de section */
-.facturation-content .content-section-title {
-  border-radius: 0;
-  background-color: transparent;
-  padding: 0 0 25px 0;
-}
-
-.facturation-content .content-section-title h2 {
-  color: #800000;
-  text-align: left;
-  border-bottom: 2px solid #800000;
-  padding-bottom: 10px;
-}
 
 /* Styles génériques pour les boutons d'action dans les listes */
 .facturation-content .cl-btn-icon {

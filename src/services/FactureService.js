@@ -1,33 +1,217 @@
 /**
- * Service de gestion des factures - VERSION MISE À JOUR avec gestion préventive des booléens
+ * Service de gestion des factures - VERSION FINALE sans état "Retard" persisté
  * @class FactureService
  * @description Gère l'accès aux données des factures via l'API facture-api.php
  */
 import api from './api';
 import { backendUrl } from '../utils/urlHelper';
-import { toBoolean, normalizeBooleanFields, normalizeBooleanFieldsArray } from '../utils/booleanHelper'; // ✅ IMPORT du helper
+import { toBoolean, normalizeBooleanFields, normalizeBooleanFieldsArray } from '../utils/booleanHelper';
+import ParametreService from './ParametreService';
+import { formatMontant } from '../utils/formatters';
 
 class FactureService {
   constructor() {
     this.factures = [];
-    this._cacheFacture = {}; // Cache pour les factures fréquemment consultées
+    this._cacheFacture = {};
+    this._parametreService = new ParametreService();
+    this._delaiPaiementCache = null;
   }
 
   /**
-   * ✅ NORMALISATION D'UNE FACTURE
+   * Récupère le délai de paiement depuis les paramètres
+   * @returns {Promise<number>} - Délai en jours
+   */
+  async _getDelaiPaiement() {
+    try {
+      if (this._delaiPaiementCache !== null) {
+        return this._delaiPaiementCache;
+      }
+
+      const result = await this._parametreService.getParametre(
+        'Delai Paiement',
+        'Facture',
+        'Paiement'
+      );
+
+      if (result.success && result.parametre) {
+        this._delaiPaiementCache = parseInt(result.parametre.Valeur_parametre) || 30;
+        console.log('✅ Délai de paiement récupéré:', this._delaiPaiementCache, 'jours');
+      } else {
+        console.warn('⚠️ Paramètre "Delai Paiement" non trouvé, utilisation de la valeur par défaut (30 jours)');
+        this._delaiPaiementCache = 30;
+      }
+
+      return this._delaiPaiementCache;
+    } catch (error) {
+      console.error('Erreur lors de la récupération du délai de paiement:', error);
+      return 30;
+    }
+  }
+
+  /**
+   * Détermine l'état d'une facture (sans gestion de "Retard" persisté)
+   * @param {Object} facture - Données de la facture
+   * @returns {string} - État de base stocké en base
+   */
+  _determinerEtatBase(facture) {
+    // Priorité aux états explicites (sauf "Retard" qui ne doit plus être persisté)
+    if (facture.etat && facture.etat !== 'Retard') {
+      return facture.etat;
+    }
+    
+    // Logique de déduction basée sur les données
+    if (facture.date_paiement) {
+      return 'Payée';
+    } else if (facture.date_annulation) {
+      return 'Annulée';
+    } else {
+      return toBoolean(facture.est_imprimee) ? 'Éditée' : 'En attente';
+    }
+  }
+
+  /**
+   * Détermine l'état d'affichage d'une facture (avec calcul dynamique de retard)
+   * @param {Object} facture - Données de la facture
+   * @returns {Promise<string>} - État pour l'interface utilisateur
+   */
+  async _determinerEtatAffichage(facture) {
+    const etatBase = this._determinerEtatBase(facture);
+    
+    console.log(`🔍 _determinerEtatAffichage - Facture ${facture.numeroFacture || facture.id}: état de base = ${etatBase}`);
+    
+    // Si la facture est "Envoyée" et pas encore payée, vérifier le retard
+    if (etatBase === 'Envoyée' && !facture.date_paiement && await this._estEnRetard(facture)) {
+      console.log(`🔴 État final: Retard pour facture ${facture.numeroFacture || facture.id}`);
+      return 'Retard';
+    }
+    
+    console.log(`✅ État final: ${etatBase} pour facture ${facture.numeroFacture || facture.id}`);
+    return etatBase;
+  }
+
+  /**
+   * Vérifie si une facture est en retard de paiement
+   * @param {Object} facture - Données de la facture
+   * @returns {Promise<boolean>} - True si en retard
+   */
+  async _estEnRetard(facture) {
+    if (!facture.date_facture || facture.date_paiement || facture.date_annulation) {
+      console.log(`📅 Facture ${facture.numeroFacture || facture.id} - Pas de retard: date_facture=${facture.date_facture}, date_paiement=${facture.date_paiement}, date_annulation=${facture.date_annulation}`);
+      return false;
+    }
+    
+    const dateFacture = new Date(facture.date_facture);
+    const aujourdhui = new Date();
+    const diffTemps = aujourdhui.getTime() - dateFacture.getTime();
+    const diffJours = Math.ceil(diffTemps / (1000 * 3600 * 24));
+    
+    const delaiPaiement = await this._getDelaiPaiement();
+    
+    const estEnRetard = diffJours > delaiPaiement;
+    
+    console.log(`📅 Vérification retard - Facture: ${facture.numeroFacture || facture.id}, Âge: ${diffJours} jours, Délai: ${delaiPaiement} jours, En retard: ${estEnRetard}`);
+    
+    return estEnRetard;
+  }
+
+  /**
+   * Vérifie si une facture peut recevoir des paiements
+   * @param {Object} facture - Données de la facture
+   * @returns {Promise<boolean>} - True si payable
+   */
+  async _peutRecevoirPaiement(facture) {
+    const etatAffichage = await this._determinerEtatAffichage(facture);
+    const etatsPayables = ['Envoyée', 'Retard', 'Partiellement payée'];
+    return etatsPayables.includes(etatAffichage);
+  }
+
+  /**
+   * Version simplifiée pour la compatibilité (calcul dynamique uniquement)
+   * @param {Object} facture - Données de la facture
+   * @returns {string} - État calculé dynamiquement
+   */
+  _determinerEtatFacture(facture) {
+    const etatBase = this._determinerEtatBase(facture);
+    
+    // Pour la version synchrone, on ne peut pas faire le calcul de retard dynamique
+    // On retourne l'état de base, le calcul de retard se fera via _determinerEtatAffichage
+    return etatBase;
+  }
+
+  /**
+   * Vide le cache du délai de paiement
+   */
+  _clearDelaiPaiementCache() {
+    this._delaiPaiementCache = null;
+  }
+
+  /**
+   * Récupère les factures payables avec délai configurable
+   * @param {number} annee - Année à filtrer
+   * @returns {Promise<Array>} - Liste des factures pouvant recevoir des paiements
+   */
+  async getFacturesPayables(annee = null) {
+    try {
+      const factures = await this.chargerFactures(annee);
+      
+      const facturesPayables = [];
+      
+      for (const facture of factures) {
+        if (await this._peutRecevoirPaiement(facture)) {
+          // Enrichir avec l'état d'affichage correct (avec calcul de retard)
+          facture.etatAffichage = await this._determinerEtatAffichage(facture);
+          facturesPayables.push(facture);
+        }
+      }
+      
+      return facturesPayables;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des factures payables:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Enrichit une facture avec son état d'affichage calculé dynamiquement
+   * @param {Object} facture - Facture à enrichir
+   * @returns {Promise<Object>} - Facture avec etatAffichage
+   */
+  async enrichirAvecEtatAffichage(facture) {
+    const factureEnrichie = { ...facture };
+    factureEnrichie.etatAffichage = await this._determinerEtatAffichage(facture);
+    return factureEnrichie;
+  }
+
+  /**
+   * Enrichit un tableau de factures avec les états d'affichage calculés
+   * @param {Array} factures - Tableau de factures à enrichir
+   * @returns {Promise<Array>} - Factures avec etatAffichage
+   */
+  async enrichirFacturesAvecEtatAffichage(factures) {
+    const facturesEnrichies = [];
+    
+    for (const facture of factures) {
+      const factureEnrichie = await this.enrichirAvecEtatAffichage(facture);
+      facturesEnrichies.push(factureEnrichie);
+    }
+    
+    return facturesEnrichies;
+  }
+
+  /**
+   * Normalisation d'une facture
    * @param {Object} facture - Facture à normaliser
    * @returns {Object} - Facture avec propriétés booléennes normalisées
    */
   normalizeFacture(facture) {
     if (!facture || typeof facture !== 'object') return facture;
     
-    // Champs booléens potentiels dans les factures
     const booleanFields = ['est_imprimee', 'est_envoyee', 'est_annulee', 'est_payee'];
     return normalizeBooleanFields(facture, booleanFields);
   }
 
   /**
-   * ✅ NORMALISATION D'UN TABLEAU DE FACTURES
+   * Normalisation d'un tableau de factures
    * @param {Array} factures - Tableau de factures à normaliser
    * @returns {Array} - Factures avec propriétés booléennes normalisées
    */
@@ -46,17 +230,14 @@ class FactureService {
       }
 
       console.log('FactureService - Chargement des factures pour l\'année:', annee);
-      console.log('FactureService - Paramètres de l\'API:', params);
       const response = await api.get('facture-api.php', params);
       console.log('FactureService - Réponse de l\'API get:', response);
       
       if (response && response.success) {
         const facturesData = response.factures || [];
 
-        // ✅ NORMALISATION PRÉVENTIVE DES BOOLÉENS
+        // Normalisation préventive des booléens
         const facturesNormalisees = this.normalizeFactures(facturesData);
-        console.log('Factures avant normalisation:', facturesData.slice(0, 2));
-        console.log('Factures après normalisation:', facturesNormalisees.slice(0, 2));
 
         const facturesTriees = facturesNormalisees.sort((a, b) => {
           const numA = a.numero_facture ? parseInt(a.numero_facture.split('.')[0]) : 0;
@@ -64,6 +245,7 @@ class FactureService {
           return numB - numA;
         });
         
+        // Adaptation des données avec état de base
         const facturesAdaptees = facturesTriees.map(facture => ({
           id: facture.id_facture,
           numeroFacture: facture.numero_facture,
@@ -74,20 +256,30 @@ class FactureService {
             email: facture.email || null
           },
           montantTotal: parseFloat(facture.montant_total),
-          etat: this._determinerEtatFacture(facture),
+          etat: this._determinerEtatFacture(facture), // État de base uniquement
           date_facture: facture.date_facture,
           dateFacture: facture.date_facture,
           date_paiement: facture.date_paiement,
           date_annulation: facture.date_annulation,
-          // ✅ PROPRIÉTÉS BOOLÉENNES NORMALISÉES
+          // Propriétés booléennes normalisées
           est_imprimee: toBoolean(facture.est_imprimee),
           est_envoyee: toBoolean(facture.est_envoyee),
           est_annulee: toBoolean(facture.est_annulee),
           est_payee: toBoolean(facture.est_payee)
         }));
         
-        this.factures = facturesAdaptees;
-        return facturesAdaptees;
+        // ✅ ENRICHISSEMENT AUTOMATIQUE avec état d'affichage calculé dynamiquement
+        const facturesEnrichies = [];
+        for (const facture of facturesAdaptees) {
+          const etatAffichage = await this._determinerEtatAffichage(facture);
+          facturesEnrichies.push({
+            ...facture,
+            etatAffichage: etatAffichage
+          });
+        }
+        
+        this.factures = facturesEnrichies;
+        return facturesEnrichies;
       }
       return [];
     } catch (error) {
@@ -101,9 +293,10 @@ class FactureService {
           console.log('Récupération de la facture:', id);
           if (id in this._cacheFacture) {
               console.log('Facture trouvée dans le cache:', id);
-              return this._cacheFacture[id];
-          } else {
-              console.log('Facture non trouvée dans le cache, appel API:', id);
+              // ✅ Enrichir la facture du cache avec l'état d'affichage actuel
+              const factureCache = this._cacheFacture[id];
+              factureCache.etatAffichage = await this._determinerEtatAffichage(factureCache);
+              return factureCache;
           }
           
           const response = await api.get(`facture-api.php?id=${id}`);
@@ -114,8 +307,6 @@ class FactureService {
               
               // Normalisation préventive des booléens
               const factureNormalisee = this.normalizeFacture(factureData);
-              console.log('Facture avant normalisation:', factureData);
-              console.log('Facture après normalisation:', factureNormalisee);
               
               // Gestion du chemin du document avec URL correcte
               let documentPath = null;
@@ -129,7 +320,7 @@ class FactureService {
                       }
                       
                       documentPath = backendUrl(`${outputDir}/${factureNormalisee.factfilename}`);
-                      console.log('Chemin du document de facture (FIX PERMANENT):', documentPath);
+                      console.log('Chemin du document de facture:', documentPath);
                   } catch (e) {
                       console.warn('Erreur lors de la récupération du chemin du document:', e);
                   }
@@ -139,12 +330,13 @@ class FactureService {
                   id: factureNormalisee.id_facture || '',
                   numeroFacture: factureNormalisee.numero_facture || '',
                   dateFacture: factureNormalisee.date_facture || '',
+                  date_facture: factureNormalisee.date_facture || '', // ✅ AJOUT: Champ requis pour le calcul de retard
                   clientId: factureNormalisee.id_client,
                   totalFacture: parseFloat(factureNormalisee.montant_total || 0),
                   ristourne: parseFloat(factureNormalisee.ristourne || 0),
                   totalAvecRistourne: parseFloat(factureNormalisee.montant_total || 0) - parseFloat(factureNormalisee.ristourne || 0),
                   
-                  // ✅ NOUVEAU: Données des paiements multiples
+                  // Données des paiements multiples
                   montantPayeTotal: parseFloat(factureNormalisee.montant_paye_total || 0),
                   montantRestant: parseFloat(factureNormalisee.montant_restant || 0),
                   nbPaiements: parseInt(factureNormalisee.nb_paiements || 0),
@@ -163,7 +355,7 @@ class FactureService {
                       noOrdre: ligne.no_ordre || null,
                       descriptionDates: ligne.description_dates || null
                   })),
-                  etat: factureNormalisee.etat || '',
+                  etat: this._determinerEtatBase(factureNormalisee), // État de base uniquement
                   documentPath: documentPath,
                   factfilename: factureNormalisee.factfilename || null,
                   date_annulation: factureNormalisee.date_annulation || null,
@@ -181,6 +373,11 @@ class FactureService {
                       email: factureNormalisee.email || null,
                   } : null
               };
+              
+              // ✅ ENRICHISSEMENT AUTOMATIQUE avec état d'affichage calculé dynamiquement
+              factureFormattee.etatAffichage = await this._determinerEtatAffichage(factureFormattee);
+              
+              console.log(`🔍 Facture ${factureFormattee.numeroFacture} - État de base: ${factureFormattee.etat}, État d'affichage: ${factureFormattee.etatAffichage}`);
               
               this._cacheFacture[id] = factureFormattee;
               return factureFormattee;
@@ -271,6 +468,15 @@ class FactureService {
 
   async changerEtatFacture(id, nouvelEtat) {
     try {
+      // Empêcher la persistance de l'état "Retard"
+      if (nouvelEtat === 'Retard') {
+        console.warn('⚠️ Tentative de persistance de l\'état "Retard" bloquée. Cet état est calculé dynamiquement.');
+        return {
+          success: false,
+          message: 'L\'état "Retard" ne peut pas être persisté, il est calculé automatiquement.'
+        };
+      }
+
       const requestData = {
         nouvelEtat: nouvelEtat
       };
@@ -301,7 +507,7 @@ class FactureService {
         if (response && response.success) {
             let processedResponse = { ...response };
             
-            // ✅ NORMALISATION DES BOOLÉENS DANS LA RÉPONSE
+            // Normalisation des booléens dans la réponse
             processedResponse.shouldOpenNewWindow = toBoolean(response.shouldOpenNewWindow);
             processedResponse.etatMisAJour = toBoolean(response.etatMisAJour);
             
@@ -326,9 +532,6 @@ class FactureService {
 
   /**
    * Enregistre un paiement avec le nouveau système de paiements multiples
-   * @param int id ID de la facture
-   * @param array data Données du paiement
-   * @return array Résultat de l'opération
    */
   async enregistrerPaiement(id, data) {
       try {
@@ -353,8 +556,6 @@ class FactureService {
 
   /**
    * Récupère l'historique des paiements d'une facture
-   * @param int factureId ID de la facture
-   * @return array Historique des paiements
    */
   async getHistoriquePaiements(factureId) {
       try {
@@ -376,15 +577,12 @@ class FactureService {
 
   /**
    * Supprime un paiement (annulation)
-   * @param int paiementId ID du paiement à supprimer
-   * @return array Résultat de l'opération
    */
   async supprimerPaiement(paiementId) {
       try {
           const response = await api.delete(`facture-api.php?supprimerPaiement&id=${paiementId}`);
           
           if (response && response.success) {
-              // Nettoyer le cache de la facture concernée
               if (response.factureId) {
                   delete this._cacheFacture[response.factureId];
               }
@@ -405,8 +603,6 @@ class FactureService {
 
   /**
    * Récupère les statistiques de paiement d'une facture
-   * @param int factureId ID de la facture
-   * @return array Statistiques de paiement
    */
   async getStatistiquesPaiement(factureId) {
       try {
@@ -429,7 +625,6 @@ class FactureService {
   async getFactureUrl(id) {
     try {
         if (id in this._cacheFacture && this._cacheFacture[id].documentPath) {
-            console.log('URL trouvée dans le cache:', this._cacheFacture[id].documentPath);
             return {
                 success: true,
                 pdfUrl: this._cacheFacture[id].documentPath
@@ -439,7 +634,6 @@ class FactureService {
         const facture = await this.getFacture(id);
         
         if (facture && facture.documentPath) {
-            console.log('URL trouvée dans les données de la facture:', facture.documentPath);
             return {
                 success: true,
                 pdfUrl: facture.documentPath
@@ -450,13 +644,9 @@ class FactureService {
             const response = await api.get(`facture-api.php?getUrl=1&id=${id}`);
             
             if (response && response.success && response.pdfUrl) {
-                console.log('URL récupérée via l\'API:', response.pdfUrl);
-                
-                // 🔧 FIX PERMANENT: Corriger l'URL si nécessaire
                 let finalUrl = response.pdfUrl;
                 if (!finalUrl.startsWith('http')) {
                     finalUrl = backendUrl(finalUrl);
-                    console.log('URL complète générée (FIX PERMANENT):', finalUrl);
                 }
                 
                 return {
@@ -466,7 +656,6 @@ class FactureService {
             }
         }
         
-        console.log('Aucun PDF trouvé pour la facture ID:', id);
         return {
             success: false,
             message: 'Aucun fichier PDF associé à cette facture'
@@ -491,11 +680,9 @@ class FactureService {
           await this.changerEtatFacture(id, 'Éditée');
         }
 
-        // 🔧 FIX PERMANENT: Corriger l'URL PDF
         let finalPdfUrl = response.pdfUrl;
         if (finalPdfUrl && !finalPdfUrl.startsWith('http')) {
             finalPdfUrl = backendUrl(finalPdfUrl);
-            console.log('URL PDF complète générée (FIX PERMANENT):', finalPdfUrl);
         }
 
         return {
@@ -513,23 +700,13 @@ class FactureService {
   }
 
   async mettreAJourRetards() {
-    try {
-      const response = await api.post('facture-api.php?mettreAJourRetards=true', {});
-      
-      if (response && response.success) {
-        this._clearCache();
-        return {
-          success: true,
-          facturesModifiees: response.facturesModifiees || 0,
-          message: response.message || 'Factures en retard mises à jour avec succès'
-        };
-      } else {
-        throw new Error(response?.message || 'Erreur lors de la mise à jour des factures en retard');
-      }
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour des factures en retard:', error);
-      throw error;
-    }
+    // Cette méthode n'est plus nécessaire puisque les retards sont calculés dynamiquement
+    console.log('⚠️ mettreAJourRetards() est obsolète - les retards sont maintenant calculés dynamiquement');
+    return {
+      success: true,
+      facturesModifiees: 0,
+      message: 'Les retards sont calculés automatiquement, aucune mise à jour nécessaire'
+    };
   }
 
   async getStatistiques(annee = null) {
@@ -559,56 +736,10 @@ class FactureService {
     }
   }
 
-  _determinerEtatFacture(facture) {
-    if (facture.etat) {
-      return facture.etat;
-    }
-    
-    if (facture.date_paiement) {
-      return 'Payée';
-    } else if (facture.date_annulation) {
-      return 'Annulée';
-    } else {
-      const dateFacture = new Date(facture.date_facture);
-      const aujourdhui = new Date();
-      const diffTemps = aujourdhui.getTime() - dateFacture.getTime();
-      const diffJours = Math.ceil(diffTemps / (1000 * 3600 * 24));
-      
-      if (diffJours > 30) {
-        return 'Retard';
-      } else {
-        // ✅ UTILISATION SÉCURISÉE DU HELPER BOOLÉEN
-        return toBoolean(facture.est_imprimee) ? 'Éditée' : 'En attente';
-      }
-    }
-  }
-
   _clearCache() {
     this._cacheFacture = {};
   }
 
-  formatMontant(montant) {
-    return new Intl.NumberFormat('fr-CH', { 
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2 
-    }).format(parseFloat(montant) || 0);
-  }
-
-  formatDate(dateString) {
-    if (!dateString) return '';
-    
-    try {
-      const date = new Date(dateString);
-      return new Intl.DateTimeFormat('fr-CH', { 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric' 
-      }).format(date);
-    } catch (e) {
-      console.error('Erreur lors du formatage de la date:', e);
-      return dateString;
-    }
-  }
 
 }
 

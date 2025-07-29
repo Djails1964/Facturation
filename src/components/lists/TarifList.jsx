@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { FiEdit, FiTrash2 } from 'react-icons/fi';
-import { formatDate } from '../../utils/formatters';
 
 const TarifList = ({ tarifs, sorting, onSortChange, onEdit, onDelete, filters }) => {
   // État pour gérer le tooltip

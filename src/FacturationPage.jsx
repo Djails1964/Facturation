@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ParametresContent from './admin/ParametresContent';
 import ClientGestion from './ClientGestion';
 import FactureGestion from './FactureGestion';
+import PaiementGestion from './PaiementGestion'; // ✅ NOUVEAU
 import TarifGestion from './TarifGestion';
 import DashboardWrapper from './DashboardWrapper';
 import GestionUtilisateurs from './admin/GestionUtilisateurs';
@@ -14,6 +15,7 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
   const [activeSection, setActiveSection] = useState(initialSection);
   const [clientCreatedId, setClientCreatedId] = useState(null);
   const [factureCreatedId, setFactureCreatedId] = useState(null);
+  const [paiementCreatedId, setPaiementCreatedId] = useState(null); // ✅ NOUVEAU
 
   // Utiliser le guard global
   const { interceptNavigation } = useNavigationGuard();
@@ -38,6 +40,12 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
     setActiveSection('factures');
   };
 
+  // ✅ NOUVEAU: Handler pour les paiements créés
+  const handlePaiementCreated = (paiementId) => {
+    setPaiementCreatedId(paiementId);
+    setActiveSection('paiements');
+  };
+
   // Fonction protégée pour changer de section
   const handleSectionChange = (newSection) => {
     interceptNavigation(
@@ -52,6 +60,9 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
         if (newSection !== 'factures') {
           setFactureCreatedId(null);
         }
+        if (newSection !== 'paiements') { // ✅ NOUVEAU
+          setPaiementCreatedId(null);
+        }
       },
       `menu-${newSection}`
     );
@@ -62,8 +73,10 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
     const sectionNames = {
       'factures': 'Factures',
       'clients': 'Clients',
+      'paiements': 'Paiements', // ✅ NOUVEAU
       'nouvelle': 'Nouvelle facture',
       'nouveau-client': 'Nouveau client',
+      'nouveau-paiement': 'Nouveau paiement', // ✅ NOUVEAU
       'tarifs': 'Tarifs',
       'parametres': 'Paramètres',
       'utilisateurs': 'Utilisateurs',
@@ -89,6 +102,20 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
           section="liste"
           factureId={factureCreatedId}
           onSectionChange={() => setFactureCreatedId(null)}
+        />;
+      
+      // ✅ NOUVEAU: Gestion des paiements
+      case 'nouveau-paiement':
+        return <PaiementGestion
+          section="nouveau"
+          onPaiementCreated={handlePaiementCreated}
+        />;
+      
+      case 'paiements':
+        return <PaiementGestion
+          section="liste"
+          paiementId={paiementCreatedId}
+          onSectionChange={() => setPaiementCreatedId(null)}
         />;
       
       case 'clients':
@@ -122,19 +149,24 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
   };
 
   // Détermine quel titre afficher en fonction de la section active
+  // const getPageTitle = () => {
+  //   switch(activeSection) {
+  //     case 'utilisateurs':
+  //       return 'Gestion des utilisateurs';
+  //     case 'parametres':
+  //       return 'Paramètres';
+  //     case 'tarifs':
+  //       return 'Gestion des tarifs';
+  //     case 'paiements': // ✅ NOUVEAU
+  //       return 'Gestion des paiements';
+  //     case 'admin_dashboard':
+  //       return 'Tableau de bord d\'administration';
+  //     default:
+  //       return 'Facturation';
+  //   }
+  // };
   const getPageTitle = () => {
-    switch(activeSection) {
-      case 'utilisateurs':
-        return 'Gestion des utilisateurs';
-      case 'parametres':
-        return 'Paramètres';
-      case 'tarifs':
-        return 'Gestion des tarifs';
-      case 'admin_dashboard':
-        return 'Tableau de bord d\'administration';
-      default:
-        return 'Facturation';
-    }
+    return 'Facturation';
   };
 
   return (
@@ -151,6 +183,15 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
             >
               <span className="menu-label">Factures</span>
             </li>
+            
+            {/* ✅ NOUVEAU: Menu Paiements */}
+            <li
+              className={activeSection === 'paiements' ? 'active' : ''}
+              onClick={() => handleSectionChange('paiements')}
+            >
+              <span className="menu-label">Paiements</span>
+            </li>
+            
             <li
               className={activeSection === 'clients' ? 'active' : ''}
               onClick={() => handleSectionChange('clients')}

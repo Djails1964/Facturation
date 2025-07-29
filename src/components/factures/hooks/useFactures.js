@@ -30,6 +30,7 @@ export const useFactures = (nouvelleFactureId, factureModified, onResetFactureMo
         try {
             const facturesData = await factureService.chargerFactures(anneeSelectionnee);
             
+            console.log(`Chargement des factures pour l'année ${anneeSelectionnee}:`, facturesData);
             // ✅ CORRECTION : Un seul setState au lieu de deux
             setFacturesNonFiltrees(facturesData);
             

@@ -9,6 +9,8 @@ import { FactureFormModals } from './components/factures/components/FactureFormM
 import { getTitreFormulaire, getFormContainerClass, getSubmitButtonText } from './components/factures/utils/factureHelpers';
 import { validateFactureLines } from './components/factures/utils/factureValidation';
 import { FORM_MODES } from './constants/factureConstants';
+// ✅ AJOUT: Import des formatters
+import { formatDate, formatMontant } from './utils/formatters';
 import FactureHeader from './FactureHeader';
 import FactureDetailsForm from './FactureDetailsForm';
 import FactureTotauxDisplay from './FactureTotauxDisplay';
@@ -248,7 +250,8 @@ function FactureForm({
       <FactureStateBanners 
         mode={mode} 
         facture={facture} 
-        formatDate={factureService.formatDate} 
+        // ✅ CORRECTION: Utilisation du formatter centralisé
+        formatDate={formatDate} 
       />
 
       <form onSubmit={handleSubmit} className="ff-formulaire-facture">
@@ -266,6 +269,7 @@ function FactureForm({
             documentPath={facture.documentPath}
             mode={mode}
             etat={facture.etat}
+            etatAffichage={facture.etatAffichage} // ✅ AJOUT: Passage de etatAffichage
             factureId={factureId || facture.id}
             factureData={facture}
           />
@@ -299,8 +303,9 @@ function FactureForm({
             <FactureHistoriquePaiements
               etat={facture.etat}
               factureId={factureId || facture.id}
-              formatMontant={(montant) => factureService.formatMontant(montant)}
-              formatDate={(dateStr) => factureService.formatDate(dateStr)}
+              // ✅ CORRECTION: Utilisation des formatters centralisés
+              formatMontant={formatMontant}
+              formatDate={formatDate}
             />
           )}
 

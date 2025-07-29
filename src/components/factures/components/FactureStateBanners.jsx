@@ -1,8 +1,10 @@
 import React from 'react';
 import { FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
 import { FORM_MODES } from '../../../constants/factureConstants';
+// ✅ AJOUT: Import du formatter centralisé
+import { formatDate } from '../../../utils/formatters';
 
-export const FactureStateBanners = ({ mode, facture, formatDate }) => {
+export const FactureStateBanners = ({ mode, facture }) => {
   if (mode !== FORM_MODES.VIEW) return null;
 
   return (

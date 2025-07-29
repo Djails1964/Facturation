@@ -1,5 +1,6 @@
 import React from 'react';
 import './LigneFactureResume.css';
+import { formatMontant } from './utils/formatters';
 
 const LigneFactureResume = ({ 
   serviceType, // Contient le nom du service, pas le code
@@ -9,14 +10,6 @@ const LigneFactureResume = ({
   prixUnitaire, 
   total
 }) => {
-  // Formater le montant en francs suisses
-  const formatCurrency = (montant) => {
-    const valeur = parseFloat(montant) || 0;
-    return new Intl.NumberFormat('fr-CH', { 
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2 
-    }).format(valeur);
-  };
 
   return (
     <div className="ligne-facture-resume">
@@ -30,10 +23,10 @@ const LigneFactureResume = ({
       </div>
       <div className="ligne-facture-resume-montants">
         <div className="ligne-facture-resume-calcul">
-          {quantite} × {formatCurrency(prixUnitaire)} CHF
+          {quantite} × {formatMontant(prixUnitaire)} CHF
         </div>
         <div className="ligne-facture-resume-total">
-          {formatCurrency(total)} CHF
+          {formatMontant(total)} CHF
         </div>
       </div>
     </div>
