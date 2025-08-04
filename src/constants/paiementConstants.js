@@ -67,7 +67,7 @@ export const BUTTON_TEXTS = {
     EDIT: 'Modifier le paiement',
     SAVE: 'Enregistrer',
     CANCEL: 'Annuler',
-    BACK: 'Retour',
+    BACK: 'Retour à la liste',
     ANNULER_PAIEMENT: 'Annuler le paiement',
     RESTAURER_PAIEMENT: 'Restaurer le paiement',
     SUPPRIMER_PAIEMENT: 'Supprimer le paiement',

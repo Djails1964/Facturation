@@ -1,6 +1,7 @@
-// PaiementForm.jsx - VERSION MIGRÉE VERS modalSystem.js
+// PaiementForm.jsx - VERSION MIGRÉE VERS modalSystem.js avec FiCalendar
 
 import React, { useState, useEffect } from 'react';
+import { FiCalendar } from 'react-icons/fi'; // ✅ AJOUT: Import de l'icône Feather
 import { 
     FORM_MODES, 
     VALIDATION_MESSAGES, 
@@ -240,6 +241,7 @@ function PaiementForm({
                 entity_id: paiementId,
                 action_type: `${LOG_ACTIONS.PAIEMENT_CREATE},${LOG_ACTIONS.PAIEMENT_UPDATE},${LOG_ACTIONS.PAIEMENT_CANCEL}`
             });
+            console.log('📋 Logs utilisateur récupérés:', logsResponse);
             
             if (logsResponse.success && logsResponse.logs) {
                 const logs = logsResponse.logs;
@@ -284,6 +286,7 @@ function PaiementForm({
     
     // ✅ Extraire le nom utilisateur depuis un log
     const extractUserName = (log) => {
+        console.log('🔍 Extraction du nom utilisateur depuis le log:', log);
         // Priorité: nom complet > email > nom utilisateur > ID
         if (log.user_name && log.user_name.trim()) {
             return log.user_name.trim();
@@ -704,7 +707,7 @@ function PaiementForm({
                         <h3>{SECTION_TITLES.PAIEMENT}</h3>
                         
                         <div className="form-row">
-                            {/* ✅ CHAMP DATE AVEC modalSystem - PLUS DE CHANGEMENTS ICI */}
+                            {/* ✅ CHAMP DATE AVEC modalSystem ET ICÔNE FiCalendar */}
                             <div className="input-group date-input-wrapper">
                                 <input
                                     type="text"
@@ -720,14 +723,14 @@ function PaiementForm({
                                     {LABELS.DATE_PAIEMENT}
                                 </label>
                                 
+                                {/* ✅ NOUVELLE ICÔNE FiCalendar avec style de buttons.css */}
                                 {!isReadOnly && !isPaiementAnnule && (
-                                    <span 
-                                        className="date-picker-icon"
+                                    <FiCalendar 
+                                        className="calendar-icon"
                                         onClick={handleOpenDateModal}
                                         title={LABELS.OPEN_DATE_CALENDAR}
-                                    >
-                                        📅
-                                    </span>
+                                        size={16}
+                                    />
                                 )}
                             </div>
                             
@@ -861,7 +864,7 @@ function PaiementForm({
                         <button 
                             type="button" 
                             onClick={handleCancel}
-                            className="btn-secondary"
+                            className={isReadOnly || isPaiementAnnule ? "btn-primary" : "btn-secondary"}
                         >
                             {isReadOnly || isPaiementAnnule ? BUTTON_TEXTS.BACK : BUTTON_TEXTS.CANCEL}
                         </button>

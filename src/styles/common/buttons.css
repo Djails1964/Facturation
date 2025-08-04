@@ -1,6 +1,6 @@
 /* 
  * Styles communs pour les boutons - VERSION MISE À JOUR
- * Ajout des styles de boutons de formulaires et modales
+ * Ajout des styles de boutons de formulaires et modales + icône calendrier
  */
 
 /* ========== BOUTONS D'ACTION DE BASE (RONDS) ========== */
@@ -178,6 +178,39 @@
 .modal-action-danger:disabled {
   background-color: #6c757d;
   cursor: not-allowed;
+}
+
+/* ========== ICÔNE CALENDRIER POUR DATEPICKER ========== */
+.calendar-icon {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  font-size: 14px;
+  z-index: 2;
+  color: var(--color-primary-light, #800020);;
+  transition: opacity 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+
+.calendar-icon:hover {
+  opacity: 0.8;
+}
+
+.calendar-icon:active {
+  opacity: 0.6;
+}
+
+/* Style pour les états désactivés */
+.calendar-icon.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  color: #ccc;
 }
 
 /* ========== ANCIENS STYLES MODAL-ACTION-BUTTON (RÉTROCOMPATIBILITÉ) ========== */
@@ -400,6 +433,14 @@
     border-width: 4px;
   }
   
+  /* Responsive pour l'icône calendrier */
+  .calendar-icon {
+    font-size: 12px;
+    width: 18px;
+    height: 18px;
+    right: 6px;
+  }
+  
   /* Responsive pour boutons de formulaires */
   .form-actions,
   .modal-actions {
@@ -451,6 +492,14 @@
     max-height: 20px;
     max-width: 150px;
   }
+  
+  /* Responsive pour l'icône calendrier */
+  .calendar-icon {
+    font-size: 11px;
+    width: 16px;
+    height: 16px;
+    right: 4px;
+  }
 }
 
 /* ========== ACCESSIBILITÉ ========== */
@@ -473,6 +522,10 @@
   .btn-danger {
     transition: none;
   }
+  
+  .calendar-icon {
+    transition: none;
+  }
 }
 
 @media (prefers-contrast: high) {
@@ -487,6 +540,10 @@
   .btn-secondary:focus {
     outline: 3px solid #000000;
   }
+  
+  .calendar-icon {
+    color: #000000;
+  }
 }
 
 /* ========== PRINT ========== */
@@ -496,7 +553,8 @@
   .cursor-tooltip,
   .lf-floating-button,
   .form-actions,
-  .modal-actions {
+  .modal-actions,
+  .calendar-icon {
     display: none;
   }
 }
@@ -532,35 +590,35 @@
 
 /* ========== COULEURS HARMONISÉES POUR LES ACTIONS ========== */
 .action-edit-icon {
-  color: #800020;
+  color: var(--color-primary-light, #800020);
 }
 
 .action-delete-icon {
-  color: #800020;
+  color: var(--color-primary-light, #800020);
 }
 
 .action-view-icon {
-  color: #800000;
+  color: var(--color-primary-light, #800020);
 }
 
 .action-copy-icon {
-  color: #800020;
+  color: var(--color-primary-light, #800020);
 }
 
 .action-mail-icon {
-  color: #800020;
+  color: var(--color-primary-light, #800020);
 }
 
 .action-pay-icon {
-  color: #800020;
+  color: var(--color-primary-light, #800020);
 }
 
 .action-print-icon {
-  color: #800020;
+  color: var(--color-primary-light, #800020);
 }
 
 .action-cancel-icon {
-  color: #800020;
+  color: var(--color-primary-light, #800020);
 }
 
 /* ========== ÉTATS DÉSACTIVÉS ========== */
