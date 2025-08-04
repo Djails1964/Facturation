@@ -1,7 +1,7 @@
-// PaiementForm.jsx - VERSION MIGRÉE VERS modalSystem.js avec FiCalendar
+// PaiementForm.jsx - VERSION AVEC PROTECTION DES MODIFICATIONS NON SAUVEGARDÉES
 
-import React, { useState, useEffect } from 'react';
-import { FiCalendar } from 'react-icons/fi'; // ✅ AJOUT: Import de l'icône Feather
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { FiCalendar } from 'react-icons/fi';
 import { 
     FORM_MODES, 
     VALIDATION_MESSAGES, 
@@ -21,9 +21,12 @@ import FactureService from '../../services/FactureService';
 import activityLogsService from '../../services/activityLogsService';
 import DateService from '../../utils/DateService';
 
-import modalSystem from '../../utils/modalSystem'; // ✅ NOUVEAU
+import modalSystem from '../../utils/modalSystem';
 
 import DatePickerModalHandler from '../../components/shared/modals/handlers/DatePickerModalHandler';
+import ConfirmationModal from '../../components/shared/ConfirmationModal';
+import { useNavigationGuard } from '../../App';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import '../../styles/components/paiements/PaiementForm.css';
 import { 
     formatMontant, 
@@ -46,8 +49,21 @@ function PaiementForm({
     const paiementService = new PaiementService();
     const factureService = new FactureService();
     
-  
-    // ✅ CHANGEMENT 3: Utiliser modalSystem directement
+    // ✅ AJOUT: Hook global pour s'enregistrer
+    const { registerGuard, unregisterGuard } = useNavigationGuard();
+
+    // ✅ AJOUT: ID unique pour ce guard
+    const guardId = `paiement-form-${paiementId || 'new'}`;
+
+    // ✅ AJOUT: États pour tracker l'initialisation complète
+    const [isFullyInitialized, setIsFullyInitialized] = useState(false);
+    const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
+
+    // ✅ AJOUT: État pour la modal de navigation externe
+    const [showGlobalModal, setShowGlobalModal] = useState(false);
+    const [globalNavigationCallback, setGlobalNavigationCallback] = useState(null);
+    
+    // DatePicker handler
     const datePickerHandler = new DatePickerModalHandler({
         showCustom: modalSystem.custom.bind(modalSystem),
         showError: modalSystem.error.bind(modalSystem),
@@ -88,6 +104,9 @@ function PaiementForm({
     const [facturesLoading, setFacturesLoading] = useState(false);
     const [factureSelectionnee, setFactureSelectionnee] = useState(null);
     
+    // ✅ AJOUT: Données initiales pour la détection des modifications
+    const [initialFormData, setInitialFormData] = useState({});
+    
     // Dérivations d'état
     const isReadOnly = mode === FORM_MODES.VIEW;
     const isEdit = mode === FORM_MODES.EDIT;
@@ -98,34 +117,88 @@ function PaiementForm({
     
     // Empêcher modification/suppression si paiement annulé
     const canEdit = isEdit && !isPaiementAnnule;
+
+    // ✅ AJOUT: Fonction pour obtenir les données actuelles du formulaire
+    const getFormData = useCallback(() => {
+        return {
+            factureId: paiement.factureId,
+            datePaiement: paiement.datePaiement,
+            montantPaye: paiement.montantPaye,
+            methodePaiement: paiement.methodePaiement,
+            commentaire: paiement.commentaire
+        };
+    }, [paiement]);
+
+    // ✅ AJOUT: Fonction pour vérifier si on peut commencer la détection
+    const canDetectChanges = useCallback(() => {
+        return !isLoading && 
+               !isSubmitting && 
+               isInitialLoadDone && 
+               isFullyInitialized && 
+               Object.keys(initialFormData).length > 0 &&
+               mode !== FORM_MODES.VIEW &&
+               !isPaiementAnnule;
+    }, [isLoading, isSubmitting, isInitialLoadDone, isFullyInitialized, initialFormData, mode, isPaiementAnnule]);
+
+    // ✅ AJOUT: Données actuelles pour la détection (calculées à chaque render)
+    const currentFormData = useMemo(() => {
+        const data = canDetectChanges() ? getFormData() : {};
+        console.log('🔄 useMemo currentFormData PaiementForm recalculé:', {
+            canDetectChanges: canDetectChanges(),
+            data,
+            paiementId
+        });
+        return data;
+    }, [canDetectChanges, paiement]); // Dépendre directement de `paiement`
+
+    // ✅ AJOUT: Hook local pour détecter les modifications
+    const {
+        hasUnsavedChanges,
+        showUnsavedModal,
+        markAsSaved,
+        confirmNavigation,
+        cancelNavigation,
+        requestNavigation,
+        resetChanges
+    } = useUnsavedChanges(
+        initialFormData,
+        currentFormData,
+        isSubmitting,
+        false
+    );
+
+    // ✅ AJOUT: Debug: Log des données pour voir ce qui change
+    useEffect(() => {
+        if (canDetectChanges()) {
+            console.log('📊 PaiementForm données comparaison:', {
+                canDetectChanges: canDetectChanges(),
+                initialFormData,
+                currentFormData,
+                sonIdentiques: JSON.stringify(initialFormData) === JSON.stringify(currentFormData),
+                hasUnsavedChanges
+            });
+        }
+    }, [paiement, initialFormData, canDetectChanges, currentFormData, hasUnsavedChanges]);
     
     // ========================================
-    // ✅ FONCTIONS DE GESTION DES DATES AVEC modalSystem
+    // FONCTIONS DE GESTION DES DATES
     // ========================================
     
-    /**
-     * Formate une date pour l'affichage dans l'input
-     */
     const formatDateForDisplay = (dateString) => {
         return DateService.formatSingleDate(dateString, 'date');
     };
 
-    /**
-     * ✅ CHANGEMENT 4: Ouvre la modal de sélection de date avec modalSystem
-     */
     const handleOpenDateModal = async (event) => {
         if (isReadOnly || isPaiementAnnule) return;
         
         console.log('📅 Ouverture modal de sélection de date pour paiement');
         
         try {
-            // Créer une référence d'ancrage pour le positionnement intelligent
             const anchorRef = React.createRef();
             if (event && event.currentTarget) {
                 anchorRef.current = event.currentTarget;
             }
             
-            // ✅ AMÉLIORATION 1: Utiliser fromInputFormat pour parser la date initiale
             let initialDates = [];
             if (paiement.datePaiement) {
                 const parsedDate = DateService.fromInputFormat(paiement.datePaiement);
@@ -135,12 +208,11 @@ function PaiementForm({
                 }
             }
             
-            // Configuration spécifique aux paiements
             const config = {
                 initialDates: initialDates,
                 multiSelect: false,
                 minDate: null,
-                maxDate: DateService.getToday(), // ✅ AMÉLIORATION 2: Utiliser getToday() au lieu de new Date()
+                maxDate: DateService.getToday(),
                 title: PAIEMENT_DATE_CONFIG.TITLE,
                 confirmText: PAIEMENT_DATE_CONFIG.CONFIRM_TEXT,
                 context: 'payment',
@@ -156,7 +228,6 @@ function PaiementForm({
             if (result.action === 'confirm' && result.dates.length > 0) {
                 const selectedDate = result.dates[0];
                 
-                // ✅ AMÉLIORATION 3: Vérification de sécurité avec isStrictlyFuture
                 if (DateService.isStrictlyFuture(selectedDate)) {
                     console.warn('⚠️ Tentative de sélection d\'une date future pour un paiement');
                     await modalSystem.warning(
@@ -166,7 +237,6 @@ function PaiementForm({
                     return;
                 }
                 
-                // ✅ AMÉLIORATION 4: Utiliser toInputFormat pour la conversion
                 const dateString = DateService.toInputFormat(selectedDate);
                 
                 console.log('📅 Date sélectionnée et formatée:', {
@@ -175,7 +245,6 @@ function PaiementForm({
                     verification: DateService.fromInputFormat(dateString)
                 });
                 
-                // Mettre à jour l'état du paiement
                 handleInputChange('datePaiement', dateString);
             }
             
@@ -190,13 +259,11 @@ function PaiementForm({
             return { isValid: false, error: VALIDATION_MESSAGES.DATE_REQUIRED };
         }
         
-        // ✅ AMÉLIORATION 5: Utiliser fromInputFormat pour parser
         const dateObj = DateService.fromInputFormat(datePaiement);
         if (!dateObj) {
             return { isValid: false, error: 'Format de date invalide' };
         }
         
-        // ✅ AMÉLIORATION 6: Utiliser isStrictlyFuture au lieu de comparaison manuelle
         if (DateService.isStrictlyFuture(dateObj)) {
             return { 
                 isValid: false, 
@@ -204,9 +271,8 @@ function PaiementForm({
             };
         }
         
-        // ✅ AMÉLIORATION 7: Vérifier que ce n'est pas trop ancien (optionnel)
         const daysAgo = DateService.getDaysFromDate(dateObj);
-        if (daysAgo > 365) { // Plus d'un an
+        if (daysAgo > 365) {
             return { 
                 isValid: false, 
                 error: 'La date de paiement ne peut pas être antérieure à un an' 
@@ -216,17 +282,144 @@ function PaiementForm({
         return { isValid: true };
     };
     
-    // Charger les données au montage
+    // ✅ AJOUT: Charger les données au montage avec initialisation
     useEffect(() => {
-        if (isEdit || mode === FORM_MODES.VIEW) {
-            chargerPaiement();
-        }
-        if (isCreate) {
-            chargerFactures();
-        }
+        const loadData = async () => {
+            if (isEdit || mode === FORM_MODES.VIEW) {
+                await chargerPaiement();
+            }
+            if (isCreate) {
+                await chargerFactures();
+                // Pour la création, initialiser avec les valeurs par défaut
+                const defaultPaiement = {
+                    factureId: '',
+                    datePaiement: DateService.getTodayInputFormat(),
+                    montantPaye: '',
+                    methodePaiement: '',
+                    commentaire: ''
+                };
+                
+                setPaiement(prev => ({
+                    ...prev,
+                    ...defaultPaiement
+                }));
+            }
+            
+            console.log('✅ Chargement initial PaiementForm terminé');
+            setIsInitialLoadDone(true);
+        };
+
+        loadData();
     }, [paiementId, mode]);
+
+    // ✅ AJOUT: Effet pour finaliser l'initialisation après que toutes les données soient chargées
+    useEffect(() => {
+        if (isInitialLoadDone && !isLoading && !isFullyInitialized) {
+            const timer = setTimeout(() => {
+                console.log('🔧 Finalisation de l\'initialisation PaiementForm');
+                const currentFormData = getFormData();
+                
+                const hasValidData = mode === FORM_MODES.CREATE ? 
+                    (currentFormData.datePaiement !== undefined) :
+                    (currentFormData.factureId && currentFormData.datePaiement);
+                
+                if (hasValidData) {
+                    setTimeout(() => {
+                        const finalFormData = getFormData();
+                        const isStable = JSON.stringify(currentFormData) === JSON.stringify(finalFormData);
+                        
+                        if (isStable) {
+                            setInitialFormData(finalFormData);
+                            setIsFullyInitialized(true);
+                            console.log('✅ Initialisation PaiementForm complète avec données stables:', {
+                                mode,
+                                finalFormData
+                            });
+                        } else {
+                            console.log('⏳ Données PaiementForm pas encore stables, attente...');
+                            setTimeout(() => {
+                                const stabilizedData = getFormData();
+                                setInitialFormData(stabilizedData);
+                                setIsFullyInitialized(true);
+                                console.log('✅ Initialisation PaiementForm forcée après délai supplémentaire:', stabilizedData);
+                            }, 1000);
+                        }
+                    }, 300);
+                } else {
+                    console.log('❌ Données PaiementForm pas encore valides pour initialisation:', {
+                        mode,
+                        currentFormData,
+                        hasValidData
+                    });
+                }
+            }, 500);
+
+            return () => clearTimeout(timer);
+        }
+    }, [isInitialLoadDone, isLoading, isFullyInitialized, getFormData, mode]);
+
+    // ✅ AJOUT: Enregistrer le guard global seulement quand tout est prêt
+    useEffect(() => {
+        if (canDetectChanges()) {
+            const guardFunction = async () => {
+                console.log(`🔍 Vérification modifications pour ${guardId}:`, hasUnsavedChanges);
+                return hasUnsavedChanges;
+            };
+
+            registerGuard(guardId, guardFunction);
+            console.log(`🔒 Guard enregistré pour ${guardId}`);
+
+            return () => {
+                unregisterGuard(guardId);
+                console.log(`🔓 Guard désenregistré pour ${guardId}`);
+            };
+        }
+    }, [canDetectChanges, hasUnsavedChanges, guardId, registerGuard, unregisterGuard]);
+
+    // ✅ AJOUT: Intercepter les navigations externes
+    useEffect(() => {
+        if (canDetectChanges() && hasUnsavedChanges) {
+            const handleGlobalNavigation = (event) => {
+                console.log('🚨 Navigation externe détectée avec modifications non sauvegardées PaiementForm');
+                
+                if (event.detail && event.detail.source && event.detail.callback) {
+                    console.log('🔄 Affichage modal pour navigation externe PaiementForm:', event.detail.source);
+                    setGlobalNavigationCallback(() => event.detail.callback);
+                    setShowGlobalModal(true);
+                }
+            };
+
+            window.addEventListener('navigation-blocked', handleGlobalNavigation);
+
+            return () => {
+                window.removeEventListener('navigation-blocked', handleGlobalNavigation);
+            };
+        }
+    }, [canDetectChanges, hasUnsavedChanges]);
+
+    // ✅ AJOUT: Debug: Afficher l'état des modifications
+    useEffect(() => {
+        console.log('🔍 État modifications PaiementForm:', {
+            guardId,
+            hasUnsavedChanges,
+            canDetectChanges: canDetectChanges(),
+            isFullyInitialized,
+            isInitialLoadDone,
+            showGlobalModal,
+            mode,
+            isLoading,
+            isSubmitting,
+            initialDataKeys: Object.keys(initialFormData),
+            currentDataKeys: Object.keys(getFormData()),
+            paiementData: {
+                factureId: paiement.factureId,
+                montantPaye: paiement.montantPaye,
+                methodePaiement: paiement.methodePaiement
+            }
+        });
+    }, [guardId, hasUnsavedChanges, canDetectChanges, isFullyInitialized, isInitialLoadDone, showGlobalModal, mode, isLoading, isSubmitting, initialFormData, paiement]);
     
-    // ✅ Charger les informations utilisateur depuis les logs d'activité
+    // Charger les informations utilisateur depuis les logs d'activité
     const chargerLogsUtilisateur = async (paiementId) => {
         if (!paiementId) return;
         
@@ -235,18 +428,15 @@ function PaiementForm({
         try {
             console.log('📋 Chargement des logs pour le paiement:', paiementId);
             
-            // Utiliser entity_id pour cibler précisément le paiement
             const logsResponse = await activityLogsService.getLogs({
                 entity_type: 'paiement',
                 entity_id: paiementId,
                 action_type: `${LOG_ACTIONS.PAIEMENT_CREATE},${LOG_ACTIONS.PAIEMENT_UPDATE},${LOG_ACTIONS.PAIEMENT_CANCEL}`
             });
-            console.log('📋 Logs utilisateur récupérés:', logsResponse);
             
             if (logsResponse.success && logsResponse.logs) {
                 const logs = logsResponse.logs;
                 
-                // Trier les logs par date pour avoir le plus récent en premier
                 logs.sort((a, b) => new Date(b.date_action) - new Date(a.date_action));
                 
                 const newLogsInfo = {
@@ -278,16 +468,12 @@ function PaiementForm({
             }
         } catch (error) {
             console.error('❌ Erreur lors du chargement des logs utilisateur:', error);
-            // Ne pas bloquer l'affichage si les logs ne sont pas disponibles
         } finally {
             setLogsLoading(false);
         }
     };
     
-    // ✅ Extraire le nom utilisateur depuis un log
     const extractUserName = (log) => {
-        console.log('🔍 Extraction du nom utilisateur depuis le log:', log);
-        // Priorité: nom complet > email > nom utilisateur > ID
         if (log.user_name && log.user_name.trim()) {
             return log.user_name.trim();
         }
@@ -306,7 +492,7 @@ function PaiementForm({
         return 'Utilisateur inconnu';
     };
     
-    // Charger un paiement (modifiée pour inclure les logs)
+    // Charger un paiement
     const chargerPaiement = async () => {
         if (!paiementId) return;
         
@@ -329,13 +515,11 @@ function PaiementForm({
                     dateAnnulation: paiementData.dateAnnulation || ''
                 });
 
-                // Charger les détails de la facture
                 const factureData = await factureService.getFacture(paiementData.factureId);
                 if (factureData) {
                     setFactureSelectionnee(factureData);
                 }
                 
-                // Charger les informations utilisateur depuis les logs
                 await chargerLogsUtilisateur(paiementId);
             } else {
                 setError(VALIDATION_MESSAGES.PAIEMENT_NON_TROUVE);
@@ -397,9 +581,11 @@ function PaiementForm({
         }
     };
     
-    // Gestionnaires de changement
+    // ✅ MODIFICATION: Gestionnaires de changement avec logging
     const handleInputChange = (field, value) => {
         if (isReadOnly || isPaiementAnnule) return;
+        
+        console.log('📝 PaiementForm handleInputChange:', { field, value, mode });
         
         setPaiement(prev => ({
             ...prev,
@@ -433,40 +619,35 @@ function PaiementForm({
         }
     };
     
-    // ✅ VALIDATION DU FORMULAIRE AVEC DateService
+    // Validation du formulaire
     const validateForm = () => {
-        // Validation de la facture
         if (!paiement.factureId) {
             setError(VALIDATION_MESSAGES.FACTURE_REQUIRED);
             return false;
         }
         
-        // ✅ AMÉLIORATION 8: Utiliser la nouvelle méthode de validation
         const dateValidation = validateDatePaiement(paiement.datePaiement);
         if (!dateValidation.isValid) {
             setError(dateValidation.error);
             return false;
         }
         
-        // Validation du montant
         const montant = parseFloat(paiement.montantPaye);
         if (!montant || montant <= 0) {
             setError(VALIDATION_MESSAGES.MONTANT_REQUIRED);
             return false;
         }
         
-        // Validation de la méthode de paiement
         if (!paiement.methodePaiement) {
             setError(VALIDATION_MESSAGES.METHODE_REQUIRED);
             return false;
         }
         
-        // Vérifier que le montant ne dépasse pas ce qui reste à payer
         if (factureSelectionnee && isCreate) {
             const montantRestant = factureSelectionnee.montantRestant || 
                 (factureSelectionnee.totalAvecRistourne - (factureSelectionnee.montantPayeTotal || 0));
             
-            if (montant > montantRestant + 0.01) { // +0.01 pour les erreurs d'arrondi
+            if (montant > montantRestant + 0.01) {
                 setError(VALIDATION_MESSAGES.MONTANT_SUPERIEUR);
                 return false;
             }
@@ -475,26 +656,27 @@ function PaiementForm({
         return true;
     };
 
-    // ========================================
-    // 3. NOUVELLE MÉTHODE UTILITAIRE POUR DÉBUGGER
-    // ========================================
+    // ✅ AJOUT: Fonction pour gérer une sauvegarde réussie
+    const handleSuccessfulSave = useCallback((paiementId, message) => {
+        console.log('✅ Sauvegarde réussie PaiementForm - nettoyage des modifications');
+        
+        markAsSaved();
+        resetChanges();
+        
+        const newFormData = getFormData();
+        setInitialFormData(newFormData);
 
-    // ✅ À ajouter dans PaiementForm.jsx pour débugger les problèmes de date
+        unregisterGuard(guardId);
 
-    const debugDateHandling = (label, date) => {
-        if (process.env.NODE_ENV === 'development') {
-            console.log(`🔍 DEBUG ${label}:`, {
-                original: date,
-                type: typeof date,
-                isDate: date instanceof Date,
-                formatted: DateService.formatSingleDate(date),
-                inputFormat: DateService.toInputFormat(date),
-                isToday: DateService.isSameDayAsToday(date),
-                isFuture: DateService.isStrictlyFuture(date),
-                daysFromToday: DateService.getDaysFromDate(date)
-            });
+        setShowGlobalModal(false);
+        setGlobalNavigationCallback(null);
+
+        if (mode === FORM_MODES.CREATE && onPaiementCreated) {
+            onPaiementCreated(paiementId, message);
+        } else if (onRetourListe) {
+            onRetourListe(paiementId, true, message, 'success');
         }
-    };
+    }, [mode, onPaiementCreated, onRetourListe, markAsSaved, resetChanges, getFormData, guardId, unregisterGuard]);
     
     // Soumission du formulaire
     const handleSubmit = async (e) => {
@@ -523,13 +705,13 @@ function PaiementForm({
             
             if (isCreate) {
                 result = await paiementService.createPaiement(paiementData);
-                if (result.success && onPaiementCreated) {
-                    onPaiementCreated(result.id, result.message || NOTIFICATIONS.SUCCESS.CREATE);
+                if (result.success) {
+                    handleSuccessfulSave(result.id, result.message || NOTIFICATIONS.SUCCESS.CREATE);
                 }
             } else if (canEdit) {
                 result = await paiementService.updatePaiement(paiementId, paiementData);
-                if (result.success && onRetourListe) {
-                    onRetourListe(paiementId, true, result.message || NOTIFICATIONS.SUCCESS.UPDATE, 'success');
+                if (result.success) {
+                    handleSuccessfulSave(paiementId, result.message || NOTIFICATIONS.SUCCESS.UPDATE);
                 }
             }
             
@@ -541,11 +723,81 @@ function PaiementForm({
         }
     };
     
-    // Annulation
+    // ✅ MODIFICATION: Gestion du retour avec protection
     const handleCancel = () => {
-        if (onRetourListe) {
-            onRetourListe(null, false, '', '');
+        // En mode VIEW, navigation directe sans protection
+        if (mode === FORM_MODES.VIEW) {
+            console.log('🔙 Navigation directe en mode VIEW (PaiementForm)');
+            unregisterGuard(guardId);
+            
+            if (onRetourListe) {
+                onRetourListe();
+            }
+            return;
         }
+
+        // Pour les paiements annulés, navigation directe
+        if (isPaiementAnnule) {
+            console.log('🔙 Navigation directe pour paiement annulé (PaiementForm)');
+            unregisterGuard(guardId);
+            
+            if (onRetourListe) {
+                onRetourListe();
+            }
+            return;
+        }
+
+        console.log('🔍 État avant navigation Retour PaiementForm:', {
+            hasUnsavedChanges,
+            canDetectChanges: canDetectChanges(),
+            mode,
+            isSubmitting
+        });
+
+        // Vérification directe : si pas de modifications, naviguer directement
+        if (!hasUnsavedChanges || !canDetectChanges()) {
+            console.log('✅ Aucune modification détectée, navigation directe (PaiementForm)');
+            unregisterGuard(guardId);
+            
+            if (onRetourListe) {
+                onRetourListe();
+            }
+            return;
+        }
+
+        // Pour les modes EDIT et CREATE avec modifications, utiliser la protection
+        const canNavigate = requestNavigation(() => {
+            console.log('🔙 Navigation retour autorisée PaiementForm');
+            unregisterGuard(guardId);
+            
+            if (onRetourListe) {
+                onRetourListe();
+            }
+        });
+
+        if (!canNavigate) {
+            console.log('🔒 Navigation retour bloquée par des modifications non sauvegardées (PaiementForm)');
+        }
+    };
+
+    // ✅ AJOUT: Gérer la confirmation de navigation externe
+    const handleConfirmGlobalNavigation = () => {
+        console.log('✅ Confirmation navigation externe PaiementForm');
+        setShowGlobalModal(false);
+        
+        unregisterGuard(guardId);
+        
+        if (globalNavigationCallback) {
+            globalNavigationCallback();
+            setGlobalNavigationCallback(null);
+        }
+    };
+
+    // ✅ AJOUT: Gérer l'annulation de navigation externe
+    const handleCancelGlobalNavigation = () => {
+        console.log('❌ Annulation navigation externe PaiementForm');
+        setShowGlobalModal(false);
+        setGlobalNavigationCallback(null);
     };
     
     // Titre du formulaire
@@ -562,7 +814,7 @@ function PaiementForm({
         }
     };
     
-    // ✅ Formater les informations utilisateur pour l'affichage
+    // Formater les informations utilisateur pour l'affichage
     const formatUserInfo = (user, date) => {
         if (!user && !date) return '-';
         
@@ -580,6 +832,18 @@ function PaiementForm({
         if (!dateString) return '-';
         return DateService.formatSingleDate(dateString, 'datetime');
     };
+
+    // ✅ AJOUT: Cleanup lors du démontage
+    useEffect(() => {
+        return () => {
+            if (mode !== FORM_MODES.VIEW && !isPaiementAnnule) {
+                console.log(`🧹 Nettoyage ${guardId} lors du démontage`);
+                unregisterGuard(guardId);
+                resetChanges();
+                setIsFullyInitialized(false);
+            }
+        };
+    }, [mode, guardId, unregisterGuard, resetChanges, isPaiementAnnule]);
     
     // Rendu conditionnel pour le chargement
     if (isLoading) {
@@ -597,11 +861,9 @@ function PaiementForm({
     
     return (
         <div className="content-section-container">
-            {/* ✅ Structure similaire à FactureHeader avec badge positionné */}
             <div className="content-section-title">
                 <h2>{getTitre()}</h2>
                 
-                {/* ✅ Badge d'état avec même style et positionnement que FactureHeader */}
                 {paiement.etat && (
                     <div className="paiement-header-etat-simple">
                         <span className={getEtatBadgeClass(paiement.etat)}>
@@ -707,7 +969,7 @@ function PaiementForm({
                         <h3>{SECTION_TITLES.PAIEMENT}</h3>
                         
                         <div className="form-row">
-                            {/* ✅ CHAMP DATE AVEC modalSystem ET ICÔNE FiCalendar */}
+                            {/* Champ date avec icône FiCalendar */}
                             <div className="input-group date-input-wrapper">
                                 <input
                                     type="text"
@@ -723,7 +985,6 @@ function PaiementForm({
                                     {LABELS.DATE_PAIEMENT}
                                 </label>
                                 
-                                {/* ✅ NOUVELLE ICÔNE FiCalendar avec style de buttons.css */}
                                 {!isReadOnly && !isPaiementAnnule && (
                                     <FiCalendar 
                                         className="calendar-icon"
@@ -798,7 +1059,7 @@ function PaiementForm({
                         </div>
                     </div>
                     
-                    {/* ✅ SECTION: Informations système avec données utilisateur */}
+                    {/* Section: Informations système avec données utilisateur */}
                     {(mode === FORM_MODES.VIEW || isEdit) && (
                         <div className="form-section">
                             <h3>{SECTION_TITLES.SYSTEM_INFO}</h3>
@@ -865,12 +1126,39 @@ function PaiementForm({
                             type="button" 
                             onClick={handleCancel}
                             className={isReadOnly || isPaiementAnnule ? "btn-primary" : "btn-secondary"}
+                            disabled={isSubmitting}
                         >
                             {isReadOnly || isPaiementAnnule ? BUTTON_TEXTS.BACK : BUTTON_TEXTS.CANCEL}
                         </button>
                     </div>
                 </div>
             </form>
+
+            {/* ✅ AJOUT: Modal pour les modifications non sauvegardées (navigation locale via bouton Annuler) */}
+            <ConfirmationModal
+                isOpen={showUnsavedModal}
+                title="Modifications non sauvegardées"
+                message="Vous avez des modifications non sauvegardées dans le formulaire de paiement. Souhaitez-vous vraiment quitter sans sauvegarder ?"
+                type="warning"
+                onConfirm={confirmNavigation}
+                onCancel={cancelNavigation}
+                confirmText="Quitter sans sauvegarder"
+                cancelText="Continuer l'édition"
+                singleButton={false}
+            />
+
+            {/* ✅ AJOUT: Modal pour les modifications non sauvegardées (navigation externe via menu/déconnexion) */}
+            <ConfirmationModal
+                isOpen={showGlobalModal}
+                title="Modifications non sauvegardées"
+                message="Vous avez des modifications non sauvegardées dans le formulaire de paiement. Souhaitez-vous vraiment quitter sans sauvegarder ?"
+                type="warning"
+                onConfirm={handleConfirmGlobalNavigation}
+                onCancel={handleCancelGlobalNavigation}
+                confirmText="Quitter sans sauvegarder"
+                cancelText="Continuer l'édition"
+                singleButton={false}
+            />
         </div>
     );
 }
