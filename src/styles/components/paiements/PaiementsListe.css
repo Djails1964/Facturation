@@ -1,3 +1,14 @@
+/* PaiementsListe.css - VERSION OPTIMISÉE AVEC FLEXBOX */
+
+/* Filtres - styles spécifiques à cette page */
+.paiements-filters {
+  background: white;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
 .filters-panel {
   margin-top: 15px;
   padding-top: 15px;
@@ -11,39 +22,62 @@
   flex-wrap: wrap;
 }
 
-/* ✅ AJUSTEMENT: Style spécifique pour les input-group dans les filtres */
+/* Style spécifique pour les input-group dans les filtres */
 .filter-row .input-group {
   min-width: 150px;
   flex: 1;
-  margin-bottom: 0; /* ✅ Pas de marge en bas pour les filtres */
+  margin-bottom: 0;
 }
-
-/* ✅ SUPPRESSION des styles .filter-group, .filter-group label, .filter-group select - utilisation de .input-group */
 
 .filter-actions {
   display: flex;
   align-items: end;
-  margin-bottom: 10px; /* ✅ AJOUT: Alignement vertical avec les input-group */
-}/* PaiementsListe.css - VERSION NETTOYÉE */
-/* ✅ SUPPRESSION de tous les styles redondants qui existent déjà dans buttons.css et layout.css */
-
-/* Filtres - styles spécifiques à cette page */
-.paiements-filters {
-  background: white;
-  border-radius: 8px;
-  padding: 15px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 10px;
 }
 
-/* ✅ AJOUT: Style pour aligner l'icône et le texte dans le bouton filtres */
+/* Style pour aligner l'icône et le texte dans le bouton filtres */
 .paiements-filters .btn-primary {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-/* ✅ SUPPRESSION des styles .filter-toggle-btn et .btn-reset-filters - utilisation des classes standardisées */
+/* ✅ NOUVEAU: Styles pour les badges de filtre actif */
+.filter-active-badge {
+  background-color: #ffc107;
+  color: #212529;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 8px;
+  font-weight: 600;
+}
+
+/* ✅ NOUVEAU: Message informatif et bouton lien */
+.info-message {
+  background-color: #d1ecf1;
+  color: #0c5460;
+  padding: 12px 16px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  border-left: 4px solid #bee5eb;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: #007bff;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0;
+  margin: 0;
+}
+
+.link-button:hover {
+  color: #0056b3;
+  text-decoration: none;
+}
 
 /* Contenu principal */
 .paiements-content {
@@ -67,40 +101,44 @@
   color: #6c757d;
 }
 
-/* Tableau des paiements - styles spécifiques */
+/* ✅ MODIFIÉ: Tableau des paiements optimisé avec Flexbox */
 .paiements-table-container {
   overflow-x: auto;
+  min-width: 100%;
 }
 
 .paiements-table {
   width: 100%;
-  border-collapse: collapse;
+  min-width: 1000px; /* Largeur minimale pour éviter le débordement */
 }
 
+/* ✅ NOUVEAU: Header avec Flexbox et colonnes optimisées */
 .paiements-table-header {
   background: #f8f9fa;
   border-bottom: 2px solid #dee2e6;
-  display: grid;
-  grid-template-columns: 120px 150px 2fr 120px 150px 220px; /* ✅ AJUSTEMENT: 120px → 220px pour la colonne Actions */
-  gap: 10px;
-  padding: 15px;
+  display: flex;
+  align-items: center;
+  padding: 12px 8px;
   font-weight: 600;
   color: #495057;
   font-size: 14px;
+  min-height: 48px;
 }
 
 .paiements-table-body {
-  display: contents;
+  display: flex;
+  flex-direction: column;
 }
 
+/* ✅ NOUVEAU: Lignes avec Flexbox et largeurs optimisées */
 .table-row {
-  display: grid;
-  grid-template-columns: 120px 150px 2fr 120px 150px 220px; /* ✅ AJUSTEMENT: 120px → 220px pour la colonne Actions */
-  gap: 10px;
-  padding: 15px;
+  display: flex;
+  align-items: center;
+  padding: 10px 8px;
   border-bottom: 1px solid #dee2e6;
   cursor: pointer;
   transition: background-color 0.2s;
+  min-height: 52px;
 }
 
 .table-row:hover {
@@ -112,21 +150,122 @@
   border-left: 4px solid #2196f3;
 }
 
+/* ✅ NOUVEAU: Cellules avec largeurs fixes optimisées */
 .table-cell {
   display: flex;
   align-items: center;
   font-size: 14px;
   color: #495057;
+  padding: 0 6px;
+  overflow: hidden;
 }
 
-/* ✅ SUPPRESSION des styles .actions-cell, .action-btn, etc. - ils sont maintenant dans buttons.css */
+/* ✅ NOUVEAU: Largeurs spécifiques pour chaque colonne - OPTIMISÉES */
+.paiements-table-header .table-cell:nth-child(1),
+.table-row .table-cell:nth-child(1) {
+  flex: 0 0 90px; /* Date - réduite */
+  min-width: 90px;
+}
 
+.paiements-table-header .table-cell:nth-child(2),
+.table-row .table-cell:nth-child(2) {
+  flex: 0 0 100px; /* N° Facture - réduite */
+  min-width: 100px;
+}
+
+.paiements-table-header .table-cell:nth-child(3),
+.table-row .table-cell:nth-child(3) {
+  flex: 1 1 110px; /* Client - réduit de 140px à 110px */
+  min-width: 90px;
+}
+
+.paiements-table-header .table-cell:nth-child(4),
+.table-row .table-cell:nth-child(4) {
+  flex: 0 0 120px; /* Montant - augmenté de 100px à 120px */
+  min-width: 120px;
+  justify-content: flex-end;
+}
+
+.paiements-table-header .table-cell:nth-child(5),
+.table-row .table-cell:nth-child(5) {
+  flex: 0 0 140px; /* Méthode - augmenté de 120px à 140px */
+  min-width: 140px;
+}
+
+.paiements-table-header .table-cell:nth-child(6),
+.table-row .table-cell:nth-child(6) {
+  flex: 0 0 90px; /* Statut */
+  min-width: 90px;
+  justify-content: center;
+}
+
+.paiements-table-header .table-cell:nth-child(7),
+.table-row .table-cell:nth-child(7) {
+  flex: 0 0 120px; /* Actions */
+  min-width: 120px;
+  justify-content: center;
+}
+
+/* ✅ NOUVEAU: Styles pour les paiements annulés */
+.paiement-annule {
+  opacity: 0.7;
+  font-style: italic;
+}
+
+.montant-annule {
+  text-decoration: line-through;
+  color: #6c757d;
+}
+
+/* ✅ NOUVEAU: Icône d'annulation harmonisée */
+.action-cancel-icon {
+  color: #dc3545;
+}
+
+button.bouton-action:disabled .action-cancel-icon {
+  color: #6c757d;
+}
+
+/* ✅ MODIFIÉ: Styles pour les badges de statut avec teintes inspirées */
+.etat-confirme {
+  background-color: #b8dac0; /* Plus foncé que --badge-payee-bg (#d4edda) */
+  color: #0f4419; /* Plus foncé que --badge-payee-text (#155724) */
+  border: 1px solid #a3cfab; /* Plus foncé que --badge-payee-border (#c3e6cb) */
+}
+
+.etat-confirme:hover {
+  background-color: #a3cfab; /* Plus foncé que --badge-payee-hover-bg (#c3e6cb) */
+}
+
+.etat-annule {
+  background-color: #6c757d;
+  color: white;
+}
+
+.etat-default {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+/* Badge universel pour tous les états */
+.etat-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+/* Messages et états */
 .no-data-message {
   padding: 40px;
   text-align: center;
   color: #6c757d;
   font-style: italic;
-  grid-column: 1 / -1;
+  width: 100%;
 }
 
 /* Pagination */
@@ -139,9 +278,7 @@
   font-size: 14px;
 }
 
-/* ✅ SUPPRESSION du style .floating-add-btn - utilisation de .lf-floating-button */
-
-/* Modal de confirmation - styles spécifiques */
+/* Modal de confirmation */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -192,46 +329,131 @@
   color: #333;
 }
 
-/* ✅ SUPPRESSION des styles .btn-cancel et .btn-confirm-delete - utilisation de .btn-secondary et .btn-danger */
+/* ✅ NOUVEAU: Responsive optimisé */
+@media (max-width: 1200px) {
+  /* Réduire encore plus les colonnes fixes sur écrans moyens */
+  .paiements-table-header .table-cell:nth-child(1),
+  .table-row .table-cell:nth-child(1) {
+    flex: 0 0 80px;
+    min-width: 80px;
+  }
+  
+  .paiements-table-header .table-cell:nth-child(2),
+  .table-row .table-cell:nth-child(2) {
+    flex: 0 0 90px;
+    min-width: 90px;
+  }
+  
+  .paiements-table-header .table-cell:nth-child(3),
+  .table-row .table-cell:nth-child(3) {
+    flex: 1 1 100px; /* Client - encore plus réduit sur écrans moyens */
+    min-width: 80px;
+  }
+  
+  .paiements-table-header .table-cell:nth-child(4),
+  .table-row .table-cell:nth-child(4) {
+    flex: 0 0 110px; /* Montant - légèrement réduit */
+    min-width: 110px;
+  }
+  
+  .paiements-table-header .table-cell:nth-child(5),
+  .table-row .table-cell:nth-child(5) {
+    flex: 0 0 130px; /* Méthode - légèrement réduit */
+    min-width: 130px;
+  }
+}
 
-/* Responsive */
-@media (max-width: 768px) {
-  .paiements-table-header,
-  .table-row {
-    grid-template-columns: 1fr;
-    text-align: left;
+@media (max-width: 992px) {
+  /* Scroll horizontal sur tablettes */
+  .paiements-table-container {
+    overflow-x: scroll;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .paiements-table {
+    min-width: 800px;
+  }
+  
+  /* Réduire les paddings */
+  .table-row,
+  .paiements-table-header {
+    padding: 8px 4px;
   }
   
   .table-cell {
-    padding: 5px 0;
+    padding: 0 4px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Layout vertical sur mobile */
+  .paiements-table-header {
+    display: none;
+  }
+  
+  .paiements-table-body {
+    display: block;
+  }
+  
+  .table-row {
+    display: block;
+    padding: 15px;
+    margin-bottom: 10px;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background: white;
+  }
+  
+  .table-cell {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
     border-bottom: 1px solid #eee;
+    font-size: 14px;
+  }
+  
+  .table-cell:last-child {
+    border-bottom: none;
+    justify-content: center;
+    padding-top: 15px;
   }
   
   .table-cell:before {
     content: attr(data-label);
     font-weight: bold;
-    display: inline-block;
-    width: 120px;
+    color: #495057;
+    min-width: 100px;
   }
   
-  /* ✅ AJUSTEMENT: Utilisation de .lf-actions-cell au lieu de .actions-cell */
+  /* Actions sur mobile */
   .table-cell.lf-actions-cell {
-    justify-content: flex-start;
-    padding-top: 10px;
+    justify-content: center;
+    gap: 8px;
   }
   
+  .table-cell.lf-actions-cell:before {
+    display: none;
+  }
+  
+  /* Filtres sur mobile */
   .filter-row {
     flex-direction: column;
     align-items: stretch;
   }
   
-  /* ✅ CHANGEMENT: Utilisation de .input-group au lieu de .filter-group */
   .filter-row .input-group {
     min-width: auto;
-    margin-bottom: 15px; /* ✅ Marge normale sur mobile */
+    margin-bottom: 15px;
   }
   
   .filter-actions {
-    margin-bottom: 0; /* ✅ Pas de marge sur mobile */
+    margin-bottom: 0;
+  }
+  
+  /* Messages et notifications */
+  .info-message {
+    padding: 10px 12px;
+    font-size: 14px;
   }
 }

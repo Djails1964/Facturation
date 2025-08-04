@@ -601,27 +601,6 @@ class FactureService {
       }
   }
 
-  /**
-   * Récupère les statistiques de paiement d'une facture
-   */
-  async getStatistiquesPaiement(factureId) {
-      try {
-          const response = await api.get(`facture-api.php?statistiquesPaiement&id=${factureId}`);
-          
-          if (response && response.success) {
-              return {
-                  success: true,
-                  statistiques: response.statistiques
-              };
-          } else {
-              throw new Error(response?.message || 'Erreur lors de la récupération des statistiques');
-          }
-      } catch (error) {
-          console.error(`Erreur lors de la récupération des statistiques de paiement pour la facture ${factureId}:`, error);
-          throw error;
-      }
-  }
-
   async getFactureUrl(id) {
     try {
         if (id in this._cacheFacture && this._cacheFacture[id].documentPath) {

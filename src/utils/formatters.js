@@ -1,4 +1,4 @@
-// src/utils/formatters.js
+// src/utils/formatters.js - Version améliorée
 
 /**
  * Formate un montant avec séparateur de milliers
@@ -13,20 +13,41 @@ export const formatMontant = (montant) => {
 };
 
 /**
- * Formate une date au format jj.mm.aaaa
- * @param {string} dateStr - La date au format AAAA-MM-JJ 
+ * ✅ AMÉLIORÉ: Formate une date avec options multiples
+ * @param {string} dateStr - La date au format AAAA-MM-JJ ou ISO
+ * @param {string} format - Type de format ('date', 'datetime', 'time')
  * @returns {string} Date formatée
  */
-export const formatDate = (dateStr) => {
+export const formatDate = (dateStr, format = 'date') => {
     if (!dateStr) return '';
     
     try {
         const date = new Date(dateStr);
-        return new Intl.DateTimeFormat('fr-CH', { 
-            day: '2-digit', 
-            month: '2-digit', 
-            year: 'numeric' 
-        }).format(date);
+        
+        switch (format) {
+            case 'datetime':
+                return new Intl.DateTimeFormat('fr-CH', { 
+                    day: '2-digit', 
+                    month: '2-digit', 
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }).format(date);
+                
+            case 'time':
+                return new Intl.DateTimeFormat('fr-CH', { 
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }).format(date);
+                
+            case 'date':
+            default:
+                return new Intl.DateTimeFormat('fr-CH', { 
+                    day: '2-digit', 
+                    month: '2-digit', 
+                    year: 'numeric' 
+                }).format(date);
+        }
     } catch (e) {
         console.error('Erreur lors du formatage de la date:', e);
         return dateStr;
@@ -129,36 +150,53 @@ export const formatAdresse = (adresse) => {
 };
 
 /**
- * ✅ MODIFIÉ : Retourne la classe CSS correspondant à l'état de la facture
- * @param {string} etat - L'état de la facture
- * @returns {string} La classe CSS correspondante pour les nouveaux badges universels
+ * ✅ AMÉLIORÉ: Retourne la classe CSS correspondant à l'état universel
+ * @param {string} etat - L'état de l'objet
+ * @returns {string} La classe CSS correspondante pour les badges universels
  */
 export const getEtatClass = (etat) => {
     if (!etat) return 'etat-default';
     
-    switch (etat.toLowerCase()) {
+    const etatLower = etat.toLowerCase();
+    
+    // États de factures
+    switch (etatLower) {
         case 'payée':
+        case 'payee':
             return 'etat-payee';
         case 'partiellement payée':
+        case 'partiellement payee':
             return 'etat-partiellement-payee';
         case 'en attente':
             return 'etat-attente';
         case 'éditée':
+        case 'editee':
             return 'etat-editee';
         case 'retard':
             return 'etat-retard';
         case 'annulée':
+        case 'annulee':
+        case 'annule':
+        case 'annulé':
             return 'etat-annulee';
         case 'envoyée':
+        case 'envoyee':
             return 'etat-envoyee';
+        // États de paiements
+        case 'validé':
+        case 'valide':
+            return 'etat-valide';
+        case 'confirme':
+        case 'confirmé':
+            return 'etat-confirme';
         default:
             return 'etat-default';
     }
 };
 
 /**
- * ✅ NOUVEAU : Retourne les classes CSS complètes pour un badge d'état
- * @param {string} etat - L'état de la facture
+ * ✅ AMÉLIORÉ: Retourne les classes CSS complètes pour un badge d'état
+ * @param {string} etat - L'état de l'objet
  * @param {string} variant - Variante optionnelle ('small', 'large')
  * @returns {string} Les classes CSS complètes
  */
@@ -173,21 +211,46 @@ export const getBadgeClasses = (etat, variant = '') => {
 };
 
 /**
- * ✅ CONSERVÉ : Formate le texte d'affichage des états pour les badges
- * @param {string} etat - État de la facture
+ * ✅ AMÉLIORÉ: Formate le texte d'affichage des états pour les badges
+ * @param {string} etat - État de l'objet
  * @returns {string} Texte formaté pour affichage
  */
 export const formatEtatText = (etat) => {
     if (!etat) return '';
     
-    switch(etat.toLowerCase()) {
-        case 'partiellement payée': return 'Part. Payée';
-        default: return etat;
+    const etatLower = etat.toLowerCase();
+    
+    switch(etatLower) {
+        case 'partiellement payée':
+        case 'partiellement payee':
+            return 'Part. Payée';
+        case 'confirme':
+        case 'confirmé':
+            return 'Confirmé';
+        case 'annule':
+        case 'annulé':
+        case 'annulee':
+        case 'annulée':
+            return 'Annulé';
+        case 'valide':
+        case 'validé':
+            return 'Validé';
+        case 'editee':
+        case 'éditée':
+            return 'Éditée';
+        case 'envoyee':
+        case 'envoyée':
+            return 'Envoyée';
+        case 'payee':
+        case 'payée':
+            return 'Payée';
+        default: 
+            return etat;
     }
 };
 
 /**
- * ✅ NOUVEAU : Vérifie si un état est considéré comme "payé" (complètement ou partiellement)
+ * ✅ NOUVEAU: Vérifie si un état est considéré comme "payé" (complètement ou partiellement)
  * @param {string} etat - L'état de la facture
  * @returns {boolean} True si l'état indique un paiement
  */
@@ -195,11 +258,14 @@ export const isEtatPaye = (etat) => {
     if (!etat) return false;
     
     const etatLower = etat.toLowerCase();
-    return etatLower === 'payée' || etatLower === 'partiellement payée';
+    return etatLower === 'payée' || 
+           etatLower === 'payee' || 
+           etatLower === 'partiellement payée' ||
+           etatLower === 'partiellement payee';
 };
 
 /**
- * ✅ NOUVEAU : Vérifie si un état est considéré comme "en cours" (non finalisé)
+ * ✅ NOUVEAU: Vérifie si un état est considéré comme "en cours" (non finalisé)
  * @param {string} etat - L'état de la facture
  * @returns {boolean} True si l'état indique que la facture est en cours
  */
@@ -209,8 +275,40 @@ export const isEtatEnCours = (etat) => {
     const etatLower = etat.toLowerCase();
     return etatLower === 'en attente' || 
            etatLower === 'éditée' || 
+           etatLower === 'editee' ||
            etatLower === 'envoyée' ||
+           etatLower === 'envoyee' ||
            etatLower === 'retard';
+};
+
+/**
+ * ✅ NOUVEAU: Vérifie si un état est considéré comme "annulé"
+ * @param {string} etat - L'état de l'objet
+ * @returns {boolean} True si l'état indique une annulation
+ */
+export const isEtatAnnule = (etat) => {
+    if (!etat) return false;
+    
+    const etatLower = etat.toLowerCase();
+    return etatLower === 'annulé' || 
+           etatLower === 'annule' ||
+           etatLower === 'annulée' ||
+           etatLower === 'annulee';
+};
+
+/**
+ * ✅ NOUVEAU: Vérifie si un état est considéré comme "validé/confirmé"
+ * @param {string} etat - L'état de l'objet
+ * @returns {boolean} True si l'état indique une validation
+ */
+export const isEtatValide = (etat) => {
+    if (!etat) return false;
+    
+    const etatLower = etat.toLowerCase();
+    return etatLower === 'validé' || 
+           etatLower === 'valide' ||
+           etatLower === 'confirmé' ||
+           etatLower === 'confirme';
 };
 
 /**
@@ -297,7 +395,102 @@ export const montantEnLettres = (montant) => {
     return résultat;
 };
 
+/**
+ * ✅ NOUVEAU: Formate une durée en texte lisible
+ * @param {number} minutes - Durée en minutes
+ * @returns {string} Durée formatée
+ */
+export const formatDuree = (minutes) => {
+    if (!minutes || minutes <= 0) return '0 min';
+    
+    const heures = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    
+    if (heures === 0) {
+        return `${mins} min`;
+    } else if (mins === 0) {
+        return `${heures}h`;
+    } else {
+        return `${heures}h ${mins}min`;
+    }
+};
+
+/**
+ * ✅ NOUVEAU: Formate un pourcentage
+ * @param {number} valeur - Valeur à formater en pourcentage
+ * @param {number} decimales - Nombre de décimales (défaut: 1)
+ * @returns {string} Pourcentage formaté
+ */
+export const formatPourcentage = (valeur, decimales = 1) => {
+    if (valeur === null || valeur === undefined) return '-';
+    
+    return new Intl.NumberFormat('fr-CH', {
+        style: 'percent',
+        minimumFractionDigits: decimales,
+        maximumFractionDigits: decimales
+    }).format(valeur / 100);
+};
+
+/**
+ * ✅ NOUVEAU: Formate un numéro de séquence avec padding
+ * @param {number} numero - Numéro à formater
+ * @param {number} longueur - Longueur totale avec zéros (défaut: 4)
+ * @param {string} prefixe - Préfixe optionnel
+ * @returns {string} Numéro formaté
+ */
+export const formatNumeroSequence = (numero, longueur = 4, prefixe = '') => {
+    if (!numero) return '';
+    
+    const numeroStr = String(numero).padStart(longueur, '0');
+    return prefixe ? `${prefixe}${numeroStr}` : numeroStr;
+};
+
+/**
+ * ✅ NOUVEAU: Formate une taille de fichier
+ * @param {number} bytes - Taille en bytes
+ * @returns {string} Taille formatée
+ */
+export const formatTailleFichier = (bytes) => {
+    if (!bytes || bytes === 0) return '0 B';
+    
+    const tailles = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    
+    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${tailles[i]}`;
+};
+
+/**
+ * ✅ NOUVEAU: Capitalise la première lettre d'une chaîne
+ * @param {string} str - Chaîne à capitaliser
+ * @returns {string} Chaîne avec première lettre en majuscule
+ */
+export const capitalize = (str) => {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+};
+
+/**
+ * ✅ NOUVEAU: Formate un nom complet à partir du prénom et nom
+ * @param {string} prenom - Prénom
+ * @param {string} nom - Nom de famille
+ * @param {boolean} nomEnPremier - Si true, affiche "NOM Prénom"
+ * @returns {string} Nom complet formaté
+ */
+export const formatNomComplet = (prenom, nom, nomEnPremier = false) => {
+    if (!prenom && !nom) return '';
+    if (!prenom) return nom;
+    if (!nom) return prenom;
+    
+    if (nomEnPremier) {
+        return `${nom.toUpperCase()} ${capitalize(prenom)}`;
+    } else {
+        return `${capitalize(prenom)} ${capitalize(nom)}`;
+    }
+};
+
+// ✅ EXPORT PAR DÉFAUT avec toutes les fonctions
 const formatters = {
+    // Fonctions principales
     formatMontant,
     formatDate,
     formatDateToYYYYMMDD,
@@ -306,12 +499,24 @@ const formatters = {
     toTitleCase,
     truncateString,
     formatAdresse,
+    
+    // Fonctions d'état
     formatEtatText,
     getEtatClass,
     getBadgeClasses,
     isEtatPaye,
     isEtatEnCours,
-    montantEnLettres
+    isEtatAnnule,
+    isEtatValide,
+    
+    // Fonctions avancées
+    montantEnLettres,
+    formatDuree,
+    formatPourcentage,
+    formatNumeroSequence,
+    formatTailleFichier,
+    capitalize,
+    formatNomComplet
 };
 
 export default formatters;

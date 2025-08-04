@@ -71,7 +71,13 @@
   --badge-envoyee-text: #0056b3;
   --badge-envoyee-border: #85c1e9;
   --badge-envoyee-hover-bg: #99d6ff;
-  
+
+    
+  --badge-confirme-bg: #b8dac0;
+  --badge-confirme-text: #0f4419;
+  --badge-confirme-border: #a3cfab;
+  --badge-confirme-hover-bg: #a3cfab;
+
   --badge-default-bg: #f8f9fa;
   --badge-default-text: #6c757d;
   --badge-default-border: #dee2e6;

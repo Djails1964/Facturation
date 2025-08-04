@@ -29,7 +29,7 @@
 .input-group select,
 .input-group textarea {
   width: 100%;
-  padding: 10px 0;
+  padding: 15px 0 10px 0;
   border: none;
   border-bottom: 1px solid #ccc;
   background-color: transparent;
@@ -126,9 +126,19 @@ textarea::placeholder {
   color: var(--color-text);
 }
 
+.input-group input[readonly],
+.input-group select[disabled],
+.input-group textarea[readonly] {
+  background-color: transparent; /* ✅ Pas de fond gris */
+  color: var(--color-text); /* ✅ Couleur normale du texte */
+  border-bottom-color: #f0f0f0; /* ✅ Bordure claire */
+  cursor: default; /* ✅ Curseur normal */
+  opacity: 1; /* ✅ Pas d'opacité réduite */
+}
+
 /* Style pour les champs de date */
 input[type="date"] {
-  padding: 10px 0;
+  padding: 15px 0 10px 0;
   width: 100%;
   font-size: 16px;
   border: none;
@@ -258,11 +268,95 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   color: transparent;
 }
 
+/* ==========================================================================
+   AJOUTS À FORMS.CSS - Styles pour champs avec DatePicker Modal
+   ========================================================================== */
+
+/* ✅ STYLES GÉNÉRIQUES POUR CHAMPS DATE AVEC MODAL PERSONNALISÉE */
+.input-group.date-input-wrapper {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.input-group.date-input-wrapper input {
+    cursor: pointer;
+    background-color: white;
+    transition: background-color 0.2s ease;
+}
+
+.input-group.date-input-wrapper input.readonly {
+    cursor: default;
+    background-color: #f5f5f5;
+}
+
+.input-group.date-input-wrapper input.clickable:hover {
+    background-color: #f8f9fa;
+}
+
+.input-group.date-input-wrapper .date-picker-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 16px;
+    color: #666;
+    user-select: none;
+    z-index: 1;
+    transition: color 0.2s ease;
+}
+
+.input-group.date-input-wrapper .date-picker-icon:hover {
+    color: var(--color-primary);
+}
+
+.input-group.date-input-wrapper .date-picker-icon:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+/* ✅ STYLES POUR INPUT DATE EN MODE MODAL */
+.input-group.date-input-wrapper input[type="text"] {
+    width: 100%;
+    padding: 15px 2.5rem 10px 0; /* Espace pour l'icône */
+    font-size: 16px;
+    border: none;
+    border-bottom: 1px solid #ccc;
+    background-color: transparent;
+    transition: border-color 0.3s;
+    outline: none;
+    box-sizing: border-box;
+    color: var(--color-text);
+    font-family: inherit;
+}
+
+.input-group.date-input-wrapper input[type="text"]:focus {
+    outline: none;
+    border-bottom: 2px solid var(--color-primary);
+}
+
+/* ✅ LABEL POUR CHAMPS DATE AVEC MODAL */
+.input-group.date-input-wrapper label {
+    position: absolute;
+    top: -12px !important; /* Toujours en position haute */
+    left: 0;
+    font-size: 12px !important;
+    color: var(--color-primary) !important;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    background-color: transparent;
+}
+
+.input-group.date-input-wrapper label.required::after {
+    content: " *";
+    color: var(--color-primary);
+}
+
 /* ✅ FIREFOX */
 @-moz-document url-prefix() {
   .input-group.date-input input[type="date"] {
     color: var(--color-text) !important;
-    padding-top: 15px;
+    padding: 15px 0 10px 0;
   }
 }
 

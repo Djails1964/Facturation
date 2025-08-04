@@ -36,6 +36,7 @@
 
 /* Ajuster le bouton pour qu'il soit légèrement plus petit dans la liste */
 .lf-table-row .bouton-action,
+.paiements-table-body .bouton-action,
 .lf-action-buttons-container .bouton-action {
   width: 30px;
   height: 30px;
@@ -555,6 +556,10 @@
 }
 
 .action-print-icon {
+  color: #800020;
+}
+
+.action-cancel-icon {
   color: #800020;
 }
 

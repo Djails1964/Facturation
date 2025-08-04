@@ -13,19 +13,17 @@ const ModalContext = createContext(null);
 
 export const useModalSystem = () => {
     const context = useContext(ModalContext);
+    const defaultModalSystem = useDefaultModalSystem(); // ✅ TOUJOURS appeler le hook
     
-    if (!context) {
-        // Si pas de contexte, utiliser l'implémentation par défaut
-        return useDefaultModalSystem(); // ✅ CHANGÉ: utiliser un hook
-    }
-    
-    return context;
+    // Retourner le contexte s'il existe, sinon l'implémentation par défaut
+    return context || defaultModalSystem;
 };
 
 // ========== PROVIDER MODAL ==========
 
 export const ModalProvider = ({ children, modalImplementation }) => {
-    const modalSystem = modalImplementation || useDefaultModalSystem(); // ✅ CHANGÉ: utiliser un hook
+    const defaultModalSystem = useDefaultModalSystem(); // ✅ TOUJOURS appeler le hook
+    const modalSystem = modalImplementation || defaultModalSystem;
     
     return (
         <ModalContext.Provider value={modalSystem}>

@@ -5,11 +5,13 @@ import ModalComponents from '../../../shared/ModalComponents';
 
 /**
  * Gestionnaire pour l'enregistrement de paiements
- * Extrait de FacturesListe.jsx pour réduire la complexité
+ * ✅ MODIFIÉ : Utilise PaiementService pour l'enregistrement (architecture unifiée)
+ * Garde FactureService uniquement pour récupérer les données de facture
  */
 export class PaymentModalHandler {
     constructor(dependencies) {
-        this.factureService = dependencies.factureService;
+        this.factureService = dependencies.factureService; // Pour récupérer les données de facture
+        this.paiementService = dependencies.paiementService; // ✅ NOUVEAU : Pour enregistrer les paiements
         this.showCustom = dependencies.showCustom;
         this.showLoading = dependencies.showLoading;
         this.formatMontant = dependencies.formatMontant;
@@ -26,7 +28,7 @@ export class PaymentModalHandler {
             event.stopPropagation();
         }
         
-        // ✅ AJOUT : Stocker l'ID de la facture comme propriété de l'instance
+        // Stocker l'ID de la facture comme propriété de l'instance
         this.currentFactureId = factureId;
         
         const anchorRef = this.createAnchorRef(event);
@@ -109,12 +111,12 @@ export class PaymentModalHandler {
     async showFactureAlreadyPaid(factureData, anchorRef) {
         const config = ModalComponents.createSimpleModalConfig(
             "Facture déjà payée",
-            factureData, // ✅ CORRECTION : passer factureData au lieu de {}
+            factureData,
             {
                 intro: "",
                 warningMessage: `Cette facture a déjà été payée le ${this.formatDate(factureData.date_paiement)}.`,
                 warningType: "warning",
-                formatDate: this.formatDate, // ✅ Ajouter formatDate
+                formatDate: this.formatDate,
                 buttons: ModalComponents.createModalButtons({
                     submitText: "OK",
                     showCancel: false
@@ -190,7 +192,7 @@ export class PaymentModalHandler {
             factureData.numeroFacture
         );
         
-        // ✅ NOUVEAU: Affichage de l'état des paiements
+        // Affichage de l'état des paiements
         const montantPaye = factureData.montantPayeTotal || 0;
         const montantRestant = montantAvecRistourne - montantPaye;
         const nbPaiements = factureData.nbPaiements || 0;
@@ -225,7 +227,7 @@ export class PaymentModalHandler {
             `;
         }
         
-        // Détails de la facture (existant)
+        // Détails de la facture
         content += `
             <div class="details-container">
                 <div class="info-row">
@@ -263,7 +265,7 @@ export class PaymentModalHandler {
             </div>
         `;
         
-        // ✅ NOUVEAU: Bouton pour voir l'historique si des paiements existent
+        // Bouton pour voir l'historique si des paiements existent
         if (nbPaiements > 0) {
             content += `
                 <div style="text-align: center; margin: 15px 0;">
@@ -277,7 +279,7 @@ export class PaymentModalHandler {
             `;
         }
         
-        // Formulaire de paiement (modifié pour le montant restant)
+        // Formulaire de paiement
         content += this.createPaymentForm(montantRestant > 0 ? montantRestant : montantAvecRistourne);
         
         return content;
@@ -348,19 +350,18 @@ export class PaymentModalHandler {
         const dateInput = container.querySelector('#datePaiement');
         const historiqueBtn = container.querySelector('#voirHistoriquePaiements');
         
-        // ✅ NOUVEAU: Gestionnaire pour l'historique des paiements
+        // Gestionnaire pour l'historique des paiements
         if (historiqueBtn) {
             historiqueBtn.addEventListener('click', async (e) => {
                 e.preventDefault();
-                // ✅ CORRECTION : Utiliser l'ID stocké dans l'instance
                 await this.showHistoriquePaiements(this.currentFactureId, e.target);
             });
         }
         
-        // Suggestions de montant avec style (existant)
+        // Suggestions de montant avec style
         this.addAmountSuggestions(container, montantInput, montantAvecRistourne, montantFacture);
         
-        // Validation montant (existant)
+        // Validation montant
         montantInput.addEventListener('blur', (e) => {
             const value = parseFloat(e.target.value);
             if (isNaN(value) || value <= 0) {
@@ -372,7 +373,7 @@ export class PaymentModalHandler {
             }
         });
         
-        // Validation date (existant)
+        // Validation date
         dateInput.addEventListener('change', (e) => {
             const selectedDate = new Date(e.target.value);
             const today = new Date();
@@ -467,7 +468,7 @@ export class PaymentModalHandler {
             return;
         }
         
-        // ✅ NOUVEAU: Calculer le montant restant avec les paiements existants
+        // Calculer le montant restant avec les paiements existants
         const montantFacture = parseFloat(factureData.totalFacture);
         const montantAvecRistourne = factureData.ristourne 
             ? montantFacture - parseFloat(factureData.ristourne || 0)
@@ -499,7 +500,7 @@ export class PaymentModalHandler {
             }
         }
         
-        // Enregistrer le paiement avec la nouvelle API
+        // ✅ MODIFIÉ : Enregistrer le paiement via PaiementService au lieu de FactureService
         await this.savePayment(factureId, formData, montantPayeNum, factureData, anchorRef);
     }
 
@@ -539,17 +540,21 @@ export class PaymentModalHandler {
         return confirmResult.action === 'confirm';
     }
 
-    // Afficher l'historique des paiements
+    // ✅ MODIFIÉ : Afficher l'historique via FactureService (données) mais on pourrait aussi via PaiementService
     async showHistoriquePaiements(factureId, anchorRef) {
         try {
-            // Récupérer l'historique via l'API
-            const historique = await this.factureService.getHistoriquePaiements(factureId);
+            // ✅ OPTION : On garde FactureService pour l'historique car c'est lié à une facture spécifique
+            // Alternativement, on pourrait créer une méthode getPaiementsByFacture dans PaiementService
+            const paiements = await this.paiementService.getPaiementsParFacture(factureId);
+            const historique = {
+                success: true,
+                paiements: paiements || []
+            };
             
             if (!historique.success) {
                 throw new Error(historique.message);
             }
             
-            const paiements = historique.paiements || [];
             
             let content = `
                 <div class="historique-paiements">
@@ -646,45 +651,8 @@ export class PaymentModalHandler {
         }
     }
 
-
     /**
-     * Confirmation pour montant différent
-     */
-    async confirmDifferentAmount(montantPayeNum, montantAvecRistourne, anchorRef) {
-        const difference = montantPayeNum - montantAvecRistourne;
-        const confirmationMessage = difference > 0
-            ? `Le montant payé (${this.formatMontant(montantPayeNum)} CHF) est supérieur au montant à payer (${this.formatMontant(montantAvecRistourne)} CHF). Différence: +${this.formatMontant(difference)} CHF.`
-            : `Le montant payé (${this.formatMontant(montantPayeNum)} CHF) est inférieur au montant à payer (${this.formatMontant(montantAvecRistourne)} CHF). Différence: ${this.formatMontant(difference)} CHF.`;
-        
-        const confirmResult = await this.showCustom({
-            title: "Confirmer le montant",
-            content: ModalComponents.createWarningSection(
-                "",
-                `${confirmationMessage}<br><br>Voulez-vous continuer avec ce montant ?`,
-                "warning"
-            ),
-            anchorRef,
-            size: 'medium',
-            position: 'smart',
-            buttons: [
-                {
-                    text: "Annuler",
-                    action: "cancel",
-                    className: "secondary"
-                },
-                {
-                    text: "Confirmer",
-                    action: "confirm",
-                    className: "primary"
-                }
-            ]
-        });
-        
-        return confirmResult.action === 'confirm';
-    }
-
-    /**
-     * Enregistrer le paiement
+     * ✅ MODIFIÉ : Enregistrer le paiement via PaiementService
      */
     async savePayment(factureId, formData, montantPayeNum, factureData, anchorRef) {
         try {
@@ -696,19 +664,23 @@ export class PaymentModalHandler {
                     size: 'small',
                     position: 'smart'
                 },
-                async () => await this.factureService.enregistrerPaiement(factureId, {
-                    datePaiement: formData.datePaiement,
-                    montantPaye: montantPayeNum,
-                    methodePaiement: formData.methodePaiement || 'virement',
-                    commentaire: formData.commentaire || ''
-                })
+                async () => {
+                    // ✅ NOUVEAU : Utiliser PaiementService.createPaiement au lieu de FactureService.enregistrerPaiement
+                    return await this.paiementService.createPaiement({
+                        factureId: factureId,                          // ID de la facture à associer
+                        datePaiement: formData.datePaiement,           // Date du paiement
+                        montantPaye: montantPayeNum,                   // Montant payé
+                        methodePaiement: formData.methodePaiement || 'virement', // Méthode de paiement
+                        commentaire: formData.commentaire || ''        // Commentaire optionnel
+                    });
+                }
             );
             
             if (paiementResult.success) {
                 // Récupérer les données fraîches de la facture après paiement
-                const factureData = await this.factureService.getFacture(factureId);
+                const factureDataUpdated = await this.factureService.getFacture(factureId);
                 
-                await this.showPaymentSuccess(formData, montantPayeNum, factureData, paiementResult, anchorRef);
+                await this.showPaymentSuccess(formData, montantPayeNum, factureDataUpdated, paiementResult, anchorRef);
                 this.onSetNotification('Paiement enregistré avec succès', 'success');
                 this.chargerFactures();
             } else {
@@ -769,15 +741,15 @@ export class PaymentModalHandler {
     /**
      * Modal d'erreur de validation
      */
-    async showValidationError(message, factureData, anchorRef) { // ✅ Ajouter factureData en paramètre
+    async showValidationError(message, factureData, anchorRef) {
         const config = ModalComponents.createSimpleModalConfig(
             "Erreur de validation",
-            factureData, // ✅ CORRECTION : passer les données de la facture
+            factureData,
             {
                 intro: "",
                 warningMessage: message,
                 warningType: "error",
-                formatMontant: this.formatMontant, // ✅ Ajouter les fonctions de formatage
+                formatMontant: this.formatMontant,
                 formatDate: this.formatDate,
                 buttons: ModalComponents.createModalButtons({
                     submitText: "OK",
@@ -796,15 +768,15 @@ export class PaymentModalHandler {
     /**
      * Modal d'erreur générique
      */
-    async showError(message, factureData = null, anchorRef) { // ✅ Ajouter factureData (optionnel)
+    async showError(message, factureData = null, anchorRef) {
         const config = ModalComponents.createSimpleModalConfig(
             "Erreur",
-            factureData || {}, // ✅ CORRECTION : utiliser factureData si disponible
+            factureData || {},
             {
                 intro: "",
                 warningMessage: message,
                 warningType: "error",
-                formatMontant: this.formatMontant, // ✅ Ajouter les fonctions de formatage
+                formatMontant: this.formatMontant,
                 formatDate: this.formatDate,
                 buttons: ModalComponents.createModalButtons({
                     submitText: "OK",

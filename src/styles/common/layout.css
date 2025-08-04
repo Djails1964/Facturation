@@ -188,6 +188,16 @@
   background-color: var(--badge-envoyee-hover-bg);
 }
 
+.etat-badge.etat-confirme {
+  background-color: var(--badge-confirme-bg);
+  color: var(--badge-confirme-text);
+  border-color: var(--badge-confirme-border);
+}
+
+.etat-badge.etat-confirme:hover {
+  background-color: var(--badge-confirme-hover-bg);
+}
+
 .etat-badge.etat-default {
   background-color: var(--badge-default-bg);
   color: var(--badge-default-text);

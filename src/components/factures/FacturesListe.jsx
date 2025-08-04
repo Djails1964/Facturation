@@ -10,6 +10,7 @@ import { showCustom, showLoading } from '../../utils/modalSystem';
 
 // Import des services
 import FactureService from '../../services/FactureService';
+import PaiementService from '../../services/PaiementService';
 
 // Import des hooks personnalisés
 import { useFactures } from './hooks/useFactures';
@@ -17,6 +18,7 @@ import { useFactureFilters } from './hooks/useFactureFilters';
 import { useTemplates } from './hooks/useTemplates';
 import { useFactureModals } from './hooks/useFactureModals';
 import { formatMontant, formatDate } from '../../utils/formatters';
+
 
 function FacturesListe({ 
     nouvelleFactureId,
@@ -38,8 +40,9 @@ function FacturesListe({
             window.location.port === '3000';
     };
     
-    // Initialisation du service facture
+    // Initialisation du service facture et du service paiement
     const factureService = new FactureService();
+    const paiementService = new PaiementService();
     
     // État pour le tooltip du bouton flottant
     const [floatingButtonTooltip, setFloatingButtonTooltip] = useState({
@@ -79,6 +82,7 @@ function FacturesListe({
     // ✅ NOUVEAUTÉ: Configuration des dépendances pour les handlers
     const modalDependencies = {
         factureService,
+        paiementService,
         showCustom,
         showLoading,
         formatMontant: (montant) => formatMontant(montant),

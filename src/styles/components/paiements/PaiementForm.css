@@ -1,176 +1,53 @@
-/* PaiementForm.css - VERSION NETTOYÉE */
-/* ✅ SUPPRESSION de tous les styles redondants qui existent dans layout.css, forms.css et buttons.css */
+/* PaiementForm.css - SEULEMENT les styles spécifiques au paiement */
+/* Tout le reste utilise forms.css, buttons.css, layout.css */
 
-/* ✅ CONSERVATION uniquement des styles spécifiques au formulaire de paiement */
-
-/* Messages de chargement spécifiques */
-.loading-message {
-  text-align: center;
-  padding: 40px;
-  color: #6c757d;
-  font-style: italic;
+/* Badge d'état harmonisé avec FactureHeader */
+.paiement-header-etat-simple {
+    margin-bottom: 20px;
 }
 
-/* Formulaire - styles spécifiques */
-.paiement-form {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  overflow: hidden;
-}
-
+/* Container sans padding pour ce formulaire */
 .paiement-form-container {
-  padding: 30px;
+    padding: 0;
 }
 
-/* Sections du formulaire - styles spécifiques */
-.form-section {
-  margin-bottom: 30px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.form-section:last-of-type {
-  border-bottom: none;
-  margin-bottom: 0;
-}
-
+/* Titres des sections - espacement spécialisé pour ce formulaire */
 .form-section h3 {
-  color: #495057;
-  margin: 0 0 20px 0;
-  font-size: 1.2rem;
-  font-weight: 600;
-  padding-bottom: 8px;
-  border-bottom: 2px solid var(--color-primary); /* ✅ Utilisation de la variable */
-  display: inline-block;
+    padding-top: 20px;
+    padding-bottom: 20px;
 }
 
-/* Rangées de formulaire */
-.form-row {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.form-row:last-child {
-  margin-bottom: 0;
-}
-
-/* ✅ AJUSTEMENT pour les input-group dans les rangées */
-.form-row .input-group {
-  flex: 1;
-  min-width: 250px;
-}
-
-.form-row .input-group.full-width {
-  flex: 1 1 100%;
-  min-width: 100%;
-}
-
-/* Détails de la facture - styles spécifiques */
+/* Section des détails de facture (spécifique au paiement) */
 .facture-details {
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 6px;
-  padding: 20px;
-  margin-top: 15px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 20px;
+    margin-top: 15px;
 }
 
 .details-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #e9ecef;
-  font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #e9ecef;
+    font-size: 14px;
 }
 
 .details-row:last-child {
-  border-bottom: none;
-  font-weight: 600;
-}
-
-.details-row span:first-child {
-  color: #6c757d;
-}
-
-.details-row span:last-child {
-  color: #495057;
-  font-weight: 500;
+    border-bottom: none;
+    font-weight: 600;
 }
 
 .montant-restant {
-  color: #28a745 !important;
-  font-weight: 600 !important;
-  font-size: 16px !important;
+    color: #28a745 !important;
+    font-weight: 600 !important;
 }
 
-/* ✅ SUPPRESSION des styles .form-actions, .btn-cancel, .btn-submit - ils sont maintenant dans buttons.css et forms.css */
-
-/* ✅ SUPPRESSION des styles .form-group - remplacés par .input-group */
-
-/* ✅ SUPPRESSION des styles .error-message - remplacés par .notification.error */
-
-/* Messages d'aide - styles spécifiques */
-.help-text {
-  font-size: 12px;
-  color: #6c757d;
-  margin-top: 5px;
-  line-height: 1.4;
-}
-
-.error-text {
-  font-size: 12px;
-  color: #dc3545;
-  margin-top: 5px;
-  line-height: 1.4;
-}
-
-/* Responsive - styles spécifiques */
+/* Responsive pour facture-details */
 @media (max-width: 768px) {
-  .paiement-form-container {
-    padding: 20px;
-  }
-  
-  .form-row {
-    flex-direction: column;
-    gap: 15px;
-  }
-  
-  .form-row .input-group {
-    min-width: auto;
-  }
-  
-  .facture-details {
-    padding: 15px;
-  }
-  
-  .details-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 5px;
-  }
-  
-  .details-row span:last-child {
-    align-self: flex-end;
-  }
-  
-  .form-section {
-    margin-bottom: 25px;
-  }
-}
-
-@media (max-width: 480px) {
-  .paiement-form-container {
-    padding: 15px;
-  }
-  
-  .form-section {
-    margin-bottom: 20px;
-  }
-  
-  .form-section h3 {
-    font-size: 1.1rem;
-  }
+    .details-row {
+        flex-direction: column;
+        gap: 5px;
+    }
 }

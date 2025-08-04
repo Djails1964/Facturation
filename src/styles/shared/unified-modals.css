@@ -1174,6 +1174,38 @@ body.modal-dragging {
   transform: translate3d(0, 0, 0) scale(1.01);
 }
 
+.unified-modal-container .calendar-day-btn {
+    pointer-events: auto !important;
+    position: relative;
+    z-index: 1;
+}
+
+.unified-modal-container .fallback-calendar {
+    pointer-events: auto !important;
+    position: relative;
+    z-index: 2;
+}
+
+.unified-modal-overlay.modal-datepicker {
+    pointer-events: auto !important;
+}
+
+.unified-modal-overlay.modal-datepicker .unified-modal-container {
+    pointer-events: auto !important;
+    position: relative;
+    z-index: 10;
+}
+
+/* Empêcher la fermeture accidentelle */
+.unified-modal-container .modal-form {
+    pointer-events: auto !important;
+    position: relative;
+}
+
+.unified-modal-container [data-calendar-button="true"] {
+    pointer-events: auto !important;
+}
+
 /* ==========================================
    VARIABLES CSS POUR PERSONNALISATION
    ========================================== */

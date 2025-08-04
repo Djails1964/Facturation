@@ -723,83 +723,112 @@ class ModalSystem {
    * ✅ Attacher les event listeners
    */
   attachEventListeners(modalId, config) {
-    const modal = this.activeModals.get(modalId);
-    if (!modal) return;
+      const modal = this.activeModals.get(modalId);
+      if (!modal) return;
 
-    const { overlay, container, resolve } = modal;
+      const { overlay, container, resolve } = modal;
 
-    // Gestionnaire des boutons
-    const handleButtonClick = (e) => {
-      const action = e.target.dataset.action;
-      if (!action) return;
+      // ✅ CORRECTION 7: Gestionnaire de boutons avec meilleure protection
+      const handleButtonClick = (e) => {
+          const action = e.target.dataset.action;
+          
+          // ✅ CORRECTION 8: Ne traiter que les vrais boutons d'action
+          if (!action || !e.target.matches('button[data-action]')) {
+              console.log('🔘 Clic ignoré - pas un bouton d\'action valide');
+              return;
+          }
 
-      console.log('🔘 Bouton cliqué - Action:', action, 'Target:', e.target);
+          console.log('🔘 Bouton cliqué - Action:', action, 'Target:', e.target);
 
-      e.preventDefault();
-      e.stopPropagation();
+          e.preventDefault();
+          e.stopPropagation();
 
-      if (action === 'close') {
-        console.log('🔘 Fermeture de la modal');
-        this.close(modalId, { action: 'close' });
-        return;
+          // ✅ CORRECTION 9: Délai pour les actions de fermeture
+          const executeAction = () => {
+              if (action === 'close') {
+                  console.log('🔘 Fermeture de la modal');
+                  this.close(modalId, { action: 'close' });
+                  return;
+              }
+
+              // Collecter les données du formulaire si présent
+              const form = container.querySelector('#modalForm, #emailForm, #paymentForm');
+              let formData = {};
+              
+              if (form) {
+                  console.log('🔘 Formulaire trouvé, collecte des données...');
+                  const formDataObj = new FormData(form);
+                  for (let [key, value] of formDataObj.entries()) {
+                      formData[key] = value;
+                  }
+                  console.log('🔘 Données formulaire collectées:', formData);
+              }
+
+              console.log('🔘 Fermeture modal avec action:', action, 'et données:', formData);
+              this.close(modalId, { action, data: formData });
+          };
+
+          // ✅ CORRECTION 10: Exécuter avec un petit délai pour éviter les conflits
+          if (action === 'close' || action === 'cancel') {
+              executeAction();
+          } else {
+              setTimeout(executeAction, 100);
+          }
+      };
+
+      // ✅ CORRECTION 11: Attacher avec délégation et capture
+      container.addEventListener('click', handleButtonClick, true);
+
+      // ✅ CORRECTION 12: Fermeture par Escape avec protection
+      const handleEscape = (e) => {
+          if (e.key === 'Escape' && config.closeOnEscape !== false) {
+              console.log('🔘 Fermeture par Escape');
+              // Vérifier qu'on est bien dans cette modal
+              const activeModal = document.querySelector('.unified-modal-overlay:last-child');
+              if (activeModal && activeModal.dataset.modalId === modalId) {
+                  this.close(modalId, { action: 'escape' });
+              }
+          }
+      };
+
+      document.addEventListener('keydown', handleEscape);
+
+      // ✅ CORRECTION 13: Fermeture par overlay avec protection renforcée
+      const handleOverlayClick = (e) => {
+          // Ne fermer que si on clique directement sur l'overlay (pas sur ses enfants)
+          if (e.target === overlay && config.closeOnOverlayClick !== false) {
+              console.log('🔘 Fermeture par clic overlay');
+              
+              // Protection supplémentaire: vérifier qu'il n'y a pas d'interaction en cours
+              setTimeout(() => {
+                  // Double vérification que c'est bien l'overlay
+                  if (e.target === overlay) {
+                      this.close(modalId, { action: 'overlay' });
+                  }
+              }, 50);
+          }
+      };
+
+      overlay.addEventListener('click', handleOverlayClick);
+
+      // Stocker les handlers
+      modal.eventHandlers = {
+          handleButtonClick,
+          handleEscape,
+          handleOverlayClick
+      };
+
+      // ✅ CORRECTION 14: Appeler onMount avec protection et délai
+      if (config.onMount && typeof config.onMount === 'function') {
+          setTimeout(() => {
+              try {
+                  console.log('🔘 Appel de onMount avec délai');
+                  config.onMount(container);
+              } catch (error) {
+                  console.error('❌ Erreur dans onMount:', error);
+              }
+          }, 100); // Délai pour s'assurer que la modal est stable
       }
-
-      // Collecter les données du formulaire si présent
-      const form = container.querySelector('#modalForm, #emailForm, #paymentForm');
-      let formData = {};
-      
-      if (form) {
-        console.log('🔘 Formulaire trouvé, collecte des données...');
-        const formDataObj = new FormData(form);
-        for (let [key, value] of formDataObj.entries()) {
-          formData[key] = value;
-        }
-        console.log('🔘 Données formulaire collectées:', formData);
-      }
-
-      console.log('🔘 Fermeture modal avec action:', action, 'et données:', formData);
-      this.close(modalId, { action, data: formData });
-    };
-
-    // Attacher les événements de boutons
-    container.addEventListener('click', handleButtonClick);
-
-    // Fermeture par Escape
-    const handleEscape = (e) => {
-      if (e.key === 'Escape' && config.closeOnEscape !== false) {
-        console.log('🔘 Fermeture par Escape');
-        this.close(modalId, { action: 'escape' });
-      }
-    };
-
-    document.addEventListener('keydown', handleEscape);
-
-    // Fermeture par clic sur l'overlay
-    const handleOverlayClick = (e) => {
-      if (e.target === overlay && config.closeOnOverlayClick !== false) {
-        console.log('🔘 Fermeture par clic overlay');
-        this.close(modalId, { action: 'overlay' });
-      }
-    };
-
-    overlay.addEventListener('click', handleOverlayClick);
-
-    // Stocker les handlers pour pouvoir les supprimer
-    modal.eventHandlers = {
-      handleButtonClick,
-      handleEscape,
-      handleOverlayClick
-    };
-
-    // Appeler onMount si défini
-    if (config.onMount && typeof config.onMount === 'function') {
-      try {
-        console.log('🔘 Appel de onMount');
-        config.onMount(container);
-      } catch (error) {
-        console.error('❌ Erreur dans onMount:', error);
-      }
-    }
   }
 
   /**

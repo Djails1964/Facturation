@@ -1,9 +1,14 @@
 /**
- * Service de gestion des paiements
+ * Service de gestion des paiements - Version complète
  * @class PaiementService
  * @description Gère l'accès aux données des paiements via l'API paiement-api.php
  */
 import api from './api';
+import { 
+    METHODES_PAIEMENT_LABELS,
+    PAIEMENT_ETATS 
+} from '../constants/paiementConstants';
+
 
 class PaiementService {
   constructor() {
@@ -12,9 +17,9 @@ class PaiementService {
   }
 
   /**
-   * Charge la liste des paiements avec filtrage optionnel
+   * ✅ COMPLÉTÉE : Charge la liste des paiements avec filtrage optionnel et pagination
    * @param {Object} options Options de filtrage et pagination
-   * @returns {Array} Liste des paiements
+   * @returns {Object} {paiements: Array, pagination: Object}
    */
   async chargerPaiements(options = {}) {
     try {
@@ -28,6 +33,7 @@ class PaiementService {
       if (options.factureId) params.facture_id = options.factureId;
       if (options.page) params.page = options.page;
       if (options.limit) params.limit = options.limit;
+      if (options.statut) params.statut = options.statut; // ✅ Filtre par statut (confirme/annule)
 
       console.log('PaiementService - Chargement des paiements avec options:', options);
       console.log('PaiementService - Paramètres de l\'API:', params);
@@ -51,7 +57,10 @@ class PaiementService {
           commentaire: paiement.commentaire,
           numeroPaiement: paiement.numero_paiement,
           dateCreation: paiement.date_creation,
-          // Informations sur la facture
+          statut: paiement.statut || PAIEMENT_ETATS.VALIDE,
+          dateModification: paiement.date_modification || null,
+          dateAnnulation: paiement.date_annulation || null,
+          motifAnnulation: paiement.motif_annulation || null,
           montantTotalFacture: parseFloat(paiement.montant_total),
           ristourneFacture: parseFloat(paiement.ristourne || 0)
         }));
@@ -72,7 +81,7 @@ class PaiementService {
   }
 
   /**
-   * Récupère un paiement spécifique par son ID
+   * ✅ EXISTANTE : Récupère un paiement spécifique par son ID
    * @param {number} id ID du paiement
    * @returns {Object|null} Données du paiement
    */
@@ -103,6 +112,9 @@ class PaiementService {
           commentaire: paiementData.commentaire,
           numeroPaiement: paiementData.numero_paiement,
           dateCreation: paiementData.date_creation,
+          statut: paiementData.statut || PAIEMENT_ETATS.VALIDE, // ✅ Statut par défaut
+          dateAnnulation: paiementData.date_annulation || null,
+          motifAnnulation: paiementData.motif_annulation || null,
           montantTotalFacture: parseFloat(paiementData.montant_total),
           ristourneFacture: parseFloat(paiementData.ristourne || 0)
         };
@@ -119,7 +131,7 @@ class PaiementService {
   }
 
   /**
-   * Récupère les paiements d'une facture spécifique
+   * ✅ EXISTANTE : Récupère les paiements d'une facture spécifique
    * @param {number} factureId ID de la facture
    * @returns {Array} Liste des paiements de la facture
    */
@@ -128,7 +140,26 @@ class PaiementService {
       const response = await api.get(`paiement-api.php?facture_id=${factureId}`);
       
       if (response && response.success) {
-        return response.paiements || [];
+        // ✅ Adapter les données de la même façon que chargerPaiements
+        const paiementsData = response.paiements || [];
+        return paiementsData.map(paiement => ({
+          id: paiement.id_paiement,
+          factureId: paiement.id_facture,
+          numeroFacture: paiement.numero_facture,
+          clientId: paiement.id_client,
+          nomClient: paiement.nom_client,
+          datePaiement: paiement.date_paiement,
+          montantPaye: parseFloat(paiement.montant_paye),
+          methodePaiement: paiement.methode_paiement,
+          commentaire: paiement.commentaire,
+          numeroPaiement: paiement.numero_paiement,
+          dateCreation: paiement.date_creation,
+          statut: paiement.statut || PAIEMENT_ETATS.VALIDE,
+          dateAnnulation: paiement.date_annulation || null,
+          motifAnnulation: paiement.motif_annulation || null,
+          montantTotalFacture: parseFloat(paiement.montant_total || 0),
+          ristourneFacture: parseFloat(paiement.ristourne || 0)
+        }));
       }
       
       return [];
@@ -139,7 +170,7 @@ class PaiementService {
   }
 
   /**
-   * Crée un nouveau paiement
+   * ✅ EXISTANTE : Crée un nouveau paiement
    * @param {Object} paiementData Données du paiement
    * @returns {Object} Résultat de l'opération
    */
@@ -165,7 +196,7 @@ class PaiementService {
   }
 
   /**
-   * Met à jour un paiement existant
+   * ✅ EXISTANTE : Met à jour un paiement existant
    * @param {number} id ID du paiement
    * @param {Object} paiementData Nouvelles données du paiement
    * @returns {Object} Résultat de l'opération
@@ -190,9 +221,38 @@ class PaiementService {
   }
 
   /**
-   * Supprime un paiement
+   * ✅ EXISTANTE : Annule un paiement (au lieu de le supprimer)
+   * @param {number} id ID du paiement
+   * @param {string} motifAnnulation Motif de l'annulation
+   * @returns {Object} Résultat de l'opération
+   */
+  async cancelPaiement(id, motifAnnulation = null) {
+    try {
+      const data = motifAnnulation ? { motif_annulation: motifAnnulation } : {};
+      const response = await api.delete(`paiement-api.php?id=${id}`, data);
+      
+      if (response && response.success) {
+        delete this._cachePaiement[id];
+        return {
+          success: true,
+          factureId: response.factureId,
+          numeroPaiement: response.numeroPaiement,
+          message: response.message || 'Paiement annulé avec succès'
+        };
+      } else {
+        throw new Error(response?.message || 'Erreur lors de l\'annulation du paiement');
+      }
+    } catch (error) {
+      console.error(`Erreur lors de l'annulation du paiement ${id}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * ✅ EXISTANTE : Supprime un paiement (méthode legacy)
    * @param {number} id ID du paiement
    * @returns {Object} Résultat de l'opération
+   * @deprecated Utilisez cancelPaiement() à la place
    */
   async deletePaiement(id) {
     try {
@@ -215,7 +275,7 @@ class PaiementService {
   }
 
   /**
-   * Récupère les statistiques globales des paiements
+   * ✅ EXISTANTE : Récupère les statistiques globales des paiements
    * @param {number|null} annee Année pour filtrer les statistiques
    * @returns {Object} Statistiques complètes
    */
@@ -247,23 +307,153 @@ class PaiementService {
   }
 
   /**
-   * Récupère les méthodes de paiement disponibles
-   * @returns {Array} Liste des méthodes de paiement
+   * ✅ NOUVELLE : Récupère les paiements avec pagination avancée
+   * @param {number} page Numéro de page (1-based)
+   * @param {number} limit Nombre d'éléments par page
+   * @param {Object} filtres Filtres à appliquer
+   * @returns {Object} {paiements: Array, pagination: Object}
    */
-  getMethodesPaiement() {
-    return [
-      { value: 'especes', label: 'Espèces' },
-      { value: 'carte_bancaire', label: 'Carte bancaire' },
-      { value: 'virement', label: 'Virement bancaire' },
-      { value: 'cheque', label: 'Chèque' },
-      { value: 'twint', label: 'TWINT' },
-      { value: 'paypal', label: 'PayPal' },
-      { value: 'autre', label: 'Autre' }
-    ];
+  async getPaiementsAvecPagination(page = 1, limit = 50, filtres = {}) {
+    return await this.chargerPaiements({
+      page,
+      limit,
+      ...filtres
+    });
   }
 
   /**
-   * Récupère la liste des années disponibles pour le filtrage
+   * ✅ NOUVELLE : Récupère uniquement les paiements confirmés
+   * @param {Object} options Options de filtrage
+   * @returns {Object} {paiements: Array, pagination: Object}
+   */
+  async getPaiementsConfirmes(options = {}) {
+    return await this.chargerPaiements({
+      ...options,
+      statut: PAIEMENT_ETATS.VALIDE
+    });
+  }
+
+  /**
+   * ✅ NOUVELLE : Récupère uniquement les paiements annulés
+   * @param {Object} options Options de filtrage
+   * @returns {Object} {paiements: Array, pagination: Object}
+   */
+  async getPaiementsAnnules(options = {}) {
+    return await this.chargerPaiements({
+      ...options,
+      statut: PAIEMENT_ETATS.ANNULE
+    });
+  }
+
+  /**
+   * ✅ NOUVELLE : Récupère les paiements par méthode de paiement
+   * @param {string} methode Méthode de paiement
+   * @param {Object} options Options de filtrage
+   * @returns {Object} {paiements: Array, pagination: Object}
+   */
+  async getPaiementsParMethode(methode, options = {}) {
+    return await this.chargerPaiements({
+      ...options,
+      methode: methode
+    });
+  }
+
+  /**
+   * ✅ NOUVELLE : Récupère les paiements d'un client spécifique
+   * @param {number} clientId ID du client
+   * @param {Object} options Options de filtrage
+   * @returns {Object} {paiements: Array, pagination: Object}
+   */
+  async getPaiementsParClient(clientId, options = {}) {
+    return await this.chargerPaiements({
+      ...options,
+      clientId: clientId
+    });
+  }
+
+  /**
+   * ✅ NOUVELLE : Récupère les paiements pour une période donnée
+   * @param {number} annee Année
+   * @param {number|null} mois Mois (optionnel)
+   * @param {Object} options Options de filtrage
+   * @returns {Object} {paiements: Array, pagination: Object}
+   */
+  async getPaiementsParPeriode(annee, mois = null, options = {}) {
+    const filtres = { ...options, annee };
+    if (mois) {
+      filtres.mois = mois;
+    }
+    
+    return await this.chargerPaiements(filtres);
+  }
+
+  /**
+   * ✅ NOUVELLE : Recherche avancée de paiements
+   * @param {Object} criteres Critères de recherche
+   * @returns {Object} {paiements: Array, pagination: Object}
+   */
+  async rechercherPaiements(criteres) {
+    const options = {};
+    
+    // Convertir les critères en paramètres d'API
+    if (criteres.numeroFacture) {
+      // Note: L'API ne supporte pas directement la recherche par numéro de facture
+      // Il faudrait d'abord récupérer l'ID de la facture
+      console.warn('Recherche par numéro de facture non implémentée dans l\'API');
+    }
+    
+    if (criteres.nomClient) {
+      // Note: L'API ne supporte pas directement la recherche par nom de client
+      console.warn('Recherche par nom de client non implémentée dans l\'API');
+    }
+    
+    if (criteres.montantMin || criteres.montantMax) {
+      // Note: L'API ne supporte pas le filtrage par montant
+      console.warn('Filtrage par montant non implémenté dans l\'API');
+    }
+    
+    // Appliquer les filtres supportés
+    Object.keys(criteres).forEach(cle => {
+      if (['annee', 'mois', 'methode', 'statut', 'clientId', 'factureId', 'page', 'limit'].includes(cle)) {
+        options[cle] = criteres[cle];
+      }
+    });
+    
+    return await this.chargerPaiements(options);
+  }
+
+  /**
+   * ✅ NOUVELLE : Debug de session (développement uniquement)
+   * @returns {Object} Informations de debug
+   */
+  async debugSession() {
+    try {
+      if (process.env.NODE_ENV !== 'development') {
+        throw new Error('Debug session disponible uniquement en développement');
+      }
+      
+      const response = await api.get('paiement-api.php?debug_session=1');
+      return response;
+    } catch (error) {
+      console.error('Erreur lors du debug session:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * ✅ EXISTANTE : Récupère les méthodes de paiement disponibles
+   * @returns {Array} Liste des méthodes de paiement
+   */
+  getMethodesPaiement() {
+    return Object.entries(METHODES_PAIEMENT_LABELS).map(([value, label]) => ({
+      value: value,
+      label: label
+    }));
+  }
+
+
+  /**
+   * ✅ EXISTANTE : Récupère la liste des années disponibles pour le filtrage
    * @returns {Array} Liste des années
    */
   async getAnneesDisponibles() {
@@ -291,7 +481,57 @@ class PaiementService {
   }
 
   /**
-   * Nettoie le cache
+   * ✅ NOUVELLE : Valide les données d'un paiement avant envoi
+   * @param {Object} paiementData Données à valider
+   * @returns {Object} {valid: boolean, errors: Array}
+   */
+  validerDonneesPaiement(paiementData) {
+    const errors = [];
+    
+    // Validation des champs obligatoires
+    if (!paiementData.factureId) {
+      errors.push('L\'ID de la facture est obligatoire');
+    }
+    
+    if (!paiementData.datePaiement) {
+      errors.push('La date de paiement est obligatoire');
+    }
+    
+    if (!paiementData.montantPaye || paiementData.montantPaye <= 0) {
+      errors.push('Le montant payé doit être positif');
+    }
+    
+    if (!paiementData.methodePaiement) {
+      errors.push('La méthode de paiement est obligatoire');
+    }
+    
+    // Validation de la date
+    if (paiementData.datePaiement) {
+      const datePayment = new Date(paiementData.datePaiement);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      
+      if (datePayment > today) {
+        errors.push('La date de paiement ne peut pas être dans le futur');
+      }
+    }
+    
+    // Validation de la méthode de paiement
+    if (paiementData.methodePaiement) {
+      const methodesValides = this.getMethodesPaiement().map(m => m.value);
+      if (!methodesValides.includes(paiementData.methodePaiement)) {
+        errors.push('Méthode de paiement non valide');
+      }
+    }
+    
+    return {
+      valid: errors.length === 0,
+      errors: errors
+    };
+  }
+
+  /**
+   * ✅ EXISTANTE : Nettoie le cache
    * @private
    */
   _clearCache() {
@@ -299,7 +539,7 @@ class PaiementService {
   }
 
   /**
-   * Formate une méthode de paiement pour l'affichage
+   * ✅ EXISTANTE : Formate une méthode de paiement pour l'affichage
    * @param {string} methode Méthode de paiement
    * @returns {string} Méthode formatée
    */
@@ -307,6 +547,26 @@ class PaiementService {
     const methodes = this.getMethodesPaiement();
     const methodeObj = methodes.find(m => m.value === methode);
     return methodeObj ? methodeObj.label : methode;
+  }
+
+  /**
+   * ✅ NOUVELLE : Calcule les totaux d'une liste de paiements
+   * @param {Array} paiements Liste des paiements
+   * @returns {Object} Totaux calculés
+   */
+  calculerTotaux(paiements) {
+    const paiementsConfirmes = paiements.filter(p => p.statut === PAIEMENT_ETATS.VALIDE);
+    const paiementsAnnules = paiements.filter(p => p.statut === PAIEMENT_ETATS.ANNULE);
+
+    return {
+      nombreTotal: paiements.length,
+      nombreConfirmes: paiementsConfirmes.length,
+      nombreAnnules: paiementsAnnules.length,
+      montantTotal: paiementsConfirmes.reduce((sum, p) => sum + p.montantPaye, 0),
+      montantAnnule: paiementsAnnules.reduce((sum, p) => sum + p.montantPaye, 0),
+      montantMoyen: paiementsConfirmes.length > 0 ? 
+        paiementsConfirmes.reduce((sum, p) => sum + p.montantPaye, 0) / paiementsConfirmes.length : 0
+    };
   }
 }
 
