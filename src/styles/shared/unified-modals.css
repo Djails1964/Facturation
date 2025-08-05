@@ -1233,22 +1233,255 @@ body.modal-dragging {
 }
 
 /* ==========================================
-   DEBUGGING (à supprimer en production)
+   STYLES DATEPICKER MODAL - À AJOUTER À LA FIN DE unified-modals.css
    ========================================== */
-/*
-.unified-modal-container {
-  border: 2px dashed red;
+
+/* Container principal du DatePicker */
+.unified-modal-container .datepicker-container {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+  min-height: 300px;
 }
 
-.unified-modal-header {
-  border: 1px dashed blue;
+.unified-modal-container .datepicker-fallback-area {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+  min-height: 300px;
 }
 
-.unified-modal-container .modal-form {
-  border: 1px dashed green;
+/* Calendrier de fallback */
+.unified-modal-container .fallback-calendar {
+  border: 1px solid var(--color-border, #ddd);
+  border-radius: var(--border-radius-sm, 4px);
+  padding: 15px;
+  background: var(--color-background, white);
+  font-family: inherit;
+  max-width: 320px;
+  margin: 0 auto;
 }
 
-.unified-modal-container .modal-actions {
-  border: 1px dashed orange;
+/* Header du calendrier */
+.unified-modal-container .calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--color-border-light, #eee);
 }
-*/
+
+.unified-modal-container .nav-month-btn {
+  background: none;
+  border: 1px solid var(--color-border, #ddd);
+  border-radius: var(--border-radius-sm, 4px);
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--color-text-light, #666);
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.unified-modal-container .nav-month-btn:hover {
+  background-color: var(--color-background-hover, #f5f5f5);
+  color: var(--color-text, #333);
+}
+
+.unified-modal-container .nav-month-btn:active {
+  transform: scale(0.95);
+}
+
+.unified-modal-container .month-year-display {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--color-primary, #800000);
+  user-select: none;
+}
+
+/* Grille des jours de la semaine */
+.unified-modal-container .calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.unified-modal-container .calendar-weekday {
+  font-weight: 600;
+  padding: 8px;
+  color: var(--color-text-light, #666);
+  font-size: 12px;
+}
+
+/* Grille des jours */
+.unified-modal-container .calendar-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+/* Boutons des jours */
+.unified-modal-container .calendar-day-btn {
+  padding: 8px 4px;
+  border: none;
+  background: transparent;
+  color: var(--color-text, #333);
+  cursor: pointer;
+  border-radius: var(--border-radius-sm, 4px);
+  transition: all 0.2s ease;
+  font-size: 13px;
+  min-height: 32px;
+  font-family: inherit;
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 10;
+}
+
+/* États des boutons de jours */
+.unified-modal-container .calendar-day-btn:hover:not(:disabled):not(.selected-date) {
+  background-color: var(--color-background-hover, #e9ecef);
+}
+
+.unified-modal-container .calendar-day-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  color: var(--color-text-disabled, #ccc);
+  background-color: var(--color-background-disabled, #f5f5f5);
+}
+
+.unified-modal-container .calendar-day-btn.not-current-month {
+  background-color: var(--color-background-muted, #f8f8f8);
+  color: var(--color-text-muted, #999);
+}
+
+.unified-modal-container .calendar-day-btn.not-current-month:hover:not(:disabled):not(.selected-date) {
+  background-color: var(--color-background-muted-hover, #efefef);
+}
+
+/* Date d'aujourd'hui */
+.unified-modal-container .calendar-day-btn.today:not(.selected-date) {
+  font-weight: 600;
+  border: 2px solid var(--color-primary, #800000);
+}
+
+/* Date sélectionnée - STYLES PRIORITAIRES */
+.unified-modal-container .calendar-day-btn.selected-date {
+  background-color: var(--color-primary, #800000) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  border: 2px solid var(--color-primary, #800000) !important;
+  box-shadow: 0 0 0 1px white inset !important;
+}
+
+/* PROTECTION CONTRE LE HOVER sur les dates sélectionnées */
+.unified-modal-container .calendar-day-btn.selected-date:hover {
+  background-color: var(--color-primary, #800000) !important;
+  color: white !important;
+  transform: none !important;
+}
+
+/* Dates futures interdites */
+.unified-modal-container .calendar-day-btn.future-date {
+  text-decoration: line-through;
+  opacity: 0.4;
+}
+
+/* Instructions en bas du calendrier */
+.unified-modal-container .calendar-instructions {
+  text-align: center;
+  font-size: 12px;
+  color: var(--color-text-light, #666);
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border-light, #eee);
+}
+
+/* Section d'informations sur les dates sélectionnées */
+.unified-modal-container .selected-dates-info {
+  margin: 15px 0;
+  padding: 15px;
+  background: var(--color-background-muted, #f9f9f9);
+  border: 1px solid var(--color-border, #e0e0e0);
+  border-radius: var(--border-radius-sm, 4px);
+  border-left: 4px solid var(--color-primary, #800000);
+}
+
+/* Responsive pour DatePicker */
+@media (max-width: 768px) {
+  .unified-modal-container .fallback-calendar {
+    max-width: 280px;
+    padding: 12px;
+  }
+  
+  .unified-modal-container .nav-month-btn {
+    padding: 6px 10px;
+    font-size: 14px;
+  }
+  
+  .unified-modal-container .month-year-display {
+    font-size: 14px;
+  }
+  
+  .unified-modal-container .calendar-day-btn {
+    min-height: 28px;
+    font-size: 12px;
+    padding: 6px 2px;
+  }
+  
+  .unified-modal-container .calendar-weekday {
+    padding: 6px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .unified-modal-container .fallback-calendar {
+    max-width: 260px;
+    padding: 10px;
+  }
+  
+  .unified-modal-container .calendar-day-btn {
+    min-height: 24px;
+    font-size: 11px;
+    padding: 4px 2px;
+  }
+  
+  .unified-modal-container .calendar-instructions {
+    font-size: 11px;
+  }
+}
+
+/* Accessibilité pour DatePicker */
+@media (prefers-reduced-motion: reduce) {
+  .unified-modal-container .calendar-day-btn,
+  .unified-modal-container .nav-month-btn {
+    transition: none;
+  }
+  
+  .unified-modal-container .nav-month-btn:active {
+    transform: none;
+  }
+}
+
+@media (prefers-contrast: high) {
+  .unified-modal-container .calendar-day-btn.selected-date {
+    border: 3px solid white !important;
+    box-shadow: 0 0 0 1px black inset !important;
+  }
+  
+  .unified-modal-container .calendar-day-btn.today:not(.selected-date) {
+    border: 3px solid var(--color-primary, #800000);
+  }
+}
+
+/* Print - masquer les éléments interactifs */
+@media print {
+  .unified-modal-container .nav-month-btn,
+  .unified-modal-container .calendar-instructions {
+    display: none;
+  }
+}
