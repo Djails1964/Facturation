@@ -1,5 +1,5 @@
 // src/components/shared/modals/handlers/DatePickerModalHandler.js
-// VERSION COMPLÈTE CORRIGÉE
+// VERSION COMPLÈTE CORRIGÉE - FIX du problème de hover sur dates sélectionnées
 
 import React from 'react';
 import DatePicker from "react-datepicker";
@@ -19,7 +19,7 @@ registerLocale('fr', fr);
 
 /**
  * Gestionnaire pour la sélection de dates avec modal unifiée
- * VERSION CORRIGÉE COMPLÈTE
+ * VERSION CORRIGÉE COMPLÈTE - FIX HOVER
  */
 export class DatePickerModalHandler {
     constructor(dependencies) {
@@ -88,7 +88,6 @@ export class DatePickerModalHandler {
      * Afficher la modal de sélection de dates
      */
     async showDateSelectionModal(config) {
-        // ✅ CORRECTION: Destructuration EN PREMIER
         const { 
             initialDates, 
             multiSelect, 
@@ -100,7 +99,6 @@ export class DatePickerModalHandler {
             anchorRef 
         } = config;
 
-        // ✅ Diagnostic après destructuration
         console.log('🔍 DIAGNOSTIC CONFIG:', {
             multiSelect: multiSelect,
             context: context,
@@ -362,7 +360,7 @@ export class DatePickerModalHandler {
     }
 
     /**
-     * Rendu du calendar fallback
+     * ✅ FIX PRINCIPAL: Rendu du calendar fallback avec gestion correcte de la sélection
      */
     renderDatePickerFallback(container, config) {
         const { minDate, maxDate, onDateSelect, initialDates = [], multiSelect } = config;
@@ -374,7 +372,7 @@ export class DatePickerModalHandler {
             return;
         }
         
-        // ✅ CORRECTION: Utiliser le mois/année depuis les attributs s'ils existent
+        // Utiliser le mois/année depuis les attributs s'ils existent
         let currentMonth, currentYear;
         
         // Vérifier si on a déjà des attributs (navigation)
@@ -414,7 +412,7 @@ export class DatePickerModalHandler {
             'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
         ];
         
-        // ✅ CORRECTION: Utiliser les dates initiales pour les sélections
+        // Utiliser les dates initiales pour les sélections
         const daysHTML = this.generateSimpleDaysHTML(currentYear, currentMonth, initialDates);
         
         // HTML du calendrier avec navigation
@@ -547,7 +545,7 @@ export class DatePickerModalHandler {
     }
 
     /**
-     * ✅ CORRECTION CRITIQUE: Générer le HTML des jours SANS décalage timezone
+     * ✅ FIX PRINCIPAL: Générer le HTML des jours avec marqueurs de sélection corrects
      */
     generateSimpleDaysHTML(year, month, selectedDates = []) {
         console.log('📅 Génération des jours pour:', { year, month, selectedDatesCount: selectedDates.length });
@@ -584,33 +582,50 @@ export class DatePickerModalHandler {
             
             const dayNum = currentDate.getDate();
             
-            // ✅ CORRECTION CRITIQUE: Utiliser DateService au lieu de toISOString()
+            // Utiliser DateService au lieu de toISOString()
             const dateStr = DateService.toInputFormat(currentDate);
             
-            // Gestion visuelle des dates hors mois courant
-            let backgroundColor, textColor;
+            // ✅ FIX: Gestion visuelle avec marqueurs multiples
+            let backgroundColor, textColor, borderStyle, fontWeight, boxShadow;
+            
             if (isSelected) {
-                backgroundColor = 'var(--color-primary, #800000)';
-                textColor = 'white';
+                backgroundColor = 'var(--color-primary, #800000) !important';
+                textColor = 'white !important';
+                borderStyle = '2px solid var(--color-primary, #800000)';
+                fontWeight = '600';
+                boxShadow = '0 0 0 1px white inset';
             } else if (!isCurrentMonth) {
                 backgroundColor = '#f8f8f8';
                 textColor = '#999';
+                borderStyle = 'none';
+                fontWeight = 'normal';
+                boxShadow = 'none';
             } else {
                 backgroundColor = 'transparent';
                 textColor = '#333';
+                borderStyle = 'none';
+                fontWeight = 'normal';
+                boxShadow = 'none';
+            }
+            
+            // Style spécial pour "aujourd'hui" si pas sélectionné
+            if (isToday && !isSelected) {
+                borderStyle = '2px solid var(--color-primary, #800000)';
+                fontWeight = '600';
             }
             
             daysHtml += `
                 <button 
                     type="button"
-                    class="calendar-day-btn"
+                    class="calendar-day-btn ${isSelected ? 'selected-date' : ''}"
                     data-date="${dateStr}"
                     data-calendar-button="true"
                     data-is-current-month="${isCurrentMonth}"
+                    data-is-selected="${isSelected}"
                     tabindex="${isDisabled ? '-1' : '0'}"
                     style="
                         padding: 8px 4px;
-                        border: none;
+                        border: ${borderStyle};
                         background: ${backgroundColor};
                         color: ${isDisabled ? '#ccc' : textColor};
                         cursor: ${isDisabled ? 'not-allowed' : 'pointer'};
@@ -619,8 +634,12 @@ export class DatePickerModalHandler {
                         font-size: 13px;
                         min-height: 32px;
                         opacity: ${isDisabled ? '0.4' : '1'};
-                        ${isToday && !isSelected ? 'font-weight: 600; border: 2px solid var(--color-primary, #800000);' : ''}
+                        font-weight: ${fontWeight};
                         ${isFutureDate ? 'text-decoration: line-through;' : ''}
+                        ${boxShadow !== 'none' ? `box-shadow: ${boxShadow};` : ''}
+                        pointer-events: auto !important;
+                        position: relative;
+                        z-index: 10;
                     "
                     ${isDisabled ? 'disabled' : ''}
                     title="${isFutureDate ? 'Date future non autorisée pour les paiements' : (isCurrentMonth ? '' : 'Date du mois précédent/suivant')}"
@@ -635,7 +654,7 @@ export class DatePickerModalHandler {
     }
 
     /**
-     * Initialiser les événements du calendrier
+     * ✅ FIX PRINCIPAL: Initialiser les événements avec protection de sélection
      */
     initializeSimpleCalendarEvents(container, config) {
         const { onDateSelect, multiSelect } = config;
@@ -680,7 +699,6 @@ export class DatePickerModalHandler {
                     
                     const dateStr = btn.getAttribute('data-date');
                     
-                    // ✅ CORRECTION: Parsing de date sans décalage timezone
                     console.log('📅 Date string depuis bouton:', dateStr);
                     
                     const dateParts = dateStr.split('-');
@@ -693,17 +711,7 @@ export class DatePickerModalHandler {
                         dateStr: dateStr,
                         parsedParts: { year, month: month + 1, day },
                         dateCreated: date,
-                        dateLocaleString: date.toLocaleDateString('fr-CH'),
-                        dateISOString: date.toISOString(),
-                        timezoneOffset: date.getTimezoneOffset()
-                    });
-                    
-                    console.log('📅 Date finale construite:', {
-                        dateObject: date,
-                        formatteeFrCH: date.toLocaleDateString('fr-CH'),
-                        jour: date.getDate(),
-                        mois: date.getMonth() + 1,
-                        annee: date.getFullYear()
+                        dateLocaleString: date.toLocaleDateString('fr-CH')
                     });
                     
                     // Vérification stricte des dates futures uniquement
@@ -717,55 +725,89 @@ export class DatePickerModalHandler {
                         return false;
                     }
                     
-                    // MODE SÉLECTION UNIQUE RENFORCÉ pour les paiements
+                    // ✅ FIX PRINCIPAL: MODE SÉLECTION AVEC MARQUEURS MULTIPLES
                     if (!multiSelect || config.context === 'payment') {
                         console.log('📅 Mode sélection unique - contexte:', config.context);
                         console.log('📅 Mode sélection unique - DÉSÉLECTION COMPLÈTE de tous les boutons');
                         
-                        // Désélectionner TOUS les boutons
+                        // Désélectionner TOUS les boutons avec tous les marqueurs
                         const allCalendarButtons = document.querySelectorAll('.calendar-day-btn');
                         console.log('📅 Désélection de', allCalendarButtons.length, 'boutons au total');
                         
                         allCalendarButtons.forEach((otherBtn, index) => {
-                            const wasSelected = otherBtn.style.backgroundColor && 
-                                                otherBtn.style.backgroundColor.includes('800000');
+                            // ✅ NETTOYER TOUS LES MARQUEURS DE SÉLECTION
+                            otherBtn.classList.remove('selected-date');
+                            otherBtn.setAttribute('data-is-selected', 'false');
                             
-                            if (wasSelected) {
-                                console.log('📅 Désélection bouton:', otherBtn.getAttribute('data-date'));
-                            }
-                            
-                            // Réinitialiser le style
+                            // Réinitialiser le style complet
                             const isCurrentMonth = otherBtn.getAttribute('data-is-current-month') === 'true';
                             const isDisabled = otherBtn.disabled;
                             
                             if (isDisabled) {
                                 otherBtn.style.backgroundColor = '#f5f5f5';
                                 otherBtn.style.color = '#ccc';
+                                otherBtn.style.border = 'none';
+                                otherBtn.style.fontWeight = 'normal';
+                                otherBtn.style.boxShadow = 'none';
                             } else if (isCurrentMonth) {
                                 otherBtn.style.backgroundColor = 'transparent';
                                 otherBtn.style.color = '#333';
+                                otherBtn.style.border = 'none';
+                                otherBtn.style.fontWeight = 'normal';
+                                otherBtn.style.boxShadow = 'none';
                             } else {
                                 otherBtn.style.backgroundColor = '#f8f8f8';
                                 otherBtn.style.color = '#999';
+                                otherBtn.style.border = 'none';
+                                otherBtn.style.fontWeight = 'normal';
+                                otherBtn.style.boxShadow = 'none';
                             }
                         });
                         
-                        // Sélectionner UNIQUEMENT le bouton cliqué
+                        // ✅ MARQUER LE BOUTON CLIQUÉ AVEC TOUS LES MARQUEURS
+                        btn.classList.add('selected-date');
+                        btn.setAttribute('data-is-selected', 'true');
+                        // ✅ MARQUER LE BOUTON CLIQUÉ AVEC TOUS LES MARQUEURS
+                        btn.classList.add('selected-date');
+                        btn.setAttribute('data-is-selected', 'true');
                         btn.style.backgroundColor = 'var(--color-primary, #800000)';
                         btn.style.color = 'white';
+                        btn.style.fontWeight = '600';
+                        btn.style.border = '2px solid var(--color-primary, #800000)';
+                        btn.style.boxShadow = '0 0 0 1px white inset';
                         
                         console.log('📅 Nouvelle sélection unique confirmée:', dateStr);
+                        console.log('📅 Bouton marqué avec classe et attribut:', {
+                            hasClass: btn.classList.contains('selected-date'),
+                            dataAttribute: btn.getAttribute('data-is-selected'),
+                            style: btn.style.backgroundColor
+                        });
                         
                     } else {
                         // Mode multi-sélection (pour d'autres contextes)
-                        const isCurrentlySelected = btn.style.backgroundColor && btn.style.backgroundColor.includes('800000');
+                        const isCurrentlySelected = btn.classList.contains('selected-date') || 
+                                                   btn.getAttribute('data-is-selected') === 'true';
+                        
                         if (isCurrentlySelected) {
+                            // Désélectionner
+                            btn.classList.remove('selected-date');
+                            btn.setAttribute('data-is-selected', 'false');
+                            
                             const isCurrentMonth = btn.getAttribute('data-is-current-month') === 'true';
                             btn.style.backgroundColor = isCurrentMonth ? 'transparent' : '#f8f8f8';
                             btn.style.color = isCurrentMonth ? '#333' : '#999';
+                            btn.style.fontWeight = 'normal';
+                            btn.style.border = 'none';
+                            btn.style.boxShadow = 'none';
                         } else {
+                            // Sélectionner
+                            btn.classList.add('selected-date');
+                            btn.setAttribute('data-is-selected', 'true');
                             btn.style.backgroundColor = 'var(--color-primary, #800000)';
                             btn.style.color = 'white';
+                            btn.style.fontWeight = '600';
+                            btn.style.border = '2px solid var(--color-primary, #800000)';
+                            btn.style.boxShadow = '0 0 0 1px white inset';
                         }
                     }
                     
@@ -780,9 +822,6 @@ export class DatePickerModalHandler {
                             console.error('❌ Erreur dans le callback onDateSelect:', error);
                         }
                         
-                        // ✅ SUPPRIMÉ: Ne plus appeler updateSelectedDatesFromButtons
-                        // this.updateSelectedDatesFromButtons(container, config);
-                        
                         // Libérer le flag de sélection
                         isSelecting = false;
                     }, 10);
@@ -796,10 +835,18 @@ export class DatePickerModalHandler {
                 // Attacher avec capture
                 btn.addEventListener('click', clickHandler, true);
                 
-                // Événements hover améliorés
+                // ✅ FIX PRINCIPAL: Événements hover avec vérification renforcée de sélection
                 const hoverInHandler = (e) => {
                     e.stopPropagation();
-                    if (!btn.disabled && !btn.style.backgroundColor.includes('800000')) {
+                    
+                    // ✅ VÉRIFICATIONS MULTIPLES pour déterminer si le bouton est sélectionné
+                    const isSelected = btn.hasAttribute('data-is-selected') && btn.getAttribute('data-is-selected') === 'true' ||
+                                     btn.classList.contains('selected-date') ||
+                                     btn.style.backgroundColor.includes('800000') ||
+                                     btn.style.backgroundColor.includes('var(--color-primary') ||
+                                     btn.style.backgroundColor === 'var(--color-primary, #800000)';
+                    
+                    if (!btn.disabled && !isSelected) {
                         const isCurrentMonth = btn.getAttribute('data-is-current-month') === 'true';
                         btn.style.backgroundColor = isCurrentMonth ? '#e9ecef' : '#efefef';
                     }
@@ -807,9 +854,18 @@ export class DatePickerModalHandler {
                 
                 const hoverOutHandler = (e) => {
                     e.stopPropagation();
-                    if (!btn.disabled && !btn.style.backgroundColor.includes('800000')) {
+                    
+                    // ✅ MÊME VÉRIFICATION RENFORCÉE pour hover out
+                    const isSelected = btn.hasAttribute('data-is-selected') && btn.getAttribute('data-is-selected') === 'true' ||
+                                     btn.classList.contains('selected-date') ||
+                                     btn.style.backgroundColor.includes('800000') ||
+                                     btn.style.backgroundColor.includes('var(--color-primary') ||
+                                     btn.style.backgroundColor === 'var(--color-primary, #800000)';
+                    
+                    if (!btn.disabled && !isSelected) {
                         const isCurrentMonth = btn.getAttribute('data-is-current-month') === 'true';
                         btn.style.backgroundColor = isCurrentMonth ? 'transparent' : '#f8f8f8';
+                        btn.style.color = isCurrentMonth ? '#333' : '#999';
                     }
                 };
                 
@@ -820,7 +876,7 @@ export class DatePickerModalHandler {
                 btn._hoverOutHandler = hoverOutHandler;
             });
             
-            // ✅ AJOUTER: Événements de navigation
+            // Événements de navigation
             const navButtons = container.querySelectorAll('.nav-month-btn');
             console.log('🔧 Boutons de navigation trouvés:', navButtons.length);
 
@@ -850,9 +906,9 @@ export class DatePickerModalHandler {
                     
                     console.log('📅 Nouveau mois/année calculé:', { year: currentYear, month: currentMonth + 1 });
                     
-                    // ✅ CORRECTION: Récupérer les dates actuellement sélectionnées AVANT régénération
+                    // ✅ RÉCUPÉRER LES DATES SÉLECTIONNÉES AVEC TOUS LES MARQUEURS
                     const currentlySelectedDates = [];
-                    const selectedButtons = document.querySelectorAll('.calendar-day-btn[style*="var(--color-primary"]');
+                    const selectedButtons = document.querySelectorAll('.calendar-day-btn.selected-date, .calendar-day-btn[data-is-selected="true"]');
                     selectedButtons.forEach(btn => {
                         const dateStr = btn.getAttribute('data-date');
                         if (dateStr) {
@@ -871,7 +927,7 @@ export class DatePickerModalHandler {
                     container.setAttribute('data-current-month', currentMonth.toString());
                     container.setAttribute('data-current-year', currentYear.toString());
                     
-                    // ✅ CORRECTION: Créer une nouvelle config avec les dates sélectionnées
+                    // Créer une nouvelle config avec les dates sélectionnées
                     const updatedConfig = {
                         ...config,
                         initialDates: currentlySelectedDates // ✅ Préserver les dates sélectionnées
@@ -900,7 +956,7 @@ export class DatePickerModalHandler {
     }
 
     /**
-     * Méthode simple pour vérifier si deux dates sont identiques
+     * Méthode pour vérifier si deux dates sont identiques
      */
     isSameDay(date1, date2) {
         if (!date1 || !date2) return false;
@@ -909,6 +965,13 @@ export class DatePickerModalHandler {
             date1.getMonth() === date2.getMonth() &&
             date1.getFullYear() === date2.getFullYear()
         );
+    }
+
+    /**
+     * Vérifier si une date est sélectionnée
+     */
+    isDateSelected(date, selectedDates) {
+        return selectedDates.some(selectedDate => this.isSameDay(date, selectedDate));
     }
 
     /**

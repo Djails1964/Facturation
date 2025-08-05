@@ -44,6 +44,72 @@
     font-weight: 600 !important;
 }
 
+/* ========== BADGE D'ÉTAT PAIEMENT DANS LE FORMULAIRE ========== */
+
+.paiement-etat-badge-container {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin-bottom: 25px;
+  padding: 0;
+}
+
+.paiement-etat-badge-container span {
+  /* Le badge utilisera automatiquement les styles définis dans getBadgeClasses avec size='normal' */
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1;
+}
+
+/* ========== ESPACEMENT AVEC LA SECTION FACTURE ========== */
+
+.form-section:first-of-type {
+  margin-top: 0;
+}
+
+/* Si le badge est présent, ajouter de l'espace avec la première section */
+.paiement-etat-badge-container + .notification,
+.paiement-etat-badge-container + .form-section {
+  margin-top: 15px;
+}
+
+/* Espacement entre les notifications et les sections */
+.notification + .form-section {
+  margin-top: 20px;
+}
+
+/* ========== RESPONSIVE POUR LE BADGE ========== */
+
+@media (max-width: 768px) {
+  .paiement-etat-badge-container {
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  
+  .paiement-etat-badge-container span {
+    font-size: 13px;
+    padding: 7px 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .paiement-etat-badge-container {
+    margin-bottom: 18px;
+  }
+  
+  .paiement-etat-badge-container span {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+}
+
 /* Responsive pour facture-details */
 @media (max-width: 768px) {
     .details-row {

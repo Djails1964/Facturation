@@ -863,18 +863,19 @@ function PaiementForm({
         <div className="content-section-container">
             <div className="content-section-title">
                 <h2>{getTitre()}</h2>
-                
-                {paiement.etat && (
-                    <div className="paiement-header-etat-simple">
-                        <span className={getEtatBadgeClass(paiement.etat)}>
-                            {formatEtatText(paiement.etat)}
-                        </span>
-                    </div>
-                )}
             </div>
             
             <form onSubmit={handleSubmit} className="paiement-form">
                 <div className="paiement-form-container">
+                    
+                    {/* ✅ BADGE D'ÉTAT EN TAILLE NORMALE DANS LE CONTENEUR */}
+                    {paiement.etat && (
+                        <div className="paiement-etat-badge-container">
+                            <span className={getBadgeClasses(paiement.etat, 'normal')}>
+                                {formatEtatText(paiement.etat)}
+                            </span>
+                        </div>
+                    )}
                     
                     {error && (
                         <div className="notification error">
