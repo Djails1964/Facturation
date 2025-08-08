@@ -222,15 +222,22 @@ export class CopyModalHandler {
     }
 
     /**
-     * Préparer les données de la nouvelle facture
+     * ✅ CORRECTION: Préparer les données avec les bons noms de champs pour le backend
      */
     prepareNewFactureData(factureData, nouveauNumero) {
+        // ✅ Utiliser les noms de champs attendus par le backend PHP
         return {
+            // Champs principaux avec les bons noms
             numeroFacture: nouveauNumero,
             dateFacture: new Date().toISOString().split('T')[0],
             clientId: factureData.clientId,
-            totalFacture: factureData.totalFacture,
+            montantTotal: factureData.totalFacture,  // ✅ Changé de totalFacture
             ristourne: factureData.ristourne || 0,
+            
+            // Informations client pour le logging
+            client_nom: factureData.client ? `${factureData.client.prenom} ${factureData.client.nom}` : 'Client inconnu',
+            
+            // État et flags
             etat: 'En attente',
             est_imprimee: false,
             est_envoyee: false,
@@ -240,6 +247,8 @@ export class CopyModalHandler {
             date_annulation: null,
             factfilename: null,
             documentPath: null,
+            
+            // Lignes de facturation
             lignes: factureData.lignes.map(ligne => ({
                 description: ligne.description,
                 descriptionDates: ligne.descriptionDates || '',

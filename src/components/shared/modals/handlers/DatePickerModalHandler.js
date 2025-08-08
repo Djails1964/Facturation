@@ -1,11 +1,7 @@
 // src/components/shared/modals/handlers/DatePickerModalHandler.js
-// VERSION NETTOYÉE - Utilise les classes CSS de unified-modals.css
+// VERSION CORRIGÉE - Respect du contexte pour les dates futures
 
 import React from 'react';
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
-import { registerLocale } from "react-datepicker";
-import fr from 'date-fns/locale/fr';
 import ModalComponents from '../../../shared/ModalComponents';
 import DateService from '../../../../utils/DateService';
 import { 
@@ -14,12 +10,9 @@ import {
     CONTEXT_CONFIGS 
 } from '../../../../constants/dateConstants';
 
-// Enregistrer la locale française
-registerLocale('fr', fr);
-
 /**
  * Gestionnaire pour la sélection de dates avec modal unifiée
- * VERSION NETTOYÉE - Utilise les classes CSS
+ * ✅ CORRECTION : Respect du contexte pour les dates futures
  */
 export class DatePickerModalHandler {
     constructor(dependencies) {
@@ -35,10 +28,7 @@ export class DatePickerModalHandler {
         const {
             initialDates = [],
             multiSelect = false,
-            minDate = null,
-            maxDate = new Date(),
-            title = DATE_LABELS.SELECT_DATE,
-            confirmText = DATE_LABELS.CONFIRM_SELECTION,
+            maxDate = null, // ✅ CORRECTION : Par défaut null au lieu de new Date()
             context = 'default',
             anchorRef = null
         } = config;
@@ -46,7 +36,8 @@ export class DatePickerModalHandler {
         console.log('📅 Ouverture du sélecteur de dates:', { 
             multiSelect, 
             initialDates: initialDates.length,
-            context 
+            context,
+            maxDate
         });
 
         const modalAnchorRef = anchorRef || this.createAnchorRef(event);
@@ -58,16 +49,15 @@ export class DatePickerModalHandler {
                 return { action: 'cancel', dates: [] };
             }
 
-            const result = await this.showDateSelectionModal({
-                initialDates,
-                multiSelect,
-                minDate,
-                maxDate,
-                title,
-                confirmText,
-                context,
-                anchorRef: modalAnchorRef
-            });
+            // ✅ CORRECTION : Appliquer les règles de contexte après validation
+            const contextConfig = this.getContextConfig(context);
+            const finalConfig = {
+                ...config,
+                maxDate: contextConfig.ALLOW_FUTURE ? null : (maxDate || new Date()),
+                contextConfig
+            };
+
+            const result = await this.showDateSelectionModal(finalConfig);
 
             console.log('📅 Résultat sélection dates:', result);
             return result;
@@ -89,17 +79,16 @@ export class DatePickerModalHandler {
         const { 
             initialDates, 
             multiSelect, 
-            minDate, 
-            maxDate, 
             title, 
             confirmText, 
-            context,
+            contextConfig,
             anchorRef 
         } = config;
 
         let selectedDates = [...initialDates];
         
         console.log('📅 Initialisation modal avec dates:', selectedDates.map(d => d.toLocaleDateString('fr-CH')));
+        console.log('📅 Context config:', contextConfig);
 
         try {
             const modalResult = await this.showCustom({
@@ -127,14 +116,10 @@ export class DatePickerModalHandler {
                         
                         if (workingContainer) {
                             this.setupDatePicker(workingContainer, {
+                                ...config,
                                 initialDates: selectedDates,
-                                multiSelect,
-                                minDate,
-                                maxDate,
-                                context,
-                                confirmText,
                                 onDateSelect: (date) => {
-                                    selectedDates = this.handleDateSelect(date, selectedDates, multiSelect, context);
+                                    selectedDates = this.handleDateSelect(date, selectedDates, multiSelect, contextConfig);
                                     this.updateSelectedDatesDisplay(null, selectedDates);
                                     this.updateConfirmButton(null, selectedDates, confirmText);
                                 }
@@ -156,15 +141,14 @@ export class DatePickerModalHandler {
     }
 
     /**
-     * Créer le contenu HTML de la modal - VERSION NETTOYÉE
+     * Créer le contenu HTML de la modal
      */
     createDatePickerContent(config) {
-        const { multiSelect, context } = config;
+        const { contextConfig } = config;
         
         let content = '';
 
-        const contextConfig = this.getContextConfig(context);
-        if (contextConfig.description) {
+        if (contextConfig && contextConfig.description) {
             content += ModalComponents.createIntroSection(contextConfig.description);
         }
 
@@ -188,8 +172,9 @@ export class DatePickerModalHandler {
             </div>
         `;
 
-        if (contextConfig.help) {
-            content += ModalComponents.createWarningSection(null, contextConfig.help, 'info');
+        if (contextConfig && contextConfig.help) {
+            const helpType = contextConfig.ALLOW_FUTURE ? 'info' : 'warning';
+            content += ModalComponents.createWarningSection(null, contextConfig.help, helpType);
         }
 
         return content;
@@ -199,7 +184,11 @@ export class DatePickerModalHandler {
      * Configurer le DatePicker dans la modal
      */
     setupDatePicker(container, config) {
-        console.log('🔧 Setup DatePicker');
+        console.log('🔧 Setup DatePicker avec config:', {
+            context: config.context,
+            allowFuture: config.contextConfig?.ALLOW_FUTURE,
+            maxDate: config.maxDate
+        });
         
         let datePickerContainer = container.querySelector('#datepicker-container') || 
                                 document.querySelector('#datepicker-container');
@@ -231,12 +220,17 @@ export class DatePickerModalHandler {
     }
 
     /**
-     * Rendu du calendrier - VERSION NETTOYÉE avec classes CSS
+     * ✅ CORRECTION : Rendu du calendrier avec respect du contexte
      */
     renderDatePickerFallback(container, config) {
-        const { initialDates = [], multiSelect } = config;
+        const { initialDates = [], multiSelect, contextConfig = {} } = config;
         
         if (!container) return;
+        
+        // ✅ CORRECTION : Récupérer la configuration du contexte
+        const allowFuture = contextConfig.ALLOW_FUTURE !== false; // Par défaut true sauf si explicitement false
+        
+        console.log('🔧 Rendu calendrier - Allow future:', allowFuture, 'Context:', config.context);
         
         // Gestion du mois/année
         let currentMonth, currentYear;
@@ -261,13 +255,14 @@ export class DatePickerModalHandler {
         container.setAttribute('data-multi-select', multiSelect.toString());
         container.setAttribute('data-current-month', currentMonth.toString());
         container.setAttribute('data-current-year', currentYear.toString());
+        container.setAttribute('data-allow-future', allowFuture.toString()); // ✅ AJOUT
         
         const monthNames = [
             'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
             'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
         ];
         
-        const daysHTML = this.generateDaysHTML(currentYear, currentMonth, initialDates);
+        const daysHTML = this.generateDaysHTML(currentYear, currentMonth, initialDates, allowFuture);
         
         // HTML simplifié utilisant les classes CSS
         const calendarHTML = `
@@ -309,9 +304,9 @@ export class DatePickerModalHandler {
     }
 
     /**
-     * Générer le HTML des jours - VERSION NETTOYÉE avec classes CSS
+     * ✅ CORRECTION : Générer le HTML des jours avec respect du contexte
      */
-    generateDaysHTML(year, month, selectedDates = []) {
+    generateDaysHTML(year, month, selectedDates = [], allowFuture = true) {
         const firstDay = new Date(year, month, 1);
         const startDate = new Date(firstDay);
         const dayOfWeek = firstDay.getDay();
@@ -321,6 +316,8 @@ export class DatePickerModalHandler {
         let daysHtml = '';
         const today = new Date();
         const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        
+        console.log('🔧 Génération jours - Allow future:', allowFuture);
         
         for (let i = 0; i < 42; i++) {
             const currentDate = new Date(startDate);
@@ -332,7 +329,9 @@ export class DatePickerModalHandler {
             
             const currentDateOnly = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
             const isFutureDate = currentDateOnly > todayDateOnly;
-            const isDisabled = isFutureDate;
+            
+            // ✅ CORRECTION : Désactiver seulement si future ET que le contexte ne l'autorise pas
+            const isDisabled = isFutureDate && !allowFuture;
             
             const dayNum = currentDate.getDate();
             const dateStr = DateService.toInputFormat(currentDate);
@@ -342,7 +341,18 @@ export class DatePickerModalHandler {
             if (isSelected) buttonClasses.push('selected-date');
             if (!isCurrentMonth) buttonClasses.push('not-current-month');
             if (isToday && !isSelected) buttonClasses.push('today');
-            if (isFutureDate) buttonClasses.push('future-date');
+            if (isFutureDate && !allowFuture) buttonClasses.push('future-date');
+            if (isFutureDate && allowFuture) buttonClasses.push('future-date-allowed'); // ✅ AJOUT
+            
+            // ✅ CORRECTION : Messages d'aide selon le contexte
+            let titleText = '';
+            if (isFutureDate && !allowFuture) {
+                titleText = 'Date future non autorisée pour les paiements';
+            } else if (isFutureDate && allowFuture) {
+                titleText = 'Date future autorisée pour la facturation';
+            } else if (!isCurrentMonth) {
+                titleText = 'Date du mois précédent/suivant';
+            }
             
             daysHtml += `
                 <button 
@@ -352,9 +362,11 @@ export class DatePickerModalHandler {
                     data-calendar-button="true"
                     data-is-current-month="${isCurrentMonth}"
                     data-is-selected="${isSelected}"
+                    data-is-future="${isFutureDate}"
+                    data-allow-future="${allowFuture}"
                     tabindex="${isDisabled ? '-1' : '0'}"
                     ${isDisabled ? 'disabled' : ''}
-                    title="${isFutureDate ? 'Date future non autorisée pour les paiements' : (isCurrentMonth ? '' : 'Date du mois précédent/suivant')}"
+                    title="${titleText}"
                 >
                     ${dayNum}
                 </button>
@@ -365,13 +377,16 @@ export class DatePickerModalHandler {
     }
 
     /**
-     * Initialiser les événements du calendrier - VERSION NETTOYÉE
+     * ✅ CORRECTION : Initialiser les événements avec respect du contexte
      */
     initializeCalendarEvents(container, config) {
         if (!container) return;
         
-        const { onDateSelect, multiSelect } = config;
+        const { onDateSelect, multiSelect, contextConfig = {} } = config;
+        const allowFuture = contextConfig.ALLOW_FUTURE !== false;
         let isSelecting = false;
+        
+        console.log('🔧 Init events - Allow future:', allowFuture);
         
         setTimeout(() => {
             const dayButtons = container.querySelectorAll('.calendar-day-btn');
@@ -391,15 +406,19 @@ export class DatePickerModalHandler {
                     const dateParts = dateStr.split('-');
                     const date = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
                     
-                    // Vérification des dates futures
+                    // ✅ CORRECTION : Vérification des dates futures selon le contexte
                     const today = new Date();
                     const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
                     const currentDateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                    const isFutureDate = currentDateOnly > todayDateOnly;
                     
-                    if (currentDateOnly > todayDateOnly) {
+                    if (isFutureDate && !allowFuture) {
+                        console.log('❌ Date future bloquée:', date.toLocaleDateString('fr-CH'));
                         isSelecting = false;
                         return false;
                     }
+                    
+                    console.log('✅ Date sélectionnée:', date.toLocaleDateString('fr-CH'), 'Future:', isFutureDate, 'Allowed:', allowFuture);
                     
                     // Gestion de la sélection avec classes CSS
                     if (!multiSelect || config.context === 'payment') {
@@ -480,27 +499,22 @@ export class DatePickerModalHandler {
     }
 
     /**
-     * Utilitaires
+     * ✅ CORRECTION : Gestion de sélection avec respect du contexte
      */
-    isSameDay(date1, date2) {
-        if (!date1 || !date2) return false;
-        return (
-            date1.getDate() === date2.getDate() &&
-            date1.getMonth() === date2.getMonth() &&
-            date1.getFullYear() === date2.getFullYear()
-        );
-    }
-
-    handleDateSelect(selectedDate, currentDates, multiSelect, context = null) {
+    handleDateSelect(selectedDate, currentDates, multiSelect, contextConfig = {}) {
+        const allowFuture = contextConfig.ALLOW_FUTURE !== false;
         const today = new Date();
         const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+        const isFutureDate = selectedDateOnly > todayDateOnly;
         
-        if (selectedDateOnly > todayDateOnly) {
+        // ✅ CORRECTION : Bloquer seulement si future ET contexte ne l'autorise pas
+        if (isFutureDate && !allowFuture) {
+            console.log('❌ Date future refusée dans handleDateSelect');
             return currentDates;
         }
         
-        if (!multiSelect || context === 'payment') {
+        if (!multiSelect || contextConfig.context === 'payment') {
             return [selectedDate];
         }
 
@@ -553,10 +567,10 @@ export class DatePickerModalHandler {
     }
 
     /**
-     * Valider la configuration
+     * ✅ CORRECTION : Valider la configuration sans forcer maxDate
      */
     validateConfig(config) {
-        const { minDate, maxDate, context } = config;
+        const { minDate, maxDate } = config;
         
         if (minDate && maxDate && minDate > maxDate) {
             return {
@@ -565,18 +579,12 @@ export class DatePickerModalHandler {
             };
         }
         
-        if (context) {
-            const contextConfig = this.getContextConfig(context);
-            if (!contextConfig.ALLOW_FUTURE && !maxDate) {
-                config.maxDate = new Date();
-            }
-        }
-        
+        // ✅ CORRECTION : Ne pas forcer maxDate ici, le laisser au contexte
         return { isValid: true };
     }
 
     /**
-     * Obtenir la configuration selon le contexte
+     * ✅ CORRECTION : Configuration du contexte avec ALLOW_FUTURE explicite
      */
     getContextConfig(context) {
         const baseConfig = CONTEXT_CONFIGS && CONTEXT_CONFIGS[context.toUpperCase()] ? 
@@ -589,15 +597,17 @@ export class DatePickerModalHandler {
                 CONFIRM_TEXT: "Confirmer cette date",
                 description: "Sélectionnez la date du paiement",
                 help: "Les dates futures ne sont pas autorisées pour les paiements.",
-                ALLOW_FUTURE: false
+                ALLOW_FUTURE: false, // ✅ EXPLICITE
+                context: 'payment'
             },
             invoice: {
                 ...baseConfig,
-                TITLE: "Sélectionner la date de facturation", 
-                CONFIRM_TEXT: "Confirmer cette date",
+                TITLE: "Sélectionner les dates", 
+                CONFIRM_TEXT: "Confirmer la sélection",
                 description: "Sélectionnez la date de facturation",
-                help: "Vous pouvez sélectionner une date future pour la facturation.",
-                ALLOW_FUTURE: true
+                help: "Vous pouvez sélectionner des dates futures pour la facturation.",
+                ALLOW_FUTURE: true, // ✅ EXPLICITE
+                context: 'invoice'
             },
             default: {
                 ...baseConfig,
@@ -605,11 +615,26 @@ export class DatePickerModalHandler {
                 CONFIRM_TEXT: "Confirmer la sélection",
                 description: "Sélectionnez une date",
                 help: null,
-                ALLOW_FUTURE: true
+                ALLOW_FUTURE: true, // ✅ EXPLICITE
+                context: 'default'
             }
         };
         
-        return configs[context] || configs.default;
+        const result = configs[context] || configs.default;
+        console.log('📋 Config pour contexte', context, ':', result);
+        return result;
+    }
+
+    /**
+     * Utilitaires
+     */
+    isSameDay(date1, date2) {
+        if (!date1 || !date2) return false;
+        return (
+            date1.getDate() === date2.getDate() &&
+            date1.getMonth() === date2.getMonth() &&
+            date1.getFullYear() === date2.getFullYear()
+        );
     }
 
     /**

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { FiDollarSign, FiCreditCard, FiClock } from 'react-icons/fi';
-import PaiementService from './services/PaiementService';
+import PaiementService from '../../../services/PaiementService';
 // ✅ AJOUT: Import des formatters centralisés
-import { formatMontant, formatDate } from './utils/formatters';
-import './FactureHistoriquePaiements.css';
+import { formatMontant, formatDate } from '../../../utils/formatters';
+import '../../../styles/components/factures/FactureHistoriquePaiements.css';
 
 /**
  * Composant pour afficher l'historique des paiements d'une facture

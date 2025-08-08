@@ -1,8 +1,8 @@
 import React from 'react';
-import { formatMontant } from '../../utils/formatters';
+import { formatMontant } from '../../../utils/formatters';
 
 // Import du CSS spécifique
-import '../../styles/components/factures/FactureLigneResume.css';
+import '../../../styles/components/factures/FactureLigneResume.css';
 
 /**
  * Composant de résumé pour une ligne de facture

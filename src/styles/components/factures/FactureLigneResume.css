@@ -8,12 +8,12 @@
     padding: var(--facture-spacing-sm);
     border-radius: var(--facture-border-radius);
     transition: background-color var(--facture-transition-speed);
-    cursor: pointer;
+    /* cursor: pointer; */
 }
 
-.ligne-facture-resume:hover {
+/* .ligne-facture-resume:hover {
     background-color: rgba(128, 0, 0, 0.05);
-}
+} */
 
 .ligne-resume-header {
     display: flex;

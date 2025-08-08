@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import './FactureDetailsForm.css';
 import { FiChevronDown, FiChevronUp, FiCopy, FiMove, FiTrash, FiClipboard } from 'react-icons/fi';
 import LigneFactureResume from './LigneFactureResume';
@@ -6,13 +6,13 @@ import { useTraceUpdate } from './useTraceUpdate';
 // Hook personnalisé
 import { useFactureDetailsForm } from './components/factures/hooks/useFactureDetailsForm';
 // Utilitaires
-import CustomDatePickerModal from './components/shared/CustomDatePickerModal';
-import DateInputField from './components/shared/DateInputField';
+import DateInputField from './components/shared/DateInputField'; // ✅ CHANGEMENT: Import du nouveau composant unifié
 // ✅ CORRECTION: Import du formatter centralisé
 import { formatMontant } from './utils/formatters';
 
 /**
  * Composant pour l'affichage et l'édition des détails d'une facture (lignes)
+ * ✅ MISE À JOUR: Utilise maintenant le système modal unifié pour les dates
  */
 function FactureDetailsForm({ 
     onLignesChange, 
@@ -46,10 +46,10 @@ function FactureDetailsForm({
         validationErrors,
         draggingIndex,
         
-        // États du sélecteur de dates
-        showDatePicker,
-        activeLigneIndex,
-        selectedDates,
+        // ✅ SUPPRESSION: États du sélecteur de dates (plus nécessaires)
+        // showDatePicker,
+        // activeLigneIndex,
+        // selectedDates,
         
         // Méthodes principales
         ajouterLigne,
@@ -75,13 +75,11 @@ function FactureDetailsForm({
         handleDrop,
         handleDragEnd,
         
-        // Méthodes du sélecteur de dates
-        openDatePicker,
-        closeDatePicker,
-        handleDateSelect,
-        addSelectedDatesToDescription,
-        
-        // ✅ SUPPRESSION: formatCurrency (remplacé par formatMontant centralisé)
+        // ✅ SUPPRESSION: Méthodes du sélecteur de dates (plus nécessaires)
+        // openDatePicker,
+        // closeDatePicker,
+        // handleDateSelect,
+        // addSelectedDatesToDescription,
         
         // Références
         prixModifiesManuel,
@@ -293,7 +291,7 @@ function FactureDetailsForm({
     }
     
     /**
-     * Rend le champ de description avec le nouveau composant DateInputField
+     * ✅ MISE À JOUR: Rend le champ de description avec le nouveau DateInputField unifié
      */
     function renderDescriptionInput(ligne, index) {
         const errorClass = getErrorClass(index, 'description');
@@ -352,21 +350,24 @@ function FactureDetailsForm({
                     </div>
                 </div>
                 
-                {/* Utilisation du nouveau composant DateInputField pour les dates */}
+                {/* ✅ CHANGEMENT MAJEUR: Utilisation du nouveau DateInputField avec système modal unifié */}
                 <DateInputField
                     id={`descriptionDates-${index}`}
                     label="Dates"
                     value={ligne.descriptionDates || ''}
-                    onChange={(e) => {
-                        if (e.target) {
-                            // Changement manuel
-                            modifierLigne(index, 'descriptionDates', e.target.value);
-                        } else {
-                            // Changement via le sélecteur de dates avec quantité
-                            modifierLigne(index, 'descriptionDates', e);
+                    onChange={(valueOrEvent) => {
+                        // ✅ ADAPTATION: Gestion des deux types de changement
+                        if (typeof valueOrEvent === 'string') {
+                            // Changement via le modal picker - valeur directe
+                            modifierLigne(index, 'descriptionDates', valueOrEvent);
+                        } else if (valueOrEvent && valueOrEvent.target) {
+                            // Changement manuel - event avec target.value
+                            modifierLigne(index, 'descriptionDates', valueOrEvent.target.value);
                         }
                     }}
                     updateQuantity={(formattedDates, count) => {
+                        // ✅ MISE À JOUR: Callback pour synchroniser avec la quantité
+                        console.log('🔄 Mise à jour quantité depuis DateInputField:', count, 'dates');
                         modifierLigne(index, 'descriptionDates', formattedDates);
                         modifierLigne(index, 'quantite', count);
                         
@@ -384,6 +385,8 @@ function FactureDetailsForm({
                     readOnly={readOnly}
                     maxLength={100}
                     showCharCount={true}
+                    multiSelect={true} // Mode multi-sélection pour les factures
+                    required={false} // Le champ dates n'est pas obligatoire
                 />
             </div>
         );
@@ -899,35 +902,8 @@ function FactureDetailsForm({
                 </div>
             )}
             
-            {/* Modal du sélecteur de dates - Utilisation du composant CustomDatePickerModal */}
-            {showDatePicker && (
-                <CustomDatePickerModal
-                    isOpen={showDatePicker}
-                    onClose={closeDatePicker}
-                    initialDates={selectedDates}
-                    onConfirm={(dates) => {
-                        // Utiliser DateService pour formater les dates
-                        const formattedDates = DateService.formatDatesCompact(dates);
-                        
-                        if (activeLigneIndex !== null) {
-                            modifierLigne(activeLigneIndex, 'descriptionDates', formattedDates);
-                            modifierLigne(activeLigneIndex, 'quantite', dates.length);
-                            
-                            // Mettre à jour l'état focusedFields
-                            handleFocus(activeLigneIndex, 'descriptionDates');
-                            
-                            setTimeout(() => {
-                                const quantiteInput = document.getElementById(`quantite-${activeLigneIndex}`);
-                                if (quantiteInput && quantiteInput.parentElement) {
-                                    quantiteInput.parentElement.classList.add('has-value');
-                                }
-                            }, 10);
-                        }
-                    }}
-                    multiSelect={true}
-                    title="Sélectionner des dates"
-                />
-            )}
+            {/* ✅ SUPPRESSION: Ancien modal CustomDatePickerModal remplacé par le système unifié */}
+            {/* Le nouveau DateInputField gère directement les modales via DatePickerModalHandler */}
         </div>
     );
 }

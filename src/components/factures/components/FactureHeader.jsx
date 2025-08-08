@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { FiFile, FiCalendar, FiCreditCard, FiDollarSign, FiClock } from 'react-icons/fi';
-import { useDateContext } from './context/DateContext';
-import { getBadgeClasses, formatEtatText, formatDate, formatDateToYYYYMMDD } from './utils/formatters';
-import FactureService from './services/FactureService';
-import './FactureHeader.css';
+import { useDateContext } from '../../../context/DateContext';
+import { getBadgeClasses, formatEtatText, formatDate, formatDateToYYYYMMDD } from '../../../utils/formatters';
+import FactureService from '../../../services/FactureService';
+import '../../../styles/components/factures/FactureHeader.css';
 
 /**
  * Composant d'en-tête de facture standardisé

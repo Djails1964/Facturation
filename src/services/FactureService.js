@@ -409,6 +409,7 @@ class FactureService {
   }
 
   async createFacture(factureData) {
+    console.log('FactureService - createFacture - Création de la facture avec les données:', factureData);
     try {
       const response = await api.post('facture-api.php', factureData);
       

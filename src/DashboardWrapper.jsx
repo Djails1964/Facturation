@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import DashboardStats from './DashboardStats';
-import FactureGestion from './FactureGestion';
+import FactureGestion from './components/factures/FactureGestion';
 
 /**
  * Composant wrapper pour intégrer DashboardStats avec FactureGestion

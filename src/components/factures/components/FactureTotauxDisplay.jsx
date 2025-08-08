@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import './FactureTotauxDisplay.css';
-import { useTraceUpdate } from './useTraceUpdate';
+import '../../../styles/components/factures/FactureTotauxDisplay.css';
+import { useTraceUpdate } from '../../../useTraceUpdate';
 // ✅ AJOUT: Import du formatter centralisé
-import { formatMontant } from './utils/formatters';
+import { formatMontant } from '../../../utils/formatters';
 
 function FactureTotauxDisplay({
     lignes = [],

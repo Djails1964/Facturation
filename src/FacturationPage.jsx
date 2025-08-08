@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ParametresContent from './admin/ParametresContent';
 import ClientGestion from './ClientGestion';
-import FactureGestion from './FactureGestion';
+import FactureGestion from './components/factures/FactureGestion';
 import PaiementGestion from './PaiementGestion'; // ✅ NOUVEAU
 import TarifGestion from './TarifGestion';
 import DashboardWrapper from './DashboardWrapper';

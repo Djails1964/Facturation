@@ -225,34 +225,57 @@ export class DeleteModalHandler {
     }
 
     /**
-     * Modal de succès
+     * ✅ CORRECTION COMPLÈTE: Deux types de modales de succès différentes
      */
     async showSuccessModal(facture, isAnnulation, anchorRef) {
         console.log('🎉 Affichage de la modal de succès');
         
-        const config = ModalComponents.createSimpleModalConfig(
-            isAnnulation ? "Facture annulée" : "Facture supprimée",
-            {},
-            {
-                intro: "",
-                content: `<div class="modal-success">
-                    ${isAnnulation 
-                        ? `La facture ${facture.numeroFacture} a été annulée avec succès.`
-                        : `La facture ${facture.numeroFacture} a été supprimée avec succès.`
+        // Stocker le numéro de facture avant toute tentative d'accès
+        const numeroFacture = facture?.numeroFacture || 'N/A';
+        
+        if (isAnnulation) {
+            // ✅ POUR LES ANNULATIONS: Afficher un message simple (la facture existe toujours)
+            await this.showCustom({
+                title: "Facture annulée !",
+                content: `
+                    <div class="modal-success">
+                        <p>La facture ${numeroFacture} a été annulée avec succès.</p>
+                        <p>Elle reste visible dans la liste avec l'état "Annulée".</p>
+                    </div>
+                `,
+                anchorRef,
+                size: 'medium',
+                position: 'smart',
+                buttons: [
+                    {
+                        text: "OK",
+                        action: "close",
+                        className: "primary"
                     }
-                </div>`,
-                buttons: ModalComponents.createModalButtons({
-                    submitText: "OK",
-                    showCancel: false
-                })
-            }
-        );
-
-        await this.showCustom({
-            ...config,
-            anchorRef,
-            position: 'smart'
-        });
+                ]
+            });
+        } else {
+            // ✅ POUR LES SUPPRESSIONS: Message ultra-simple (la facture n'existe plus)
+            await this.showCustom({
+                title: "Facture supprimée !",
+                content: `
+                    <div class="modal-success">
+                        <p>La facture ${numeroFacture} a été supprimée avec succès.</p>
+                        <p>Elle ne sera plus visible dans la liste.</p>
+                    </div>
+                `,
+                anchorRef,
+                size: 'medium',
+                position: 'smart',
+                buttons: [
+                    {
+                        text: "OK",
+                        action: "close",
+                        className: "primary"
+                    }
+                ]
+            });
+        }
     }
 
     /**
