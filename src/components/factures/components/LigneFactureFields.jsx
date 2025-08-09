@@ -8,7 +8,7 @@ import { ReadOnlyField } from '../../shared/FactureUIComponents';
 
 /**
  * Composant pour les champs de saisie d'une ligne de facture
- * VERSION CORRIGÉE avec les bons imports
+ * VERSION FINALE avec initialisation automatique des tarifs
  */
 function LigneFactureFields({
     ligne,
@@ -22,6 +22,7 @@ function LigneFactureFields({
     readOnly,
     serviceNom,
     uniteNom,
+    client, // Données du client pour déterminer le tarif
     onModify,
     onInsertUniteName,
     onFocus,
@@ -48,6 +49,7 @@ function LigneFactureFields({
             focusedFields={focusedFields}
             validationErrors={validationErrors}
             prixModifiesManuel={prixModifiesManuel}
+            client={client}
             onModify={onModify}
             onInsertUniteName={onInsertUniteName}
             onFocus={onFocus}
@@ -117,6 +119,7 @@ function EditableFields({
     focusedFields,
     validationErrors,
     prixModifiesManuel,
+    client,
     onModify,
     onInsertUniteName,
     onFocus,
@@ -149,6 +152,7 @@ function EditableFields({
                         unitesByService={unitesByService}
                         focusedFields={focusedFields}
                         validationErrors={validationErrors}
+                        client={client}
                         onModify={onModify}
                         onFocus={onFocus}
                         onBlur={onBlur}
@@ -271,7 +275,7 @@ function ServiceTypeSelect({
 }
 
 /**
- * Sélecteur d'unité
+ * Sélecteur d'unité avec initialisation automatique du tarif
  */
 function UniteSelect({
     ligne,
@@ -280,6 +284,7 @@ function UniteSelect({
     unitesByService,
     focusedFields,
     validationErrors,
+    client,
     onModify,
     onFocus,
     onBlur,
@@ -288,12 +293,42 @@ function UniteSelect({
     const errorClass = getErrorClass('unite');
     const hasValue = ligne.unite !== undefined && ligne.unite !== '';
     
+    /**
+     * ✅ CORRECTION : Gestionnaire de changement d'unité avec calcul automatique du prix
+     */
+    const handleUniteChange = async (e) => {
+        const uniteValue = e.target.value;
+        
+        console.log('🔄 Changement d\'unité:', { index, uniteValue, serviceType: ligne.serviceType });
+        
+        // 1. Modifier l'unité
+        onModify(index, 'unite', uniteValue);
+        
+        // 2. Stocker l'ID de l'unité pour référence
+        if (uniteValue) {
+            const uniteObj = unites.find(u => u && (u.code === uniteValue || u.nom === uniteValue));
+            if (uniteObj) {
+                onModify(index, 'uniteId', uniteObj.id);
+                console.log('✅ Unité sélectionnée:', { code: uniteValue, id: uniteObj.id, nom: uniteObj.nom });
+            }
+        } else {
+            onModify(index, 'uniteId', null);
+        }
+        
+        // 3. ✅ CORRECTION PRINCIPALE : Déclencher le recalcul automatique du prix
+        // Le hook useFactureDetailsForm se chargera du calcul via modifierLigneAvecPrix
+        // qui détecte le changement d'unité et appelle initialiserPrixLigneDefaut
+        
+        // Note: Le calcul automatique se fait maintenant dans le hook parent
+        // via l'effet dans modifierLigneAvecPrix quand champ === 'unite'
+    };
+    
     return (
         <div className={`fdf_floating-label-input ${focusedFields[`unite-${index}`] ? 'fdf_focused' : ''} ${hasValue ? 'has-value' : ''}`}>
             <select
                 id={`unite-${index}`}
                 value={ligne.unite || ''}
-                onChange={(e) => onModify(index, 'unite', e.target.value)}
+                onChange={handleUniteChange}
                 onFocus={() => onFocus(index, 'unite')}
                 onBlur={() => onBlur(index, 'unite', ligne.unite)}
                 disabled={!ligne.serviceType}
@@ -536,16 +571,19 @@ function TotalInput({ ligne, index, focusedFields, onFocus, onBlur }) {
     );
 }
 
-// Utilitaires
+/**
+ * Génère les options d'unités selon le service sélectionné
+ */
 function getUniteOptions(ligne, unites, unitesByService) {
     if (!ligne || !ligne.serviceType) {
         return getFallbackOptions();
     }
     
-    // Vérifier si nous avons des unités pré-mappées
+    // Vérifier si nous avons des unités pré-mappées pour ce service
     if (unitesByService && unitesByService[ligne.serviceType] && unitesByService[ligne.serviceType].length > 0) {
         const options = unitesByService[ligne.serviceType].map(unite => {
             if (typeof unite === 'string') {
+                // Si c'est un code d'unité, trouver l'objet correspondant
                 const uniteObj = unites.find(u => u && u.code === unite);
                 return (
                     <option key={`unite-${unite}`} value={unite}>
@@ -553,6 +591,7 @@ function getUniteOptions(ligne, unites, unitesByService) {
                     </option>
                 );
             } else if (typeof unite === 'object' && unite !== null) {
+                // Si c'est déjà un objet unité
                 return (
                     <option key={`unite-${unite.code || unite.id}`} value={unite.code || unite.id}>
                         {unite.nom || unite.code || unite.id}
@@ -581,6 +620,9 @@ function getUniteOptions(ligne, unites, unitesByService) {
     return getFallbackOptions();
 }
 
+/**
+ * Options d'unités par défaut
+ */
 function getFallbackOptions() {
     return [
         <option key="heure" value="Heure">Heure</option>,

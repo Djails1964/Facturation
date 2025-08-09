@@ -96,6 +96,12 @@ export function useFactureLignes(
             ? defaultUnites[defaultService.code] 
             : '';
         
+        console.log('➕ Ajout nouvelle ligne:', { 
+            defaultServiceCode, 
+            defaultUniteCode,
+            defaultService: defaultService?.nom 
+        });
+        
         // Créer la nouvelle ligne avec les valeurs par défaut
         const nouvelleLigne = { 
             description: '',
@@ -103,7 +109,7 @@ export function useFactureLignes(
             serviceType: defaultServiceCode,
             unite: defaultUniteCode, 
             quantite: '',
-            prixUnitaire: '',
+            prixUnitaire: '', // ✅ Sera calculé automatiquement par le hook parent
             total: 0 
         };
         
@@ -112,6 +118,7 @@ export function useFactureLignes(
             const serviceObj = services.find(s => s.code === defaultServiceCode);
             if (serviceObj) {
                 nouvelleLigne.serviceId = serviceObj.id;
+                console.log('✅ Service par défaut configuré:', serviceObj.nom);
             }
         }
         
@@ -119,6 +126,7 @@ export function useFactureLignes(
             const uniteObj = unites.find(u => u.code === defaultUniteCode);
             if (uniteObj) {
                 nouvelleLigne.uniteId = uniteObj.id;
+                console.log('✅ Unité par défaut configurée:', uniteObj.nom);
             }
         }
         
@@ -133,10 +141,14 @@ export function useFactureLignes(
             [nouvelIndex]: true
         }));
         
-        // Supprimer le marqueur de prix modifié pour la nouvelle ligne
+        // ✅ CORRECTION : NE PAS marquer le prix comme modifié manuellement
+        // pour permettre le calcul automatique
         if (prixModifiesManuel.current[nouvelIndex]) {
             delete prixModifiesManuel.current[nouvelIndex];
         }
+        
+        console.log('✅ Nouvelle ligne ajoutée à l\'index:', nouvelIndex);
+        
     }, [lignes, readOnly, services, unites, onResetRistourne]);
 
     /**
