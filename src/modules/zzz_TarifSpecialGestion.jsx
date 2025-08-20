@@ -36,6 +36,7 @@ const TarifSpecialGestion = ({
   // Charger tous les tarifs spéciaux (valides et invalides)
   useEffect(() => {
     const fetchAllTarifsSpeciaux = async () => {
+      console.log('fetchAllTarifsSpeciaux - Chargement de tous les tarifs spéciaux...');
       try {
         const result = await tarificationService.getAllTarifsSpeciaux({});
         setAllTarifsSpeciaux(result);
@@ -47,6 +48,8 @@ const TarifSpecialGestion = ({
     };
     
     fetchAllTarifsSpeciaux();
+    console.log('fetchAllTarifsSpeciaux - Chargement terminé');
+    console.log('fetchAllTarifsSpeciaux - Données chargées:', allTarifsSpeciaux);
   }, [tarificationService, setMessage, setMessageType]);
 
   // Gestionnaires pour le nouveau tarif spécial
@@ -145,9 +148,12 @@ const TarifSpecialGestion = ({
   
   // Charger tous les tarifs spéciaux
   const loadAllTarifsSpeciaux = async () => {
+    console.log('loadAllTarifsSpeciaux - Chargement de tous les tarifs spéciaux...');
     try {
       const result = await tarificationService.getAllTarifsSpeciaux({});
       setAllTarifsSpeciaux(result);
+      console.log('loadAllTarifsSpeciaux - Chargement terminé');
+      console.log('loadAllTarifsSpeciaux - Données chargées:', allTarifsSpeciaux);
     } catch (error) {
       console.error('Erreur lors du chargement de tous les tarifs spéciaux:', error);
       setMessage('Erreur lors du chargement des tarifs spéciaux: ' + error.message);

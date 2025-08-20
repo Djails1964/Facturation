@@ -328,6 +328,94 @@
   font-size: 14px;
 }
 
+/* Container pour checkboxes côte à côte */
+.unified-modal-container .checkbox-row {
+  display: flex;
+  gap: 30px;
+  margin: 20px 0;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+/* Labels de checkbox */
+.unified-modal-container .checkbox-row label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  padding: 8px 12px;
+  border-radius: var(--border-radius-sm, 4px);
+  transition: background-color 0.2s ease;
+  min-height: 40px;
+}
+
+.unified-modal-container .checkbox-row label:hover {
+  background-color: rgba(128, 0, 0, 0.05);
+}
+
+/* Checkboxes */
+.unified-modal-container .checkbox-row input[type="checkbox"] {
+  margin-right: 8px;
+  transform: scale(1.2);
+  cursor: pointer;
+  accent-color: var(--color-primary, #800000);
+}
+
+/* Text des labels */
+.unified-modal-container .checkbox-row span {
+  font-weight: 500;
+  color: var(--color-text, #333);
+  font-size: 14px;
+}
+
+/* État disabled */
+.unified-modal-container .checkbox-row label.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.unified-modal-container .checkbox-row label.disabled input[type="checkbox"] {
+  cursor: not-allowed;
+}
+
+/* Responsive pour checkboxes */
+@media (max-width: 768px) {
+  .unified-modal-container .checkbox-row {
+    flex-direction: column;
+    gap: 15px;
+    margin: 15px 0;
+  }
+  
+  .unified-modal-container .checkbox-row label {
+    justify-content: flex-start;
+    padding: 10px 8px;
+  }
+}
+
+/* Support pour thème sombre */
+@media (prefers-color-scheme: dark) {
+  .unified-modal-container .checkbox-row label:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .unified-modal-container .checkbox-row span {
+    color: var(--color-text-dark, #fff);
+  }
+}
+
+/* Accessibilité */
+.unified-modal-container .checkbox-row label:focus-within {
+  outline: 2px solid var(--color-primary, #800000);
+  outline-offset: 2px;
+}
+
+@media (prefers-contrast: high) {
+  .unified-modal-container .checkbox-row input[type="checkbox"] {
+    outline: 2px solid #000;
+  }
+}
+
+
 /* ==========================================
    RESPONSIVE
    ========================================== */

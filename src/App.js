@@ -1,4 +1,4 @@
-// src/App.js - Version utilisant useGlobalNavigationGuard existant
+// src/App.js - Version avec initialisation des fieldMappings
 import React, { useState, useEffect } from 'react';
 import { createHashRouter, RouterProvider, Navigate, Outlet } from 'react-router-dom';
 import { NotificationProvider } from './services/NotificationService';
@@ -18,6 +18,9 @@ import {
   configureUrlHelperForEnvironment,
   setUrlLogging
 } from './utils/urlHelper';
+
+// ✅ IMPORT pour l'initialisation des field mappings
+import { initializeFieldMappings } from './constants/fieldMappings';
 
 console.log('🚀 Application React démarrée avec protection navigation globale');
 
@@ -55,20 +58,35 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
 
-  // Configuration initiale
+  // ✅ NOUVELLE CONFIGURATION INITIALE avec fieldMappings
   useEffect(() => {
+    console.log('🔧 Configuration initiale de l\'application...');
+    
+    // Configuration UrlHelper (existant)
     console.log('🔧 Configuration UrlHelper...');
     configureUrlHelperForEnvironment();
     if (process.env.REACT_APP_DEBUG === 'true') {
       setUrlLogging(true);
       console.log('🔍 Mode debug activé');
     }
+
+    // ✅ INITIALISATION des field mappings
+    try {
+      console.log('🔧 Initialisation des field mappings...');
+      initializeFieldMappings();
+      console.log('✅ Field mappings initialisés avec succès');
+    } catch (error) {
+      console.error('❌ Erreur lors de l\'initialisation des field mappings:', error);
+      // Ne pas bloquer l'application, juste logger l'erreur
+    }
+
+    console.log('✅ Configuration initiale terminée');
   }, []);
 
-  // Vérification d'authentification au démarrage
+  // Vérification d'authentification au démarrage (code existant identique)
   useEffect(() => {
     const checkAuthentication = async () => {
-      console.log('🔐 Vérification de l\'authentification...');
+      console.log('🔍 Vérification de l\'authentification...');
       try {
         if (authService.isAuthenticated()) {
           const currentUser = authService.getCurrentUser();
@@ -126,10 +144,10 @@ function App() {
     }
   }, [authenticated, user]);
 
-  // Gestion de la connexion
+  // Gestion de la connexion (code existant identique)
   const handleLogin = async (username, password) => {
     try {
-      console.log('🔐 Début handleLogin pour:', username);
+      console.log('🔍 Début handleLogin pour:', username);
       setLoading(true);
       const loginData = await authService.login(username, password);
       console.log('📊 Réponse login complète:', loginData);
@@ -156,7 +174,7 @@ function App() {
     }
   };
 
-  // Composant Header protégé
+  // Composant Header protégé (code existant identique)
   const ProtectedHeader = () => {
     const { interceptNavigation } = useNavigationGuard();
 
@@ -189,7 +207,7 @@ function App() {
     );
   };
 
-  // Rafraîchissement de session
+  // Rafraîchissement de session (code existant identique)
   const refreshSession = async (newSessionExpiry) => {
     if (newSessionExpiry && user) {
       setUser(prev => ({
@@ -199,12 +217,12 @@ function App() {
     }
   };
 
-  // Affichage de chargement
+  // Affichage de chargement (code existant identique)
   if (loading) {
     return <LoadingSpinner message="Chargement de l'application..." />;
   }
 
-  // Contexte utilisateur
+  // Contexte utilisateur (code existant identique)
   const userContext = {
     user,
     setUser,
@@ -212,7 +230,7 @@ function App() {
     appConfig
   };
 
-  // Layout principal pour les pages authentifiées avec protection globale
+  // Layout principal pour les pages authentifiées avec protection globale (code existant identique)
   const AuthenticatedLayout = () => (
     <NavigationGuardProvider>
       <SessionAlert
@@ -225,7 +243,7 @@ function App() {
       </main>
       <GlobalDatePicker />
       
-      {/* Indicateur mode développement */}
+      {/* ✅ INDICATEUR mis à jour avec info field mappings */}
       {process.env.NODE_ENV === 'development' && (
         <div style={{
           position: 'fixed',
@@ -238,13 +256,13 @@ function App() {
           zIndex: 9999,
           borderBottomLeftRadius: '5px'
         }}>
-          {process.env.REACT_APP_API_BASE_URL ? 'REACT SÉPARÉ' : 'REACT DEV'}
+          {process.env.REACT_APP_API_BASE_URL ? 'REACT SÉPARÉ + MAPPINGS' : 'REACT DEV + MAPPINGS'}
         </div>
       )}
     </NavigationGuardProvider>
   );
 
-  // Layout simple pour les pages non authentifiées
+  // Layout simple pour les pages non authentifiées (code existant identique)
   const PublicLayout = () => (
     <>
       <Outlet />
@@ -266,7 +284,7 @@ function App() {
     </>
   );
 
-  // Configuration du routeur
+  // Configuration du routeur (code existant identique)
   const router = createHashRouter([
     // Routes publiques (non authentifiées)
     {

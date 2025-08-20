@@ -99,6 +99,8 @@ class TarificationService {
    */
   async createService(serviceData) {
     try {
+        console.log('🚀 Création service - Données reçues:', serviceData);
+  
       const payload = {
         action: 'createService',
         ...serviceData,
@@ -184,6 +186,7 @@ class TarificationService {
    */
   async chargerUnites(serviceId = null) {
     try {
+      console.log('TarificationService - chargerUnites - serviceId:', serviceId);
       const url = serviceId 
         ? `tarif-api.php?unites=true&serviceId=${serviceId}` 
         : 'tarif-api.php?unites=true';
@@ -639,18 +642,52 @@ class TarificationService {
   }
 
   /**
+   * ✅ MÉTHODE UTILITAIRE pour nettoyer les dates vides
+   * @param {Object} data - Données à nettoyer
+   * @returns {Object} Données avec dates vides converties en null
+   */
+  static cleanDateFields(data) {
+    if (!data || typeof data !== 'object') {
+      return data;
+    }
+    
+    const cleaned = { ...data };
+    
+    // Liste des champs de date (camelCase et snake_case)
+    const dateFields = [
+      'dateDebut', 'date_debut',
+      'dateFin', 'date_fin',
+      'dateCreation', 'date_creation', 
+      'dateModification', 'date_modification'
+    ];
+    
+    dateFields.forEach(field => {
+      if (cleaned.hasOwnProperty(field) && cleaned[field] === '') {
+        console.log(`🔄 TarificationService - Nettoyage date vide: ${field} = "${cleaned[field]}" → null`);
+        cleaned[field] = null;
+      }
+    });
+    
+    return cleaned;
+  }
+
+  /**
    * Créer un nouveau tarif
    * @param {Object} tarifData Données du tarif
    * @returns {Promise<Object>} Résultat de la création
    */
   async createTarif(tarifData) {
     try {
+      // ✅ NETTOYAGE des dates vides AVANT envoi
+      const cleanedData = TarificationService.cleanDateFields(tarifData);
+      
       const payload = {
         action: 'createTarif',
-        // Traitement des dates vides
-        date_fin: tarifData.date_fin === '' ? null : tarifData.date_fin,
-        ...tarifData
+        ...cleanedData
       };
+      
+      console.log('🚀 Création tarif - payload nettoyé:', payload);
+      
       const response = await api.post('tarif-api.php', payload);
       return response;
     } catch (error) {
@@ -666,17 +703,16 @@ class TarificationService {
    */
   async createTarifSpecial(tarifSpecialData) {
     try {
+      // ✅ NETTOYAGE des dates vides AVANT envoi
+      const cleanedData = TarificationService.cleanDateFields(tarifSpecialData);
+      
       const payload = {
         action: 'createTarifSpecial',
-        // Traitement des dates vides
-        date_fin: tarifSpecialData.date_fin === '' ? null : tarifSpecialData.date_fin,
-        clientId: tarifSpecialData.clientId,
-        serviceId: tarifSpecialData.serviceId,
-        uniteId: tarifSpecialData.uniteId,
-        prix: tarifSpecialData.prix,
-        date_debut: tarifSpecialData.date_debut,
-        note: tarifSpecialData.note
+        ...cleanedData
       };
+      
+      console.log('🚀 Création tarif spécial - payload nettoyé:', payload);
+      
       const response = await api.post('tarif-api.php', payload);
       return response;
     } catch (error) {
@@ -693,13 +729,17 @@ class TarificationService {
    */
   async updateTarif(id, tarifData) {
     try {
+      // ✅ NETTOYAGE des dates vides AVANT envoi
+      const cleanedData = TarificationService.cleanDateFields(tarifData);
+      
       const payload = {
         action: 'updateTarif',
         id,
-        // Traitement des dates vides
-        date_fin: tarifData.date_fin === '' ? null : tarifData.date_fin,
-        ...tarifData
+        ...cleanedData
       };
+      
+      console.log('🔄 Mise à jour tarif - payload nettoyé:', payload);
+      
       const response = await api.put('tarif-api.php', payload);
       return response;
     } catch (error) {
@@ -716,13 +756,17 @@ class TarificationService {
    */
   async updateTarifSpecial(id, tarifSpecialData) {
     try {
+      // ✅ NETTOYAGE des dates vides AVANT envoi
+      const cleanedData = TarificationService.cleanDateFields(tarifSpecialData);
+      
       const payload = {
         action: 'updateTarifSpecial',
         id,
-        // Traitement des dates vides
-        date_fin: tarifSpecialData.date_fin === '' ? null : tarifSpecialData.date_fin,
-        ...tarifSpecialData
+        ...cleanedData
       };
+      
+      console.log('🔄 Mise à jour tarif spécial - payload nettoyé:', payload);
+      
       const response = await api.put('tarif-api.php', payload);
       return response;
     } catch (error) {

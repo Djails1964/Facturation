@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import ParametresContent from './admin/ParametresContent';
 import ClientGestion from './ClientGestion';
 import FactureGestion from './components/factures/FactureGestion';
 import PaiementGestion from './PaiementGestion'; // ✅ NOUVEAU
-import TarifGestion from './TarifGestion';
+import TarifGestion from './components/tarifs/TarifGestion';
 import DashboardWrapper from './DashboardWrapper';
 import GestionUtilisateurs from './admin/GestionUtilisateurs';
 import AdminDashboard from './components/AdminDashboard';
@@ -16,6 +16,12 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
   const [clientCreatedId, setClientCreatedId] = useState(null);
   const [factureCreatedId, setFactureCreatedId] = useState(null);
   const [paiementCreatedId, setPaiementCreatedId] = useState(null); // ✅ NOUVEAU
+  const [tarifIntegration, setTarifIntegration] = useState({
+    selectedService: null,
+    selectedTarif: null,
+    lastAction: null,
+    contextualData: {}
+  });
 
   // Utiliser le guard global
   const { interceptNavigation } = useNavigationGuard();
@@ -67,6 +73,29 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
       `menu-${newSection}`
     );
   };
+
+  const handleTarifIntegrationAction = useCallback((action, data) => {
+    console.log('🔄 Action tarif:', action, data);
+    
+    setTarifIntegration(prev => ({
+      ...prev,
+      lastAction: action,
+      ...data
+    }));
+    
+    // Actions spécifiques
+    switch (action) {
+      case 'create-facture-from-tarif':
+        setActiveSection('nouvelle');
+        setFactureCreatedId(null);
+        break;
+      case 'update-client-tarifs':
+        // Rafraîchir les données clients si nécessaire
+        break;
+      default:
+        break;
+  }
+}, []);
 
   // Fonction utilitaire pour obtenir le nom lisible d'une section
   const getSectionName = (section) => {
@@ -132,7 +161,22 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
         />;
       
       case 'tarifs':
-        return canAccessParams ? <TarifGestion /> : <div className="content-placeholder">Accès non autorisé</div>;
+        return canAccessParams ? (
+          <TarifGestion 
+            initialSection={tarifIntegration.activeTab || 'services'}
+            userContext={userContext}
+            // Callbacks d'intégration
+            onTarifAction={handleTarifIntegrationAction}
+            onNavigateToFacture={(serviceId, tarifId) => {
+              handleTarifIntegrationAction('create-facture-from-tarif', {
+                selectedService: serviceId,
+                selectedTarif: tarifId
+              });
+            }}
+            // Données contextuelles
+            preselectedData={tarifIntegration.contextualData}
+          />
+        ) : <div className="content-placeholder">Accès non autorisé</div>;
       
       case 'dashboard':
         return <DashboardWrapper />;

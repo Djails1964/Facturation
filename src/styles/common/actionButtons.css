@@ -1,0 +1,388 @@
+/* 
+ * COMPLÉMENTS À buttons.css - Styles additionnels pour la standardisation des icônes
+ * Ce fichier complète buttons.css sans le remplacer
+ */
+
+/* ========== STYLES SPÉCIFIQUES POUR LA COHÉRENCE DES ICÔNES ========== */
+
+/* Tailles standardisées des icônes selon le contexte */
+.bouton-action svg {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s ease;
+}
+
+.lf-table-row .bouton-action svg,
+.paiements-table-body .bouton-action svg {
+  width: 14px;
+  height: 14px;
+}
+
+.tarif-actions-cell .bouton-action svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Animations pour les icônes dans les boutons d'action */
+.bouton-action:hover:not(.bouton-desactive) svg {
+  transform: scale(1.1);
+}
+
+.bouton-action:active:not(.bouton-desactive) svg {
+  transform: scale(0.95);
+}
+
+/* ========== STYLES POUR LES BOUTONS DE FORMULAIRE AVEC ICÔNES ========== */
+
+/* Espacement pour les icônes dans les boutons de formulaire */
+.btn-primary svg,
+.btn-secondary svg,
+.btn-success svg,
+.btn-danger svg,
+.modal-action-primary svg,
+.modal-action-secondary svg,
+.modal-action-danger svg {
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* Boutons avec icône seulement (pas de texte) */
+.btn-icon-only {
+  min-width: auto;
+  padding: 10px;
+  justify-content: center;
+}
+
+.btn-icon-only svg {
+  margin-right: 0;
+}
+
+/* ========== GROUPE D'ICÔNES STANDARDISÉES ========== */
+
+/* Couleurs harmonisées pour toutes les icônes d'action */
+.action-edit-icon,
+.action-delete-icon,
+.action-view-icon,
+.action-copy-icon,
+.action-mail-icon,
+.action-pay-icon,
+.action-print-icon,
+.action-cancel-icon,
+.action-move-icon,
+.action-add-icon,
+.action-save-icon,
+.action-confirm-icon {
+  color: var(--color-primary-light, #800020);
+  transition: color 0.2s ease;
+}
+
+/* États hover pour les icônes */
+.bouton-action:hover:not(.bouton-desactive) .action-edit-icon,
+.bouton-action:hover:not(.bouton-desactive) .action-delete-icon,
+.bouton-action:hover:not(.bouton-desactive) .action-view-icon,
+.bouton-action:hover:not(.bouton-desactive) .action-copy-icon,
+.bouton-action:hover:not(.bouton-desactive) .action-mail-icon,
+.bouton-action:hover:not(.bouton-desactive) .action-pay-icon,
+.bouton-action:hover:not(.bouton-desactive) .action-print-icon,
+.bouton-action:hover:not(.bouton-desactive) .action-cancel-icon {
+  color: var(--color-primary, #800000);
+}
+
+/* ========== ICÔNES DANS LES ÉTATS DÉSACTIVÉS ========== */
+.bouton-desactive .action-edit-icon,
+.bouton-desactive .action-delete-icon,
+.bouton-desactive .action-view-icon,
+.bouton-desactive .action-copy-icon,
+.bouton-desactive .action-mail-icon,
+.bouton-desactive .action-pay-icon,
+.bouton-desactive .action-print-icon,
+.bouton-desactive .action-cancel-icon {
+  color: #ccc !important;
+}
+
+/* ========== RESPONSIVE POUR LES ICÔNES ========== */
+@media (max-width: 768px) {
+  /* Ajustement des tailles d'icônes sur mobile */
+  .lf-table-row .bouton-action svg,
+  .paiements-table-body .bouton-action svg,
+  .tarif-actions-cell .bouton-action svg {
+    width: 12px;
+    height: 12px;
+  }
+  
+  /* Boutons de formulaire responsive avec icônes */
+  .btn-primary svg,
+  .btn-secondary svg,
+  .btn-success svg,
+  .btn-danger svg {
+    margin-right: 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .bouton-action svg {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .lf-table-row .bouton-action svg,
+  .paiements-table-body .bouton-action svg,
+  .tarif-actions-cell .bouton-action svg {
+    width: 11px;
+    height: 11px;
+  }
+}
+
+/* ========== GROUPES D'ACTIONS STANDARDISÉS ========== */
+
+/* Conteneur pour groupes d'actions avec espacement cohérent */
+.action-group {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.action-group-large {
+  gap: 8px;
+}
+
+.action-group-small {
+  gap: 2px;
+}
+
+/* ========== ICÔNES SPÉCIALES ========== */
+
+/* Icône de calendrier améliorée */
+.calendar-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.calendar-icon:hover:not(.disabled) svg {
+  transform: scale(1.1);
+}
+
+/* ========== ANIMATIONS RÉDUITES POUR L'ACCESSIBILITÉ ========== */
+@media (prefers-reduced-motion: reduce) {
+  .bouton-action svg,
+  .calendar-icon svg,
+  .action-edit-icon,
+  .action-delete-icon,
+  .action-view-icon,
+  .action-copy-icon {
+    transition: none;
+  }
+  
+  .bouton-action:hover svg,
+  .calendar-icon:hover svg {
+    transform: none;
+  }
+}
+
+/* ========== STYLES SPÉCIFIQUES POUR LES TARIFS ========== */
+
+/* Actions globales des tarifs */
+.tarif-global-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: var(--spacing-md);
+}
+
+.tarif-global-actions .btn-icon-only {
+  min-width: auto;
+  padding: 8px;
+}
+
+/* Actions rapides du dashboard */
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-lg);
+}
+
+.quick-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-lg);
+  min-height: 80px;
+  justify-content: center;
+  text-align: center;
+}
+
+.quick-action-btn .action-text {
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+/* Onglets avec boutons d'action */
+.tarif-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.tab-action-btn {
+  margin-left: auto;
+  padding: 2px 6px;
+  font-size: 12px;
+  font-weight: bold;
+  min-width: auto;
+  height: 20px;
+  border-radius: 10px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.tarif-tab:hover .tab-action-btn {
+  opacity: 1;
+}
+
+.tarif-tab.active .tab-action-btn {
+  opacity: 0.7;
+}
+
+/* Actions de filtrage et tri */
+.list-filter-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+}
+
+/* Actions de sélection multiple */
+.bulk-selection-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--color-secondary);
+  border-radius: var(--border-radius-md);
+  margin-bottom: var(--spacing-md);
+  border: 1px solid var(--color-border);
+}
+
+.selection-info {
+  font-size: 12px;
+  color: var(--color-text-light);
+  font-weight: 500;
+}
+
+.selection-controls {
+  display: flex;
+  gap: 4px;
+}
+
+.bulk-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+/* Actions des listes de tarifs */
+.tarif-actions-cell {
+  min-width: 280px;
+  max-width: 320px;
+}
+
+/* Animations pour les actions */
+.tarif-actions-cell .bouton-action {
+  transition: all 0.2s ease;
+}
+
+.tarif-actions-cell .bouton-action:hover:not(.bouton-desactive) {
+  transform: translateY(-1px);
+}
+
+/* ========== RESPONSIVE POUR LES TARIFS ========== */
+@media (max-width: 768px) {
+  .tarif-global-actions {
+    justify-content: center;
+  }
+  
+  .quick-actions-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-sm);
+  }
+  
+  .quick-action-btn {
+    padding: var(--spacing-md);
+    min-height: 60px;
+  }
+  
+  .quick-action-btn .action-text {
+    font-size: 11px;
+  }
+  
+  .tab-action-btn {
+    opacity: 1;
+    font-size: 10px;
+    padding: 1px 4px;
+    height: 16px;
+  }
+  
+  .bulk-selection-actions {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    align-items: stretch;
+  }
+  
+  .bulk-actions {
+    margin-left: 0;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .quick-actions-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .tarif-global-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .list-filter-actions {
+    justify-content: center;
+  }
+  
+  .tarif-actions-cell {
+    min-width: 240px;
+    max-width: 280px;
+  }
+}
+
+/* ========== CONTRASTE ÉLEVÉ ========== */
+@media (prefers-contrast: high) {
+  .action-edit-icon,
+  .action-delete-icon,
+  .action-view-icon,
+  .action-copy-icon,
+  .action-mail-icon,
+  .action-pay-icon,
+  .action-print-icon,
+  .action-cancel-icon {
+    color: #000000;
+  }
+  
+  .bouton-desactive .action-edit-icon,
+  .bouton-desactive .action-delete-icon,
+  .bouton-desactive .action-view-icon,
+  .bouton-desactive .action-copy-icon {
+    color: #666666 !important;
+  }
+  
+  .tab-action-btn {
+    border: 2px solid #000000;
+  }
+  
+  .bulk-selection-actions {
+    border: 2px solid #000000;
+  }
+}
