@@ -13,7 +13,9 @@ const FactureActions = ({
     onSupprimerFacture,
     onSetNotification
 }) => {
-    const { id, etat } = facture;
+    // ✅ CORRECTION: Extraction robuste de l'ID
+    const id = facture.idFacture || facture.id;
+    const { etat } = facture;
     
     // État pour gérer le tooltip
     const [tooltip, setTooltip] = useState({
@@ -26,17 +28,12 @@ const FactureActions = ({
     // Conditions d'activation des boutons
     const canModify = ['En attente', 'Éditée'].includes(etat);
     const canSendEmail = etat === 'Éditée';
-    const canPay = ['Envoyée', 'Retard', 'Partiellement payée'].includes(etat); // ✅ AJOUT
+    const canPay = ['Envoyée', 'Retard', 'Partiellement payée'].includes(etat);
     const canDelete = etat === 'En attente';
-    const canCancel = ['Envoyée', 'Éditée', 'Retard', 'Partiellement payée'].includes(etat); // ✅ AJOUT
+    const canCancel = ['Envoyée', 'Éditée', 'Retard', 'Partiellement payée'].includes(etat);
 
-    // ✅ VARIABLES SUPPRIMÉES car non utilisées :
-    // - deleteOrCancelMessage
-    // - actionType
-
-    // ✅ Gestion du tooltip collé au curseur - CORRIGÉ
+    // Gestion du tooltip collé au curseur
     const handleMouseEnter = (event, text) => {
-        // Suppression de la variable rect non utilisée
         setTooltip({
             visible: true,
             text: text,
@@ -82,6 +79,11 @@ const FactureActions = ({
         );
     };
 
+    // ✅ Suppression du log de debug excessif (garde uniquement pour le développement)
+    if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 FactureActions - ID extrait:', id);
+    }
+
     return (
         <>
             <div className="lf-table-cell lf-actions-cell">
@@ -94,6 +96,9 @@ const FactureActions = ({
                     onMouseLeave={handleMouseLeave}
                     onClick={(e) => {
                         e.stopPropagation();
+                        console.log('🔍 CLICK AFFICHER - ID passé à onAfficherFacture:', id);
+                        console.log('🔍 CLICK AFFICHER - Type ID:', typeof id);
+                        console.log('🔍 CLICK AFFICHER - Objet facture complet:', facture);
                         onAfficherFacture(id);
                     }}
                 >
@@ -190,7 +195,7 @@ const FactureActions = ({
                     <FiDollarSign size={16} color={canPay ? "#800020" : "#ccc"} />
                 </button>
 
-                {/* Bouton Supprimer/Annuler - ✅ TEXTE INLINE AU LIEU DE VARIABLE */}
+                {/* Bouton Supprimer/Annuler */}
                 <button 
                     className={`bouton-action ${!(canDelete || canCancel) ? 'bouton-desactive' : ''}`}
                     aria-label={canDelete ? 'Supprimer la facture' : canCancel ? 'Annuler la facture' : 'Action impossible'}

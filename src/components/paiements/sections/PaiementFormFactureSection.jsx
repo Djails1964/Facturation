@@ -19,9 +19,9 @@ const PaiementFormFactureSection = ({
                     {isCreate ? (
                         <>
                             <select
-                                id="factureId"
-                                value={paiement.factureId}
-                                onChange={(e) => onInputChange('factureId', e.target.value)}
+                                id="idFacture"
+                                value={paiement.idFacture}
+                                onChange={(e) => onInputChange('idFacture', e.target.value)}
                                 required
                                 disabled={facturesLoading}
                             >
@@ -41,7 +41,7 @@ const PaiementFormFactureSection = ({
                                     );
                                 })}
                             </select>
-                            <label htmlFor="factureId" className="required">{LABELS.FACTURE}</label>
+                            <label htmlFor="idFacture" className="required">{LABELS.FACTURE}</label>
                         </>
                     ) : (
                         <>

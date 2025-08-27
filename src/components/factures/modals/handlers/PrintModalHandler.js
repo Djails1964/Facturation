@@ -21,25 +21,25 @@ export class PrintModalHandler {
     /**
      * Point d'entrée principal
      */
-    async handle(factureId, event) {
+    async handle(idFacture, event) {
         if (event) {
             event.stopPropagation();
         }
         
-        if (this.impressionEnCours.has(factureId)) {
-            console.log('⚠️ Impression déjà en cours pour facture', factureId);
+        if (this.impressionEnCours.has(idFacture)) {
+            console.log('⚠️ Impression déjà en cours pour facture', idFacture);
             return;
         }
         
         // Ajouter à la liste des impressions en cours
         if (this.setImpressionEnCours) {
-            this.setImpressionEnCours(prev => new Set(prev).add(factureId));
+            this.setImpressionEnCours(prev => new Set(prev).add(idFacture));
         }
         
         const anchorRef = this.createAnchorRef(event);
         
         try {
-            console.log('🎯 Début impression facture', factureId);
+            console.log('🎯 Début impression facture', idFacture);
             
             // Utiliser showLoading pour l'impression
             const result = await this.showLoading(
@@ -50,13 +50,13 @@ export class PrintModalHandler {
                     size: 'small',
                     position: 'smart'
                 },
-                async () => await this.factureService.imprimerFacture(factureId)
+                async () => await this.factureService.imprimerFacture(idFacture)
             );
             
             console.log('🎯 Résultat impression:', result);
             
             if (result.success) {
-                await this.showSuccessModal(result, factureId, anchorRef);
+                await this.showSuccessModal(result, idFacture, anchorRef);
                 this.onSetNotification('Facture imprimée avec succès', 'success');
                 this.chargerFactures();
             } else {
@@ -65,26 +65,26 @@ export class PrintModalHandler {
             
         } catch (error) {
             console.error('❌ Erreur impression:', error);
-            await this.showErrorWithRetry(error, factureId, event, anchorRef);
+            await this.showErrorWithRetry(error, idFacture, event, anchorRef);
         } finally {
             // Retirer de la liste des impressions en cours
             if (this.setImpressionEnCours) {
                 this.setImpressionEnCours(prev => {
                     const newSet = new Set(prev);
-                    newSet.delete(factureId);
+                    newSet.delete(idFacture);
                     return newSet;
                 });
             }
-            console.log('🎯 Impression terminée pour facture', factureId);
+            console.log('🎯 Impression terminée pour facture', idFacture);
         }
     }
 
     /**
      * ✅ CORRECTION: Modal de succès avec gestion du téléchargement
      */
-    async showSuccessModal(result, factureId, anchorRef) {
+    async showSuccessModal(result, idFacture, anchorRef) {
         console.log('📋 showSuccessModal - result:', result);
-        console.log('📋 showSuccessModal - factureId:', factureId);
+        console.log('📋 showSuccessModal - idFacture:', idFacture);
         console.log('📋 showSuccessModal - pdfUrl:', result.pdfUrl);
 
         const modalResult = await this.showCustom({
@@ -116,7 +116,7 @@ export class PrintModalHandler {
 
         if (modalResult.action === 'download') {
             console.log('📥 Action de téléchargement détectée');
-            await this.handlePdfDownload(result.pdfUrl, factureId);
+            await this.handlePdfDownload(result.pdfUrl, idFacture);
         }
 
         return modalResult;
@@ -125,7 +125,7 @@ export class PrintModalHandler {
     /**
      * ✅ NOUVEAU: Gestionnaire de téléchargement séparé
      */
-    async handlePdfDownload(pdfUrl, factureId) {
+    async handlePdfDownload(pdfUrl, idFacture) {
         try {
             let finalPdfUrl = pdfUrl;
             console.log('📥 Début téléchargement PDF:', finalPdfUrl);
@@ -133,7 +133,7 @@ export class PrintModalHandler {
             // Vérification et récupération d'URL si nécessaire
             if (!finalPdfUrl) {
                 console.log('🔄 URL manquante, récupération via service...');
-                const urlResult = await this.factureService.getFactureUrl(factureId);
+                const urlResult = await this.factureService.getFactureUrl(idFacture);
                 console.log('🔄 Résultat getFactureUrl:', urlResult);
                 
                 if (urlResult.success && urlResult.pdfUrl) {
@@ -195,7 +195,7 @@ export class PrintModalHandler {
     /**
      * Modal d'erreur avec option de réessayer
      */
-    async showErrorWithRetry(error, factureId, originalEvent, anchorRef) {
+    async showErrorWithRetry(error, idFacture, originalEvent, anchorRef) {
         const errorResult = await this.showCustom({
             title: "Erreur d'impression",
             content: ModalComponents.createWarningSection("", error.message, "error"),
@@ -219,7 +219,7 @@ export class PrintModalHandler {
         if (errorResult.action === 'retry') {
             // Délai court puis relancer
             setTimeout(() => {
-                this.handle(factureId, originalEvent);
+                this.handle(idFacture, originalEvent);
             }, 100);
         }
     }

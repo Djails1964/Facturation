@@ -42,7 +42,9 @@ const ServiceUniteForm = ({
     try {
       // ✅ Les données viennent de tarificationService qui normalise déjà
       const serviceUnites = await tarificationService.chargerUnites(selectedServiceId);
+      console.log('ServiceUniteForm - loadUniteData - defaultUnite:');
       const defaultUnite = await tarificationService.getUniteDefault({ id: selectedServiceId });
+      console.log('ServiceUniteForm - loadUniteData - defaultUnite:', defaultUnite);
       setDefaultUniteId(defaultUnite);
       
       const associatedIds = serviceUnites.map(unite => unite.id);

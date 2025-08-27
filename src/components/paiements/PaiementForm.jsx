@@ -15,10 +15,17 @@ import { FORM_MODES, FORM_TITLES, LOADING_MESSAGES, HELP_TEXTS } from '../../con
 import DateService from '../../utils/DateService';
 import '../../styles/components/paiements/PaiementForm.css';
 
-function PaiementForm({ mode = FORM_MODES.VIEW, paiementId = null, onRetourListe, onPaiementCreated }) {
+function PaiementForm({ mode = FORM_MODES.VIEW, idPaiement = null, onRetourListe, onPaiementCreated }) {
     
+    console.log('🎨 PaiementForm - Props reçues:', {
+        mode,
+        idPaiement,
+        hasOnRetourListe: !!onRetourListe,
+        hasOnPaiementCreated: !!onPaiementCreated
+    });
+
     // Hooks personnalisés pour la logique métier
-    const formState = usePaiementForm({ mode, paiementId, onRetourListe, onPaiementCreated });
+    const formState = usePaiementForm({ mode, idPaiement, onRetourListe, onPaiementCreated });
     const formLogic = usePaiementFormLogic(formState);
     const formValidation = usePaiementFormValidation(formState);
     const formHandlers = usePaiementFormHandlers(formState, formLogic, formValidation);
@@ -26,7 +33,7 @@ function PaiementForm({ mode = FORM_MODES.VIEW, paiementId = null, onRetourListe
     // Debug log
     console.log('🎨 Rendu PaiementForm:', {
         mode,
-        paiementId,
+        idPaiement,
         isLoading: formState.isLoading,
         paiement: formState.paiement, // Développez cet objet
         paiementKeys: Object.keys(formState.paiement || {}),

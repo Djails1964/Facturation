@@ -1,9 +1,10 @@
-// UniteGestion.jsx - Version mise à jour pour intégration avec TarifGestion unifié
+// UniteGestion.jsx - Version avec UniteTableSection et filtre intégré
 import React, { useState, useEffect } from 'react';
-import { UniteActions } from '../sections/TarifListActions';
-import TableSection from '../sections/TableSection';
+import UniteTableSection from '../sections/UniteTableSection';
 import { AddButton } from '../../../components/ui/buttons';
 import TarifFormHeader from '../sections/TarifFormHeader';
+import TarifFilter from '../components/TarifFilter';
+import { useTarifFilter, createInitialFilters } from '../hooks/useTarifFilter';
 
 const UniteGestion = ({ 
   unites = [],
@@ -20,6 +21,17 @@ const UniteGestion = ({
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // ===== INTÉGRATION DU FILTRE =====
+  const {
+    filters,
+    showFilters,
+    filteredData: unitesFiltered,
+    filterStats,
+    handleFilterChange,
+    handleResetFilters,
+    handleToggleFilters
+  } = useTarifFilter(unites, 'unites', createInitialFilters('unites'));
+
   // ===== HANDLERS POUR LE SYSTÈME UNIFIÉ =====
   
   const handleCreateClick = (event) => {
@@ -36,7 +48,7 @@ const UniteGestion = ({
   const handleEditClick = (unite, event) => {
     if (onEditUnite) {
       // Utiliser le nouveau système unifié
-      onEditUnite(unite.id, event);
+      onEditUnite(unite.idUnite || unite.id, event);
     } else {
       // Fallback vers l'ancien système (deprecated)
       console.warn('⚠️ onEditUnite non fourni, utilisation du système legacy');
@@ -47,7 +59,7 @@ const UniteGestion = ({
   const handleDeleteClick = (unite, event) => {
     if (onDeleteUnite) {
       // Utiliser le nouveau système unifié
-      onDeleteUnite(unite.id, unite.nom, event);
+      onDeleteUnite(unite.idUnite || unite.id, unite.nom, event);
     } else {
       // Fallback vers l'ancien système (deprecated)
       console.warn('⚠️ onDeleteUnite non fourni, utilisation du système legacy');
@@ -55,123 +67,19 @@ const UniteGestion = ({
     }
   };
   
-  // ===== ANCIEN SYSTÈME (DEPRECATED - À SUPPRIMER) =====
-  
-  const handleLegacyCreate = async () => {
-    console.log('🚨 Système legacy de création d\'unité utilisé - À MIGRER');
-    // Code de l'ancien système...
+  // ===== LEGACY HANDLERS (DEPRECATED) =====
+  const handleLegacyCreate = () => {
+    console.log('🔧 Legacy create handler appelé');
   };
   
-  const handleLegacyEdit = async (unite) => {
-    console.log('🚨 Système legacy d\'édition d\'unité utilisé - À MIGRER');
-    // Code de l'ancien système...
+  const handleLegacyEdit = (unite) => {
+    console.log('🔧 Legacy edit handler appelé:', unite);
   };
   
-  const handleLegacyDelete = async (unite) => {
-    console.log('🚨 Système legacy de suppression d\'unité utilisé - À MIGRER');
-    
-    if (!unite || !unite.id) {
-      console.error('Unité invalide pour suppression');
-      return;
-    }
-    
-    setConfirmModal({
-      isOpen: true,
-      title: 'Supprimer l\'unité',
-      message: `Êtes-vous sûr de vouloir supprimer l'unité "${unite.nom}" ?`,
-      type: 'danger',
-      confirmText: 'Supprimer',
-      onConfirm: async () => {
-        setIsSubmitting(true);
-        try {
-          const result = await tarificationService.deleteUnite(unite.id);
-          
-          if (result.success) {
-            setMessage(`Unité "${unite.nom}" supprimée avec succès`);
-            setMessageType('success');
-            await loadUnites();
-          } else {
-            throw new Error(result.message || 'Erreur lors de la suppression');
-          }
-        } catch (error) {
-          console.error('Erreur suppression unité:', error);
-          setMessage(error.message || 'Erreur lors de la suppression de l\'unité');
-          setMessageType('error');
-        } finally {
-          setIsSubmitting(false);
-          setConfirmModal({ isOpen: false });
-        }
-      }
-    });
+  const handleLegacyDelete = (unite) => {
+    console.log('🔧 Legacy delete handler appelé:', unite);
   };
-  
-  // ===== ANCIEN FORMULAIRE (DEPRECATED) =====
-  
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    console.log('🚨 handleSubmit legacy appelé - CECI NE DEVRAIT PLUS ARRIVER');
-    console.log('👉 Vérifiez que vous utilisez bien le nouveau système TarifGestion unifié');
-    
-    // Pour éviter les erreurs, on peut rediriger vers le nouveau système
-    if (onCreateUnite) {
-      onCreateUnite(event);
-    } else {
-      console.error('❌ Système legacy utilisé mais pas de fallback disponible');
-    }
-  };
-  
-  // ===== CONFIGURATION DES COLONNES =====
-  
-  const columns = [
-    {
-      label: 'Code',
-      field: 'code',
-      width: '100px',
-      sortable: true,
-      render: (unite) => (
-        <span className="unite-code">
-          {unite.code}
-        </span>
-      )
-    },
-    {
-      label: 'Nom',
-      field: 'nom',
-      width: '200px',
-      sortable: true,
-      render: (unite) => (
-        <strong className="unite-nom">
-          {unite.nom}
-        </strong>
-      )
-    },
-    {
-      label: 'Description',
-      field: 'description',
-      width: '400px',
-      sortable: true,
-      render: (unite) => (
-        <span className="unite-description">
-          {unite.description || '-'}
-        </span>
-      )
-    },
-    {
-      label: '', // ✅ CORRECTION: Pas de libellé pour la colonne Actions
-      field: 'actions',
-      width: '120px',
-      sortable: false,
-      render: (unite) => (
-        <UniteActions
-          unite={unite}
-          onEdit={(u, e) => handleEditClick(u, e)}
-          onDelete={(u, e) => handleDeleteClick(u, e)}
-          disabled={isSubmitting}
-        />
-      )
-    }
-  ];
-  
+
   // ===== RENDU PRINCIPAL =====
   
   return (
@@ -187,24 +95,28 @@ const UniteGestion = ({
         </AddButton>
       </TarifFormHeader>
       
-      {/* Tableau des unités */}
-      <TableSection
-        title="Liste des unités"
+      {/* ===== FILTRE - NOUVELLE INTÉGRATION ===== */}
+      <TarifFilter
+        filterType="unites"
         data={unites}
-        columns={columns}
-        highlightedId={highlightedId}
-        emptyMessage="Aucune unité trouvée"
-        className="unite-table-section"
-        defaultSort={{ field: 'nom', direction: 'asc' }}
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onResetFilters={handleResetFilters}
+        showFilters={showFilters}
+        onToggleFilters={handleToggleFilters}
+        totalCount={filterStats.totalCount}
+        filteredCount={filterStats.filteredCount}
+        className="filter-unites"
       />
       
-      {/* ===== ANCIEN FORMULAIRE - MASQUÉ ET DEPRECATED ===== */}
-      <div style={{ display: 'none' }}>
-        <form onSubmit={handleSubmit}>
-          {/* Ancien formulaire masqué pour éviter les erreurs */}
-          <input type="hidden" name="deprecated" value="true" />
-        </form>
-      </div>
+      {/* Utilisation d'UniteTableSection avec données filtrées */}
+      <UniteTableSection
+        unites={unitesFiltered}
+        onEdit={handleEditClick}
+        onDelete={handleDeleteClick}
+        highlightedId={highlightedId}
+        isSubmitting={isSubmitting}
+      />
       
       {/* Informations de debug en mode développement */}
       {process.env.NODE_ENV === 'development' && (
@@ -218,9 +130,12 @@ const UniteGestion = ({
         }}>
           <strong>🔧 Debug UniteGestion :</strong><br/>
           - Unités chargées : {unites.length}<br/>
+          - Unités filtrées : {unitesFiltered.length}<br/>
+          - Filtres actifs : {filterStats.hasActiveFilters ? 'Oui' : 'Non'}<br/>
           - Highlighted ID : {highlightedId || 'aucun'}<br/>
           - Système unifié : {onCreateUnite ? '✅ Actif' : '❌ Non connecté'}<br/>
-          - Is submitting : {isSubmitting ? 'Oui' : 'Non'}
+          - Is submitting : {isSubmitting ? 'Oui' : 'Non'}<br/>
+          - Filtres actuels : {JSON.stringify(filters)}
         </div>
       )}
     </div>

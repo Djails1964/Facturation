@@ -30,7 +30,7 @@ class PaiementService {
       if (options.mois) params.mois = options.mois;
       if (options.methode) params.methode = options.methode;
       if (options.clientId) params.client_id = options.clientId;
-      if (options.factureId) params.facture_id = options.factureId;
+      if (options.idFacture) params.IdFacture = options.idFacture;
       if (options.page) params.page = options.page;
       if (options.limit) params.limit = options.limit;
       if (options.statut) params.statut = options.statut; // ✅ Filtre par statut (confirme/annule)
@@ -46,22 +46,22 @@ class PaiementService {
 
         // Adapter les données pour le frontend
         const paiementsAdaptes = paiementsData.map(paiement => ({
-          id: paiement.id_paiement,
-          factureId: paiement.id_facture,
-          numeroFacture: paiement.numero_facture,
-          clientId: paiement.id_client,
-          nomClient: paiement.nom_client,
-          datePaiement: paiement.date_paiement,
-          montantPaye: parseFloat(paiement.montant_paye),
-          methodePaiement: paiement.methode_paiement,
+          idPaiement: paiement.idPaiement,
+          idFacture: paiement.idFacture,
+          numeroFacture: paiement.numeroFacture,
+          idClient: paiement.idClient,
+          nomClient: paiement.nomClient,
+          datePaiement: paiement.datePaiement,
+          montantPaye: parseFloat(paiement.montantPaye),
+          methodePaiement: paiement.methodePaiement,
           commentaire: paiement.commentaire,
-          numeroPaiement: paiement.numero_paiement,
-          dateCreation: paiement.date_creation,
+          numeroPaiement: paiement.numeroPaiement,
+          dateCreation: paiement.dateCreation,
           statut: paiement.statut || PAIEMENT_ETATS.VALIDE,
-          dateModification: paiement.date_modification || null,
-          dateAnnulation: paiement.date_annulation || null,
-          motifAnnulation: paiement.motif_annulation || null,
-          montantTotalFacture: parseFloat(paiement.montant_total),
+          dateModification: paiement.dateModification || null,
+          dateAnnulation: paiement.dateAnnulation || null,
+          motifAnnulation: paiement.motifAnnulation || null,
+          montantTotalFacture: parseFloat(paiement.montantTotal),
           ristourneFacture: parseFloat(paiement.ristourne || 0)
         }));
         
@@ -94,28 +94,29 @@ class PaiementService {
         return this._cachePaiement[id];
       }
       
-      const response = await api.get(`paiement-api.php?id=${id}`);
+      const response = await api.get(`paiement-api.php?idPaiement=${id}`);
       console.log('Réponse de l\'API:', response);
       
       if (response && response.success && response.paiement) {
         const paiementData = response.paiement;
+        console.log('PaiementService - getPaiement - paiementData:', paiementData);
         
         const paiementFormate = {
-          id: paiementData.id_paiement,
-          factureId: paiementData.id_facture,
-          numeroFacture: paiementData.numero_facture,
-          clientId: paiementData.id_client,
-          nomClient: paiementData.nom_client,
-          datePaiement: paiementData.date_paiement,
-          montantPaye: parseFloat(paiementData.montant_paye),
-          methodePaiement: paiementData.methode_paiement,
+          idPaiement: paiementData.idPaiement,
+          idFacture: paiementData.idFacture,
+          numeroFacture: paiementData.numeroFacture,
+          idClient: paiementData.idClient,
+          nomClient: paiementData.nomClient,
+          datePaiement: paiementData.datePaiement,
+          montantPaye: parseFloat(paiementData.montantPaye),
+          methodePaiement: paiementData.methodePaiement,
           commentaire: paiementData.commentaire,
-          numeroPaiement: paiementData.numero_paiement,
-          dateCreation: paiementData.date_creation,
+          numeroPaiement: paiementData.numeroPaiement,
+          dateCreation: paiementData.dateCreation,
           statut: paiementData.statut || PAIEMENT_ETATS.VALIDE, // ✅ Statut par défaut
-          dateAnnulation: paiementData.date_annulation || null,
-          motifAnnulation: paiementData.motif_annulation || null,
-          montantTotalFacture: parseFloat(paiementData.montant_total),
+          dateAnnulation: paiementData.dateAnnulation || null,
+          motifAnnulation: paiementData.motifAnnulation || null,
+          montantTotalFacture: parseFloat(paiementData.montantTotal),
           ristourneFacture: parseFloat(paiementData.ristourne || 0)
         };
         
@@ -132,19 +133,21 @@ class PaiementService {
 
   /**
    * ✅ EXISTANTE : Récupère les paiements d'une facture spécifique
-   * @param {number} factureId ID de la facture
+   * @param {number} idFacture ID de la facture
    * @returns {Array} Liste des paiements de la facture
    */
-  async getPaiementsParFacture(factureId) {
+  async getPaiementsParFacture(idFacture) {
     try {
-      const response = await api.get(`paiement-api.php?facture_id=${factureId}`);
+      console.log('getpaiementsParFacture - idFacture :', idFacture);
+      const response = await api.get(`paiement-api.php?idFacture=${idFacture}`);
+      console.log('getpaiementsParFacture - response: ', response);
       
       if (response && response.success) {
         // ✅ Adapter les données de la même façon que chargerPaiements
         const paiementsData = response.paiements || [];
         return paiementsData.map(paiement => ({
-          id: paiement.id_paiement,
-          factureId: paiement.id_facture,
+          idPaiement: paiement.idPaiement,
+          idFacture: paiement.idFacture,
           numeroFacture: paiement.numero_facture,
           clientId: paiement.id_client,
           nomClient: paiement.nom_client,
@@ -164,7 +167,7 @@ class PaiementService {
       
       return [];
     } catch (error) {
-      console.error(`Erreur lors de la récupération des paiements pour la facture ${factureId}:`, error);
+      console.error(`Erreur lors de la récupération des paiements pour la facture ${idFacture}:`, error);
       return [];
     }
   }
@@ -182,7 +185,7 @@ class PaiementService {
         this._clearCache();
         return {
           success: true,
-          id: response.paiementId,
+          id: response.idPaiement,
           numeroPaiement: response.numeroPaiement,
           message: response.message || 'Paiement enregistré avec succès'
         };
@@ -203,7 +206,7 @@ class PaiementService {
    */
   async updatePaiement(id, paiementData) {
     try {
-      const response = await api.put(`paiement-api.php?id=${id}`, paiementData);
+      const response = await api.put(`paiement-api.php?idPaiement=${id}`, paiementData);
       
       if (response && response.success) {
         delete this._cachePaiement[id];
@@ -229,13 +232,13 @@ class PaiementService {
   async cancelPaiement(id, motifAnnulation = null) {
     try {
       const data = motifAnnulation ? { motif_annulation: motifAnnulation } : {};
-      const response = await api.delete(`paiement-api.php?id=${id}`, data);
+      const response = await api.delete(`paiement-api.php?idPaiement=${id}`, data);
       
       if (response && response.success) {
         delete this._cachePaiement[id];
         return {
           success: true,
-          factureId: response.factureId,
+          idFacture: response.idFacture,
           numeroPaiement: response.numeroPaiement,
           message: response.message || 'Paiement annulé avec succès'
         };
@@ -256,13 +259,13 @@ class PaiementService {
    */
   async deletePaiement(id) {
     try {
-      const response = await api.delete(`paiement-api.php?id=${id}`);
+      const response = await api.delete(`paiement-api.php?idPaiement=${id}`);
       
       if (response && response.success) {
         delete this._cachePaiement[id];
         return {
           success: true,
-          factureId: response.factureId,
+          idFacture: response.idFacture,
           message: response.message || 'Paiement supprimé avec succès'
         };
       } else {
@@ -414,7 +417,7 @@ class PaiementService {
     
     // Appliquer les filtres supportés
     Object.keys(criteres).forEach(cle => {
-      if (['annee', 'mois', 'methode', 'statut', 'clientId', 'factureId', 'page', 'limit'].includes(cle)) {
+      if (['annee', 'mois', 'methode', 'statut', 'clientId', 'idFacture', 'page', 'limit'].includes(cle)) {
         options[cle] = criteres[cle];
       }
     });
@@ -489,7 +492,7 @@ class PaiementService {
     const errors = [];
     
     // Validation des champs obligatoires
-    if (!paiementData.factureId) {
+    if (!paiementData.idFacture) {
       errors.push('L\'ID de la facture est obligatoire');
     }
     

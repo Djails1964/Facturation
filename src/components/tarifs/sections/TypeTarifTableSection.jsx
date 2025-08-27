@@ -13,30 +13,30 @@ const TypeTarifTableSection = ({
   const columns = [
     {
       label: 'Code',
-      field: 'code',
+      field: 'codeTypeTarif',
       width: '120px',
       sortable: true,
       render: (typeTarif) => (
-        <span className="type-tarif-code">{typeTarif.code}</span>
+        <span className="type-tarif-code">{typeTarif.codeTypeTarif}</span>
       )
     },
     {
       label: 'Nom',
-      field: 'nom',
+      field: 'nomTypeTarif',
       width: '25%',
       sortable: true,
       render: (typeTarif) => (
-        <strong className="type-tarif-name">{typeTarif.nom}</strong>
+        <strong className="type-tarif-name">{typeTarif.nomTypeTarif}</strong>
       )
     },
     {
       label: 'Description',
-      field: 'description',
+      field: 'descriptionTypeTarif',
       width: 'auto',
       sortable: true,
       render: (typeTarif) => (
         <span className="type-tarif-description">
-          {typeTarif.description || <em>Aucune description</em>}
+          {typeTarif.descriptionTypeTarif || <em>Aucune description</em>}
         </span>
       )
     },

@@ -97,7 +97,7 @@ const TypeTarifGestion = ({
         setConfirmModal({
           isOpen: true,
           title: 'Suppression impossible',
-          message: `Le type de tarif "${typeTarif.nom}" ne peut pas être supprimé car il est utilisé dans ${checkResult.count} tarif(s).`,
+          message: `Le type de tarif "${typeTarif.nomTypeTarif}" ne peut pas être supprimé car il est utilisé dans ${checkResult.count} tarif(s).`,
           onConfirm: () => {
             setConfirmModal(prev => ({ ...prev, isOpen: false }));
           },
@@ -111,7 +111,7 @@ const TypeTarifGestion = ({
         setConfirmModal({
           isOpen: true,
           title: 'Confirmation de suppression',
-          message: `Êtes-vous sûr de vouloir supprimer le type de tarif "${typeTarif.nom}" ?`,
+          message: `Êtes-vous sûr de vouloir supprimer le type de tarif "${typeTarif.nomTypeTarif}" ?`,
           onConfirm: async () => {
             try {
               const result = await tarificationService.deleteTypeTarif(id);

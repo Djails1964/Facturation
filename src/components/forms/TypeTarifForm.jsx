@@ -29,7 +29,7 @@ const TypeTarifForm = ({
             type="text"
             id="typetarif-nom"
             name="nom"
-            value={typeTarif.nom}
+            value={typeTarif.nomTypeTarif}
             onChange={onChange}
             required
             placeholder=" "

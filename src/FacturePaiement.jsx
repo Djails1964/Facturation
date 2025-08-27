@@ -4,7 +4,7 @@ import { FiX } from 'react-icons/fi';
 import FactureService from './services/FactureService';
 import { formatMontant, formatDate } from './utils/formatters';
 
-function FacturePaiement({ factureId, onClose, onFacturePayee, position }) {
+function FacturePaiement({ idFacture, onClose, onFacturePayee, position }) {
     const [facture, setFacture] = useState(null);
     const [montantPaye, setMontantPaye] = useState('');
     const [montantPayeFormatted, setMontantPayeFormatted] = useState('');
@@ -23,7 +23,7 @@ function FacturePaiement({ factureId, onClose, onFacturePayee, position }) {
         
         const fetchFacture = async () => {
             try {
-                const factureData = await factureService.getFacture(factureId);
+                const factureData = await factureService.getFacture(idFacture);
                 if (factureData) {
                     setFacture(factureData);
                     
@@ -50,7 +50,7 @@ function FacturePaiement({ factureId, onClose, onFacturePayee, position }) {
         };
 
         fetchFacture();
-    }, [factureId, factureService]);
+    }, [idFacture, factureService]);
 
     // Gérer le changement du montant payé
     const handleMontantChange = (e) => {
@@ -113,12 +113,12 @@ function FacturePaiement({ factureId, onClose, onFacturePayee, position }) {
         
         try {
             // Appel au service pour enregistrer le paiement
-            const result = await factureService.enregistrerPaiement(factureId, paiementData);
+            const result = await factureService.enregistrerPaiement(idFacture, paiementData);
             
             if (result.success) {
                 // Notifier le parent que le paiement a été enregistré
                 if (onFacturePayee) {
-                    onFacturePayee(factureId, 'Paiement enregistré avec succès');
+                    onFacturePayee(idFacture, 'Paiement enregistré avec succès');
                 }
                 // Fermer la fenêtre
                 onClose();

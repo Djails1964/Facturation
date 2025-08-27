@@ -22,8 +22,8 @@ export class CopyModalHandler {
     /**
      * Point d'entrée principal
      */
-    async handle(factureId, event) {
-        console.log('🔄 Début copie facture ID:', factureId);
+    async handle(idFacture, event) {
+        console.log('🔄 Début copie facture ID:', idFacture);
         
         if (event) {
             event.stopPropagation();
@@ -34,7 +34,7 @@ export class CopyModalHandler {
         try {
             // Charger les données nécessaires
             console.log('🔄 Chargement des données pour la copie...');
-            const [factureData, nouveauNumero] = await this.loadCopyData(factureId, anchorRef);
+            const [factureData, nouveauNumero] = await this.loadCopyData(idFacture, anchorRef);
             
             if (!factureData) {
                 throw new Error('Erreur lors du chargement de la facture à copier');
@@ -66,7 +66,7 @@ export class CopyModalHandler {
     /**
      * Charger les données nécessaires pour la copie
      */
-    async loadCopyData(factureId, anchorRef) {
+    async loadCopyData(idFacture, anchorRef) {
         return await this.showLoading(
             {
                 title: "Préparation de la copie...",
@@ -76,7 +76,7 @@ export class CopyModalHandler {
                 position: 'smart'
             },
             async () => {
-                const factureData = await this.factureService.getFacture(factureId);
+                const factureData = await this.factureService.getFacture(idFacture);
                 const today = new Date();
                 const annee = today.getFullYear();
                 const nouveauNumero = await this.factureService.getProchainNumeroFacture(annee);

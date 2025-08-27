@@ -23,19 +23,19 @@ export class PaymentModalHandler {
     /**
      * Point d'entrée principal
      */
-    async handle(factureId, event) {
+    async handle(idFacture, event) {
         if (event) {
             event.stopPropagation();
         }
         
         // Stocker l'ID de la facture comme propriété de l'instance
-        this.currentFactureId = factureId;
+        this.currentFactureId = idFacture;
         
         const anchorRef = this.createAnchorRef(event);
         
         try {
             // Charger les données de la facture
-            const factureData = await this.loadFactureData(factureId, anchorRef);
+            const factureData = await this.loadFactureData(idFacture, anchorRef);
             
             if (!factureData) {
                 throw new Error('Erreur lors du chargement de la facture');
@@ -50,7 +50,7 @@ export class PaymentModalHandler {
             const paymentResult = await this.showPaymentModal(factureData, anchorRef);
             
             if (paymentResult.action === 'submit') {
-                await this.processPayment(factureId, paymentResult.data, factureData, anchorRef);
+                await this.processPayment(idFacture, paymentResult.data, factureData, anchorRef);
             }
             
         } catch (error) {
@@ -59,7 +59,7 @@ export class PaymentModalHandler {
             // Essayer de récupérer factureData même en cas d'erreur
             let factureData = null;
             try {
-                factureData = await this.factureService.getFacture(factureId);
+                factureData = await this.factureService.getFacture(idFacture);
             } catch (e) {
                 console.warn('Impossible de récupérer les données de facture pour l\'erreur');
             }
@@ -75,7 +75,7 @@ export class PaymentModalHandler {
     /**
      * Charger les données de la facture
      */
-    async loadFactureData(factureId, anchorRef) {
+    async loadFactureData(idFacture, anchorRef) {
         return await this.showLoading(
             {
                 title: "Chargement...",
@@ -84,7 +84,7 @@ export class PaymentModalHandler {
                 size: 'small',
                 position: 'smart'
             },
-            async () => await this.factureService.getFacture(factureId)
+            async () => await this.factureService.getFacture(idFacture)
         );
     }
 
@@ -451,7 +451,7 @@ export class PaymentModalHandler {
     /**
      * Traiter le paiement
      */
-    async processPayment(factureId, formData, factureData, anchorRef) {
+    async processPayment(idFacture, formData, factureData, anchorRef) {
         const montantPayeNum = parseFloat(formData.montantPaye);
         
         if (isNaN(montantPayeNum) || montantPayeNum <= 0) {
@@ -501,7 +501,7 @@ export class PaymentModalHandler {
         }
         
         // ✅ MODIFIÉ : Enregistrer le paiement via PaiementService au lieu de FactureService
-        await this.savePayment(factureId, formData, montantPayeNum, factureData, anchorRef);
+        await this.savePayment(idFacture, formData, montantPayeNum, factureData, anchorRef);
     }
 
     // Confirmation pour paiement partiel
@@ -541,11 +541,11 @@ export class PaymentModalHandler {
     }
 
     // ✅ MODIFIÉ : Afficher l'historique via FactureService (données) mais on pourrait aussi via PaiementService
-    async showHistoriquePaiements(factureId, anchorRef) {
+    async showHistoriquePaiements(idFacture, anchorRef) {
         try {
             // ✅ OPTION : On garde FactureService pour l'historique car c'est lié à une facture spécifique
             // Alternativement, on pourrait créer une méthode getPaiementsByFacture dans PaiementService
-            const paiements = await this.paiementService.getPaiementsParFacture(factureId);
+            const paiements = await this.paiementService.getPaiementsParFacture(idFacture);
             const historique = {
                 success: true,
                 paiements: paiements || []
@@ -654,7 +654,7 @@ export class PaymentModalHandler {
     /**
      * ✅ MODIFIÉ : Enregistrer le paiement via PaiementService
      */
-    async savePayment(factureId, formData, montantPayeNum, factureData, anchorRef) {
+    async savePayment(idFacture, formData, montantPayeNum, factureData, anchorRef) {
         try {
             const paiementResult = await this.showLoading(
                 {
@@ -667,7 +667,7 @@ export class PaymentModalHandler {
                 async () => {
                     // ✅ NOUVEAU : Utiliser PaiementService.createPaiement au lieu de FactureService.enregistrerPaiement
                     return await this.paiementService.createPaiement({
-                        factureId: factureId,                          // ID de la facture à associer
+                        idFacture: idFacture,                          // ID de la facture à associer
                         datePaiement: formData.datePaiement,           // Date du paiement
                         montantPaye: montantPayeNum,                   // Montant payé
                         methodePaiement: formData.methodePaiement || 'virement', // Méthode de paiement
@@ -678,7 +678,7 @@ export class PaymentModalHandler {
             
             if (paiementResult.success) {
                 // Récupérer les données fraîches de la facture après paiement
-                const factureDataUpdated = await this.factureService.getFacture(factureId);
+                const factureDataUpdated = await this.factureService.getFacture(idFacture);
                 
                 await this.showPaymentSuccess(formData, montantPayeNum, factureDataUpdated, paiementResult, anchorRef);
                 this.onSetNotification('Paiement enregistré avec succès', 'success');
@@ -692,7 +692,7 @@ export class PaymentModalHandler {
             
             let factureData = null;
             try {
-                factureData = await this.factureService.getFacture(factureId);
+                factureData = await this.factureService.getFacture(idFacture);
             } catch (e) {
                 console.warn('Impossible de récupérer les données de facture pour l\'erreur');
             }

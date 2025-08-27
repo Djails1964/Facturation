@@ -13,18 +13,18 @@ import {
     LOG_ACTIONS 
 } from '../../../constants/paiementConstants';
 
-export const usePaiementForm = ({ mode, paiementId, onRetourListe, onPaiementCreated }) => {
+export const usePaiementForm = ({ mode, idPaiement, onRetourListe, onPaiementCreated }) => {
     // Services
     const paiementService = new PaiementService();
     const factureService = new FactureService();
     
     // Navigation protection
     const { registerGuard, unregisterGuard } = useNavigationGuard();
-    const guardId = `paiement-form-${paiementId || 'new'}`;
+    const guardId = `paiement-form-${idPaiement || 'new'}`;
     
     // États de base
     const [paiement, setPaiement] = useState({
-        factureId: '',
+        idFacture: '',
         datePaiement: DateService.getTodayInputFormat(),
         montantPaye: '',
         methodePaiement: '',
@@ -69,7 +69,7 @@ export const usePaiementForm = ({ mode, paiementId, onRetourListe, onPaiementCre
     
     // Fonction pour obtenir les données du formulaire
     const getFormData = useCallback(() => ({
-        factureId: paiement.factureId,
+        idFacture: paiement.idFacture,
         datePaiement: paiement.datePaiement,
         montantPaye: paiement.montantPaye,
         methodePaiement: paiement.methodePaiement,
@@ -156,7 +156,7 @@ export const usePaiementForm = ({ mode, paiementId, onRetourListe, onPaiementCre
 
         // Paramètres d'entrée
         mode,
-        paiementId,
+        idPaiement,
         onRetourListe,
         onPaiementCreated,
         

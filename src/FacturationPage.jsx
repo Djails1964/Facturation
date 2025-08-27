@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import ParametresContent from './admin/ParametresContent';
 import ClientGestion from './ClientGestion';
 import FactureGestion from './components/factures/FactureGestion';
-import PaiementGestion from './PaiementGestion'; // ✅ NOUVEAU
+import PaiementGestion from './components/paiements/PaiementGestion'; // ✅ NOUVEAU
 import TarifGestion from './components/tarifs/TarifGestion';
 import DashboardWrapper from './DashboardWrapper';
 import GestionUtilisateurs from './admin/GestionUtilisateurs';
@@ -41,14 +41,14 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
     setActiveSection('clients');
   };
 
-  const handleFactureCreated = (factureId) => {
-    setFactureCreatedId(factureId);
+  const handleFactureCreated = (idFacture) => {
+    setFactureCreatedId(idFacture);
     setActiveSection('factures');
   };
 
   // ✅ NOUVEAU: Handler pour les paiements créés
-  const handlePaiementCreated = (paiementId) => {
-    setPaiementCreatedId(paiementId);
+  const handlePaiementCreated = (idPaiement) => {
+    setPaiementCreatedId(idPaiement);
     setActiveSection('paiements');
   };
 
@@ -129,7 +129,7 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
       case 'factures':
         return <FactureGestion
           section="liste"
-          factureId={factureCreatedId}
+          idFacture={factureCreatedId}
           onSectionChange={() => setFactureCreatedId(null)}
         />;
       
@@ -143,7 +143,7 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
       case 'paiements':
         return <PaiementGestion
           section="liste"
-          paiementId={paiementCreatedId}
+          idPaiement={paiementCreatedId}
           onSectionChange={() => setPaiementCreatedId(null)}
         />;
       

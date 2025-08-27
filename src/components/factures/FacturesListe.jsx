@@ -246,36 +246,6 @@ function FacturesListe({
                 </div>
             )}
             
-            {/* 
-            🎉 REFACTORISATION COMPLÈTE RÉALISÉE !
-            
-            ✅ CODE RÉDUIT DE ~2000 LIGNES À ~300 LIGNES !
-            
-            ✅ HANDLERS EXTERNALISÉS:
-            - EmailModalHandler.js (~400 lignes)
-            - DeleteModalHandler.js (~200 lignes) 
-            - PrintModalHandler.js (~150 lignes)
-            - PaymentModalHandler.js (~400 lignes)
-            - CopyModalHandler.js (~200 lignes)
-            
-            ✅ COMPOSANTS PARTAGÉS:
-            - ModalComponents.js (réutilisables)
-            - modalSystem.js (système unifié)
-            - useFactureModals.js (hook centralisé)
-            
-            ✅ AVANTAGES:
-            ✓ Code maintenable et modulaire
-            ✓ Réutilisabilité maximale
-            ✓ Tests unitaires facilitées 
-            ✓ Debugging simplifié
-            ✓ Mêmes fonctionnalités et styles
-            ✓ Performance préservée
-            ✓ Positionnement intelligent conservé
-            ✓ Drag & drop conservé
-            ✓ Calcul automatique des retards (plus de mise à jour manuelle)
-            
-            🚀 RÉSULTAT: Architecture propre et scalable !
-            */}
         </div>
     );
 }

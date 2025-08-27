@@ -76,14 +76,14 @@ const TarifFormDataSection = ({
                 >
                     <option value="">Sélectionner un type de tarif</option>
                     {typesTarifs.map(typeTarif => (
-                        <option key={typeTarif.id} value={typeTarif.id}>
-                            {typeTarif.nom}
+                        <option key={typeTarif.idTypeTarif} value={typeTarif.idTypeTarif}>
+                            {typeTarif.nomTypeTarif}
                         </option>
                     ))}
                 </select>
                 <label htmlFor="tarif-type" className="required">Type de tarif</label>
-                {validationErrors.typeTarifId && (
-                    <span className="error-message">{validationErrors.typeTarifId}</span>
+                {validationErrors.idTypeTarif && (
+                    <span className="error-message">{validationErrors.idTypeTarif}</span>
                 )}
             </div>
 
@@ -93,18 +93,18 @@ const TarifFormDataSection = ({
                     type="number"
                     id="tarif-prix"
                     name="prix"
-                    value={tarif.prix}
+                    value={tarif.prixTypeTarif}
                     onChange={onInputChange}
                     required
                     min="0"
                     step="0.01"
                     placeholder=" "
                     disabled={isReadOnly}
-                    className={validationErrors.prix ? 'error' : ''}
+                    className={validationErrors.prixTypeTarif ? 'error' : ''}
                 />
                 <label htmlFor="tarif-prix" className="required">Prix (CHF)</label>
-                {validationErrors.prix && (
-                    <span className="error-message">{validationErrors.prix}</span>
+                {validationErrors.prixTypeTarif && (
+                    <span className="error-message">{validationErrors.prixTypeTarif}</span>
                 )}
             </div>
 
@@ -114,11 +114,11 @@ const TarifFormDataSection = ({
                     type="date"
                     id="tarif-date-debut"
                     name="date_debut"
-                    value={tarif.date_debut}
+                    value={tarif.dateDebutTarifStandard || ''}
                     onChange={onInputChange}
                     required
                     disabled={isReadOnly}
-                    className={validationErrors.date_debut ? 'error' : ''}
+                    className={validationErrors.dateDebutTarifStandard ? 'error' : ''}
                 />
                 {!isReadOnly && (
                     <CalendarIcon 
@@ -127,8 +127,8 @@ const TarifFormDataSection = ({
                     />
                 )}
                 <label htmlFor="tarif-date-debut" className="required">Date de début</label>
-                {validationErrors.date_debut && (
-                    <span className="error-message">{validationErrors.date_debut}</span>
+                {validationErrors.dateDebutTarifStandard && (
+                    <span className="error-message">{validationErrors.dateDebutTarifStandard}</span>
                 )}
             </div>
 
@@ -138,10 +138,10 @@ const TarifFormDataSection = ({
                     type="date"
                     id="tarif-date-fin"
                     name="date_fin"
-                    value={tarif.date_fin || ''}
+                    value={tarif.dateFinTarifStandard || ''}
                     onChange={onInputChange}
                     disabled={isReadOnly}
-                    className={validationErrors.date_fin ? 'error' : ''}
+                    className={validationErrors.dateFinTarifStandard ? 'error' : ''}
                 />
                 {!isReadOnly && (
                     <CalendarIcon 
@@ -150,8 +150,8 @@ const TarifFormDataSection = ({
                     />
                 )}
                 <label htmlFor="tarif-date-fin">Date de fin (optionnel)</label>
-                {validationErrors.date_fin && (
-                    <span className="error-message">{validationErrors.date_fin}</span>
+                {validationErrors.dateFinTarifStandard && (
+                    <span className="error-message">{validationErrors.dateFinTarifStandard}</span>
                 )}
             </div>
             

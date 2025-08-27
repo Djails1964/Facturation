@@ -27,11 +27,11 @@ export class EmailModalHandler {
     /**
      * Point d'entrée principal
      */
-    async handle(factureId, event) {
+    async handle(idFacture, event) {
         const anchorRef = this.createAnchorRef(event);
         
         try {
-            const [factureData, pdfResult] = await this.loadFactureData(factureId, anchorRef);
+            const [factureData, pdfResult] = await this.loadFactureData(idFacture, anchorRef);
             
             if (!factureData) {
                 throw new Error('Erreur lors du chargement de la facture');
@@ -45,7 +45,7 @@ export class EmailModalHandler {
             const emailResult = await this.showEmailModal(factureData, pdfResult, anchorRef);
             
             if (emailResult.action === 'submit') {
-                await this.handleSubmit(factureId, emailResult.data, factureData, anchorRef);
+                await this.handleSubmit(idFacture, emailResult.data, factureData, anchorRef);
             }
 
         } catch (error) {
@@ -57,7 +57,7 @@ export class EmailModalHandler {
     /**
      * Chargement des données - SIMPLIFIÉ avec composants partagés
      */
-    async loadFactureData(factureId, anchorRef) {
+    async loadFactureData(idFacture, anchorRef) {
         return await this.showLoading(
             {
                 title: "Préparation de l'email...",
@@ -67,11 +67,11 @@ export class EmailModalHandler {
                 position: 'smart'
             },
             async () => {
-                const facture = await this.factureService.getFacture(factureId);
+                const facture = await this.factureService.getFacture(idFacture);
                 
                 let pdfResult = null;
                 try {
-                    pdfResult = await this.factureService.getFactureUrl(factureId);
+                    pdfResult = await this.factureService.getFactureUrl(idFacture);
                     console.log(`✅ Résultat getFactureUrl:`, pdfResult);
                 } catch (error) {
                     console.log(`❌ Erreur getFactureUrl: ${error.message}`);
@@ -343,7 +343,7 @@ export class EmailModalHandler {
     /**
      * Soumission - SIMPLIFIÉ avec composants partagés pour les erreurs
      */
-    async handleSubmit(factureId, formData, factureData, anchorRef) {
+    async handleSubmit(idFacture, formData, factureData, anchorRef) {
         if (!formData.to || !formData.subject || !formData.message) {
             await this.showValidationError(anchorRef);
             return;
@@ -373,7 +373,7 @@ export class EmailModalHandler {
                     size: 'small',
                     position: 'smart'
                 },
-                async () => await this.factureService.envoyerFactureParEmail(factureId, emailDataToSend)
+                async () => await this.factureService.envoyerFactureParEmail(idFacture, emailDataToSend)
             );
             
             if (sendResult.success) {
@@ -383,7 +383,7 @@ export class EmailModalHandler {
             }
             
         } catch (sendError) {
-            await this.handleSendError(sendError, factureId, anchorRef);
+            await this.handleSendError(sendError, idFacture, anchorRef);
         }
     }
 
@@ -577,7 +577,7 @@ export class EmailModalHandler {
     /**
      * Gestion erreur envoi
      */
-    async handleSendError(sendError, factureId, anchorRef) {
+    async handleSendError(sendError, idFacture, anchorRef) {
         const errorResult = await this.showCustom({
             title: "Erreur d'envoi",
             content: ModalComponents.createWarningSection("", sendError.message, "error"),
@@ -600,7 +600,7 @@ export class EmailModalHandler {
         
         if (errorResult.action === 'retry') {
             setTimeout(() => {
-                this.handle(factureId, null);
+                this.handle(idFacture, null);
             }, 100);
         }
     }

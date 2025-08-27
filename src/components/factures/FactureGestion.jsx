@@ -6,7 +6,7 @@ import ClientService from '../../services/ClientService';
 
 function FactureGestion({ 
     section = 'liste', 
-    factureId = null, 
+    idFacture = null, 
     onFactureCreated = null, 
     onSectionChange = null,
     initialFilter = {}, 
@@ -14,7 +14,7 @@ function FactureGestion({
 }) {
     // États pour gérer la navigation entre les différentes vues
     const [activeView, setActiveView] = useState(section);
-    const [selectedFactureId, setSelectedFactureId] = useState(factureId);
+    const [selectedFactureId, setSelectedFactureId] = useState(idFacture);
     const [notification, setNotification] = useState({ message: '', type: '' });
     
     // États pour la gestion des clients
@@ -32,10 +32,10 @@ function FactureGestion({
 
     // Effet pour mettre à jour l'ID de la facture sélectionnée
     useEffect(() => {
-        if (factureId !== null) {
-            setSelectedFactureId(factureId);
+        if (idFacture !== null) {
+            setSelectedFactureId(idFacture);
         }
-    }, [factureId]);
+    }, [idFacture]);
 
     // Effet pour notifier le parent du changement de section
     useEffect(() => {
@@ -66,9 +66,9 @@ function FactureGestion({
     }, []);
 
     // Gestion du retour à la liste
-    const handleRetourListe = (factureId = null, modified = false, message = '', type = '') => {
-        if (factureId) {
-            setSelectedFactureId(factureId);
+    const handleRetourListe = (idFacture = null, modified = false, message = '', type = '') => {
+        if (idFacture) {
+            setSelectedFactureId(idFacture);
         }
         
         if (message) {
@@ -79,27 +79,31 @@ function FactureGestion({
     };
 
     // Gestion de la création de facture
-    const handleFactureCreated = (factureId, message = 'Facture créée avec succès') => {
-        setSelectedFactureId(factureId);
+    const handleFactureCreated = (idFacture, message = 'Facture créée avec succès') => {
+        setSelectedFactureId(idFacture);
         setNotification({ message, type: 'success' });
         setActiveView('liste');
         
         // Si un gestionnaire externe a été fourni, l'appeler
         if (onFactureCreated) {
-            onFactureCreated(factureId);
+            onFactureCreated(idFacture);
         }
     };
 
     // Gestion de la modification de facture
-    const handleModifierFacture = (factureId) => {
-        setSelectedFactureId(factureId);
+    const handleModifierFacture = (idFacture) => {
+        setSelectedFactureId(idFacture);
         setActiveView('modifier');
     };
 
     // Gestion de l'affichage de facture
-    const handleAfficherFacture = (factureId) => {
-        setSelectedFactureId(factureId);
+        const handleAfficherFacture = (idFacture) => {
+        console.log('🔍 FactureGestion.handleAfficherFacture - ID reçu:', idFacture);
+        console.log('🔍 FactureGestion.handleAfficherFacture - Type:', typeof idFacture);
+        setSelectedFactureId(idFacture);
+        console.log('🔍 FactureGestion - selectedFactureId défini à:', idFacture);
         setActiveView('afficher');
+        console.log('🔍 FactureGestion - activeView défini à: afficher');
     };
 
     // Passer à la vue de création
@@ -130,7 +134,7 @@ function FactureGestion({
                 return (
                     <FactureForm 
                         mode={FORM_MODES.EDIT}
-                        factureId={selectedFactureId}
+                        idFacture={selectedFactureId}
                         onRetourListe={handleRetourListe}
                         clients={clients}
                         clientsLoading={clientsLoading}
@@ -138,10 +142,11 @@ function FactureGestion({
                     />
                 );
             case 'afficher':
+                console.log('🔍 FactureGestion RENDU afficher - selectedFactureId:', selectedFactureId);
                 return (
                     <FactureForm 
                         mode={FORM_MODES.VIEW}
-                        factureId={selectedFactureId}
+                        idFacture={selectedFactureId}
                         onRetourListe={handleRetourListe}
                         clients={clients}
                         clientsLoading={clientsLoading}

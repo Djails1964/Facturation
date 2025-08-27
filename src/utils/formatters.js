@@ -312,6 +312,115 @@ export const isEtatValide = (etat) => {
 };
 
 /**
+ * ✅ NOUVEAU: Calcule l'état de validité d'une entité basé sur ses dates de début et fin
+ * Retourne UNIQUEMENT 'valide' ou 'invalide' selon les critères
+ * @param {Date|string} dateDebut - Date de début de validité
+ * @param {Date|string} dateFin - Date de fin de validité (optionnelle)
+ * @param {Date|string} dateComparaison - Date de comparaison (par défaut: aujourd'hui)
+ * @returns {Object} Objet avec état et classe CSS { etat: 'valide'|'invalide', classe: string }
+ */
+export const getEtatValidite = (dateDebut, dateFin = null, dateComparaison = null) => {
+    // Date de comparaison (par défaut aujourd'hui)
+    const dateRef = dateComparaison ? new Date(dateComparaison) : new Date();
+    dateRef.setHours(0, 0, 0, 0);
+    
+    // Si pas de date de début, considéré comme valide
+    if (!dateDebut) {
+        return {
+            etat: 'valide',
+            classe: 'etat-confirme'
+        };
+    }
+    
+    const debut = new Date(dateDebut);
+    debut.setHours(0, 0, 0, 0);
+    
+    // Gestion de la date de fin
+    let fin = null;
+    if (dateFin) {
+        fin = new Date(dateFin);
+        fin.setHours(0, 0, 0, 0);
+    }
+    
+    // Logique de validation
+    // Valide si : dateDebut <= dateRef ET (dateFin est null OU dateFin >= dateRef)
+    const debutValide = debut <= dateRef;
+    const finValide = !fin || fin >= dateRef;
+    
+    if (debutValide && finValide) {
+        return {
+            etat: 'valide',
+            label: 'Valide',
+            classe: 'etat-confirme'
+        };
+    } else {
+        return {
+            etat: 'invalide',
+            label: 'Invalide',
+            classe: 'etat-annulee'
+        };
+    }
+};
+
+/**
+ * ✅ NOUVEAU: Calcule l'état détaillé d'une entité avec distinction futur/expiré
+ * Version détaillée pour l'affichage dans les tables
+ * @param {Date|string} dateDebut - Date de début de validité
+ * @param {Date|string} dateFin - Date de fin de validité (optionnelle)
+ * @param {Date|string} dateComparaison - Date de comparaison (par défaut: aujourd'hui)
+ * @returns {Object} Objet avec état détaillé et classe CSS
+ */
+export const getEtatValiditeDetaille = (dateDebut, dateFin = null, dateComparaison = null) => {
+    // Date de comparaison (par défaut aujourd'hui)
+    const dateRef = dateComparaison ? new Date(dateComparaison) : new Date();
+    dateRef.setHours(0, 0, 0, 0);
+    
+    // Si pas de date de début, considéré comme valide
+    if (!dateDebut) {
+        return {
+            etat: 'valide',
+            label: 'Actif',
+            classe: 'etat-confirme'
+        };
+    }
+    
+    const debut = new Date(dateDebut);
+    debut.setHours(0, 0, 0, 0);
+    
+    // Gestion de la date de fin
+    let fin = null;
+    if (dateFin) {
+        fin = new Date(dateFin);
+        fin.setHours(0, 0, 0, 0);
+    }
+    
+    // Cas 1: Date de début dans le futur
+    if (debut > dateRef) {
+        return {
+            etat: 'futur',
+            label: 'À venir',
+            classe: 'etat-attente'
+        };
+    }
+    
+    // Cas 2: Date de fin dépassée
+    if (fin && fin < dateRef) {
+        return {
+            etat: 'expire',
+            label: 'Expiré',
+            classe: 'etat-annulee'
+        };
+    }
+    
+    // Cas 3: Actuellement valide
+    return {
+        etat: 'valide',
+        label: 'Actif',
+        classe: 'etat-confirme'
+    };
+};
+
+/**
  * Conversion d'un montant en lettres (français)
  * @param {number} montant - Montant à convertir
  * @returns {string} Montant en toutes lettres
@@ -508,6 +617,10 @@ const formatters = {
     isEtatEnCours,
     isEtatAnnule,
     isEtatValide,
+    
+    // Fonctions de validité temporelle
+    getEtatValidite,
+    getEtatValiditeDetaille,
     
     // Fonctions avancées
     montantEnLettres,

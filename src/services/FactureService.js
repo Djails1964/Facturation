@@ -240,27 +240,27 @@ class FactureService {
         const facturesNormalisees = this.normalizeFactures(facturesData);
 
         const facturesTriees = facturesNormalisees.sort((a, b) => {
-          const numA = a.numero_facture ? parseInt(a.numero_facture.split('.')[0]) : 0;
-          const numB = b.numero_facture ? parseInt(b.numero_facture.split('.')[0]) : 0;
+          const numA = a.numeroFacture ? parseInt(a.numeroFacture.split('.')[0]) : 0;
+          const numB = b.numeroFacture ? parseInt(b.numeroFacture.split('.')[0]) : 0;
           return numB - numA;
         });
         
         // Adaptation des données avec état de base
         const facturesAdaptees = facturesTriees.map(facture => ({
-          id: facture.id_facture,
-          numeroFacture: facture.numero_facture,
+          idFacture: facture.idFacture,
+          numeroFacture: facture.numeroFacture,
           client: {
-            id: facture.id_client,
+            idClient: facture.idClient,
             prenom: facture.prenom,
             nom: facture.nom,
             email: facture.email || null
           },
-          montantTotal: parseFloat(facture.montant_total),
+          montantTotal: parseFloat(facture.montantTotal),
           etat: this._determinerEtatFacture(facture), // État de base uniquement
-          date_facture: facture.date_facture,
-          dateFacture: facture.date_facture,
-          date_paiement: facture.date_paiement,
-          date_annulation: facture.date_annulation,
+          date_facture: facture.dateFacture,
+          dateFacture: facture.dateFacture,
+          date_paiement: facture.datePaiement,
+          date_annulation: facture.dateAnnulation,
           // Propriétés booléennes normalisées
           est_imprimee: toBoolean(facture.est_imprimee),
           est_envoyee: toBoolean(facture.est_envoyee),
@@ -289,104 +289,121 @@ class FactureService {
   }
 
   async getFacture(id) {
-      try {
-          console.log('Récupération de la facture:', id);
-          if (id in this._cacheFacture) {
-              console.log('Facture trouvée dans le cache:', id);
-              // ✅ Enrichir la facture du cache avec l'état d'affichage actuel
-              const factureCache = this._cacheFacture[id];
-              factureCache.etatAffichage = await this._determinerEtatAffichage(factureCache);
-              return factureCache;
-          }
-          
-          const response = await api.get(`facture-api.php?id=${id}`);
-          console.log('Réponse de l\'API:', response);
-          
-          if (response && response.success && response.facture) {
-              const factureData = response.facture;
-              
-              // Normalisation préventive des booléens
-              const factureNormalisee = this.normalizeFacture(factureData);
-              
-              // Gestion du chemin du document avec URL correcte
-              let documentPath = null;
-              if (factureNormalisee.factfilename) {
-                  try {
-                      const outputDirResponse = await api.get('parametre-api.php?nomParametre=OutputDir&groupe=Facture&sGroupe=Chemin');
-                      
-                      let outputDir = 'storage/factures';
-                      if (outputDirResponse && outputDirResponse.success) {
-                          outputDir = outputDirResponse.parametre?.Valeur_parametre || outputDir;
-                      }
-                      
-                      documentPath = backendUrl(`${outputDir}/${factureNormalisee.factfilename}`);
-                      console.log('Chemin du document de facture:', documentPath);
-                  } catch (e) {
-                      console.warn('Erreur lors de la récupération du chemin du document:', e);
-                  }
-              }
-
-              const factureFormattee = {
-                  id: factureNormalisee.id_facture || '',
-                  numeroFacture: factureNormalisee.numero_facture || '',
-                  dateFacture: factureNormalisee.date_facture || '',
-                  date_facture: factureNormalisee.date_facture || '', // ✅ AJOUT: Champ requis pour le calcul de retard
-                  clientId: factureNormalisee.id_client,
-                  totalFacture: parseFloat(factureNormalisee.montant_total || 0),
-                  ristourne: parseFloat(factureNormalisee.ristourne || 0),
-                  totalAvecRistourne: parseFloat(factureNormalisee.montant_total || 0) - parseFloat(factureNormalisee.ristourne || 0),
-                  
-                  // Données des paiements multiples
-                  montantPayeTotal: parseFloat(factureNormalisee.montant_paye_total || 0),
-                  montantRestant: parseFloat(factureNormalisee.montant_restant || 0),
-                  nbPaiements: parseInt(factureNormalisee.nb_paiements || 0),
-                  dateDernierPaiement: factureNormalisee.date_dernier_paiement || null,
-                  
-                  lignes: (factureNormalisee.lignes || []).map(ligne => ({
-                      id: ligne.id_ligne,
-                      description: ligne.description,
-                      unite: ligne.unite,
-                      quantite: parseFloat(ligne.quantite || 0),
-                      prixUnitaire: parseFloat(ligne.prix_unitaire || 0),
-                      total: parseFloat(ligne.total_ligne || 0),
-                      serviceId: ligne.service_id || null,
-                      uniteId: ligne.unite_id || null,
-                      serviceType: ligne.service_type || ligne.serviceType || null,
-                      noOrdre: ligne.no_ordre || null,
-                      descriptionDates: ligne.description_dates || null
-                  })),
-                  etat: this._determinerEtatBase(factureNormalisee), // État de base uniquement
-                  documentPath: documentPath,
-                  factfilename: factureNormalisee.factfilename || null,
-                  date_annulation: factureNormalisee.date_annulation || null,
-                  date_paiement: factureNormalisee.date_paiement || null,
-                  
-                  // Propriétés booléennes normalisées
-                  est_imprimee: toBoolean(factureNormalisee.est_imprimee),
-                  est_envoyee: toBoolean(factureNormalisee.est_envoyee),
-                  est_annulee: toBoolean(factureNormalisee.est_annulee),
-                  est_payee: toBoolean(factureNormalisee.est_payee),
-                  client: factureNormalisee.nom ? {
-                      id: factureNormalisee.id_client,
-                      prenom: factureNormalisee.prenom,
-                      nom: factureNormalisee.nom,
-                      email: factureNormalisee.email || null,
-                  } : null
-              };
-              
-              // ✅ ENRICHISSEMENT AUTOMATIQUE avec état d'affichage calculé dynamiquement
-              factureFormattee.etatAffichage = await this._determinerEtatAffichage(factureFormattee);
-              
-              console.log(`🔍 Facture ${factureFormattee.numeroFacture} - État de base: ${factureFormattee.etat}, État d'affichage: ${factureFormattee.etatAffichage}`);
-              
-              this._cacheFacture[id] = factureFormattee;
-              return factureFormattee;
-          }
-          return null;
-      } catch (error) {
-          console.error(`Erreur lors de la récupération de la facture ${id}:`, error);
-          return null;
+    try {
+      console.log('Récupération de la facture:', id);
+      if (id in this._cacheFacture) {
+          console.log('Facture trouvée dans le cache:', id);
+          // ✅ Enrichir la facture du cache avec l'état d'affichage actuel
+          const factureCache = this._cacheFacture[id];
+          factureCache.etatAffichage = await this._determinerEtatAffichage(factureCache);
+          return factureCache;
       }
+      
+      const response = await api.get(`facture-api.php?id=${id}`);
+      console.log('Réponse de l\'API:', response);
+      
+      if (response && response.success && response.facture) {
+          const factureData = response.facture;
+          
+          // ✅ AJOUT: Debug des données brutes de l'API
+          console.log('🔍 Données brutes de l\'API facture:', factureData);
+          console.log('🔍 Clés disponibles dans factureData:', Object.keys(factureData));
+          console.log('🔍 Valeurs importantes:', {
+            idFacture: factureData.idFacture,
+            numeroFacture: factureData.numeroFacture,
+            dateFacture: factureData.dateFacture,
+            id_client: factureData.id_client,
+            idClient: factureData.idClient,
+            montant_total: factureData.montant_total,
+            prenom: factureData.prenom,
+            nom: factureData.nom
+          });
+          
+          // Normalisation préventive des booléens
+          const factureNormalisee = this.normalizeFacture(factureData);
+          
+          // Gestion du chemin du document avec URL correcte
+          let documentPath = null;
+          if (factureNormalisee.factfilename) {
+              try {
+                  const outputDirResponse = await api.get('parametre-api.php?nomParametre=OutputDir&groupe=Facture&sGroupe=Chemin');
+                  
+                  let outputDir = 'storage/factures';
+                  if (outputDirResponse && outputDirResponse.success) {
+                      outputDir = outputDirResponse.parametre?.Valeur_parametre || outputDir;
+                  }
+                  
+                  documentPath = backendUrl(`${outputDir}/${factureNormalisee.factfilename}`);
+                  console.log('Chemin du document de facture:', documentPath);
+              } catch (e) {
+                  console.warn('Erreur lors de la récupération du chemin du document:', e);
+              }
+          }
+
+          const factureFormattee = {
+              // ✅ CORRECTION: Essayer différentes variantes de noms de champs
+              idFacture: factureNormalisee.idFacture || factureNormalisee.id_facture || '',
+              numeroFacture: factureNormalisee.numeroFacture || factureNormalisee.numero_facture || '',
+              dateFacture: factureNormalisee.dateFacture || factureNormalisee.date_facture || '',
+              idClient: factureNormalisee.idClient || factureNormalisee.id_client,
+              totalFacture: parseFloat(factureNormalisee.montant_total || 0),
+              ristourne: parseFloat(factureNormalisee.ristourne || 0),
+              totalAvecRistourne: parseFloat(factureNormalisee.montant_total || 0) - parseFloat(factureNormalisee.ristourne || 0),
+              
+              // Données des paiements multiples
+              montantPayeTotal: parseFloat(factureNormalisee.montantPayeTotal || 0),
+              montantRestant: parseFloat(factureNormalisee.montantRestant || 0),
+              nbPaiements: parseInt(factureNormalisee.nbPaiements || 0),
+              dateDernierPaiement: factureNormalisee.dateDernierPaiement || null,
+              
+              lignes: (factureNormalisee.lignes || []).map(ligne => ({
+                  id: ligne.id_ligne,
+                  description: ligne.description,
+                  unite: ligne.unite,
+                  quantite: parseFloat(ligne.quantite || 0),
+                  prixUnitaire: parseFloat(ligne.prix_unitaire || 0),
+                  total: parseFloat(ligne.total_ligne || 0),
+                  serviceId: ligne.service_id || null,
+                  uniteId: ligne.unite_id || null,
+                  serviceType: ligne.service_type || ligne.serviceType || null,
+                  noOrdre: ligne.no_ordre || null,
+                  descriptionDates: ligne.description_dates || null
+              })),
+              etat: this._determinerEtatBase(factureNormalisee), // État de base uniquement
+              documentPath: documentPath,
+              factfilename: factureNormalisee.factfilename || null,
+              date_annulation: factureNormalisee.date_annulation || null,
+              date_paiement: factureNormalisee.date_paiement || null,
+              
+              // Propriétés booléennes normalisées
+              est_imprimee: toBoolean(factureNormalisee.est_imprimee),
+              est_envoyee: toBoolean(factureNormalisee.est_envoyee),
+              est_annulee: toBoolean(factureNormalisee.est_annulee),
+              est_payee: toBoolean(factureNormalisee.est_payee),
+              client: factureNormalisee.nom ? {
+                  id: factureNormalisee.id_client,
+                  prenom: factureNormalisee.prenom,
+                  nom: factureNormalisee.nom,
+                  email: factureNormalisee.email || null,
+              } : null
+          };
+          
+          // ✅ AJOUT: Debug des données formatées
+          console.log('🔍 Données formatées pour le frontend:', factureFormattee);
+          
+          // ✅ ENRICHISSEMENT AUTOMATIQUE avec état d'affichage calculé dynamiquement
+          factureFormattee.etatAffichage = await this._determinerEtatAffichage(factureFormattee);
+          
+          console.log(`🔍 Facture ${factureFormattee.numeroFacture} - État de base: ${factureFormattee.etat}, État d'affichage: ${factureFormattee.etatAffichage}`);
+          
+          this._cacheFacture[id] = factureFormattee;
+          return factureFormattee;
+      }
+      return null;
+    } catch (error) {
+      console.error(`Erreur lors de la récupération de la facture ${id}:`, error);
+      return null;
+    }
   }
 
   async getProchainNumeroFacture(annee) {
@@ -417,7 +434,7 @@ class FactureService {
         this._clearCache();
         return {
           success: true,
-          id: response.factureId,
+          id: response.idFacture,
           message: response.message || 'Facture créée avec succès'
         };
       } else {
@@ -499,9 +516,9 @@ class FactureService {
     }
   }
 
-  async envoyerFactureParEmail(factureId, emailData) {
+  async envoyerFactureParEmail(idFacture, emailData) {
     try {
-        const response = await api.post(`facture-api.php?envoyer&id=${factureId}`, emailData);
+        const response = await api.post(`facture-api.php?envoyer&id=${idFacture}`, emailData);
         
         console.log('Réponse de l\'API pour l\'envoi par email:', response);
         
@@ -526,7 +543,7 @@ class FactureService {
             throw new Error(response?.message || 'Erreur lors de l\'envoi de la facture par email');
         }
     } catch (error) {
-        console.error(`Erreur lors de l'envoi par email de la facture ${factureId}:`, error);
+        console.error(`Erreur lors de l'envoi par email de la facture ${idFacture}:`, error);
         throw error;
     }
   }
@@ -543,7 +560,7 @@ class FactureService {
               return {
                   success: true,
                   message: response.message || 'Paiement enregistré avec succès',
-                  paiementId: response.paiementId,
+                  idPaiement: response.idPaiement,
                   numeroPaiement: response.numeroPaiement
               };
           } else {
@@ -558,9 +575,9 @@ class FactureService {
   /**
    * Récupère l'historique des paiements d'une facture
    */
-  async getHistoriquePaiements(factureId) {
+  async getHistoriquePaiements(idFacture) {
       try {
-          const response = await api.get(`facture-api.php?historiquePaiements&id=${factureId}`);
+          const response = await api.get(`facture-api.php?historiquePaiements&id=${idFacture}`);
           
           if (response && response.success) {
               return {
@@ -571,7 +588,7 @@ class FactureService {
               throw new Error(response?.message || 'Erreur lors de la récupération de l\'historique');
           }
       } catch (error) {
-          console.error(`Erreur lors de la récupération de l'historique des paiements pour la facture ${factureId}:`, error);
+          console.error(`Erreur lors de la récupération de l'historique des paiements pour la facture ${idFacture}:`, error);
           throw error;
       }
   }
@@ -579,25 +596,25 @@ class FactureService {
   /**
    * Supprime un paiement (annulation)
    */
-  async supprimerPaiement(paiementId) {
+  async supprimerPaiement(idPaiement) {
       try {
-          const response = await api.delete(`facture-api.php?supprimerPaiement&id=${paiementId}`);
+          const response = await api.delete(`facture-api.php?supprimerPaiement&id=${idPaiement}`);
           
           if (response && response.success) {
-              if (response.factureId) {
-                  delete this._cacheFacture[response.factureId];
+              if (response.idFacture) {
+                  delete this._cacheFacture[response.idFacture];
               }
               
               return {
                   success: true,
                   message: response.message || 'Paiement supprimé avec succès',
-                  factureId: response.factureId
+                  idFacture: response.idFacture
               };
           } else {
               throw new Error(response?.message || 'Erreur lors de la suppression du paiement');
           }
       } catch (error) {
-          console.error(`Erreur lors de la suppression du paiement ${paiementId}:`, error);
+          console.error(`Erreur lors de la suppression du paiement ${idPaiement}:`, error);
           throw error;
       }
   }

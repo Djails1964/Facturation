@@ -22,10 +22,27 @@ function FactureHeader({
   mode = 'view',
   etat = '',
   etatAffichage = '', // ✅ NOUVEAU: Paramètre pour l'état d'affichage
-  factureId = null,
+  idFacture = null,
   factureData = null
 }) {
-    console.log(`[HEADER] FactureHeader initialisé - mode: ${mode}, état: ${etat}, etatAffichage: ${etatAffichage}, factureId: ${factureId}`);
+    // ✅ AJOUT: Debug détaillé des props reçues
+    console.log(`[HEADER] FactureHeader initialisé - mode: ${mode}, état: ${etat}, etatAffichage: ${etatAffichage}, idFacture: ${idFacture}`);
+    console.log(`[HEADER] FactureHeader initialisé - numeroFacture: ${numeroFacture}, dateFacture: ${dateFacture}, clientId: ${clientId}`);
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[HEADER] Props complètes:', {
+        numeroFacture,
+        dateFacture,
+        clientId,
+        clients: clients?.length,
+        readOnly,
+        mode,
+        etat,
+        etatAffichage,
+        idFacture,
+        factureData
+      });
+    }
 
   // États existants
   const [numeroFactureFocused, setNumeroFactureFocused] = useState(false);
@@ -40,6 +57,18 @@ function FactureHeader({
 
   // ✅ CORRECTION: Déterminer l'état à utiliser pour l'affichage
   const etatAUtiliser = etatAffichage || etat;
+
+  // ✅ AJOUT: Effect pour surveiller les changements de props
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[HEADER] Props mises à jour:', {
+        numeroFacture,
+        dateFacture,
+        clientId,
+        hasData: !!(numeroFacture || dateFacture || clientId)
+      });
+    }
+  }, [numeroFacture, dateFacture, clientId]);
 
   // Gestion des changements (existants)
   const handleNumeroFactureChange = (e) => {
@@ -98,6 +127,11 @@ function FactureHeader({
   const getClientInputClass = () => {
     return `facture-header-input ${clientId || clientFocused ? 'focused' : ''}`;
   };
+
+  // ✅ AJOUT: Affichage conditionnel pour debug
+  if (process.env.NODE_ENV === 'development' && mode === 'view' && !numeroFacture && !dateFacture) {
+    console.warn('[HEADER] Mode VIEW sans données - possible problème de timing');
+  }
 
   return (
     <div className="facture-header-container">

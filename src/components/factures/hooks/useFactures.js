@@ -78,9 +78,9 @@ export const useFactures = (nouvelleFactureId, factureModified, onResetFactureMo
     }, []);
 
     // Fonction pour sélectionner/désélectionner une facture
-    const handleSelectionFacture = useCallback((factureId) => {
+    const handleSelectionFacture = useCallback((idFacture) => {
         setFactureSelectionnee(prevId => {
-            const newId = prevId === factureId ? null : factureId;
+            const newId = prevId === idFacture ? null : idFacture;
             console.log('🎯 Sélection facture:', prevId, '→', newId);
             return newId;
         });

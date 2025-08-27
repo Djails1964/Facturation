@@ -11,7 +11,7 @@ export const usePaiementFormLogic = (formState) => {
     const {
         paiement, setPaiement, factures, setFactures, factureSelectionnee, setFactureSelectionnee,
         logsInfo, setLogsInfo, isLoading, setIsLoading, error, setError, logsLoading, setLogsLoading,
-        facturesLoading, setFacturesLoading, isCreate, isEdit, mode, paiementId,
+        facturesLoading, setFacturesLoading, isCreate, isEdit, mode, idPaiement,
         paiementService, factureService, setIsInitialLoadDone, setIsFullyInitialized,
         getFormData, setInitialFormData
     } = formState;
@@ -72,9 +72,9 @@ export const usePaiementFormLogic = (formState) => {
     // Chargement initial
     useEffect(() => {
         const loadData = async () => {
-            console.log('🚀 Début loadData:', { mode, paiementId, isEdit, isCreate });
+            console.log('🚀 Début loadData:', { mode, idPaiement, isEdit, isCreate });
             if (isEdit || mode === 'view') {
-                console.log('📥 Appel chargerPaiement pour:', paiementId);
+                console.log('📥 Appel chargerPaiement pour:', idPaiement);
                 await chargerPaiement();
             }
             if (isCreate) {
@@ -82,7 +82,7 @@ export const usePaiementFormLogic = (formState) => {
                 await chargerFactures();
                 setPaiement(prev => ({
                     ...prev,
-                    factureId: '',
+                    idFacture: '',
                     datePaiement: DateService.getTodayInputFormat(),
                     montantPaye: '',
                     methodePaiement: '',
@@ -92,7 +92,7 @@ export const usePaiementFormLogic = (formState) => {
             setIsInitialLoadDone(true);
         };
         loadData();
-    }, [paiementId, mode]);
+    }, [idPaiement, mode]);
     
     // Finalisation de l'initialisation
     useEffect(() => {
@@ -101,7 +101,7 @@ export const usePaiementFormLogic = (formState) => {
                 const currentFormData = getFormData();
                 const hasValidData = isCreate ? 
                     (currentFormData.datePaiement !== undefined) :
-                    (currentFormData.factureId && currentFormData.datePaiement);
+                    (currentFormData.idFacture && currentFormData.datePaiement);
                 
                 if (hasValidData) {
                     setTimeout(() => {
@@ -117,20 +117,20 @@ export const usePaiementFormLogic = (formState) => {
     
     // Fonctions de chargement
     const chargerPaiement = async () => {
-        if (!paiementId) {
-            console.log('❌ Pas de paiementId:', paiementId);
+        if (!idPaiement) {
+            console.log('❌ Pas de idPaiement:', idPaiement);
             return;
         }
-        console.log('🔄 Début chargement paiement:', paiementId);
+        console.log('🔄 Début chargement paiement:', idPaiement);
         setIsLoading(true);
         setError(null);
         
         try {
-            const paiementData = await paiementService.getPaiement(paiementId);
-            console.log('📥 Données brutes reçues:', paiementData);
+            const paiementData = await paiementService.getPaiement(idPaiement);
+            console.log('🔥 Données brutes reçues:', paiementData);
             if (paiementData) {
                 const newPaiement = {
-                    factureId: paiementData.factureId,
+                    idFacture: paiementData.idFacture,
                     datePaiement: paiementData.datePaiement,
                     montantPaye: paiementData.montantPaye.toString(),
                     methodePaiement: paiementData.methodePaiement,
@@ -144,17 +144,37 @@ export const usePaiementFormLogic = (formState) => {
                 console.log('🎯 Nouvel état paiement:', newPaiement);
                 setPaiement(newPaiement);
                 
-                // Charger la facture
-                if (paiementData.factureId) {
-                    console.log('🔄 Chargement facture:', paiementData.factureId);
-                    const factureData = await factureService.getFacture(paiementData.factureId);
-                    console.log('📥 Données facture:', factureData);
-                    if (factureData) {
-                        setFactureSelectionnee(factureData);
+                // ✅ AMÉLIORATION: Chargement de la facture avec plus de debug
+                if (paiementData.idFacture) {
+                    console.log('🔄 Chargement facture:', paiementData.idFacture);
+                    console.log('🔍 Type idFacture:', typeof paiementData.idFacture);
+                    
+                    try {
+                        const factureData = await factureService.getFacture(paiementData.idFacture);
+                        console.log('🔥 Données facture reçues:', factureData);
+                        
+                        if (factureData) {
+                            console.log('✅ Facture chargée avec succès:', {
+                                id: factureData.idFacture,
+                                numero: factureData.numeroFacture,
+                                client: factureData.client,
+                                montant: factureData.totalAvecRistourne
+                            });
+                            setFactureSelectionnee(factureData);
+                        } else {
+                            console.log('❌ Aucune donnée de facture retournée');
+                            setError('Impossible de charger les détails de la facture');
+                        }
+                    } catch (factureError) {
+                        console.error('❌ Erreur lors du chargement de la facture:', factureError);
+                        setError('Erreur lors du chargement de la facture: ' + factureError.message);
                     }
+                } else {
+                    console.log('⚠️ Aucun idFacture dans les données du paiement');
+                    console.log('⚠️ Données complètes du paiement:', paiementData);
                 }
                 
-                await chargerLogsUtilisateur(paiementId);
+                await chargerLogsUtilisateur(idPaiement);
             } else {
                 console.log('❌ Aucune donnée de paiement reçue');
                 setError(VALIDATION_MESSAGES.PAIEMENT_NON_TROUVE);
@@ -214,14 +234,14 @@ export const usePaiementFormLogic = (formState) => {
     };
     
     // ✅ FONCTION DE CHARGEMENT DES LOGS AVEC CACHE
-    const chargerLogsUtilisateur = async (paiementId) => {
-        if (!paiementId) return;
+    const chargerLogsUtilisateur = async (idPaiement) => {
+        if (!idPaiement) return;
         setLogsLoading(true);
         
         try {
             const logsResponse = await activityLogsService.getLogs({
                 entity_type: 'paiement',
-                entity_id: paiementId,
+                entity_id: idPaiement,
                 action_type: `${LOG_ACTIONS.PAIEMENT_CREATE},${LOG_ACTIONS.PAIEMENT_UPDATE},${LOG_ACTIONS.PAIEMENT_CANCEL}`
             });
             
@@ -329,7 +349,7 @@ export const usePaiementFormLogic = (formState) => {
             'methodePaiement': 'Méthode de paiement',
             'commentaire': 'Commentaire',
             'facture_id': 'Facture',
-            'factureId': 'Facture'
+            'idFacture': 'Facture'
         };
         return translations[field] || field;
     };

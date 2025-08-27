@@ -90,6 +90,17 @@ function PaiementsListe({
             console.log('PaiementsListe - Filtre statut actuel:', filtres.statut);
             
             const result = await paiementService.chargerPaiements(options);
+
+            // 🔍 Debug ici
+        console.log('🔍 Résultat complet:', result);
+        console.log('🔍 Paiements reçus:', result.paiements);
+        if (result.paiements.length > 0) {
+            console.log('🔍 Premier paiement:', result.paiements[0]);
+            console.log('🔍 ID du premier paiement:', result.paiements[0].id);
+            console.log('🔍 Clés disponibles:', Object.keys(result.paiements[0]));
+        }
+
+        
             setPaiements(result.paiements);
             setPagination(result.pagination);
             
@@ -149,8 +160,8 @@ function PaiementsListe({
     };
     
     // ✅ MODIFIÉ: Gestion de l'annulation
-    const handleAnnulerPaiement = (paiementId) => {
-        const paiement = paiements.find(p => p.id === paiementId);
+    const handleAnnulerPaiement = (idPaiement) => {
+        const paiement = paiements.find(p => p.idPaiement === idPaiement);
         if (paiement) {
             // Vérifier si déjà annulé
             if (paiement.statut === 'annule') {
@@ -191,7 +202,7 @@ function PaiementsListe({
         
         try {
             const result = await paiementService.cancelPaiement(
-                paiementToCancel.id, 
+                paiementToCancel.idPaiement, 
                 motifAnnulation || 'Annulation demandée'
             );
             if (result.success) {
@@ -408,9 +419,9 @@ function PaiementsListe({
                                     ) : (
                                         paiements.map(paiement => (
                                             <div 
-                                                key={paiement.id} 
-                                                className={`table-row ${paiementSelectionne === paiement.id ? 'selected' : ''} ${paiement.statut === 'annule' ? 'paiement-annule' : ''}`}
-                                                onClick={() => setPaiementSelectionne(paiement.id)}
+                                                key={paiement.idPaiement} 
+                                                className={`table-row ${paiementSelectionne === paiement.idPaiement ? 'selected' : ''} ${paiement.statut === 'annule' ? 'paiement-annule' : ''}`}
+                                                onClick={() => setPaiementSelectionne(paiement.idPaiement)}
                                             >
                                                 <div className="table-cell">
                                                     {formatDate(paiement.datePaiement)}
@@ -438,7 +449,7 @@ function PaiementsListe({
                                                         className="bouton-action"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            onAfficherPaiement(paiement.id);
+                                                            onAfficherPaiement(paiement.idPaiement);
                                                         }}
                                                         title="Afficher le paiement"
                                                     >
@@ -450,7 +461,7 @@ function PaiementsListe({
                                                         className="bouton-action"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            onModifierPaiement(paiement.id);
+                                                            onModifierPaiement(paiement.idPaiement);
                                                         }}
                                                         title={paiement.statut === 'annule' ? 'Paiement annulé - modification impossible' : 'Modifier le paiement'}
                                                         disabled={paiement.statut === 'annule'}
@@ -463,7 +474,7 @@ function PaiementsListe({
                                                         className="bouton-action"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            handleAnnulerPaiement(paiement.id);
+                                                            handleAnnulerPaiement(paiement.idPaiement);
                                                         }}
                                                         title={paiement.statut === 'annule' ? 'Paiement déjà annulé' : 'Annuler le paiement'}
                                                         disabled={paiement.statut === 'annule'}

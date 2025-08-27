@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTarifList } from '../hooks/useTarifList';
 import TarifTableSection from '../sections/TarifTableSection';
-import TarifFormHeader from '../sections/TarifFormHeader'; // ✅ AJOUT
-import { AddButton } from '../../../components/ui/buttons'; // ✅ AJOUT
+import TarifFormHeader from '../sections/TarifFormHeader';
+import { AddButton } from '../../../components/ui/buttons';
+import TarifFilter from '../components/TarifFilter';
+import { useTarifFilter, createInitialFilters, enrichTarifsWithEtat } from '../hooks/useTarifFilter';
 
 const TarifStandardGestion = ({ 
   tarifs, 
@@ -24,7 +26,7 @@ const TarifStandardGestion = ({
   onNew,
   onCreateFacture,
   onBulkAction,
-  // ✅ AJOUT : Nouveaux handlers du système unifié
+  // Nouveaux handlers du système unifié
   onCreateTarif,
   onEditTarif,
   onDeleteTarif
@@ -32,17 +34,30 @@ const TarifStandardGestion = ({
   const [selectedTarifs, setSelectedTarifs] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Utiliser le hook corrigé
-  const tarifList = useTarifList(tarifs, services, unites, typesTarifs);
+  // ===== INTÉGRATION DU NOUVEAU FILTRE CENTRALISÉ =====
+  
+  // Enrichir les tarifs avec leur état calculé
+  const enrichedTarifs = useMemo(() => {
+    return enrichTarifsWithEtat(tarifs || []);
+  }, [tarifs]);
+
+  // Utiliser le hook de filtrage centralisé
+  const {
+    filters,
+    showFilters,
+    filteredData: tarifsFiltered,
+    filterStats,
+    handleFilterChange,
+    handleResetFilters,
+    handleToggleFilters
+  } = useTarifFilter(enrichedTarifs, 'tarifs-standards', createInitialFilters('tarifs-standards'));
 
   // ===== HANDLERS POUR LE SYSTÈME UNIFIÉ =====
   
   const handleCreateClick = (event) => {
     if (onCreateTarif) {
-      // Utiliser le nouveau système unifié
       onCreateTarif(event);
     } else {
-      // Fallback vers l'ancien système (deprecated)
       console.warn('⚠️ onCreateTarif non fourni, utilisation du système legacy');
       handleLegacyCreate();
     }
@@ -50,10 +65,8 @@ const TarifStandardGestion = ({
   
   const handleEditClick = (tarif, event) => {
     if (onEditTarif) {
-      // Utiliser le nouveau système unifié
-      onEditTarif(tarif.id, event);
+      onEditTarif(tarif.id || tarif.idTarifStandard, event);
     } else {
-      // Fallback vers l'ancien système (deprecated)
       console.warn('⚠️ onEditTarif non fourni, utilisation du système legacy');
       handleLegacyEdit(tarif);
     }
@@ -61,10 +74,8 @@ const TarifStandardGestion = ({
   
   const handleDeleteClick = (tarif, event) => {
     if (onDeleteTarif) {
-      // Utiliser le nouveau système unifié
-      onDeleteTarif(tarif.id, getTarifDisplayName(tarif), event);
+      onDeleteTarif(tarif.id || tarif.idTarifStandard, getTarifDisplayName(tarif), event);
     } else {
-      // Fallback vers l'ancien système (deprecated)
       console.warn('⚠️ onDeleteTarif non fourni, utilisation du système legacy');
       handleSupprimerTarif(tarif);
     }
@@ -74,22 +85,19 @@ const TarifStandardGestion = ({
 
   const handleLegacyCreate = async () => {
     console.log('🚨 Système legacy de création de tarif utilisé - À MIGRER');
-    // Code de l'ancien système...
   };
 
   const handleLegacyEdit = async (tarif) => {
     console.log('🚨 Système legacy d\'édition de tarif utilisé - À MIGRER');
-    // Code de l'ancien système...
   };
 
   // Utilitaire pour obtenir le nom d'affichage d'un tarif
   const getTarifDisplayName = (tarif) => {
-    console.tlog('TarifStandardGestion - getTarifDisplayName - données entrantes : ', tarif);
-    const service = services.find(s => s.id === tarif.service_id);
-    const unite = unites.find(u => u.id === tarif.unite_id);
-    const typeTarif = typesTarifs.find(t => t.id === tarif.type_tarif_id);
+    const service = services.find(s => s.id === (tarif.service_id || tarif.serviceId));
+    const unite = unites.find(u => u.id === (tarif.unite_id || tarif.uniteId));
+    const typeTarif = typesTarifs.find(t => t.id === (tarif.type_tarif_id || tarif.typeTarifId));
     
-    return `${service?.nom || 'Service'} - ${unite?.nom || 'Unité'} - ${typeTarif?.nom || 'Type'}`;
+    return `${service?.nomService || 'Service'} - ${unite?.nomUnite || 'Unité'} - ${typeTarif?.nomTypeTarif || 'Type'}`;
   };
 
   // Actions legacy (à supprimer progressivement)
@@ -119,24 +127,6 @@ const TarifStandardGestion = ({
     } catch (error) {
       console.error('Erreur suppression tarif:', error);
       setMessage('Erreur lors de la suppression: ' + error.message);
-      setMessageType('error');
-    }
-  };
-
-  const handleDuplicateTarif = async (tarif) => {
-    try {
-      const result = await tarificationService.dupliquerTarif(tarif.id);
-      
-      if (result.success) {
-        setMessage('Tarif dupliqué avec succès');
-        setMessageType('success');
-        loadTarifs();
-      } else {
-        throw new Error(result.message || 'Erreur lors de la duplication');
-      }
-    } catch (error) {
-      console.error('Erreur duplication tarif:', error);
-      setMessage('Erreur lors de la duplication: ' + error.message);
       setMessageType('error');
     }
   };
@@ -177,87 +167,12 @@ const TarifStandardGestion = ({
 
   const handleBulkExport = () => {
     if (onBulkAction) {
-      const tarifsToExport = tarifList.filteredAndSortedTarifs.filter(t => 
+      const tarifsToExport = tarifsFiltered.filter(t => 
         selectedTarifs.includes(t.id)
       );
       onBulkAction('export', tarifsToExport);
     }
   };
-
-  // Rendu des filtres
-  const renderFilters = () => (
-    <div className="tarifs-filters">
-      <div className="filters-row">
-        <div className="filter-group">
-          <select
-            name="service"
-            value={tarifList.filters?.service || ''}
-            onChange={tarifList.handleFilterChange}
-            className="filter-select"
-          >
-            <option value="">Tous les services</option>
-            {services?.map(service => (
-              <option key={service.id} value={service.id}>
-                {service.nom}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div className="filter-group">
-          <select
-            name="unite"
-            value={tarifList.filters?.unite || ''}
-            onChange={tarifList.handleFilterChange}
-            className="filter-select"
-          >
-            <option value="">Toutes les unités</option>
-            {unites?.map(unite => (
-              <option key={unite.id} value={unite.id}>
-                {unite.nom}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div className="filter-group">
-          <select
-            name="typeTarif"
-            value={tarifList.filters?.typeTarif || ''}
-            onChange={tarifList.handleFilterChange}
-            className="filter-select"
-          >
-            <option value="">Tous les types</option>
-            {typesTarifs?.map(type => (
-              <option key={type.id} value={type.id}>
-                {type.nom}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div className="filter-group">
-          <select
-            name="etat"
-            value={tarifList.filters?.etat || ''}
-            onChange={tarifList.handleFilterChange}
-            className="filter-select"
-          >
-            <option value="">Tous les états</option>
-            <option value="valid">Valides</option>
-            <option value="invalid">Invalides</option>
-          </select>
-        </div>
-        
-        <button 
-          className="btn btn-secondary"
-          onClick={tarifList.handleResetFilters}
-        >
-          Réinitialiser
-        </button>
-      </div>
-    </div>
-  );
 
   // Rendu des actions de liste
   const renderListActions = () => (
@@ -288,7 +203,7 @@ const TarifStandardGestion = ({
 
   return (
     <div className="tarif-standard-gestion">
-      {/* ✅ EN-TÊTE UNIFIÉ AVEC BOUTON D'ACTION */}
+      {/* EN-TÊTE UNIFIÉ AVEC BOUTON D'ACTION */}
       <TarifFormHeader
         titre="Tarifs standards"
         description="Tarifs de base appliqués par défaut à tous vos clients"
@@ -298,18 +213,28 @@ const TarifStandardGestion = ({
         </AddButton>
       </TarifFormHeader>
 
-      {/* ✅ SUPPRESSION DU FORMULAIRE INTÉGRÉ - Remplacé par modal unifiée */}
-
       <div className="gestion-header">
-        <div className="header-title">
-          {/* Titre déplacé dans TarifFormHeader */}
-        </div>
         {renderListActions()}
       </div>
 
-      {renderFilters()}
+      {/* ===== NOUVEAU FILTRE CENTRALISÉ ===== */}
+      <TarifFilter
+        filterType="tarifs-standards"
+        data={enrichedTarifs}
+        services={services}
+        unites={unites}
+        typesTarifs={typesTarifs}
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onResetFilters={handleResetFilters}
+        showFilters={showFilters}
+        onToggleFilters={handleToggleFilters}
+        totalCount={filterStats.totalCount}
+        filteredCount={filterStats.filteredCount}
+        className="filter-tarifs-standards"
+      />
 
-      {tarifList.filteredAndSortedTarifs.length === 0 ? (
+      {tarifsFiltered.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">💰</div>
           <h4>
@@ -324,10 +249,10 @@ const TarifStandardGestion = ({
               : "Aucun tarif ne correspond aux filtres sélectionnés"
             }
           </p>
-          {(tarifs?.length || 0) > 0 && (
+          {(tarifs?.length || 0) > 0 && filterStats.hasActiveFilters && (
             <button 
               className="btn-secondary"
-              onClick={tarifList.handleResetFilters}
+              onClick={handleResetFilters}
             >
               Réinitialiser les filtres
             </button>
@@ -336,7 +261,7 @@ const TarifStandardGestion = ({
       ) : (
         <>
           <TarifTableSection
-            tarifs={tarifList.filteredAndSortedTarifs}
+            tarifs={tarifsFiltered}
             onEdit={handleEditClick}
             onDelete={handleDeleteClick}
             highlightedId={highlightedId}
@@ -357,9 +282,12 @@ const TarifStandardGestion = ({
         }}>
           <strong>🔧 Debug TarifStandardGestion :</strong><br/>
           - Tarifs chargés : {tarifs?.length || 0}<br/>
+          - Tarifs filtrés : {tarifsFiltered.length}<br/>
+          - Filtres actifs : {filterStats.hasActiveFilters ? 'Oui' : 'Non'}<br/>
           - Highlighted ID : {highlightedId || 'aucun'}<br/>
           - Système unifié : {onCreateTarif ? '✅ Actif' : '❌ Non connecté'}<br/>
-          - Is submitting : {isSubmitting ? 'Oui' : 'Non'}
+          - Is submitting : {isSubmitting ? 'Oui' : 'Non'}<br/>
+          - Filtres actuels : {JSON.stringify(filters)}
         </div>
       )}
     </div>

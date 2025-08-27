@@ -1,8 +1,8 @@
 import React from 'react';
 import TableSection from './TableSection';
 import { TarifStandardActions } from './TarifListActions';
+import { getEtatValidite } from '../../../utils/formatters';
 
-// 🚨 VERSION ULTRA-SIMPLIFIÉE pour stopper définitivement la boucle
 const TarifTableSection = ({ 
   tarifs, 
   onEdit,
@@ -40,51 +40,35 @@ const TarifTableSection = ({
     );
   }
 
-  // 🎯 CALCUL DU STATUT SIMPLE
-  const getTarifStatus = (tarif) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const dateDebut = new Date(tarif.dateDebut || tarif.date_debut || today);
-    const dateFin = tarif.dateFin || tarif.date_fin ? 
-      new Date(tarif.dateFin || tarif.date_fin) : null;
-    
-    dateDebut.setHours(0, 0, 0, 0);
-    if (dateFin) dateFin.setHours(0, 0, 0, 0);
-    
-    if (dateDebut > today) {
-      return { status: 'À venir', class: 'etat-attente' };
-    }
-    if (dateFin && dateFin < today) {
-      return { status: 'Expiré', class: 'etat-annulee' };
-    }
-    return { status: 'Actif', class: 'etat-confirme' };
-  };
-
-  // 🔧 TRAITEMENT SIMPLE DES DONNÉES
+  // 🔧 TRAITEMENT SIMPLE DES DONNÉES avec la méthode centralisée
   const processedTarifs = tarifs.map((tarif, index) => {
     if (!tarif || typeof tarif !== 'object') {
       return {
         id: index,
-        serviceNom: 'Données invalides',
-        uniteNom: 'N/A',
-        typeTarifNom: 'N/A',
+        nomService: 'Données invalides',
+        nomUnite: 'N/A',
+        nomTypeTarif: 'N/A',
         prix: 0,
         statutCalcule: 'Erreur',
         statusClass: 'etat-annulee'
       };
     }
     
-    const status = getTarifStatus(tarif);
+    // Utilisation de la méthode centralisée pour calculer l'état
+    const dateDebut = tarif.dateDebutTarifStandard || tarif.date_debut_tarif_standard;
+    const dateFin = tarif.dateFinTarifStandard || tarif.date_fin_tarif_standard;
+    const status = getEtatValidite(dateDebut, dateFin);
     
     return {
       ...tarif,
-      id: tarif.id || tarif.tarif_id || index,
-      serviceNom: tarif.serviceNom || tarif.service_nom || tarif.serviceName || `Service ${tarif.serviceId || tarif.service_id || '?'}`,
-      uniteNom: tarif.uniteNom || tarif.unite_nom || tarif.uniteName || `Unité ${tarif.uniteId || tarif.unite_id || '?'}`,
-      typeTarifNom: tarif.typeTarifNom || tarif.type_tarif_nom || tarif.typeTarifName || `Type ${tarif.typeTarifId || tarif.type_tarif_id || '?'}`,
-      statutCalcule: status.status,
-      statusClass: status.class
+      id: tarif.id || tarif.tarif_id || tarif.idTarifStandard || index,
+      nomService: tarif.nomService || tarif.service_nom || tarif.serviceName || `Service ${tarif.serviceId || tarif.service_id || '?'}`,
+      nomUnite: tarif.nomUnite || tarif.unite_nom || tarif.uniteName || `Unité ${tarif.uniteId || tarif.unite_id || '?'}`,
+      nomTypeTarif: tarif.nomTypeTarif || tarif.type_tarif_nom || tarif.typeTarifName || `Type ${tarif.typeTarifId || tarif.type_tarif_id || '?'}`,
+      statutCalcule: status.label,
+      statusClass: status.classe,
+      dateDebut: dateDebut,
+      dateFin: dateFin
     };
   });
 
@@ -92,42 +76,42 @@ const TarifTableSection = ({
   const columns = [
     {
       label: 'Service',
-      field: 'serviceNom',
+      field: 'nomService',
       width: '200px',
       sortable: true,
-      render: (tarif) => <strong className="tarif-service">{tarif.serviceNom}</strong>
+      render: (tarif) => <strong className="tarif-service">{tarif.nomService}</strong>
     },
     {
       label: 'Unité',
-      field: 'uniteNom',
+      field: 'nomUnite',
       width: '120px',
       sortable: true
     },
     {
       label: 'Type',
-      field: 'typeTarifNom',
+      field: 'nomTypeTarif',
       width: '180px',
       sortable: true
     },
     {
       label: 'Prix',
-      field: 'prix',
+      field: 'prixTarifStandard' || 'prix_tarif_standard' || 'prix',
       width: '100px',
       sortable: true,
       render: (tarif) => (
         <span className="tarif-prix">
-          {parseFloat(tarif.prix || 0).toFixed(2)} CHF
+          {parseFloat(tarif.prixTarifStandard || 0).toFixed(2)} CHF
         </span>
       )
     },
     {
       label: 'Période',
-      field: 'dateDebut',
+      field: 'dateDebutTarifStandard' || 'date_debut_tarif_standard' || 'dateDebut',
       width: '180px',
       sortable: true,
       render: (tarif) => {
-        const dateDebut = tarif.dateDebut || tarif.date_debut;
-        const dateFin = tarif.dateFin || tarif.date_fin;
+        const dateDebut = tarif.dateDebutTarifStandard;
+        const dateFin = tarif.dateFinTarifStandard;
         
         return (
           <div className="periode">
@@ -191,11 +175,10 @@ const TarifTableSection = ({
         highlightedId={highlightedId}
         emptyMessage="Aucun tarif trouvé"
         className="tarif-table-section"
-        defaultSort={{ field: 'serviceNom', direction: 'asc' }}
+        defaultSort={{ field: 'nomService', direction: 'asc' }}
       />
     </div>
   );
 };
 
-// 🚨 PAS DE React.memo - Version basique pour éliminer tous problèmes de référence
 export default TarifTableSection;

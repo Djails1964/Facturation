@@ -29,20 +29,20 @@ export const useTypeTarifForm = () => {
     const validateTypeTarif = () => {
         const errors = {};
         
-        if (!typeTarif.code.trim()) {
+        if (!typeTarif.codeTypeTarif.trim()) {
             errors.code = 'Le code est obligatoire';
         }
         
-        if (!typeTarif.nom.trim()) {
+        if (!typeTarif.nomTypeTarif.trim()) {
             errors.nom = 'Le nom est obligatoire';
         }
         
         // Validation longueur
-        if (typeTarif.code.length > 20) {
+        if (typeTarif.codeTypeTarif.length > 20) {
             errors.code = 'Le code ne peut pas dépasser 20 caractères';
         }
         
-        if (typeTarif.nom.length > 100) {
+        if (typeTarif.nomTypeTarif.length > 100) {
             errors.nom = 'Le nom ne peut pas dépasser 100 caractères';
         }
         

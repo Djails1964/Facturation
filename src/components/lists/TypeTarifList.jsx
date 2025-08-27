@@ -65,9 +65,9 @@ const TypeTarifList = ({ typesTarifs, onEdit, onDelete }) => {
         {typesTarifs.length > 0 ? (
           typesTarifs.map(typeTarif => (
             <div key={typeTarif.id} className="tarif-list-row type-tarif-list-row">
-              <div className="tarif-list-cell">{typeTarif.code}</div>
-              <div className="tarif-list-cell">{typeTarif.nom}</div>
-              <div className="tarif-list-cell">{typeTarif.description || '-'}</div>
+              <div className="tarif-list-cell">{typeTarif.codeTypeTarif}</div>
+              <div className="tarif-list-cell">{typeTarif.nomTypeTarif}</div>
+              <div className="tarif-list-cell">{typeTarif.descriptionTypeTarif || '-'}</div>
               
               {/* ✅ NOUVEAU: Actions avec boutons ronds harmonisés */}
               <div className="tarif-list-cell tarif-actions-cell">

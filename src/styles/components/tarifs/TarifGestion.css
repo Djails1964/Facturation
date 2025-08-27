@@ -881,6 +881,75 @@
   font-weight: 600;
 }
 
+/* =======================================
+   STYLES POUR LES BOUTONS CŒUR (UNITÉ PAR DÉFAUT)
+   À ajouter dans TarifGestion.css
+   ======================================= */
+
+/* === BOUTON CŒUR REMPLI (UNITÉ PAR DÉFAUT) === */
+.unite-actions .btn-default.heart-filled {
+  background-color: rgba(128, 0, 32, 0.1) !important;
+  border-color: #800020 !important;
+  border-width: 2px !important;
+}
+
+.unite-actions .btn-default.heart-filled svg {
+  fill: #800020 !important;
+  color: #800020 !important;
+}
+
+.unite-actions .btn-default.heart-filled:hover {
+  background-color: rgba(128, 0, 32, 0.2) !important;
+  transform: scale(1.05);
+}
+
+/* === BOUTON CŒUR VIDE (UNITÉ NON PAR DÉFAUT) === */
+.unite-actions .btn-default.heart-empty {
+  background-color: transparent;
+  border-color: #ccc;
+  border-width: 1px;
+}
+
+.unite-actions .btn-default.heart-empty svg {
+  fill: transparent !important;
+  color: #666 !important;
+  stroke: #666 !important;
+  stroke-width: 1.5px;
+}
+
+.unite-actions .btn-default.heart-empty:hover {
+  background-color: rgba(128, 0, 32, 0.05);
+  border-color: #800020;
+}
+
+.unite-actions .btn-default.heart-empty:hover svg {
+  color: #800020 !important;
+  stroke: #800020 !important;
+}
+
+/* === STYLES GÉNÉRIQUES POUR TOUS LES BOUTONS CŒUR === */
+.unite-actions .btn-default {
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* === SUPPORT POUR DIFFÉRENTES TAILLES D'ICÔNES === */
+.unite-actions .btn-default svg {
+  width: 14px;
+  height: 14px;
+  transition: all 0.2s ease;
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+  .unite-actions .btn-default svg {
+    width: 12px;
+    height: 12px;
+  }
+}
+
 /* === RESPONSIVE === */
 
 @media (max-width: 768px) {

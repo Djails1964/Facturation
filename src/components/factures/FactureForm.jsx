@@ -19,7 +19,7 @@ import '../../styles/components/factures/FactureForm.css';
 
 function FactureForm({
   mode = FORM_MODES.VIEW,
-  factureId = null,
+  idFacture = null,
   onRetourListe,
   onFactureCreated,
   clients = [],
@@ -27,6 +27,11 @@ function FactureForm({
   onRechargerClients = null
 }) {
 
+  console.log('🔍 FactureForm - Props reçues:', {
+    mode,
+    idFacture,
+    typeIdFacture: typeof idFacture
+  });
   
   // Hook principal du formulaire
   const {
@@ -34,7 +39,7 @@ function FactureForm({
     error, setError, clientData, setClientData, clientLoading, setClientLoading,
     isLignesValid, setIsLignesValid, factureService, clientService,
     isReadOnly, isFormValid, getFormData
-  } = useFactureForm(mode, factureId);
+  } = useFactureForm(mode, idFacture);
 
   // État pour les modales d'erreur
   const [confirmModal, setConfirmModal] = useState({
@@ -50,7 +55,7 @@ function FactureForm({
   // Hook d'initialisation
   const {
     isFullyInitialized, initialFormData, setInitialFormData
-  } = useFactureInitialization(mode, factureId, {
+  } = useFactureInitialization(mode, idFacture, {
     chargerFacture: (id) => factureActions.chargerFacture(id, {
       setIsLoading, setError, setFacture, setIsLignesValid,
       fetchClientDetails: (clientId) => factureActions.fetchClientDetails(clientId, {
@@ -71,7 +76,7 @@ function FactureForm({
     hasUnsavedChanges, showUnsavedModal, confirmNavigation, cancelNavigation,
     showGlobalModal, setShowGlobalModal, globalNavigationCallback, 
     setGlobalNavigationCallback, handleSuccessfulSave, guardId, unregisterGuard
-  } = useFactureNavigation(mode, factureId, initialFormData, getFormData, canDetectChanges);
+  } = useFactureNavigation(mode, idFacture, initialFormData, getFormData, canDetectChanges);
 
   // Gestionnaires pour les changements de formulaire
   const handleNumeroFactureChange = (value) => {
@@ -155,31 +160,30 @@ function FactureForm({
       setIsSubmitting(true);
       try {
         // ✅ CORRECTION: Construction du client_nom avec les données disponibles
-        let client_nom = 'Client inconnu';
+        let clientNom = 'Client inconnu';
         
         // Option 1: Utiliser clientData si disponible (cas normal)
         if (clientData && clientData.prenom && clientData.nom) {
-          client_nom = `${clientData.prenom} ${clientData.nom}`;
-          console.log('✅ Client_nom construit depuis clientData:', client_nom);
+          clientNom = `${clientData.prenom} ${clientData.nom}`;
+          console.log('✅ Client_nom construit depuis clientData:', clientNom);
         }
         // Option 2: Utiliser facture.client si disponible (cas de chargement de facture existante)
         else if (facture.client && facture.client.prenom && facture.client.nom) {
-          client_nom = `${facture.client.prenom} ${facture.client.nom}`;
-          console.log('✅ Client_nom construit depuis facture.client:', client_nom);
+          clientNom = `${facture.client.prenom} ${facture.client.nom}`;
+          console.log('✅ Client_nom construit depuis facture.client:', clientNom);
         }
         // Option 3: Chercher dans la liste des clients par ID
         else if (facture.clientId && clients && clients.length > 0) {
           const clientTrouve = clients.find(c => c.id === facture.clientId);
           if (clientTrouve && clientTrouve.prenom && clientTrouve.nom) {
-            client_nom = `${clientTrouve.prenom} ${clientTrouve.nom}`;
-            console.log('✅ Client_nom construit depuis liste clients:', client_nom);
+            clientNom = `${clientTrouve.prenom} ${clientTrouve.nom}`;
+            console.log('✅ Client_nom construit depuis liste clients:', clientNom);
           }
         }
 
         const factureData = {
           // Champs principaux
           numeroFacture: facture.numeroFacture,
-          numero_facture: facture.numeroFacture, // ✅ AJOUT: Support backend
           dateFacture: facture.dateFacture || new Date().toISOString().split('T')[0],
           clientId: facture.clientId,
           totalFacture: facture.totalFacture,
@@ -188,12 +192,12 @@ function FactureForm({
           lignes: facture.lignes,
           
           // ✅ AJOUT PRINCIPAL: Informations client pour le logging backend
-          client_nom: client_nom
+          clientNom: clientNom
         };
 
         console.log('🔍 Données envoyées à submitFacture:', factureData);
 
-        const result = await factureActions.submitFacture(factureData, mode, factureId);
+        const result = await factureActions.submitFacture(factureData, mode, idFacture);
         
         if (result?.success) {
           const newFactureId = result.id || facture.id;
@@ -328,7 +332,7 @@ function FactureForm({
             mode={mode}
             etat={facture.etat}
             etatAffichage={facture.etatAffichage} // ✅ AJOUT: Passage de etatAffichage
-            factureId={factureId || facture.id}
+            idFacture={idFacture || facture.id}
             factureData={facture}
           />
           
@@ -360,7 +364,7 @@ function FactureForm({
           {isReadOnly && (
             <FactureHistoriquePaiements
               etat={facture.etat}
-              factureId={factureId || facture.id}
+              idFacture={idFacture || facture.id}
               // ✅ CORRECTION: Utilisation des formatters centralisés
               formatMontant={formatMontant}
               formatDate={formatDate}

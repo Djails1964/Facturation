@@ -304,13 +304,17 @@ apiClient.interceptors.request.use(
 // Intercepteur pour les réponses - AVEC CONVERSION AUTOMATIQUE
 apiClient.interceptors.response.use(
   response => {
-    // ✅ CONVERSION AUTOMATIQUE DES RÉPONSES
+    console.log('📥 Intercepteur réponse - URL:', response.config.url);
+    console.log('📥 Intercepteur réponse - Données brutes:', response.data);
+    
+    // Conversion automatique des réponses
     if (response.data && shouldConvertEndpoint(response.config.url)) {
       const context = getConversionContext(response.config.url);
       
       console.log('🔄 Conversion API → Frontend:', {
         url: response.config.url,
         context,
+        shouldConvert: true,
         originalData: response.data
       });
       
@@ -319,6 +323,9 @@ apiClient.interceptors.response.use(
       response.data = convertedData;
       
       console.log('✅ Réponse convertie:', convertedData);
+    } else {
+      console.log('⏭️ Pas de conversion pour:', response.config.url);
+      console.log('⏭️ shouldConvert:', shouldConvertEndpoint(response.config.url));
     }
     
     // Journalisation en mode développement
@@ -398,35 +405,59 @@ function convertApiResponse(data, context = null) {
     return data;
   }
   
+  console.log('🔄 convertApiResponse - Données entrantes:', data);
+  console.log('🔄 convertApiResponse - Contexte:', context);
+  
   // Si c'est un tableau, convertir chaque élément
   if (Array.isArray(data)) {
-    return FieldConverter.convertArray(data, 'toFrontend', { context });
+    const converted = FieldConverter.convertArray(data, 'toFrontend', { context });
+    console.log('✅ Tableau converti:', converted);
+    return converted;
   }
   
-  // Si c'est un objet avec des propriétés contenant des tableaux/objets
+  // ✅ CORRECTION: Traiter les objets de réponse wrap (success, paiement, etc.)
   const converted = { ...data };
   
-  // Convertir les propriétés communes qui contiennent des données métier
-  const dataProperties = [
-    'services', 'unites', 'typesTarifs', 'tarifs', 'tarifsSpeciaux',
-    'clients', 'factures', 'users', 'items', 'data', 'result'
+  // ✅ NOUVEAU: Propriétés spécifiques aux paiements
+  const paiementProperties = [
+    'paiement', 'paiements'
   ];
   
+  // ✅ NOUVEAU: Propriétés spécifiques aux autres entités
+  const dataProperties = [
+    'services', 'unites', 'typesTarifs', 'tarifs', 'tarifsSpeciaux',
+    'clients', 'factures', 'users', 'items', 'data', 'result',
+    ...paiementProperties
+  ];
+  
+  // Convertir les propriétés qui contiennent des données métier
   dataProperties.forEach(prop => {
     if (converted[prop]) {
+      console.log(`🔄 Conversion de la propriété '${prop}':`, converted[prop]);
+      
       if (Array.isArray(converted[prop])) {
         converted[prop] = FieldConverter.convertArray(converted[prop], 'toFrontend', { context });
+        console.log(`✅ Tableau '${prop}' converti:`, converted[prop]);
       } else if (typeof converted[prop] === 'object') {
         converted[prop] = FieldConverter.toFrontendFormat(converted[prop], { context });
+        console.log(`✅ Objet '${prop}' converti:`, converted[prop]);
       }
     }
   });
   
-  // Si c'est un objet simple (pas une réponse wrapper), le convertir directement
-  if (!converted.success && !converted.error && !dataProperties.some(prop => converted[prop])) {
-    return FieldConverter.toFrontendFormat(data, { context });
+  // ✅ NOUVELLE LOGIQUE: Convertir TOUJOURS les objets simples avec snake_case
+  const hasSnakeCaseFields = Object.keys(converted).some(key => key.includes('_') && key !== 'success' && key !== 'error');
+  const isSimpleDataObject = !dataProperties.some(prop => converted[prop]);
+  
+  if (isSimpleDataObject && hasSnakeCaseFields) {
+    console.log('🔄 Conversion objet simple avec snake_case:', converted);
+    // ✅ CORRECTION: Convertir l'objet entier, pas seulement data
+    const directConverted = FieldConverter.toFrontendFormat(converted, { context });
+    console.log('✅ Objet simple converti:', directConverted);
+    return directConverted;
   }
   
+  console.log('✅ Réponse finale convertie:', converted);
   return converted;
 }
 
@@ -574,6 +605,15 @@ function testUrlConversion(testUrl) {
 // ✅ Fonctions utilitaires pour debug
 export const getConversionEndpoints = () => ENDPOINT_CONVERSION_CONFIG;
 
+// ============================================
+// EXPORTS DES NOUVELLES FONCTIONS
+// ============================================
+
+// Rendre les fonctions disponibles globalement pour les tests
+window.extractAndConvertUrlParams = extractAndConvertUrlParams;
+window.shouldConvertEndpoint = shouldConvertEndpoint;
+window.getConversionContext = getConversionContext;
+window.getConversionEndpoints = getConversionEndpoints;
 
 // Export de la fonction de test pour debug
 export { testUrlConversion };

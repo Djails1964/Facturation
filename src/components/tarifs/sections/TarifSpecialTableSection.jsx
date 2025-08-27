@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import TableSection from './TableSection';
 import { TarifSpecialActions } from './TarifListActions';
+import { getEtatValidite } from '../../../utils/formatters';
 
 const TarifSpecialTableSection = ({ 
   tarifsSpeciaux = [], 
@@ -38,34 +39,14 @@ const TarifSpecialTableSection = ({
       const service = services.find(s => s.id == serviceId);
       const unite = unites.find(u => u.id == uniteId);
 
-      // Calcul du statut
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      const dateDebut = tarifSpecial.dateDebut || tarifSpecial.date_debut ? 
-        new Date(tarifSpecial.dateDebut || tarifSpecial.date_debut) : null;
-      const dateFin = tarifSpecial.dateFin || tarifSpecial.date_fin ? 
-        new Date(tarifSpecial.dateFin || tarifSpecial.date_fin) : null;
-      
-      let status = { status: 'Actif', class: 'etat-confirme' };
-      
-      if (dateDebut) {
-        dateDebut.setHours(0, 0, 0, 0);
-        if (dateDebut > today) {
-          status = { status: 'À venir', class: 'etat-attente' };
-        }
-      }
-      
-      if (dateFin) {
-        dateFin.setHours(0, 0, 0, 0);
-        if (dateFin < today) {
-          status = { status: 'Expiré', class: 'etat-annulee' };
-        }
-      }
+      // Utilisation de la méthode centralisée pour calculer l'état
+      const dateDebut = tarifSpecial.dateDebutTarifSpecial || tarifSpecial.date_debut_tarif_special;
+      const dateFin = tarifSpecial.dateFinTarifSpecial || tarifSpecial.date_fin_tarif_special;
+      const status = getEtatValidite(dateDebut, dateFin);
 
       return {
         ...tarifSpecial,
-        id: tarifSpecial.id || tarifSpecial.tarif_special_id || index,
+        id: tarifSpecial.id || tarifSpecial.tarif_special_id || tarifSpecial.idTarifSpecial || index,
         
         // Noms enrichis
         clientNom: client ? `${client.prenom} ${client.nom}` : `Client ${clientId || 'inconnu'}`,
@@ -73,12 +54,13 @@ const TarifSpecialTableSection = ({
         uniteNom: unite?.nom || `Unité ${uniteId || 'inconnue'}`,
         
         // Informations de période
-        dateDebut: dateDebut,
-        dateFin: dateFin,
+        dateDebut: dateDebut ? new Date(dateDebut) : null,
+        dateFin: dateFin ? new Date(dateFin) : null,
         
-        // Statut calculé
-        statutCalcule: status.status,
-        statusClass: status.class,
+        // Statut calculé avec la méthode centralisée
+        statutCalcule: status.label,
+        statusClass: status.classe,
+        etatSimple: status.etat, // Pour le filtrage : 'valide', 'futur' ou 'expire'
         
         // IDs normalisés
         clientId: clientId,
@@ -111,28 +93,33 @@ const TarifSpecialTableSection = ({
     },
     {
       label: 'Prix',
-      field: 'prix',
+      field: 'prixTarifSpecial' || 'prix_tarif_special' || 'prix',
       width: '100px',
       sortable: true,
       render: (tarif) => (
         <span className="tarif-prix">
-          {parseFloat(tarif.prix || 0).toFixed(2)} CHF
+          {parseFloat(tarif.prixTarifSpecial || 0).toFixed(2)} CHF
         </span>
       )
     },
     {
       label: 'Période',
-      field: 'dateDebut',
-      width: '100px',
+      field: 'dateDebutTarifSpecial' || 'date_debut_tarif_special' || 'dateDebut',
+      width: '180px',
       sortable: true,
-      render: (tarif) => (
-        <div className="periode">
-          <div>Du: {tarif.dateDebut ? tarif.dateDebut.toLocaleDateString() : 'Non défini'}</div>
-          {tarif.dateFin && (
-            <div>Au: {tarif.dateFin.toLocaleDateString()}</div>
-          )}
-        </div>
-      )
+      render: (tarif) => {
+        const dateDebut = tarif.dateDebutTarifSpecial;
+        const dateFin = tarif.dateFinTarifSpecial;
+        
+        return (
+          <div className="periode">
+            <div>Du: {dateDebut ? new Date(dateDebut).toLocaleDateString() : 'Non défini'}</div>
+            {dateFin && (
+              <div>Au: {new Date(dateFin).toLocaleDateString()}</div>
+            )}
+          </div>
+        );
+      }
     },
     {
       label: 'Statut',

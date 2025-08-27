@@ -1,5 +1,5 @@
 /**
- * Service de gestion des tarifications - VERSION COMPLÈTE avec gestion des booléens
+ * Service de gestion des tarifications - VERSION camelCase UNIQUEMENT
  * @class TarificationService
  * @description Gère les services, unités, tarifs et calculs de prix
  */
@@ -66,7 +66,7 @@ class TarificationService {
    */
   clearCache() {
     this._cacheResultat = {};
-    console.log('⭐ Cache de tarification vidé');
+    console.log('♻️ Cache de tarification vidé');
   }
 
   /**
@@ -78,9 +78,18 @@ class TarificationService {
       const response = await api.get('tarif-api.php?services=true');
       
       if (response && response.success && response.services) {
+        // ✅ VALIDATION avec format camelCase uniquement
+        const validServices = response.services.filter(service => 
+          service && 
+          typeof service === 'object' && 
+          service.idService && // ✅ camelCase uniquement
+          typeof service.code === 'string' && 
+          typeof service.nom === 'string'
+        );
+
         // ✅ NORMALISATION DES BOOLÉENS
-        const normalizedServices = normalizeServices(response.services);
-        console.log('Services avant normalisation:', response.services.slice(0, 2));
+        const normalizedServices = normalizeServices(validServices);
+        console.log('Services avant normalisation:', validServices.slice(0, 2));
         console.log('Services après normalisation:', normalizedServices.slice(0, 2));
         return normalizedServices;
       }
@@ -194,11 +203,11 @@ class TarificationService {
       const response = await api.get(url);
       
       if (response && response.success && response.unites) {
-        // Validation et normalisation des unités
+        // ✅ VALIDATION avec format camelCase uniquement
         const validUnites = response.unites.filter(unite => 
           unite && 
           typeof unite === 'object' && 
-          unite.id && 
+          unite.idUnite && // ✅ camelCase uniquement
           typeof unite.code === 'string' && 
           typeof unite.nom === 'string'
         );
@@ -425,8 +434,17 @@ class TarificationService {
       const response = await api.get('tarif-api.php?typesTarifs=true');
       
       if (response && response.success && response.typesTarifs) {
+        // ✅ VALIDATION avec format camelCase uniquement
+        const validTypesTarifs = response.typesTarifs.filter(typeTarif => 
+          typeTarif && 
+          typeof typeTarif === 'object' && 
+          typeTarif.idTypeTarif && // ✅ camelCase uniquement
+          typeof typeTarif.codeTypeTarif === 'string' && 
+          typeof typeTarif.nomTypeTarif === 'string'
+        );
+
         // ✅ NORMALISATION DES BOOLÉENS
-        const normalizedTypesTarifs = normalizeTypesTarifs(response.typesTarifs);
+        const normalizedTypesTarifs = normalizeTypesTarifs(validTypesTarifs);
         return normalizedTypesTarifs;
       }
       
@@ -663,7 +681,7 @@ class TarificationService {
     
     dateFields.forEach(field => {
       if (cleaned.hasOwnProperty(field) && cleaned[field] === '') {
-        console.log(`🔄 TarificationService - Nettoyage date vide: ${field} = "${cleaned[field]}" → null`);
+        console.log(`🗂️ TarificationService - Nettoyage date vide: ${field} = "${cleaned[field]}" → null`);
         cleaned[field] = null;
       }
     });
@@ -819,7 +837,6 @@ class TarificationService {
       ]);
 
       // Charger les associations services-unités séparément
-      // (le résultat est stocké dans this.servicesUnites)
       await this.chargerServicesUnites();
 
       return {
@@ -848,7 +865,6 @@ class TarificationService {
       const response = await api.get('tarif-api.php?servicesUnites=true');
       
       if (response && response.success) {
-        // Stocker le résultat dans la propriété de classe
         const relations = response.servicesUnites || [];
         
         // Organiser par service_id pour un accès rapide
@@ -883,30 +899,27 @@ class TarificationService {
    * @returns {Array} Codes des unités
    */
   getUnitesForService(serviceId) {
-    // Vérification de serviceId
     if (!serviceId) {
       return [];
     }
     
-    // Trouver le service
-    const service = this.services.find(s => s.id === serviceId);
+    // ✅ RECHERCHE avec camelCase uniquement
+    const service = this.services.find(s => s.idService === serviceId);
     if (!service) {
       return [];
     }
 
-    // Vérification des unités
     if (!this.unites || !Array.isArray(this.unites)) {
       return [];
     }
     
     // Utiliser le mapping des relations services-unités
-    if (this.servicesUnites && this.servicesUnites[service.id]) {
-      const uniteIds = this.servicesUnites[service.id];
+    if (this.servicesUnites && this.servicesUnites[service.idService]) {
+      const uniteIds = this.servicesUnites[service.idService];
       
       if (Array.isArray(uniteIds)) {
-        // Convertir les IDs d'unités en codes
         return uniteIds.map(uniteId => {
-          const unite = this.unites.find(u => u.id === uniteId);
+          const unite = this.unites.find(u => u.idUnite === uniteId);
           return unite ? unite.code : null;
         }).filter(code => code !== null);
       }
@@ -914,7 +927,7 @@ class TarificationService {
     
     // Fallback: chercher les unités avec le service_id correspondant
     try {
-      const unitesForService = this.unites.filter(u => u.service_id === service.id);
+      const unitesForService = this.unites.filter(u => u.serviceId === service.idService);
       return unitesForService.map(u => u.code);
     } catch (error) {
       console.error('Erreur lors du filtrage des unités:', error);
@@ -950,7 +963,6 @@ class TarificationService {
       date 
     });
       
-    // Retourner le premier tarif trouvé, sinon 0
     return tarifs.length > 0 ? tarifs[0].prix : 0;
   }
 
@@ -962,29 +974,27 @@ class TarificationService {
   getPrix(params) {
     const { typeService, unite, client } = params;
     
-    // Vérification des paramètres essentiels
     if (!typeService || !unite || !client) {
       console.warn('Paramètres manquants pour getPrix', params);
       return 0;
     }
     
     try {
-      // Trouver l'ID du service correspondant au code
+      // ✅ RECHERCHE avec camelCase uniquement
       const service = this.services.find(s => s.code === typeService);
       if (!service) {
         console.warn(`Service non trouvé pour le code: ${typeService}`);
         return 0;
       }
       
-      // Trouver l'ID de l'unité correspondant au code
       const uniteObj = this.unites.find(u => u.code === unite);
       if (!uniteObj) {
         console.warn(`Unité non trouvée pour le code: ${unite}`);
         return 0;
       }
       
-      // Vérifier si nous avons déjà ce tarif en cache
-      const cacheKey = `${client.id}-${service.id}-${uniteObj.id}`;
+      // ✅ UTILISATION des ID camelCase
+      const cacheKey = `${client.id}-${service.idService}-${uniteObj.idUnite}`;
       if (this._cacheResultat && this._cacheResultat[cacheKey] !== undefined) {
         return this._cacheResultat[cacheKey];
       }
@@ -992,8 +1002,8 @@ class TarificationService {
       // Démarrer la requête en arrière-plan pour les futures demandes
       this.getTarifClient({
         clientId: client.id,
-        serviceId: service.id,
-        uniteId: uniteObj.id,
+        serviceId: service.idService,
+        uniteId: uniteObj.idUnite,
         date: new Date().toISOString().split('T')[0]
       }).then(tarifClient => {
         this._cacheResultat[cacheKey] = tarifClient?.prix || 0;
@@ -1001,7 +1011,6 @@ class TarificationService {
         console.error('Erreur lors de la récupération du tarif client:', error);
       });
       
-      // Par défaut, retourner 0 en attendant que le cache soit mis à jour
       return 0;
     } catch (error) {
       console.error('Erreur dans getPrix:', error);
@@ -1019,8 +1028,8 @@ class TarificationService {
       return false;
     }
     
-    const service = this.services.find(s => s.id === serviceId);
-    // ✅ UTILISATION DE LA NORMALISATION BOOLÉENNE
+    // ✅ RECHERCHE avec camelCase uniquement
+    const service = this.services.find(s => s.idService === serviceId);
     return service ? toBoolean(service.isDefault) : false;
   }
 
@@ -1034,8 +1043,8 @@ class TarificationService {
       return false;
     }
     
-    const unite = this.unites.find(u => u.id === uniteId);
-    // ✅ UTILISATION DE LA NORMALISATION BOOLÉENNE
+    // ✅ RECHERCHE avec camelCase uniquement
+    const unite = this.unites.find(u => u.idUnite === uniteId);
     return unite ? toBoolean(unite.isDefault) : false;
   }
 
@@ -1045,7 +1054,6 @@ class TarificationService {
    * @returns {Object|null} Le service par défaut ou null si aucun n'est trouvé
    */
   getServiceDefault(services = null) {
-    // Utiliser les services passés en paramètre ou this.services
     const servicesToCheck = services || this.services;
 
     if (!servicesToCheck || !Array.isArray(servicesToCheck)) {
@@ -1063,19 +1071,18 @@ class TarificationService {
    * @returns {Promise<number|null>} ID de l'unité par défaut ou null
    */
   async getUniteDefault(service) {
-    // Si aucun service n'est fourni, retourner null
+    console.log('TarificationService - getUniteDefault - service:', service);
     if (!service) return null;
 
     try {
-        // Requête pour obtenir l'unité par défaut via l'API
-        const response = await api.get(`tarif-api.php?uniteDefautService=${service.id}`);
+        // ✅ UTILISATION de l'ID camelCase
+        const response = await api.get(`tarif-api.php?uniteDefautService=${service.idService}`);
+        console.log('TarificationService - getUniteDefault - API response:', response);
         
-        // Vérifier la réponse de l'API
         if (response && response.success && response.uniteId) {
             return response.uniteId;
         }
         
-        // Retourner null si aucune unité par défaut n'est trouvée
         return null;
     } catch (error) {
       console.error('Erreur lors de la récupération de l\'unité par défaut:', error);
@@ -1154,7 +1161,6 @@ class TarificationService {
         return 'Tarif thérapeute appliqué';
       }
       
-      // Si ni tarif spécial, ni thérapeute, tarif standard
       return 'Tarif standard appliqué';
     } catch (error) {
       console.error('Erreur lors de la détermination du message de tarif:', error);
@@ -1164,7 +1170,6 @@ class TarificationService {
 
   /**
    * Récupère toutes les unités applicables pour un client spécifique
-   * Inclut les unités avec tarif standard et les unités avec tarif spécial
    * @param {number} clientId ID du client
    * @param {string} [date] Date pour la recherche des tarifs valides (format YYYY-MM-DD)
    * @returns {Promise<Array>} Liste des unités avec leurs détails

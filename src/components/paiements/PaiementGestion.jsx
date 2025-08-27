@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import PaiementsListe from './components/paiements/PaiementsListe';
-import PaiementForm from './components/paiements/PaiementForm';
-import ClientService from './services/ClientService';
+import PaiementsListe from './PaiementsListe';
+import PaiementForm from './PaiementForm';
+import ClientService from '../../services/ClientService';
 
 // Modes du formulaire de paiement
 const FORM_MODES = {
@@ -12,7 +12,7 @@ const FORM_MODES = {
 
 function PaiementGestion({ 
     section = 'liste', 
-    paiementId = null, 
+    idPaiement = null, 
     onPaiementCreated = null, 
     onSectionChange = null,
     initialFilter = {}, 
@@ -20,7 +20,7 @@ function PaiementGestion({
 }) {
     // États pour gérer la navigation entre les différentes vues
     const [activeView, setActiveView] = useState(section);
-    const [selectedPaiementId, setSelectedPaiementId] = useState(paiementId);
+    const [selectedPaiementId, setSelectedPaiementId] = useState(idPaiement);
     const [notification, setNotification] = useState({ message: '', type: '' });
     
     // États pour la gestion des clients
@@ -38,10 +38,10 @@ function PaiementGestion({
 
     // Effet pour mettre à jour l'ID du paiement sélectionné
     useEffect(() => {
-        if (paiementId !== null) {
-            setSelectedPaiementId(paiementId);
+        if (idPaiement !== null) {
+            setSelectedPaiementId(idPaiement);
         }
-    }, [paiementId]);
+    }, [idPaiement]);
 
     // Effet pour notifier le parent du changement de section
     useEffect(() => {
@@ -72,9 +72,9 @@ function PaiementGestion({
     }, []);
 
     // Gestion du retour à la liste
-    const handleRetourListe = (paiementId = null, modified = false, message = '', type = '') => {
-        if (paiementId) {
-            setSelectedPaiementId(paiementId);
+    const handleRetourListe = (idPaiement = null, modified = false, message = '', type = '') => {
+        if (idPaiement) {
+            setSelectedPaiementId(idPaiement);
         }
         
         if (message) {
@@ -85,26 +85,29 @@ function PaiementGestion({
     };
 
     // Gestion de la création de paiement
-    const handlePaiementCreated = (paiementId, message = 'Paiement enregistré avec succès') => {
-        setSelectedPaiementId(paiementId);
+    const handlePaiementCreated = (idPaiement, message = 'Paiement enregistré avec succès') => {
+        setSelectedPaiementId(idPaiement);
         setNotification({ message, type: 'success' });
         setActiveView('liste');
         
         // Si un gestionnaire externe a été fourni, l'appeler
         if (onPaiementCreated) {
-            onPaiementCreated(paiementId);
+            onPaiementCreated(idPaiement);
         }
     };
 
     // Gestion de la modification de paiement
-    const handleModifierPaiement = (paiementId) => {
-        setSelectedPaiementId(paiementId);
+    const handleModifierPaiement = (idPaiement) => {
+        setSelectedPaiementId(idPaiement);
         setActiveView('modifier');
     };
 
     // Gestion de l'affichage de paiement
-    const handleAfficherPaiement = (paiementId) => {
-        setSelectedPaiementId(paiementId);
+    const handleAfficherPaiement = (idPaiement) => {
+        console.log('🔍 ID reçu du clic:', idPaiement);
+        console.log('🔍 Type de l\'ID:', typeof idPaiement);
+        console.log('🔍 ID non vide:', !!idPaiement);
+        setSelectedPaiementId(idPaiement);
         setActiveView('afficher');
     };
 
@@ -136,7 +139,7 @@ function PaiementGestion({
                 return (
                     <PaiementForm 
                         mode={FORM_MODES.EDIT}
-                        paiementId={selectedPaiementId}
+                        idPaiement={selectedPaiementId}
                         onRetourListe={handleRetourListe}
                         clients={clients}
                         clientsLoading={clientsLoading}
@@ -144,10 +147,11 @@ function PaiementGestion({
                     />
                 );
             case 'afficher':
+                console.log('🎯 ID transmis au formulaire:', selectedPaiementId);
                 return (
                     <PaiementForm 
                         mode={FORM_MODES.VIEW}
-                        paiementId={selectedPaiementId}
+                        idPaiement={selectedPaiementId}
                         onRetourListe={handleRetourListe}
                         clients={clients}
                         clientsLoading={clientsLoading}

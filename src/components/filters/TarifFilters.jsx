@@ -127,7 +127,7 @@ const TarifFilters = ({
                 .filter(typeTarif => typeTarif.code !== 'Special')
                 .map(typeTarif => (
                   <option key={typeTarif.id} value={typeTarif.id}>
-                    {typeTarif.nom}
+                    {typeTarif.nomTypeTarif}
                   </option>
                 ))
               }

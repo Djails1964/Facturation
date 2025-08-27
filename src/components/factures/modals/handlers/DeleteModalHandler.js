@@ -23,17 +23,17 @@ export class DeleteModalHandler {
     /**
      * Point d'entrée principal
      */
-    async handle(factureId, event) {
+    async handle(idFacture, event) {
         if (event) {
             event.stopPropagation();
         }
         
         const anchorRef = this.createAnchorRef(event);
         
-        console.log('🚀 DeleteModalHandler - Début suppression/annulation facture ID:', factureId);
-        const facture = this.filteredFactures?.find(f => f.id === factureId);
+        console.log('🚀 DeleteModalHandler - Début suppression/annulation facture ID:', idFacture);
+        const facture = this.filteredFactures?.find(f => f.id === idFacture);
         if (!facture) {
-            console.error('❌ Facture non trouvée:', factureId);
+            console.error('❌ Facture non trouvée:', idFacture);
             return;
         }
 
@@ -71,7 +71,7 @@ export class DeleteModalHandler {
             // ✅ CORRECTION: Vérifier aussi result.confirmed en plus de result.action
             if (result.action === 'confirm' || result.action === 'submit' || result.confirmed === true) {
                 console.log('✅ Confirmation reçue, exécution de l\'action...');
-                await this.executeAction(factureId, facture, isAnnulation, anchorRef);
+                await this.executeAction(idFacture, facture, isAnnulation, anchorRef);
             } else {
                 console.log('❌ Action annulée par l\'utilisateur:', result);
             }
@@ -172,8 +172,8 @@ export class DeleteModalHandler {
     /**
      * Exécuter l'action de suppression/annulation
      */
-    async executeAction(factureId, facture, isAnnulation, anchorRef) {
-        console.log('🚀 Début exécution de l\'action:', { factureId, isAnnulation });
+    async executeAction(idFacture, facture, isAnnulation, anchorRef) {
+        console.log('🚀 Début exécution de l\'action:', { idFacture, isAnnulation });
         
         try {
             console.log('🔄 Affichage du loading...');
@@ -193,10 +193,10 @@ export class DeleteModalHandler {
                     console.log('📞 Appel du service facture...');
                     if (isAnnulation) {
                         console.log('📞 Changement d\'état vers "Annulée"');
-                        return await this.factureService.changerEtatFacture(factureId, 'Annulée');
+                        return await this.factureService.changerEtatFacture(idFacture, 'Annulée');
                     } else {
                         console.log('📞 Suppression de la facture');
-                        return await this.factureService.deleteFacture(factureId);
+                        return await this.factureService.deleteFacture(idFacture);
                     }
                 }
             );

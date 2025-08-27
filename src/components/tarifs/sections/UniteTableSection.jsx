@@ -9,7 +9,7 @@ const UniteTableSection = ({
   highlightedId,
   isSubmitting = false
 }) => {
-  // Configuration des colonnes
+  // Configuration des colonnes - SANS STATUT
   const columns = [
     {
       label: 'Code',
@@ -38,29 +38,18 @@ const UniteTableSection = ({
       )
     },
     {
-      label: 'Statut',
-      field: 'statut',
+      label: '',
+      field: 'actions',
       width: '120px',
+      sortable: false,
       render: (unite) => (
-        <span className={`etat-badge ${unite.actif ? 'etat-confirme' : 'etat-annulee'}`}>
-          {unite.actif ? 'ACTIF' : 'INACTIF'}
-        </span>
-      )
-    },
-    {
-        label: '',
-        field: 'actions',
-        width: '120px',
-        sortable: false,
-        render: (unite) => (
         <UniteActions
-            unite={unite}
-            onEdit={() => onEdit?.(unite)}
-            onDelete={() => onDelete?.(unite)}
-            disabled={isSubmitting}
-            
+          unite={unite}
+          onEdit={() => onEdit?.(unite)}
+          onDelete={() => onDelete?.(unite)}
+          disabled={isSubmitting}
         />
-        )
+      )
     }
   ];
 

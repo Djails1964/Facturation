@@ -17,10 +17,10 @@ import CopyModalHandler from '../modals/handlers/CopyModalHandler';
 export const useFactureModals = (dependencies) => {
     
     // ========== HANDLER EMAIL ==========
-    const handleEnvoyerFacture = useCallback(async (factureId, event) => {
+    const handleEnvoyerFacture = useCallback(async (idFacture, event) => {
         try {
             const emailHandler = new EmailModalHandler(dependencies);
-            await emailHandler.handle(factureId, event);
+            await emailHandler.handle(idFacture, event);
         } catch (error) {
             console.error('❌ Erreur dans handleEnvoyerFacture:', error);
             dependencies.onSetNotification('Erreur lors de l\'envoi de l\'email', 'error');
@@ -28,10 +28,10 @@ export const useFactureModals = (dependencies) => {
     }, [dependencies]);
 
     // ========== HANDLER SUPPRESSION/ANNULATION ==========
-    const handleSupprimerFacture = useCallback(async (factureId, event) => {
+    const handleSupprimerFacture = useCallback(async (idFacture, event) => {
         try {
             const deleteHandler = new DeleteModalHandler(dependencies);
-            await deleteHandler.handle(factureId, event);
+            await deleteHandler.handle(idFacture, event);
         } catch (error) {
             console.error('❌ Erreur dans handleSupprimerFacture:', error);
             dependencies.onSetNotification('Erreur lors de la suppression/annulation', 'error');
@@ -39,10 +39,10 @@ export const useFactureModals = (dependencies) => {
     }, [dependencies]);
 
     // ========== HANDLER IMPRESSION ==========
-    const handleImprimerFacture = useCallback(async (factureId, event) => {
+    const handleImprimerFacture = useCallback(async (idFacture, event) => {
         try {
             const printHandler = new PrintModalHandler(dependencies);
-            await printHandler.handle(factureId, event);
+            await printHandler.handle(idFacture, event);
         } catch (error) {
             console.error('❌ Erreur dans handleImprimerFacture:', error);
             dependencies.onSetNotification('Erreur lors de l\'impression', 'error');
@@ -50,10 +50,10 @@ export const useFactureModals = (dependencies) => {
     }, [dependencies]);
 
     // ========== HANDLER PAIEMENT ==========
-    const handleEnregistrerPaiement = useCallback(async (factureId, event) => {
+    const handleEnregistrerPaiement = useCallback(async (idFacture, event) => {
         try {
             const paymentHandler = new PaymentModalHandler(dependencies);
-            await paymentHandler.handle(factureId, event);
+            await paymentHandler.handle(idFacture, event);
         } catch (error) {
             console.error('❌ Erreur dans handleEnregistrerPaiement:', error);
             dependencies.onSetNotification('Erreur lors de l\'enregistrement du paiement', 'error');
@@ -61,12 +61,12 @@ export const useFactureModals = (dependencies) => {
     }, [dependencies]);
 
     // ========== HANDLER COPIE ==========
-    const handleCopierFacture = useCallback(async (factureId, event) => {
-        console.log('🔄 useFactureModals - handleCopierFacture appelé pour:', factureId);
+    const handleCopierFacture = useCallback(async (idFacture, event) => {
+        console.log('🔄 useFactureModals - handleCopierFacture appelé pour:', idFacture);
         
         try {
             const copyHandler = new CopyModalHandler(dependencies);
-            await copyHandler.handle(factureId, event);
+            await copyHandler.handle(idFacture, event);
             console.log('✅ useFactureModals - handleCopierFacture terminé avec succès');
         } catch (error) {
             console.error('❌ Erreur dans handleCopierFacture:', error);

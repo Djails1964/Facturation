@@ -21,6 +21,7 @@ const GENERIC_MAPPINGS = {
   dateFin: 'date_fin',
   
   // Identifiants génériques
+  id: 'id',
   userId: 'user_id',
   companyId: 'company_id',
   
@@ -44,13 +45,20 @@ const GENERIC_MAPPINGS = {
 
 const FACTURATION_MAPPINGS = {
   // Facture
+  idFacture: 'id_facture',
   numeroFacture: 'numero_facture',
   dateFacture: 'date_facture',
   dateEcheance: 'date_echeance',
+  dateDernierPaiement: 'date_dernier_paiement',
+  dateEdition: 'date_edition',
+  dateEnvoi: 'date_envoi',
   montantHt: 'montant_ht',
   montantTva: 'montant_tva',
   montantTtc: 'montant_ttc',
   montantTotal: 'montant_total',
+  montantPayeTotal: 'montant_paye_total',
+  montantRestant: 'montant_restant',
+  nbPaiements: 'nb_paiements',
   statutFacture: 'statut_facture',
   modeReglement: 'mode_reglement',
   
@@ -59,6 +67,9 @@ const FACTURATION_MAPPINGS = {
   prixUnitaire: 'prix_unitaire',
   prixTotal: 'prix_total',
   tauxTva: 'taux_tva',
+
+    // Relations
+  IdClient: 'id_client',
   
   // Devis
   numeroDevis: 'numero_devis',
@@ -73,28 +84,34 @@ const FACTURATION_MAPPINGS = {
 
 const TARIFICATION_MAPPINGS = {
   // Services
-  serviceId: 'service_id',
+  idService: 'id_service',
   codeService: 'code_service',
   nomService: 'nom_service',
   descriptionService: 'description_service',
   
   // Unités
-  uniteId: 'unite_id',
+  idUnite: 'id_unite',
   codeUnite: 'code_unite',
   nomUnite: 'nom_unite',
+  descriptionUnite: 'description_unite',
   
   // Types de tarifs
-  typeTarifId: 'type_tarif_id',
+  idTypeTarif: 'id_type_tarif',
   codeTypeTarif: 'code_type_tarif',
   nomTypeTarif: 'nom_type_tarif',
+  descriptionTypeTarif: 'description_type_tarif',
   
   // Tarifs
-  tarifId: 'tarif_id',
-  prixTarif: 'prix_tarif',
-  dateTarif: 'date_tarif',
+  idTarifStandard: 'id_tarif_standard',
+  prixTarifStandard: 'prix_tarif_standard',
+  dateDebutTarifStandard: 'date_debut_tarif_standard',
+  dateFinTarifStandard: 'date_fin_tarif_standard',
   
   // Tarifs spéciaux
-  tarifSpecialId: 'tarif_special_id',
+  idTarifSpecial: 'id_tarif_special',
+  prixTarifSpecial: 'prix_tarif_special',
+  dateDebutTarifSpecial: 'date_debut_tarif_special',
+  dateFinTarifSpecial: 'date_fin_tarif_special',
   noteTarifSpecial: 'note_tarif_special'
 };
 
@@ -104,6 +121,7 @@ const TARIFICATION_MAPPINGS = {
 
 const PAIEMENT_MAPPINGS = {
   // Paiements
+  idPaiement: 'id_paiement',
   paiementId: 'paiement_id',
   datePaiement: 'date_paiement',
   montantPaye: 'montant_paye',
@@ -112,8 +130,8 @@ const PAIEMENT_MAPPINGS = {
   etatPaiement: 'etat_paiement',
   
   // Relations
-  factureId: 'facture_id',
-  clientId: 'client_id',
+  idFacture: 'id_facture',
+  idClient: 'id_client',
   
   // Informations système
   dateAnnulation: 'date_annulation',

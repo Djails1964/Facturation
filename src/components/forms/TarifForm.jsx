@@ -132,7 +132,7 @@ const TarifForm = ({
           >
             <option value="">Sélectionner un type de tarif</option>
             {typesTarifs.map(typeTarif => (
-              <option key={typeTarif.id} value={typeTarif.id}>{typeTarif.nom}</option>
+              <option key={typeTarif.id} value={typeTarif.id}>{typeTarif.nomTypeTarif}</option>
             ))}
           </select>
           <label htmlFor="tarif-type" className="required">Type de tarif</label>

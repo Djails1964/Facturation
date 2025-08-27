@@ -11,11 +11,11 @@ import '../../../styles/components/factures/FactureHistoriquePaiements.css';
  */
 function FactureHistoriquePaiements({ 
   etat, 
-  factureId
+  idFacture
   // ✅ SUPPRESSION: formatMontant et formatDate ne sont plus des props
 }) {
 
-    console.log('🔍 Chargement de l\'historique des paiements pour la facture:', factureId);
+    console.log('🔍 Chargement de l\'historique des paiements pour la facture:', idFacture);
   const [historiquePaiements, setHistoriquePaiements] = useState([]);
   const [loadingHistorique, setLoadingHistorique] = useState(false);
   const [hasData, setHasData] = useState(false);
@@ -24,12 +24,12 @@ function FactureHistoriquePaiements({
 
   // Charger l'historique des paiements
   const chargerHistoriquePaiements = async () => {
-    if (!factureId || loadingHistorique) return;
+    if (!idFacture || loadingHistorique) return;
 
     setLoadingHistorique(true);
     try {
-      console.log('🔍 Chargement historique pour facture:', factureId);
-      const response = await paiementService.getPaiementsParFacture(factureId);
+      console.log('🔍 Chargement historique pour facture:', idFacture);
+      const response = await paiementService.getPaiementsParFacture(idFacture);
       console.log('📊 Historique des paiements reçu:', response);
       
       // ✅ CORRECTION : getPaiementsParFacture retourne directement un tableau ou une réponse avec success
@@ -53,7 +53,7 @@ function FactureHistoriquePaiements({
         // ✅ CORRECTION : Adapter les noms des propriétés selon la structure de PaiementService
         const paiementsAdaptes = paiements.map(paiement => ({
           // Garder les propriétés originales pour compatibilité
-          id_paiement: paiement.id || paiement.id_paiement,
+          idPaiement: paiement.id || paiement.idPaiement,
           numero_paiement: paiement.numeroPaiement || paiement.numero_paiement,
           date_paiement: paiement.datePaiement || paiement.date_paiement,
           montant_paye: paiement.montantPaye || paiement.montant_paye,
@@ -61,7 +61,7 @@ function FactureHistoriquePaiements({
           commentaire: paiement.commentaire,
           statut: paiement.statut || 'confirme',
           // Propriétés adaptées pour PaiementService
-          id: paiement.id || paiement.id_paiement,
+          id: paiement.id || paiement.idPaiement,
           numeroPaiement: paiement.numeroPaiement || paiement.numero_paiement,
           datePaiement: paiement.datePaiement || paiement.date_paiement,
           montantPaye: paiement.montantPaye || paiement.montant_paye,
@@ -72,7 +72,7 @@ function FactureHistoriquePaiements({
         setHasData(true);
         console.log('✅ Historique chargé et adapté:', paiementsAdaptes);
       } else {
-        console.log('ℹ️ Aucun paiement trouvé pour la facture:', factureId);
+        console.log('ℹ️ Aucun paiement trouvé pour la facture:', idFacture);
         setHistoriquePaiements([]);
         setHasData(false);
       }
@@ -87,10 +87,10 @@ function FactureHistoriquePaiements({
 
   // Charger automatiquement l'historique au montage
   useEffect(() => {
-    if (factureId) {
+    if (idFacture) {
       chargerHistoriquePaiements();
     }
-  }, [factureId]);
+  }, [idFacture]);
 
   // ✅ POINT CLÉ : Ne rien afficher s'il n'y a pas de données
   if (loadingHistorique) {
@@ -113,7 +113,7 @@ function FactureHistoriquePaiements({
         <div className="facture-paiements-container-simple">
           {historiquePaiements.map((paiement, index) => {
             // ✅ CORRECTION : Utiliser les propriétés adaptées avec fallback
-            const paiementId = paiement.id || paiement.id_paiement;
+            const idPaiement = paiement.id || paiement.idPaiement;
             const numeroPaiement = paiement.numeroPaiement || paiement.numero_paiement;
             const datePaiement = paiement.datePaiement || paiement.date_paiement;
             const montantPaye = paiement.montantPaye || paiement.montant_paye;
@@ -122,7 +122,7 @@ function FactureHistoriquePaiements({
             const statut = paiement.statut || 'confirme';
             
             return (
-              <div key={paiementId || index} className="facture-paiement-ligne">
+              <div key={idPaiement || index} className="facture-paiement-ligne">
                 <div className="paiement-info">
                   <FiCreditCard className="paiement-icon-inline" />
                   Paiement #{numeroPaiement} • {formatDate(datePaiement)} • {methodePaiement}

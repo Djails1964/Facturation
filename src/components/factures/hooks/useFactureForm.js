@@ -3,10 +3,10 @@ import { FORM_MODES } from '../../../constants/factureConstants';
 import FactureService from '../../../services/FactureService';
 import ClientService from '../../../services/ClientService';
 
-export const useFactureForm = (mode, factureId) => {
+export const useFactureForm = (mode, idFacture) => {
   // États principaux
   const [facture, setFacture] = useState({
-    id: '',
+    idFacture: '',
     numeroFacture: '',
     dateFacture: '',
     clientId: null,
@@ -20,14 +20,14 @@ export const useFactureForm = (mode, factureId) => {
     date_paiement: null
   });
 
-  const [isLoading, setIsLoading] = useState(factureId !== null);
+  const [isLoading, setIsLoading] = useState(idFacture !== null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [clientData, setClientData] = useState(null);
   const [clientLoading, setClientLoading] = useState(false);
   const [isLignesValid, setIsLignesValid] = useState(false);
 
-  // Services
+  // Services avec mémorisation
   const factureService = useMemo(() => new FactureService(), []);
   const clientService = useMemo(() => new ClientService(), []);
 
@@ -40,7 +40,7 @@ export const useFactureForm = (mode, factureId) => {
       facture.lignes.length > 0 &&
       isLignesValid);
 
-  // Fonction pour obtenir les données du formulaire
+  // Fonction pour obtenir les données du formulaire avec mémorisation
   const getFormData = useCallback(() => {
     return {
       numeroFacture: facture.numeroFacture,

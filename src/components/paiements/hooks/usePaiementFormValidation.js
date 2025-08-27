@@ -63,7 +63,7 @@ export const usePaiementFormValidation = (formState) => {
      */
     const validateForm = useCallback(() => {
         // Validation de la facture
-        if (!paiement.factureId) {
+        if (!paiement.idFacture) {
             return { isValid: false, error: VALIDATION_MESSAGES.FACTURE_REQUIRED };
         }
         

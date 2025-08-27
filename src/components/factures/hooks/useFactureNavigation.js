@@ -3,9 +3,9 @@ import { useNavigationGuard } from '../../../App';
 import { useUnsavedChanges } from '../../../hooks/useUnsavedChanges';
 import { FORM_MODES } from '../../../constants/factureConstants';
 
-export const useFactureNavigation = (mode, factureId, initialFormData, getFormData, canDetectChanges) => {
+export const useFactureNavigation = (mode, idFacture, initialFormData, getFormData, canDetectChanges) => {
   const { registerGuard, unregisterGuard } = useNavigationGuard();
-  const guardId = `facture-form-${factureId || 'new'}`;
+  const guardId = `facture-form-${idFacture || 'new'}`;
   
   const [showGlobalModal, setShowGlobalModal] = useState(false);
   const [globalNavigationCallback, setGlobalNavigationCallback] = useState(null);
@@ -49,7 +49,7 @@ export const useFactureNavigation = (mode, factureId, initialFormData, getFormDa
     }
   }, [canDetectChanges, hasUnsavedChanges]);
 
-  const handleSuccessfulSave = useCallback((factureId, message, callbacks) => {
+  const handleSuccessfulSave = useCallback((idFacture, message, callbacks) => {
     markAsSaved();
     resetChanges();
     unregisterGuard(guardId);
@@ -57,9 +57,9 @@ export const useFactureNavigation = (mode, factureId, initialFormData, getFormDa
     setGlobalNavigationCallback(null);
 
     if (mode === FORM_MODES.CREATE && callbacks.onFactureCreated) {
-      callbacks.onFactureCreated(factureId, message);
+      callbacks.onFactureCreated(idFacture, message);
     } else if (callbacks.onRetourListe) {
-      callbacks.onRetourListe(factureId, true, message, 'success');
+      callbacks.onRetourListe(idFacture, true, message, 'success');
     }
   }, [mode, markAsSaved, resetChanges, guardId, unregisterGuard]);
 

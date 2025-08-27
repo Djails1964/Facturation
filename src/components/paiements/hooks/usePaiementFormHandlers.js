@@ -12,7 +12,7 @@ import {
 export const usePaiementFormHandlers = (formState, formLogic, formValidation) => {
     const {
         paiement, setPaiement, setError, isSubmitting, setIsSubmitting,
-        isReadOnly, isPaiementAnnule, isCreate, mode, paiementId,
+        isReadOnly, isPaiementAnnule, isCreate, mode, idPaiement,
         onRetourListe, onPaiementCreated, paiementService, factureService,
         markAsSaved, resetChanges, getFormData, setInitialFormData,
         unregisterGuard, guardId, setShowGlobalModal, setGlobalNavigationCallback,
@@ -39,7 +39,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
             [field]: value
         }));
         
-        if (field === 'factureId' && value) {
+        if (field === 'idFacture' && value) {
             chargerDetailFacture(value);
         }
     }, [isReadOnly, isPaiementAnnule, mode, setPaiement]);
@@ -47,9 +47,11 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
     /**
      * Charger les détails d'une facture sélectionnée
      */
-    const chargerDetailFacture = useCallback(async (factureId) => {
+    const chargerDetailFacture = useCallback(async (idFacture) => {
         try {
-            const factureData = await factureService.getFacture(factureId);
+            console.log('usePaiementFormHandlers - chargerDetailFacture - idFacture:', idFacture);
+            const factureData = await factureService.getFacture(idFacture);
+            console.log('usePaiementFormHandlers - chargerDetailFacture - factureData:', factureData);
             formState.setFactureSelectionnee(factureData);
             
             if (factureData && isCreate) {
@@ -127,7 +129,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
     /**
      * Fonction pour gérer une sauvegarde réussie
      */
-    const handleSuccessfulSave = useCallback((paiementId, message) => {
+    const handleSuccessfulSave = useCallback((idPaiement, message) => {
         console.log('✅ Sauvegarde réussie PaiementForm - nettoyage des modifications');
         
         markAsSaved();
@@ -142,9 +144,9 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
         setGlobalNavigationCallback(null);
 
         if (mode === FORM_MODES.CREATE && onPaiementCreated) {
-            onPaiementCreated(paiementId, message);
+            onPaiementCreated(idPaiement, message);
         } else if (onRetourListe) {
-            onRetourListe(paiementId, true, message, 'success');
+            onRetourListe(idPaiement, true, message, 'success');
         }
     }, [mode, onPaiementCreated, onRetourListe, markAsSaved, resetChanges, getFormData, guardId, unregisterGuard]);
 
@@ -170,7 +172,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
         
         try {
             const paiementData = {
-                factureId: parseInt(paiement.factureId),
+                idFacture: parseInt(paiement.idFacture),
                 datePaiement: paiement.datePaiement,
                 montantPaye: parseFloat(paiement.montantPaye),
                 methodePaiement: paiement.methodePaiement,
@@ -185,9 +187,9 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
                     handleSuccessfulSave(result.id, result.message || NOTIFICATIONS.SUCCESS.CREATE);
                 }
             } else if (formState.canEdit) {
-                result = await paiementService.updatePaiement(paiementId, paiementData);
+                result = await paiementService.updatePaiement(idPaiement, paiementData);
                 if (result.success) {
-                    handleSuccessfulSave(paiementId, result.message || NOTIFICATIONS.SUCCESS.UPDATE);
+                    handleSuccessfulSave(idPaiement, result.message || NOTIFICATIONS.SUCCESS.UPDATE);
                 }
             }
             
@@ -197,7 +199,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
         } finally {
             setIsSubmitting(false);
         }
-    }, [isPaiementAnnule, formValidation, setError, setIsSubmitting, paiement, isCreate, paiementService, paiementId, handleSuccessfulSave]);
+    }, [isPaiementAnnule, formValidation, setError, setIsSubmitting, paiement, isCreate, paiementService, idPaiement, handleSuccessfulSave]);
 
     /**
      * Gestion du retour avec protection
