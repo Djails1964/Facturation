@@ -31,13 +31,13 @@ const TarifSpecialTableSection = ({
     return tarifsSpeciaux.map((tarifSpecial, index) => {
       // IDs avec support camelCase et snake_case
       const clientId = tarifSpecial.clientId || tarifSpecial.client_id;
-      const serviceId = tarifSpecial.serviceId || tarifSpecial.service_id;
-      const uniteId = tarifSpecial.uniteId || tarifSpecial.unite_id;
+      const idService = tarifSpecial.idService;
+      const idUnite = tarifSpecial.idUnite;
 
       // Recherche des entités liées
       const client = clients.find(c => c.id == clientId);
-      const service = services.find(s => s.id == serviceId);
-      const unite = unites.find(u => u.id == uniteId);
+      const service = services.find(s => s.id == idService);
+      const unite = unites.find(u => u.id == idUnite);
 
       // Utilisation de la méthode centralisée pour calculer l'état
       const dateDebut = tarifSpecial.dateDebutTarifSpecial || tarifSpecial.date_debut_tarif_special;
@@ -50,8 +50,8 @@ const TarifSpecialTableSection = ({
         
         // Noms enrichis
         clientNom: client ? `${client.prenom} ${client.nom}` : `Client ${clientId || 'inconnu'}`,
-        serviceNom: service?.nom || `Service ${serviceId || 'inconnu'}`,
-        uniteNom: unite?.nom || `Unité ${uniteId || 'inconnue'}`,
+        nomService: service?.nomService || `Service ${idService || 'inconnu'}`,
+        nomUnite: unite?.nomUnite || `Unité ${idUnite || 'inconnue'}`,
         
         // Informations de période
         dateDebut: dateDebut ? new Date(dateDebut) : null,
@@ -64,8 +64,8 @@ const TarifSpecialTableSection = ({
         
         // IDs normalisés
         clientId: clientId,
-        serviceId: serviceId,
-        uniteId: uniteId
+        idService: idService,
+        idUnite: idUnite
       };
     });
   }, [tarifsSpeciaux, services, unites, clients]);
@@ -81,7 +81,7 @@ const TarifSpecialTableSection = ({
     },
     {
       label: 'Service',
-      field: 'serviceNom',
+      field: 'nomService',
       width: '180px',
       sortable: true
     },

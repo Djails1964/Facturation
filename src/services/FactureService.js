@@ -340,15 +340,17 @@ class FactureService {
               }
           }
 
+          console.log('🔍 Données normalisées de la facture:', factureNormalisee);
+
           const factureFormattee = {
               // ✅ CORRECTION: Essayer différentes variantes de noms de champs
               idFacture: factureNormalisee.idFacture || factureNormalisee.id_facture || '',
               numeroFacture: factureNormalisee.numeroFacture || factureNormalisee.numero_facture || '',
               dateFacture: factureNormalisee.dateFacture || factureNormalisee.date_facture || '',
               idClient: factureNormalisee.idClient || factureNormalisee.id_client,
-              totalFacture: parseFloat(factureNormalisee.montant_total || 0),
+              montantTotal: parseFloat(factureNormalisee.montantTotal || 0),
               ristourne: parseFloat(factureNormalisee.ristourne || 0),
-              totalAvecRistourne: parseFloat(factureNormalisee.montant_total || 0) - parseFloat(factureNormalisee.ristourne || 0),
+              totalAvecRistourne: parseFloat(factureNormalisee.montantTotal || 0) - parseFloat(factureNormalisee.ristourne || 0),
               
               // Données des paiements multiples
               montantPayeTotal: parseFloat(factureNormalisee.montantPayeTotal || 0),
@@ -357,17 +359,17 @@ class FactureService {
               dateDernierPaiement: factureNormalisee.dateDernierPaiement || null,
               
               lignes: (factureNormalisee.lignes || []).map(ligne => ({
-                  id: ligne.id_ligne,
+                  idLigne: ligne.idLigne,
                   description: ligne.description,
-                  unite: ligne.unite,
+                  // unite: ligne.unite,
                   quantite: parseFloat(ligne.quantite || 0),
-                  prixUnitaire: parseFloat(ligne.prix_unitaire || 0),
-                  total: parseFloat(ligne.total_ligne || 0),
-                  serviceId: ligne.service_id || null,
-                  uniteId: ligne.unite_id || null,
-                  serviceType: ligne.service_type || ligne.serviceType || null,
-                  noOrdre: ligne.no_ordre || null,
-                  descriptionDates: ligne.description_dates || null
+                  prixUnitaire: parseFloat(ligne.prixUnitaire || 0),
+                  totalLigne: parseFloat(ligne.totalLigne || 0),
+                  idService: ligne.idService || null,
+                  idUnite: ligne.idUnite || null,
+                  // serviceType: ligne.service_type || ligne.serviceType || null,
+                  noOrdre: ligne.noOrdre || null,
+                  descriptionDates: ligne.descriptionDates || null
               })),
               etat: this._determinerEtatBase(factureNormalisee), // État de base uniquement
               documentPath: documentPath,
@@ -381,7 +383,7 @@ class FactureService {
               est_annulee: toBoolean(factureNormalisee.est_annulee),
               est_payee: toBoolean(factureNormalisee.est_payee),
               client: factureNormalisee.nom ? {
-                  id: factureNormalisee.id_client,
+                  id: factureNormalisee.idClient,
                   prenom: factureNormalisee.prenom,
                   nom: factureNormalisee.nom,
                   email: factureNormalisee.email || null,
@@ -434,7 +436,7 @@ class FactureService {
         this._clearCache();
         return {
           success: true,
-          id: response.idFacture,
+          id: response.factureId,
           message: response.message || 'Facture créée avec succès'
         };
       } else {
@@ -448,8 +450,10 @@ class FactureService {
 
   async updateFacture(id, factureData) {
     try {
+      console.log(`FactureService - updateFacture - Mise à jour de la facture ${id} avec les données:`, factureData);
       const response = await api.put(`facture-api.php?id=${id}`, factureData);
-      
+      console.log(`FactureService - updateFacture - Réponse de l'API:`, response);
+
       if (response && response.success) {
         delete this._cacheFacture[id];
         return {
@@ -668,8 +672,10 @@ class FactureService {
 
   async imprimerFacture(id, options = {}) {
     try {
+      console.log(`Impression de la facture ${id} avec options:`, options);
       const response = await api.post(`facture-api.php?imprimer=1&id=${id}`, { options });
-      
+      console.log(`Réponse de l'impression de la facture ${id}:`, response);
+
       if (response && response.success) {
         delete this._cacheFacture[id];
 

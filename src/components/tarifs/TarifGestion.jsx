@@ -85,7 +85,7 @@ const TarifGestion = ({
   // Actions avancées
   const handleCreateFactureFromTarif = (tarif, type = 'standard') => {
     if (onNavigateToFacture) {
-      onNavigateToFacture(tarif.serviceId || tarif.service_id, tarif.id);
+      onNavigateToFacture(tarif.idService, tarif.id);
       addNotification('info', 'Redirection vers la création de facture...', { tarif });
     }
   };

@@ -155,7 +155,7 @@ export class CopyModalHandler {
                 </div>
                 <div class="info-row">
                     <div class="info-label">Montant total:</div>
-                    <div class="info-value">${this.formatMontant(factureData.totalFacture)} CHF</div>
+                    <div class="info-value">${this.formatMontant(factureData.montantTotal)} CHF</div>
                 </div>
                 <div class="info-row">
                     <div class="info-label">Nombre de lignes:</div>
@@ -171,7 +171,7 @@ export class CopyModalHandler {
      * Exécuter la copie de la facture
      */
     async executeFactureCopy(factureData, nouveauNumero, anchorRef) {
-        console.log('🔄 Début exécution copie - Nouvelle facture:', nouveauNumero);
+        console.log('📄 Début exécution copie - Nouvelle facture:', nouveauNumero);
         
         try {
             const createResult = await this.showLoading(
@@ -183,30 +183,48 @@ export class CopyModalHandler {
                     position: 'smart'
                 },
                 async () => {
-                    console.log('🔄 Préparation des données de la nouvelle facture...');
+                    console.log('📄 Préparation des données de la nouvelle facture...');
                     const nouvelleFactureData = this.prepareNewFactureData(factureData, nouveauNumero);
-                    console.log('🔄 Données préparées:', nouvelleFactureData);
+                    console.log('📄 Données préparées:', nouvelleFactureData);
                     
-                    console.log('🔄 Appel API createFacture...');
+                    console.log('📄 Appel API createFacture...');
                     const result = await this.factureService.createFacture(nouvelleFactureData);
-                    console.log('🔄 Résultat API createFacture:', result);
+                    console.log('📄 Résultat API createFacture:', result);
                     
                     return result;
                 }
             );
             
-            console.log('🔄 Résultat création:', createResult);
+            console.log('📄 Résultat création:', createResult);
             
             if (createResult && createResult.success) {
-                console.log('✅ Copie réussie, affichage du succès...');
-                await this.showCopySuccess(nouveauNumero, factureData.numeroFacture, anchorRef);
+                console.log('✅ Copie réussie, récupération des détails de la facture créée...');
+                
+                // ✅ CORRECTION: Récupérer les détails complets de la facture créée
+                let nouvelleFacture = null;
+                if (createResult.id) {
+                    try {
+                        nouvelleFacture = await this.factureService.getFacture(createResult.id);
+                    } catch (error) {
+                        console.warn('⚠️ Impossible de récupérer les détails de la nouvelle facture:', error);
+                    }
+                }
+                
+                // Afficher le succès avec les vraies données
+                await this.showCopySuccess(
+                    nouveauNumero, 
+                    factureData.numeroFacture, 
+                    nouvelleFacture || this.createFallbackFactureData(factureData, nouveauNumero),
+                    anchorRef
+                );
+                
                 this.onSetNotification(`Facture ${nouveauNumero} créée avec succès!`, 'success');
                 
-                console.log('🔄 Rechargement des factures...');
+                console.log('📄 Rechargement des factures...');
                 this.chargerFactures();
                 
                 if (createResult.id && this.setFactureSelectionnee) {
-                    console.log('🔄 Sélection de la nouvelle facture:', createResult.id);
+                    console.log('📄 Sélection de la nouvelle facture:', createResult.id);
                     this.setFactureSelectionnee(createResult.id);
                 }
             } else {
@@ -226,12 +244,14 @@ export class CopyModalHandler {
      */
     prepareNewFactureData(factureData, nouveauNumero) {
         // ✅ Utiliser les noms de champs attendus par le backend PHP
+        console.log('🔄 Préparation des données pour la nouvelle facture avec numéro:', nouveauNumero);
+        console.log('🔄 Données source:', factureData);
         return {
             // Champs principaux avec les bons noms
             numeroFacture: nouveauNumero,
             dateFacture: new Date().toISOString().split('T')[0],
-            clientId: factureData.clientId,
-            montantTotal: factureData.totalFacture,  // ✅ Changé de totalFacture
+            idClient: factureData.idClient,
+            montantTotal: factureData.montantTotal,  // ✅ Changé de montant de la facture
             ristourne: factureData.ristourne || 0,
             
             // Informations client pour le logging
@@ -243,8 +263,8 @@ export class CopyModalHandler {
             est_envoyee: false,
             est_annulee: false,
             est_payee: false,
-            date_paiement: null,
-            date_annulation: null,
+            datePaiement: null,
+            dateAnnulation: null,
             factfilename: null,
             documentPath: null,
             
@@ -252,12 +272,12 @@ export class CopyModalHandler {
             lignes: factureData.lignes.map(ligne => ({
                 description: ligne.description,
                 descriptionDates: ligne.descriptionDates || '',
-                unite: ligne.unite,
+                noOrdre: ligne.noOrdre,
                 quantite: ligne.quantite,
                 prixUnitaire: ligne.prixUnitaire,
-                total: ligne.total,
-                serviceId: ligne.serviceId,
-                uniteId: ligne.uniteId
+                totalLigne: ligne.totalLigne,
+                idService: ligne.idService,
+                idUnite: ligne.idUnite
             }))
         };
     }
@@ -265,26 +285,31 @@ export class CopyModalHandler {
     /**
      * Modal de succès de copie
      */
-    async showCopySuccess(nouveauNumero, ancienNumero, anchorRef) {
-        const config = ModalComponents.createSimpleModalConfig(
-            "Copie réussie !",
-            {},
-            {
-                intro: "",
-                content: `<div class="modal-success">
-                    La facture ${nouveauNumero} a été créée avec succès à partir de ${ancienNumero}.
-                </div>`,
-                buttons: ModalComponents.createModalButtons({
-                    submitText: "OK",
-                    showCancel: false
-                })
-            }
-        );
+    async showCopySuccess(nouveauNumero, ancienNumero, nouvelleFacture, anchorRef) {
+        console.log('📄 Affichage modal succès avec données:', nouvelleFacture);
+        
+        // Créer le contenu avec le message de succès et les détails de la facture
+        const content = `
+            <div class="modal-success" style="margin-bottom: 15px; padding: 10px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 5px; color: #155724;">
+                <p style="margin: 0;">La facture ${nouveauNumero} a été créée avec succès à partir de ${ancienNumero}.</p>
+            </div>
+            ${ModalComponents.createFactureDetailsSection(nouvelleFacture, this.formatMontant, this.formatDate)}
+        `;
 
+        // Afficher directement avec showCustom sans passer par createSimpleModalConfig
         await this.showCustom({
-            ...config,
+            title: "Copie réussie !",
+            content: content,
             anchorRef,
-            position: 'smart'
+            size: 'medium',
+            position: 'smart',
+            buttons: [
+                {
+                    text: "OK",
+                    action: "submit",
+                    className: "primary"
+                }
+            ]
         });
     }
 
@@ -348,6 +373,19 @@ export class CopyModalHandler {
             anchorRef.current = event.currentTarget;
         }
         return anchorRef;
+    }
+
+    /**
+     * Créer des données de fallback si on ne peut pas récupérer la nouvelle facture
+     */
+    createFallbackFactureData(factureOriginal, nouveauNumero) {
+        return {
+            numeroFacture: nouveauNumero,
+            client: factureOriginal.client,
+            dateFacture: new Date().toISOString().split('T')[0],
+            montantTotal: factureOriginal.montantTotal,
+            etat: 'En attente'
+        };
     }
 }
 

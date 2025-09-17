@@ -1,9 +1,9 @@
-import { useCallback } from 'react';
-import TarificationService from '../../../services/TarificationService';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
 /**
- * Hook personnalisé pour la gestion des prix et calculs de facture
- * Gère le calcul automatique des prix selon les services et unités sélectionnés
+ * Hook personnalisé pour la gestion des calculs de prix dans les factures
+ * VERSION ARCHITECTURE UNIFIÉE - Une seule fonction principale pour tous les calculs
+ * CORRIGÉ pour forcer le recalcul lors des changements de service
  */
 export function useFacturePricing(
     client,
@@ -11,277 +11,495 @@ export function useFacturePricing(
     services,
     unites,
     lignes,
-    modifierLigneCallback,
+    modifierLigne,
     prixModifiesManuel
 ) {
+    // États pour le suivi des calculs
+    const [isCalculating, setIsCalculating] = useState(false);
+    const [lastCalculation, setLastCalculation] = useState({});
+    
+    // Références pour éviter les calculs multiples
+    const calculationCache = useRef(new Map());
+    const calculationPromises = useRef(new Map());
+    
     /**
-     * Calcule le prix pour un client, service et unité donnés
+     * FONCTION PRINCIPALE UNIFIÉE: Calcul du prix pour un client
      */
-    const calculerPrixPourClient = useCallback(async (client, service, unite) => {
-        if (!client || !service || !unite) {
-            console.warn('Paramètres manquants pour le calcul du prix');
+    const calculerPrixPourClient = useCallback(async (params) => {
+        const { clientId, idService, idUnite, forceRecalcul = false } = params;
+
+        console.log('Calcul prix pour client appelé avec:', { clientId, idService, idUnite, forceRecalcul });
+        
+        // Validation stricte des paramètres
+        if (!clientId || !idService || !idUnite) {
+            console.warn('Paramètres manquants pour calculerPrixPourClient:', { clientId, idService, idUnite });
             return 0;
         }
 
-        try {
-            // Créer une nouvelle instance pour chaque calcul
-            const tarificationService = new TarificationService();
-            await tarificationService.initialiser();
-            
-            const prix = await tarificationService.calculerPrix({
-                clientId: client.id,
-                serviceId: service.id,
-                uniteId: unite.id,
-                clientType: client.type,
-                date: new Date().toISOString().split('T')[0]
+        if (!tarificationService) {
+            console.warn('TarificationService non disponible');
+            return 0;
+        }
+
+        // Clé de cache
+        const cacheKey = `${clientId}-${idService}-${idUnite}`;
+
+        // Vérification cache ou force recalcul
+        if (!forceRecalcul) {
+            if (calculationCache.current.has(cacheKey)) {
+                const cachedResult = calculationCache.current.get(cacheKey);
+                const now = Date.now();
+                
+                if (now - cachedResult.timestamp < 10000) {
+                    console.log(`Prix récupéré du cache: ${cachedResult.prix} CHF pour ${cacheKey}`);
+                    return cachedResult.prix;
+                } else {
+                    calculationCache.current.delete(cacheKey);
+                    console.log(`Cache expiré pour ${cacheKey}, recalcul nécessaire`);
+                }
+            }
+        } else {
+            calculationCache.current.delete(cacheKey);
+            console.log(`Force recalcul demandé pour ${cacheKey}`);
+        }
+
+        // Protection contre les appels simultanés
+        if (calculationPromises.current.has(cacheKey)) {
+            console.log(`Calcul déjà en cours pour ${cacheKey}, attente du résultat...`);
+            return await calculationPromises.current.get(cacheKey);
+        }
+
+        // Créer la promesse de calcul
+        const calculationPromise = (async () => {
+            try {
+                console.log('Calcul du prix initial pour:', {
+                    clientId,
+                    idService,
+                    idUnite,
+                    clientNom: client?.nom,
+                    forceRecalcul
+                });
+
+                const prix = await tarificationService.calculerPrix({
+                    clientId,
+                    idService,
+                    idUnite,
+                    date: new Date().toISOString().split('T')[0]
+                });
+
+                const finalPrix = prix || 0;
+                
+                // Mise en cache du résultat
+                calculationCache.current.set(cacheKey, {
+                    prix: finalPrix,
+                    timestamp: Date.now()
+                });
+
+                console.log(`Prix calculé: ${finalPrix} CHF pour client ${client?.nom} (ID: ${clientId})`);
+                return finalPrix;
+            } catch (error) {
+                console.error('Erreur dans calculerPrixPourClient:', error);
+                return 0;
+            } finally {
+                // Nettoyer la promesse
+                calculationPromises.current.delete(cacheKey);
+            }
+        })();
+
+        // Stocker la promesse
+        calculationPromises.current.set(cacheKey, calculationPromise);
+        
+        return await calculationPromise;
+    }, [tarificationService, client]);
+
+    /**
+     * FONCTION UTILITAIRE: Extraction unifiée des IDs de service et unité
+     */
+    const extraireIdsLigne = useCallback((ligne, index, nouvellesValeurs = null) => {
+        let idService = null;
+        let idUnite = null;
+        let serviceCode = null;
+        let uniteCode = null;
+
+        console.log(`Extraction IDs ligne ${index}:`, {
+            ligne: ligne,
+            nouvellesValeurs: nouvellesValeurs
+        });
+
+        // EXTRACTION DU SERVICE
+        if (nouvellesValeurs?.serviceType) {
+            // Nouvelle valeur fournie
+            serviceCode = nouvellesValeurs.serviceType;
+            const serviceObj = services?.find(s => s.codeService === serviceCode);
+            idService = serviceObj?.idService;
+            console.log('Service ID depuis nouvelle valeur:', { serviceCode, idService });
+        } else if (nouvellesValeurs?.service && typeof nouvellesValeurs.service === 'object') {
+            // Objet service fourni
+            idService = nouvellesValeurs.service.idService;
+            serviceCode = nouvellesValeurs.service.codeService;
+            console.log('Service ID depuis objet nouvelle valeur:', { serviceCode, idService });
+        } else if (ligne.service?.idService) {
+            // Objet enrichi
+            idService = ligne.service.idService;
+            serviceCode = ligne.service.codeService;
+            console.log('Service ID depuis objet enrichi:', { serviceCode, idService });
+        } else if (ligne.serviceId) {
+            // ID direct
+            idService = ligne.serviceId;
+            console.log('Service ID depuis propriété directe:', idService);
+        } else if (ligne.serviceType && services) {
+            // Code service
+            serviceCode = ligne.serviceType;
+            const serviceObj = services.find(s => s.codeService === serviceCode);
+            idService = serviceObj?.idService;
+            console.log('Service ID depuis code service:', { serviceCode, idService });
+        }
+
+        // EXTRACTION DE L'UNITÉ
+        if (nouvellesValeurs?.unite) {
+            // Nouvelle valeur fournie
+            if (typeof nouvellesValeurs.unite === 'object') {
+                idUnite = nouvellesValeurs.unite.idUnite;
+                uniteCode = nouvellesValeurs.unite.code || nouvellesValeurs.unite.codeUnite;
+                console.log('Unité ID depuis objet nouvelle valeur:', { uniteCode, idUnite });
+            } else {
+                uniteCode = nouvellesValeurs.unite;
+                const uniteObj = unites?.find(u => u.code === uniteCode || u.codeUnite === uniteCode);
+                idUnite = uniteObj?.idUnite;
+                console.log('Unité ID depuis code nouvelle valeur:', { uniteCode, idUnite });
+            }
+        } else if (ligne.unite?.idUnite) {
+            // Objet enrichi
+            idUnite = ligne.unite.idUnite;
+            uniteCode = ligne.unite.code || ligne.unite.codeUnite;
+            console.log('Unité ID depuis objet enrichi:', { uniteCode, idUnite });
+        } else if (ligne.uniteId) {
+            // ID direct
+            idUnite = ligne.uniteId;
+            console.log('Unité ID depuis propriété directe:', idUnite);
+        } else if (ligne.uniteCode && unites) {
+            // Code unité
+            uniteCode = ligne.uniteCode;
+            const uniteObj = unites.find(u => u.codeUnite === uniteCode || u.code === uniteCode);
+            idUnite = uniteObj?.idUnite;
+            console.log('Unité ID depuis uniteCode:', { uniteCode, idUnite });
+        } else if (typeof ligne.unite === 'string' && unites) {
+            // String unité
+            uniteCode = ligne.unite;
+            const uniteObj = unites.find(u => u.codeUnite === uniteCode || u.code === uniteCode);
+            idUnite = uniteObj?.idUnite;
+            console.log('Unité ID depuis string unité:', { uniteCode, idUnite });
+        }
+
+        const result = { idService, idUnite, serviceCode, uniteCode };
+        console.log(`IDs finaux ligne ${index}:`, result);
+        return result;
+    }, [services, unites]);
+
+    /**
+     * FONCTION PRINCIPALE UNIFIÉE: Calcule les prix des lignes selon différentes stratégies
+     */
+    const calculerPrix = useCallback(async (options = {}) => {
+        const {
+            mode = 'missing',
+            ligneIndex = null,
+            nouvellesValeurs = null,
+            respecterModificationsManuelles = true,
+            forceRecalcul = false  // ✅ AJOUT: Paramètre pour forcer le recalcul
+        } = options;
+
+        if (!client || !lignes?.length || !tarificationService || isCalculating) {
+            console.log('Conditions non remplies pour calcul prix:', {
+                client: !!client,
+                lignes: lignes?.length,
+                tarificationService: !!tarificationService,
+                isCalculating
             });
-
-            console.log(`💰 Prix calculé: ${prix} CHF pour ${service.nom} - ${unite.nom}`);
-            return prix || 0;
-        } catch (error) {
-            console.error('Erreur lors du calcul du prix:', error);
-            return 0;
-        }
-    }, []);
-
-    /**
-     * Recalcule le prix d'une ligne spécifique
-     */
-    const recalculerPrixLigne = useCallback(async (index) => {
-        if (!client || !lignes[index] || !tarificationService) {
             return;
         }
 
-        const ligne = lignes[index];
+        console.log(`Calcul prix unifié - Mode: ${mode}`, options);
+
+        // Déterminer les lignes à traiter
+        let lignesToProcess = [];
         
-        // Ne recalculer que si le prix n'a pas été modifié manuellement
-        if (prixModifiesManuel.current && prixModifiesManuel.current[index]) {
-            console.log(`⚠️ Prix ligne ${index} modifié manuellement, pas de recalcul automatique`);
-            return;
-        }
-
-        // Trouver les objets service et unité
-        const service = services.find(s => s.code === ligne.serviceType);
-        const unite = unites.find(u => u.code === ligne.unite);
-        
-        if (!service || !unite) {
-            console.warn(`Service ou unité introuvable pour la ligne ${index}`);
-            return;
-        }
-
-        try {
-            const prix = await calculerPrixPourClient(client, service, unite);
-            
-            if (prix > 0) {
-                // Mettre à jour le prix et recalculer le total
-                const quantite = parseFloat(ligne.quantite) || 0;
-                const nouveauTotal = quantite * prix;
-                
-                console.log(`🔄 Mise à jour prix ligne ${index}: ${prix} CHF (total: ${nouveauTotal})`);
-                
-                // Utiliser le callback pour mettre à jour la ligne
-                if (modifierLigneCallback) {
-                    modifierLigneCallback(index, 'prixUnitaire', prix);
+        switch (mode) {
+            case 'single':
+                if (ligneIndex !== null && ligneIndex >= 0 && ligneIndex < lignes.length) {
+                    lignesToProcess = [{ ligne: lignes[ligneIndex], index: ligneIndex }];
                 }
-                
-                // Mettre à jour l'affichage
-                setTimeout(() => {
-                    const prixInput = document.getElementById(`prixUnitaire-${index}`);
-                    if (prixInput && prixInput.parentElement) {
-                        prixInput.parentElement.classList.add('has-value');
-                    }
-                }, 10);
-            }
-        } catch (error) {
-            console.error(`Erreur lors du recalcul du prix pour la ligne ${index}:`, error);
-        }
-    }, [client, lignes, services, unites, tarificationService, calculerPrixPourClient, modifierLigneCallback, prixModifiesManuel]);
-
-    /**
-     * Recalcule les prix de toutes les lignes
-     */
-    const recalculerTousLesPrix = useCallback(async () => {
-        if (!lignes || lignes.length === 0) {
-            return;
-        }
-
-        console.log('🔄 Recalcul de tous les prix...');
-        
-        for (let i = 0; i < lignes.length; i++) {
-            await recalculerPrixLigne(i);
-        }
-        
-        console.log('✅ Recalcul de tous les prix terminé');
-    }, [lignes, recalculerPrixLigne]);
-
-    /**
-     * Marque un prix comme modifié manuellement
-     */
-    const marquerPrixModifieManuel = useCallback((index) => {
-        if (prixModifiesManuel.current) {
-            prixModifiesManuel.current[index] = true;
-            console.log(`✏️ Prix ligne ${index} marqué comme modifié manuellement`);
-        }
-    }, [prixModifiesManuel]);
-
-    /**
-     * Réinitialise le marqueur de prix modifié pour une ligne
-     */
-    const reinitialiserMarqueurPrix = useCallback((index) => {
-        if (prixModifiesManuel.current && prixModifiesManuel.current[index]) {
-            delete prixModifiesManuel.current[index];
-            console.log(`🔄 Marqueur prix ligne ${index} réinitialisé`);
-        }
-    }, [prixModifiesManuel]);
-
-    /**
-     * Vérifie si le prix d'une ligne a été modifié manuellement
-     */
-    const isPrixModifieManuel = useCallback((index) => {
-        return prixModifiesManuel.current && prixModifiesManuel.current[index] === true;
-    }, [prixModifiesManuel]);
-
-    /**
-     * Calcule le prix automatiquement lors d'un changement de service/unité
-     */
-    const handleServiceUniteChange = useCallback(async (index, serviceType, unite) => {
-        if (!client || !serviceType || !unite) {
-            return;
-        }
-
-        // Réinitialiser le marqueur de prix modifié lors du changement de service/unité
-        reinitialiserMarqueurPrix(index);
-
-        // Trouver les objets correspondants
-        const service = services.find(s => s.code === serviceType);
-        const uniteObj = unites.find(u => u.code === unite);
-        
-        if (!service || !uniteObj) {
-            console.warn('Service ou unité non trouvé pour le calcul automatique');
-            return;
-        }
-
-        try {
-            const prix = await calculerPrixPourClient(client, service, uniteObj);
-            
-            if (prix > 0 && modifierLigneCallback) {
-                console.log(`💰 Prix automatique calculé: ${prix} CHF`);
-                modifierLigneCallback(index, 'prixUnitaire', prix);
-                
-                // Mettre à jour l'affichage
-                setTimeout(() => {
-                    const prixInput = document.getElementById(`prixUnitaire-${index}`);
-                    if (prixInput && prixInput.parentElement) {
-                        prixInput.parentElement.classList.add('has-value');
-                    }
-                }, 50);
-            }
-        } catch (error) {
-            console.error('Erreur lors du calcul automatique du prix:', error);
-        }
-    }, [client, services, unites, calculerPrixPourClient, modifierLigneCallback, reinitialiserMarqueurPrix]);
-
-    /**
-     * Calcule le total d'une ligne
-     */
-    const calculerTotalLigne = useCallback((quantite, prixUnitaire) => {
-        const qty = parseFloat(quantite) || 0;
-        const prix = parseFloat(prixUnitaire) || 0;
-        return qty * prix;
-    }, []);
-
-    /**
-     * Calcule le total général de toutes les lignes
-     */
-    const calculerTotalGeneral = useCallback((lignes) => {
-        return lignes.reduce((total, ligne) => {
-            return total + (parseFloat(ligne.total) || 0);
-        }, 0);
-    }, []);
-
-    /**
-     * Met à jour le prix d'une ligne avec validation
-     */
-    const updatePrixLigne = useCallback((index, nouveauPrix, estModificationManuelle = false) => {
-        if (!modifierLigneCallback) {
-            console.warn('Callback de modification non disponible');
-            return;
-        }
-
-        const prix = parseFloat(nouveauPrix) || 0;
-        
-        if (prix < 0) {
-            console.warn('Prix négatif non autorisé');
-            return;
-        }
-
-        // Marquer comme modifié manuellement si nécessaire
-        if (estModificationManuelle) {
-            marquerPrixModifieManuel(index);
-        }
-
-        // Mettre à jour le prix
-        modifierLigneCallback(index, 'prixUnitaire', prix);
-        
-        console.log(`💰 Prix ligne ${index} mis à jour: ${prix} CHF ${estModificationManuelle ? '(manuel)' : '(auto)'}`);
-    }, [modifierLigneCallback, marquerPrixModifieManuel]);
-
-    /**
-     * Gère la logique de recalcul des prix selon le contexte
-     */
-    const handlePriceRecalculation = useCallback(async (index, trigger = 'auto') => {
-        const ligne = lignes[index];
-        if (!ligne) return;
-
-        switch (trigger) {
-            case 'service_change':
-                // Recalculer automatiquement le prix lors du changement de service
-                await handleServiceUniteChange(index, ligne.serviceType, ligne.unite);
                 break;
                 
-            case 'unite_change':
-                // Recalculer automatiquement le prix lors du changement d'unité
-                await handleServiceUniteChange(index, ligne.serviceType, ligne.unite);
+            case 'missing':
+                lignesToProcess = lignes
+                    .map((ligne, index) => ({ ligne, index }))
+                    .filter(({ ligne, index }) => {
+                        const sansPrix = ligne.prixUnitaire === 0 || ligne.prixUnitaire === '' || ligne.prixUnitaire === null || ligne.prixUnitaire === undefined;
+                        const pasModifieManuel = !respecterModificationsManuelles || !prixModifiesManuel?.current?.[index];
+                        return sansPrix && pasModifieManuel;
+                    });
                 break;
                 
-            case 'manual_override':
-                // L'utilisateur a modifié le prix manuellement
-                marquerPrixModifieManuel(index);
-                break;
-                
-            case 'quantity_change':
-                // Recalculer seulement le total, pas le prix unitaire
-                const nouveauTotal = calculerTotalLigne(ligne.quantite, ligne.prixUnitaire);
-                if (modifierLigneCallback) {
-                    modifierLigneCallback(index, 'total', nouveauTotal);
-                }
+            case 'all':
+            case 'client_change':
+                lignesToProcess = lignes
+                    .map((ligne, index) => ({ ligne, index }))
+                    .filter(({ index }) => {
+                        return !respecterModificationsManuelles || !prixModifiesManuel?.current?.[index];
+                    });
                 break;
                 
             default:
-                // Recalcul automatique standard
-                await recalculerPrixLigne(index);
+                console.warn('Mode de calcul inconnu:', mode);
+                return;
         }
-    }, [lignes, handleServiceUniteChange, marquerPrixModifieManuel, calculerTotalLigne, modifierLigneCallback, recalculerPrixLigne]);
+
+        if (lignesToProcess.length === 0) {
+            console.log(`Aucune ligne à traiter pour le mode ${mode}`);
+            return;
+        }
+
+        console.log(`Traitement de ${lignesToProcess.length} ligne(s) en mode ${mode}`);
+        setIsCalculating(true);
+
+        try {
+            for (const { ligne, index } of lignesToProcess) {
+                try {
+                    // EXTRACTION DES IDs UNIFIÉE
+                    const ids = extraireIdsLigne(ligne, index, nouvellesValeurs);
+                    
+                    if (!ids.idService || !ids.idUnite) {
+                        console.warn(`IDs manquants ligne ${index}:`, ids);
+                        continue;
+                    }
+
+                    console.log(`Calcul prix ligne ${index}:`, {
+                        service: ids.serviceCode,
+                        unite: ids.uniteCode,
+                        ancienPrix: ligne.prixUnitaire
+                    });
+
+                    // ✅ CORRECTION: Utiliser forceRecalcul du paramètre options
+                    const shouldForceRecalcul = forceRecalcul || mode === 'client_change' || mode === 'all';
+
+                    // CALCUL DU PRIX
+                    const nouveauPrix = await calculerPrixPourClient({
+                        clientId: client.id,
+                        idService: ids.idService,
+                        idUnite: ids.idUnite,
+                        forceRecalcul: shouldForceRecalcul
+                    });
+
+                    // MISE À JOUR SI NÉCESSAIRE
+                    if (nouveauPrix >= 0 && nouveauPrix !== ligne.prixUnitaire) {
+                        if (modifierLigne && typeof modifierLigne === 'function') {
+                            modifierLigne(index, 'prixUnitaire', nouveauPrix);
+                            console.log(`Prix mis à jour ligne ${index}: ${ligne.prixUnitaire} → ${nouveauPrix} CHF`);
+                        }
+                    }
+
+                } catch (error) {
+                    console.error(`Erreur calcul ligne ${index}:`, error);
+                }
+
+                // Délai entre les lignes pour éviter la surcharge
+                if (lignesToProcess.length > 1) {
+                    await new Promise(resolve => setTimeout(resolve, 30));
+                }
+            }
+        } catch (error) {
+            console.error('Erreur dans calculerPrix:', error);
+        } finally {
+            setIsCalculating(false);
+        }
+    }, [client, lignes, tarificationService, isCalculating, calculerPrixPourClient, extraireIdsLigne, modifierLigne, prixModifiesManuel]);
+
+    // FONCTIONS PUBLIQUES SIMPLIFIÉES (wrappers)
+    
+    const calculerPrixManquants = useCallback(() => {
+        return calculerPrix({ mode: 'missing' });
+    }, [calculerPrix]);
+
+    const recalculerTousLesPrix = useCallback(() => {
+        return calculerPrix({ mode: 'all', respecterModificationsManuelles: true });
+    }, [calculerPrix]);
+
+    const recalculerPrixChangementClient = useCallback(() => {
+        return calculerPrix({ mode: 'client_change', respecterModificationsManuelles: true });
+    }, [calculerPrix]);
+
+    /**
+     * ✅ CORRECTION: Fonction avec support du forceRecalcul
+     */
+    const recalculerPrixLigne = useCallback((index, nouvellesValeurs = null, options = {}) => {
+        return calculerPrix({ 
+            mode: 'single', 
+            ligneIndex: index, 
+            nouvellesValeurs,
+            respecterModificationsManuelles: false, // Pour une ligne spécifique, on recalcule toujours
+            forceRecalcul: options.forceRecalcul || false  // ✅ AJOUT: Support du forceRecalcul
+        });
+    }, [calculerPrix]);
+
+    /**
+     * Calcul du prix pour un service et une unité spécifiques
+     */
+    const calculerPrixPourServiceUnite = useCallback(async (serviceCode, uniteCode) => {
+        if (!client || !serviceCode || !uniteCode || !services || !unites) {
+            return 0;
+        }
+
+        const service = services.find(s => s.codeService === serviceCode);
+        const unite = unites.find(u => u.code === uniteCode || u.codeUnite === uniteCode);
+
+        if (!service || !unite) {
+            console.warn('Service ou unité non trouvé:', { serviceCode, uniteCode });
+            return 0;
+        }
+
+        return await calculerPrixPourClient({
+            clientId: client.id,
+            idService: service.idService,
+            idUnite: unite.idUnite
+        });
+    }, [client, services, unites, calculerPrixPourClient]);
+
+    /**
+     * Vérification si un prix est en cours de calcul
+     */
+    const isPrixCalculating = useCallback((serviceId, uniteId) => {
+        if (!client) return false;
+        const cacheKey = `${client.id}-${serviceId}-${uniteId}`;
+        return calculationPromises.current.has(cacheKey);
+    }, [client]);
+
+    /**
+     * ✅ CORRECTION: Nettoyage du cache avec option de clé spécifique
+     */
+    const clearCache = useCallback((specificKey = null) => {
+        if (specificKey) {
+            calculationCache.current.delete(specificKey);
+            calculationPromises.current.delete(specificKey);
+            console.log('Cache vidé pour clé spécifique:', specificKey);
+        } else {
+            calculationCache.current.clear();
+            calculationPromises.current.clear();
+            console.log('Cache des prix entièrement vidé');
+        }
+    }, []);
+
+    /**
+     * ✅ AJOUT: Fonction pour vider le cache d'une combinaison spécifique
+     */
+    const clearCacheForServiceUnite = useCallback((serviceId, uniteId) => {
+        if (!client) return;
+        const cacheKey = `${client.id}-${serviceId}-${uniteId}`;
+        clearCache(cacheKey);
+    }, [client, clearCache]);
+
+    /**
+     * Obtention du tarif d'information pour un client
+     */
+    const getTarifInfo = useCallback(async () => {
+        if (!client || !tarificationService) {
+            return '';
+        }
+
+        try {
+            return await tarificationService.getTarifInfoMessage(client);
+        } catch (error) {
+            console.error('Erreur lors de la récupération du tarif info:', error);
+            return '';
+        }
+    }, [client, tarificationService]);
+
+    /**
+     * Validation qu'un prix est valide
+     */
+    const isValidPrice = useCallback((prix) => {
+        return typeof prix === 'number' && prix >= 0 && !isNaN(prix);
+    }, []);
+
+    /**
+     * Formatage d'un prix pour affichage
+     */
+    const formatPrice = useCallback((prix) => {
+        if (!isValidPrice(prix)) return '0.00';
+        return prix.toFixed(2);
+    }, [isValidPrice]);
+
+    /**
+     * EFFET SIMPLIFIÉ pour changement de client
+     */
+    useEffect(() => {
+        if (client?.id !== lastCalculation.clientId) {
+            clearCache();
+            
+            if (lastCalculation.clientId) { // Pas la première initialisation
+                console.log('Changement de client détecté:', {
+                    ancien: lastCalculation.clientId,
+                    nouveau: client?.id
+                });
+                
+                setTimeout(() => {
+                    recalculerPrixChangementClient();
+                }, 500);
+            }
+            
+            setLastCalculation({ 
+                clientId: client?.id, 
+                timestamp: Date.now() 
+            });
+        }
+    }, [client?.id, lastCalculation.clientId, clearCache, recalculerPrixChangementClient]);
+
+    /**
+     * Effet pour déclencher le calcul automatique des prix manquants
+     */
+    useEffect(() => {
+        if (!client || !lignes?.length || !tarificationService) {
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            calculerPrixManquants();
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [client?.id, lignes?.length, tarificationService, calculerPrixManquants]);
+
+    /**
+     * Nettoyage lors du démontage
+     */
+    useEffect(() => {
+        return () => {
+            clearCache();
+        };
+    }, [clearCache]);
 
     return {
-        // Méthodes de calcul
+        // Fonction principale unifiée
+        calculerPrix,
+        extraireIdsLigne,
+        
+        // Fonctions de convenance (wrappers)
         calculerPrixPourClient,
-        recalculerPrixLigne,
+        calculerPrixManquants,
         recalculerTousLesPrix,
-        calculerTotalLigne,
-        calculerTotalGeneral,
+        recalculerPrixChangementClient,
+        recalculerPrixLigne,
+        calculerPrixPourServiceUnite,
         
-        // Gestion des prix modifiés manuellement
-        marquerPrixModifieManuel,
-        reinitialiserMarqueurPrix,
-        isPrixModifieManuel,
+        // Utilitaires
+        getTarifInfo,
+        isPrixCalculating,
+        clearCache,
+        clearCacheForServiceUnite,  // ✅ AJOUT
+        isValidPrice,
+        formatPrice,
         
-        // Méthodes de mise à jour
-        updatePrixLigne,
-        handleServiceUniteChange,
-        handlePriceRecalculation,
-        
-        // État des prix
-        prixModifiesManuel
+        // États
+        isCalculating,
+        lastCalculation
     };
 }

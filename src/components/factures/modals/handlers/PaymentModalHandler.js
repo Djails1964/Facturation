@@ -160,7 +160,7 @@ export class PaymentModalHandler {
      * Modal principale de paiement
      */
     async showPaymentModal(factureData, anchorRef) {
-        const montantFacture = parseFloat(factureData.totalFacture);
+        const montantFacture = parseFloat(factureData.montantTotal);
         const montantAvecRistourne = factureData.ristourne 
             ? montantFacture - parseFloat(factureData.ristourne || 0)
             : montantFacture;
@@ -469,7 +469,7 @@ export class PaymentModalHandler {
         }
         
         // Calculer le montant restant avec les paiements existants
-        const montantFacture = parseFloat(factureData.totalFacture);
+        const montantFacture = parseFloat(factureData.montantTotal);
         const montantAvecRistourne = factureData.ristourne 
             ? montantFacture - parseFloat(factureData.ristourne || 0)
             : montantFacture;

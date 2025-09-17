@@ -18,17 +18,17 @@ const ServiceTableSection = ({
       className: 'col-code',
       sortable: true,
       render: (service) => (
-        <span className="service-code">{service.code}</span>
+        <span className="service-code">{service.codeService}</span>
       )
     },
     {
       label: 'Nom',
-      field: 'nom',
+      field: 'nomService',
       width: '25%',
       className: 'col-name',
       sortable: true,
       render: (service) => (
-        <span className="service-name">{service.nom}</span>
+        <span className="service-name">{service.nomService}</span>
       )
     },
     {
@@ -80,7 +80,7 @@ const ServiceTableSection = ({
       highlightedId={highlightedId}
       emptyMessage="Aucun service trouvé"
       className="service-table-section"
-      defaultSort={{ field: 'nom', direction: 'asc' }}
+      defaultSort={{ field: 'nomService', direction: 'asc' }}
     />
   );
 };

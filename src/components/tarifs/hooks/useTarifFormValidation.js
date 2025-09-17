@@ -36,7 +36,7 @@ export const useTarifFormValidation = (formState) => {
                     break;
                     
                 default:
-                    if (!value && ['serviceId', 'uniteId', 'typeTarifId'].includes(fieldName)) {
+                    if (!value && ['idService', 'idUnite', 'typeTarifId'].includes(fieldName)) {
                         errors[fieldName] = 'Ce champ est obligatoire';
                     }
                     break;
@@ -62,8 +62,8 @@ export const useTarifFormValidation = (formState) => {
         
         try {
             // Validation synchrone
-            if (!tarif.serviceId) errors.serviceId = 'Le service est obligatoire';
-            if (!tarif.uniteId) errors.uniteId = 'L\'unité est obligatoire';
+            if (!tarif.idService) errors.idService = 'Le service est obligatoire';
+            if (!tarif.idUnite) errors.idUnite = 'L\'unité est obligatoire';
             if (!tarif.typeTarifId) errors.typeTarifId = 'Le type de tarif est obligatoire';
             if (!tarif.prix || isNaN(parseFloat(tarif.prix)) || parseFloat(tarif.prix) <= 0) {
                 errors.prix = 'Le prix doit être un nombre positif';
@@ -81,11 +81,11 @@ export const useTarifFormValidation = (formState) => {
             }
             
             // Validation métier (conflits de tarifs)
-            if (tarif.serviceId && tarif.uniteId && tarif.typeTarifId && tarif.date_debut) {
+            if (tarif.idService && tarif.idUnite && tarif.typeTarifId && tarif.date_debut) {
                 try {
                     const conflictCheck = await tarificationService.checkTarifConflict({
-                        serviceId: tarif.serviceId,
-                        uniteId: tarif.uniteId,
+                        idService: tarif.idService,
+                        idUnite: tarif.idUnite,
                         typeTarifId: tarif.typeTarifId,
                         date_debut: tarif.date_debut,
                         date_fin: tarif.date_fin,

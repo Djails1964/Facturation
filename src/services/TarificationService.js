@@ -13,6 +13,24 @@ class TarificationService {
     this.typesTarifs = [];
     this.servicesUnites = {}; // Mapping des services aux unités
     this._cacheResultat = {}; // Cache pour les résultats de tarifs
+
+    // ✅ NOUVEAU : Cache pour éviter les rechargements
+    this._cache = {
+      services: null,
+      unites: null,
+      typesTarifs: null,
+      servicesUnites: null,
+      lastUpdate: null,
+      isInitialized: false
+    };
+    
+    // ✅ NOUVEAU : Verrous pour éviter les appels simultanés
+    this._locks = {
+      services: false,
+      unites: false,
+      typesTarifs: false,
+      servicesUnites: false
+    };
     
     // Bind des méthodes pour s'assurer que 'this' est correctement défini
     this.chargerServices = this.chargerServices.bind(this);
@@ -66,7 +84,15 @@ class TarificationService {
    */
   clearCache() {
     this._cacheResultat = {};
-    console.log('♻️ Cache de tarification vidé');
+    this._cache = {
+      services: null,
+      unites: null,
+      typesTarifs: null,
+      servicesUnites: null,
+      lastUpdate: null,
+      isInitialized: false
+    };
+    console.log('♻️ Cache de tarification vidé complètement');
   }
 
   /**
@@ -74,32 +100,56 @@ class TarificationService {
    * @returns {Promise<Array>} Liste des services avec booléens normalisés
    */
   async chargerServices() {
+    // ✅ CACHE : Retourner les données en cache si disponibles
+    if (this._cache.services && !this._locks.services) {
+      console.log('🔄 Services retournés depuis le cache');
+      return this._cache.services;
+    }
+
+    // ✅ VERROU : Éviter les appels simultanés
+    if (this._locks.services) {
+      console.log('⏳ Chargement des services déjà en cours, attente...');
+      // Attendre que le verrou soit libéré
+      while (this._locks.services) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      return this._cache.services || [];
+    }
+
     try {
+      this._locks.services = true;
+      console.log('📥 Chargement des services depuis l\'API');
+      
       const response = await api.get('tarif-api.php?services=true');
       
       if (response && response.success && response.services) {
-        // ✅ VALIDATION avec format camelCase uniquement
         const validServices = response.services.filter(service => 
           service && 
           typeof service === 'object' && 
-          service.idService && // ✅ camelCase uniquement
-          typeof service.code === 'string' && 
-          typeof service.nom === 'string'
+          service.idService && 
+          typeof service.codeService === 'string' && 
+          typeof service.nomService === 'string'
         );
 
-        // ✅ NORMALISATION DES BOOLÉENS
         const normalizedServices = normalizeServices(validServices);
-        console.log('Services avant normalisation:', validServices.slice(0, 2));
-        console.log('Services après normalisation:', normalizedServices.slice(0, 2));
+        
+        // ✅ MISE EN CACHE
+        this._cache.services = normalizedServices;
+        this.services = normalizedServices; // Compatibilité
+        
+        console.log('✅ Services chargés et mis en cache:', normalizedServices.length);
         return normalizedServices;
       }
       
       return [];
     } catch (error) {
-      console.error('Erreur lors du chargement des services:', error);
+      console.error('❌ Erreur lors du chargement des services:', error);
       return [];
+    } finally {
+      this._locks.services = false;
     }
   }
+
 
   /**
    * Créer un nouveau service
@@ -107,24 +157,16 @@ class TarificationService {
    * @returns {Promise<Object>} Résultat de la création
    */
   async createService(serviceData) {
-    try {
-        console.log('🚀 Création service - Données reçues:', serviceData);
-  
-      const payload = {
-        action: 'createService',
-        ...serviceData,
-        // ✅ NORMALISATION DES BOOLÉENS AVANT ENVOI
-        actif: toBoolean(serviceData.actif),
-        isDefault: toBoolean(serviceData.isDefault)
-      };
-      
-      console.log('Création service - payload normalisé:', payload);
-      const response = await api.post('tarif-api.php', payload);
-      return response;
-    } catch (error) {
-      console.error('Erreur lors de la création du service:', error);
-      throw error;
-    }
+    const payload = {
+      action: 'createService',
+      ...serviceData,
+      actif: toBoolean(serviceData.actif),
+      isDefault: toBoolean(serviceData.isDefault)
+    };
+    
+    const response = await api.post('tarif-api.php', payload);
+    this.clearCache(); // Vider le cache après modification
+    return response;
   }
 
   /**
@@ -139,19 +181,19 @@ class TarificationService {
         action: 'updateService',
         id,
         ...serviceData,
-        // ✅ NORMALISATION DES BOOLÉENS AVANT ENVOI
         actif: toBoolean(serviceData.actif),
         isDefault: toBoolean(serviceData.isDefault)
       };
       
-      console.log('Mise à jour service - payload normalisé:', payload);
       const response = await api.put('tarif-api.php', payload);
+      this.clearCache(); // Vider le cache après modification
       return response;
     } catch (error) {
       console.error('Erreur lors de la mise à jour du service:', error);
       throw error;
     }
   }
+
 
   /**
    * Mettre à jour l'unité par défaut d'un service
@@ -181,6 +223,7 @@ class TarificationService {
   async deleteService(id) {
     try {
       const response = await api.delete(`tarif-api.php?id=${id}&type=service`);
+      this.clearCache(); // Vider le cache après suppression
       return response;
     } catch (error) {
       console.error('Erreur lors de la suppression du service:', error);
@@ -193,36 +236,61 @@ class TarificationService {
    * @param {number} [serviceId] ID du service optionnel
    * @returns {Promise<Array>} Liste des unités avec booléens normalisés
    */
-  async chargerUnites(serviceId = null) {
+  async chargerUnites(idService = null) {
+    const cacheKey = idService ? `unites_${idService}` : 'unites_all';
+
+    // ✅ CACHE : Vérifier le cache spécifique
+    if (this._cache[cacheKey] && !this._locks.unites) {
+      console.log('🔄 Unités retournées depuis le cache:', cacheKey);
+      return this._cache[cacheKey];
+    }
+
+    // ✅ VERROU : Éviter les appels simultanés
+    if (this._locks.unites) {
+      console.log('⏳ Chargement des unités déjà en cours, attente...');
+      while (this._locks.unites) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      return this._cache[cacheKey] || [];
+    }
+
     try {
-      console.log('TarificationService - chargerUnites - serviceId:', serviceId);
-      const url = serviceId 
-        ? `tarif-api.php?unites=true&serviceId=${serviceId}` 
+      this._locks.unites = true;
+      console.log('📥 Chargement des unités depuis l\'API, idService:', idService);
+
+      const url = idService
+        ? `tarif-api.php?unites=true&idService=${idService}`
         : 'tarif-api.php?unites=true';
       
       const response = await api.get(url);
       
       if (response && response.success && response.unites) {
-        // ✅ VALIDATION avec format camelCase uniquement
         const validUnites = response.unites.filter(unite => 
           unite && 
           typeof unite === 'object' && 
-          unite.idUnite && // ✅ camelCase uniquement
-          typeof unite.code === 'string' && 
-          typeof unite.nom === 'string'
+          unite.idUnite && 
+          typeof unite.codeUnite === 'string' && 
+          typeof unite.nomUnite === 'string'
         );
         
-        // ✅ NORMALISATION DES BOOLÉENS
         const normalizedUnites = normalizeUnites(validUnites);
-        console.log('Unités avant normalisation:', validUnites.slice(0, 2));
-        console.log('Unités après normalisation:', normalizedUnites.slice(0, 2));
+        
+        // ✅ MISE EN CACHE
+        this._cache[cacheKey] = normalizedUnites;
+        if (!idService) {
+          this.unites = normalizedUnites; // Compatibilité
+        }
+        
+        console.log('✅ Unités chargées et mises en cache:', normalizedUnites.length);
         return normalizedUnites;
       }
       
       return [];
     } catch (error) {
-      console.error('Erreur lors du chargement des unités:', error);
+      console.error('❌ Erreur lors du chargement des unités:', error);
       return [];
+    } finally {
+      this._locks.unites = false;
     }
   }
 
@@ -236,12 +304,12 @@ class TarificationService {
       const payload = {
         action: 'createUnite',
         ...uniteData,
-        // ✅ NORMALISATION DES BOOLÉENS AVANT ENVOI
         actif: toBoolean(uniteData.actif),
         isDefault: toBoolean(uniteData.isDefault)
       };
       
       const response = await api.post('tarif-api.php', payload);
+      this.clearCache(); // Vider le cache après modification
       return response;
     } catch (error) {
       console.error('Erreur lors de la création de l\'unité:', error);
@@ -261,12 +329,12 @@ class TarificationService {
         action: 'updateUnite',
         id,
         ...uniteData,
-        // ✅ NORMALISATION DES BOOLÉENS AVANT ENVOI
         actif: toBoolean(uniteData.actif),
         isDefault: toBoolean(uniteData.isDefault)
       };
       
       const response = await api.put('tarif-api.php', payload);
+      this.clearCache(); // Vider le cache après modification
       return response;
     } catch (error) {
       console.error('Erreur lors de la mise à jour de l\'unité:', error);
@@ -282,6 +350,7 @@ class TarificationService {
   async deleteUnite(id) {
     try {
       const response = await api.delete(`tarif-api.php?id=${id}&type=unite`);
+      this.clearCache(); // Vider le cache après suppression
       return response;
     } catch (error) {
       console.error('Erreur lors de la suppression de l\'unité:', error);
@@ -430,28 +499,49 @@ class TarificationService {
    * @returns {Promise<Array>} Liste des types de tarifs avec booléens normalisés
    */
   async chargerTypesTarifs() {
+    if (this._cache.typesTarifs && !this._locks.typesTarifs) {
+      console.log('🔄 Types de tarifs retournés depuis le cache');
+      return this._cache.typesTarifs;
+    }
+
+    if (this._locks.typesTarifs) {
+      console.log('⏳ Chargement des types de tarifs déjà en cours, attente...');
+      while (this._locks.typesTarifs) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      return this._cache.typesTarifs || [];
+    }
+
     try {
+      this._locks.typesTarifs = true;
+      console.log('📥 Chargement des types de tarifs depuis l\'API');
+      
       const response = await api.get('tarif-api.php?typesTarifs=true');
       
       if (response && response.success && response.typesTarifs) {
-        // ✅ VALIDATION avec format camelCase uniquement
         const validTypesTarifs = response.typesTarifs.filter(typeTarif => 
           typeTarif && 
           typeof typeTarif === 'object' && 
-          typeTarif.idTypeTarif && // ✅ camelCase uniquement
+          typeTarif.idTypeTarif && 
           typeof typeTarif.codeTypeTarif === 'string' && 
           typeof typeTarif.nomTypeTarif === 'string'
         );
 
-        // ✅ NORMALISATION DES BOOLÉENS
         const normalizedTypesTarifs = normalizeTypesTarifs(validTypesTarifs);
+        
+        this._cache.typesTarifs = normalizedTypesTarifs;
+        this.typesTarifs = normalizedTypesTarifs;
+        
+        console.log('✅ Types de tarifs chargés et mis en cache:', normalizedTypesTarifs.length);
         return normalizedTypesTarifs;
       }
       
       return [];
     } catch (error) {
-      console.error('Erreur lors du chargement des types de tarifs:', error);
+      console.error('❌ Erreur lors du chargement des types de tarifs:', error);
       return [];
+    } finally {
+      this._locks.typesTarifs = false;
     }
   }
 
@@ -524,18 +614,20 @@ class TarificationService {
    * @returns {Promise<Object>} Détails du tarif
    */
   async getTarifClient(params) {
-    const { clientId, serviceId, uniteId, date } = params;
+    const { clientId, idService, idUnite, date } = params;
     
     try {
       const queryParams = {
         tarifClient: 'true',
         clientId,
-        serviceId,
-        uniteId,
+        idService,
+        idUnite,
         date: date || new Date().toISOString().split('T')[0]
       };
 
+      console.log('Params pour getTarifClient:', queryParams);
       const response = await api.get('tarif-api.php', queryParams);
+      console.log('Réponse de getTarifClient:', response);
       return response;
     } catch (error) {
       console.error('Erreur lors de la récupération du tarif client:', error);
@@ -549,21 +641,19 @@ class TarificationService {
    * @returns {Promise<Array>} Liste des tarifs
    */
   async getTarifs(params = {}) {
-    const { serviceId, uniteId, typeTarifId, date } = params;
-    
+    const { idService, idUnite, idTypeTarif, date } = params;
+
     try {
       const queryParams = {
         tarifs: 'true'
       };
-      
-      if (serviceId) queryParams.serviceId = serviceId;
-      if (uniteId) queryParams.uniteId = uniteId;
-      if (typeTarifId) queryParams.typeTarifId = typeTarifId;
+
+      if (idService) queryParams.idService = idService;
+      if (idUnite) queryParams.idUnite = idUnite;
+      if (idTypeTarif) queryParams.idTypeTarif = idTypeTarif;
       if (date) queryParams.date = date;
 
-      console.log('getTarifs - Query params pour les tarifs:', queryParams);
       const response = await api.get('tarif-api.php', queryParams);
-      console.log('getTarifs - Réponse de l\'API:', response);
       
       return response && response.success 
         ? response.tarifs || [] 
@@ -828,8 +918,20 @@ class TarificationService {
    * @returns {Promise<Object>} Résultat de l'initialisation
    */
   async initialiser() {
+    if (this._cache.isInitialized) {
+      console.log('✅ TarificationService déjà initialisé, retour des données en cache');
+      return {
+        services: this._cache.services || [],
+        unites: this._cache.unites || [],
+        typesTarifs: this._cache.typesTarifs || [],
+        servicesUnites: this.servicesUnites
+      };
+    }
+
     try {
-      // Charger les services, unités et types de tarifs
+      console.log('🚀 Initialisation du TarificationService');
+      
+      // Charger toutes les données de base en parallèle
       const [services, unites, typesTarifs] = await Promise.all([
         this.chargerServices(),
         this.chargerUnites(),
@@ -839,6 +941,12 @@ class TarificationService {
       // Charger les associations services-unités séparément
       await this.chargerServicesUnites();
 
+      // Marquer comme initialisé
+      this._cache.isInitialized = true;
+      this._cache.lastUpdate = new Date();
+
+      console.log('✅ TarificationService initialisé avec succès');
+
       return {
         services,
         unites,
@@ -846,7 +954,7 @@ class TarificationService {
         servicesUnites: this.servicesUnites
       };
     } catch (error) {
-      console.error('Erreur lors de l\'initialisation:', error);
+      console.error('❌ Erreur lors de l\'initialisation:', error);
       return {
         services: [],
         unites: [],
@@ -861,7 +969,23 @@ class TarificationService {
    * @returns {Promise<Array>} Associations entre services et unités
    */
   async chargerServicesUnites() {
+    if (this._cache.servicesUnites && !this._locks.servicesUnites) {
+      console.log('🔄 Services-unités retournés depuis le cache');
+      return this._cache.servicesUnites;
+    }
+
+    if (this._locks.servicesUnites) {
+      console.log('⏳ Chargement des services-unités déjà en cours, attente...');
+      while (this._locks.servicesUnites) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      return this._cache.servicesUnites || [];
+    }
+
     try {
+      this._locks.servicesUnites = true;
+      console.log('📥 Chargement des services-unités depuis l\'API');
+      
       const response = await api.get('tarif-api.php?servicesUnites=true');
       
       if (response && response.success) {
@@ -870,18 +994,27 @@ class TarificationService {
         // Organiser par service_id pour un accès rapide
         this.servicesUnites = {};
         relations.forEach(relation => {
-          if (!this.servicesUnites[relation.service_id]) {
-            this.servicesUnites[relation.service_id] = [];
+          const serviceId = relation.serviceId || relation.service_id;
+          const uniteId = relation.uniteId || relation.unite_id;
+          
+          if (serviceId && uniteId) {
+            if (!this.servicesUnites[serviceId]) {
+              this.servicesUnites[serviceId] = [];
+            }
+            this.servicesUnites[serviceId].push(uniteId);
           }
-          this.servicesUnites[relation.service_id].push(relation.unite_id);
         });
         
+        this._cache.servicesUnites = relations;
+        console.log('✅ Services-unités chargés et mis en cache:', relations.length);
         return relations;
       }
       return [];
     } catch (error) {
-      console.error('Erreur lors du chargement des relations services-unités:', error);
+      console.error('❌ Erreur lors du chargement des relations services-unités:', error);
       return [];
+    } finally {
+      this._locks.servicesUnites = false;
     }
   }
 
@@ -890,7 +1023,8 @@ class TarificationService {
    * @returns {Array} Codes des services
    */
   getTypesServices() {
-    return this.services.map(service => service.code);
+    const services = this._cache.services || this.services;
+    return services.map(service => service.codeService);
   }
 
   /**
@@ -903,13 +1037,14 @@ class TarificationService {
       return [];
     }
     
-    // ✅ RECHERCHE avec camelCase uniquement
-    const service = this.services.find(s => s.idService === serviceId);
+    const services = this._cache.services || this.services;
+    const service = services.find(s => s.idService === serviceId);
     if (!service) {
       return [];
     }
 
-    if (!this.unites || !Array.isArray(this.unites)) {
+    const unites = this._cache.unites || this.unites;
+    if (!unites || !Array.isArray(unites)) {
       return [];
     }
     
@@ -919,7 +1054,7 @@ class TarificationService {
       
       if (Array.isArray(uniteIds)) {
         return uniteIds.map(uniteId => {
-          const unite = this.unites.find(u => u.idUnite === uniteId);
+          const unite = unites.find(u => u.idUnite === uniteId);
           return unite ? unite.code : null;
         }).filter(code => code !== null);
       }
@@ -927,7 +1062,7 @@ class TarificationService {
     
     // Fallback: chercher les unités avec le service_id correspondant
     try {
-      const unitesForService = this.unites.filter(u => u.serviceId === service.idService);
+      const unitesForService = unites.filter(u => u.serviceId === service.idService);
       return unitesForService.map(u => u.code);
     } catch (error) {
       console.error('Erreur lors du filtrage des unités:', error);
@@ -941,30 +1076,128 @@ class TarificationService {
    * @returns {Promise<number>} Prix calculé
    */
   async calculerPrix(params) {
-    const { clientId, serviceId, uniteId, date } = params;
-      
-    // Essayer d'abord de récupérer un tarif spécial client
-    const tarifClient = await this.getTarifClient({ 
-      clientId, 
-      serviceId, 
-      uniteId, 
-      date 
+    const { clientId, idService, idUnite, date } = params;
+
+    console.log('Calcul du prix avec les paramètres:', {
+      clientId,
+      idService,
+      idUnite,
+      date
     });
+
+    // Essayer d'abord de récupérer un tarif spécial client
+    const tarifClient = await this.getTarifClient({
+      clientId,
+      idService,
+      idUnite,
+      date
+    });
+
+    console.log('Tarif client récupéré:', tarifClient);
       
-    if (tarifClient && tarifClient.success && tarifClient.tarif) {
-      return tarifClient.tarif.prix;
+    // ✅ CORRECTION: Vérifier si on a un tarif client valide avec un prix
+    if (tarifClient && tarifClient.success && tarifClient.tarif && tarifClient.tarif.prix !== undefined) {
+      const prix = parseFloat(tarifClient.tarif.prix);
+      console.log('Prix depuis tarif client:', prix);
+      return prix;
     }
       
     // Si pas de tarif spécial, chercher un tarif standard
-    const tarifs = await this.getTarifs({ 
-      serviceId, 
-      uniteId, 
-      typeTarifId: 1, // Tarif Normal
+    const tarifs = await this.getTarifs({
+      idService,
+      idUnite,
       date 
     });
+    
+    console.log('Tarifs standards récupérés:', tarifs);
       
-    return tarifs.length > 0 ? tarifs[0].prix : 0;
+    // ✅ CORRECTION: Meilleure gestion des tarifs standards
+    if (tarifs && Array.isArray(tarifs) && tarifs.length > 0) {
+      // Chercher le premier tarif avec un prix valide
+      for (const tarif of tarifs) {
+        if (tarif && tarif.prix !== undefined && tarif.prix !== null) {
+          const prix = parseFloat(tarif.prix);
+          console.log('Prix depuis tarif standard:', prix);
+          return prix;
+        }
+      }
+    }
+    
+    // ✅ AJOUT: Fallback - essayer de récupérer TOUS les tarifs pour cette combinaison
+    console.log('Aucun tarif trouvé, tentative de récupération de tous les tarifs...');
+    
+    try {
+      const tousLesTarifs = await this.getAllTarifs({
+        serviceId: idService,
+        uniteId: idUnite
+      });
+      
+      console.log('Tous les tarifs récupérés:', tousLesTarifs);
+      
+      if (tousLesTarifs && Array.isArray(tousLesTarifs) && tousLesTarifs.length > 0) {
+        console.log('Analyse des tous les tarifs pour trouver un prix valide...');
+        
+        // Chercher un tarif valide pour la date donnée ou le plus récent
+        const tarifsValides = tousLesTarifs.filter(tarif => {
+          console.log('Analyse tarif complet:', tarif);
+          
+          // Essayer différents noms de propriétés pour le prix
+          const prixValue = tarif.prix || tarif.prixTarif || tarif.montant || tarif.price;
+          
+          if (prixValue === undefined || prixValue === null || prixValue === '') {
+            console.log('Prix non trouvé dans ce tarif');
+            return false;
+          }
+          
+          const prixNum = parseFloat(prixValue);
+          if (isNaN(prixNum)) {
+            console.log('Prix non parsable:', prixValue);
+            return false;
+          }
+          
+          // Si pas de date de début, le tarif est valide
+          if (!tarif.dateDebut) return true;
+          
+          // Vérifier si le tarif est valide pour la date
+          const dateDebut = new Date(tarif.dateDebut);
+          const dateVerif = new Date(date || new Date().toISOString().split('T')[0]);
+          
+          let dateFinOk = true;
+          if (tarif.dateFin) {
+            const dateFin = new Date(tarif.dateFin);
+            dateFinOk = dateVerif <= dateFin;
+          }
+          
+          return dateVerif >= dateDebut && dateFinOk;
+        });
+        
+        if (tarifsValides.length > 0) {
+          // Prendre le premier tarif valide
+          const prixValue = tarifsValides[0].prix || tarifsValides[0].prixTarif || tarifsValides[0].montant || tarifsValides[0].price;
+          const prix = parseFloat(prixValue);
+          console.log('Prix depuis tarif valide (fallback):', prix);
+          return prix;
+        } else if (tousLesTarifs.length > 0) {
+          // En dernier recours, prendre le premier tarif même s'il n'est pas valide pour la date
+          const prixValue = tousLesTarifs[0].prix || tousLesTarifs[0].prixTarif || tousLesTarifs[0].montant || tousLesTarifs[0].price;
+          if (prixValue !== undefined && prixValue !== null && prixValue !== '') {
+            const prix = parseFloat(prixValue);
+            if (!isNaN(prix)) {
+              console.log('Prix depuis tarif (dernier recours):', prix);
+              return prix;
+            }
+          }
+          console.log('Aucun prix valide trouvé dans les tarifs');
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors de la récupération de tous les tarifs:', error);
+    }
+    
+    console.log('Aucun prix trouvé, retour de 0');
+    return 0;
   }
+
 
   /**
    * Obtenir le prix pour un service, une unité et un client spécifiques
@@ -1024,12 +1257,14 @@ class TarificationService {
    * @returns {boolean} True si le service est par défaut, false sinon
    */
   isServiceDefault(serviceId) {
-    if (!serviceId || !this.services || !Array.isArray(this.services)) {
+    if (!serviceId) return false;
+    
+    const services = this._cache.services || this.services;
+    if (!services || !Array.isArray(services)) {
       return false;
     }
     
-    // ✅ RECHERCHE avec camelCase uniquement
-    const service = this.services.find(s => s.idService === serviceId);
+    const service = services.find(s => s.idService === serviceId);
     return service ? toBoolean(service.isDefault) : false;
   }
 
@@ -1039,12 +1274,14 @@ class TarificationService {
    * @returns {boolean} True si l'unité est par défaut, false sinon
    */
   isUniteDefault(uniteId) {
-    if (!uniteId || !this.unites || !Array.isArray(this.unites)) {
+    if (!uniteId) return false;
+    
+    const unites = this._cache.unites || this.unites;
+    if (!unites || !Array.isArray(unites)) {
       return false;
     }
     
-    // ✅ RECHERCHE avec camelCase uniquement
-    const unite = this.unites.find(u => u.idUnite === uniteId);
+    const unite = unites.find(u => u.idUnite === uniteId);
     return unite ? toBoolean(unite.isDefault) : false;
   }
 
@@ -1054,15 +1291,16 @@ class TarificationService {
    * @returns {Object|null} Le service par défaut ou null si aucun n'est trouvé
    */
   getServiceDefault(services = null) {
-    const servicesToCheck = services || this.services;
+    const servicesToCheck = services || this._cache.services || this.services;
 
     if (!servicesToCheck || !Array.isArray(servicesToCheck)) {
-        console.warn('Aucun service disponible');
+        console.warn('Aucun service disponible pour getServiceDefault');
         return null;
     }
     
-    // ✅ UTILISATION DE LA NORMALISATION BOOLÉENNE
-    return servicesToCheck.find(service => toBoolean(service.isDefault)) || null;
+    const defaultService = servicesToCheck.find(service => toBoolean(service.isDefault));
+    console.log('Service par défaut trouvé:', defaultService?.nomService || 'Aucun');
+    return defaultService || null;
   }
 
   /**
@@ -1071,21 +1309,31 @@ class TarificationService {
    * @returns {Promise<number|null>} ID de l'unité par défaut ou null
    */
   async getUniteDefault(service) {
-    console.log('TarificationService - getUniteDefault - service:', service);
     if (!service) return null;
 
+    console.log('Recherche de l\'unité par défaut pour le service:', service.nomService || service.codeService || service.idService);
+
+    const cacheKey = `uniteDefault_${service.idService}`;
+    
+    // Vérifier le cache de résultats
+    if (this._cacheResultat[cacheKey] !== undefined) {
+      return this._cacheResultat[cacheKey];
+    }
+
     try {
-        // ✅ UTILISATION de l'ID camelCase
         const response = await api.get(`tarif-api.php?uniteDefautService=${service.idService}`);
-        console.log('TarificationService - getUniteDefault - API response:', response);
+        console.log('Réponse de l\'API pour l\'unité par défaut:', response);
         
-        if (response && response.success && response.uniteId) {
-            return response.uniteId;
+        if (response && response.success && response.idUnite) {
+            this._cacheResultat[cacheKey] = response.idUnite;
+            return response.idUnite;
         }
         
+        this._cacheResultat[cacheKey] = null;
         return null;
     } catch (error) {
       console.error('Erreur lors de la récupération de l\'unité par défaut:', error);
+      this._cacheResultat[cacheKey] = null;
       return null;
     }
   }
@@ -1096,14 +1344,16 @@ class TarificationService {
    * @returns {Promise<boolean>} True si le client est thérapeute, false sinon
    */
   async estTherapeute(clientId) {
+    const cacheKey = `therapeute_${clientId}`;
+    if (this._cacheResultat[cacheKey] !== undefined) {
+      return this._cacheResultat[cacheKey];
+    }
+
     try {
       const response = await api.get(`tarif-api.php?estTherapeute=true&clientId=${clientId}`);
-      
-      if (response && response.success) {
-        // ✅ UTILISATION DE LA NORMALISATION BOOLÉENNE
-        return toBoolean(response.estTherapeute);
-      }
-      return false;
+      const result = response && response.success ? toBoolean(response.estTherapeute) : false;
+      this._cacheResultat[cacheKey] = result;
+      return result;
     } catch (error) {
       console.error('Erreur lors de la vérification du statut thérapeute:', error);
       return false;
@@ -1117,6 +1367,11 @@ class TarificationService {
    * @returns {Promise<boolean>} True si le client possède un tarif spécial, false sinon
    */
   async possedeTarifSpecialDefini(clientId, date = null) {
+    const cacheKey = `tarifSpecial_${clientId}_${date || 'nodate'}`;
+    if (this._cacheResultat[cacheKey] !== undefined) {
+      return this._cacheResultat[cacheKey];
+    }
+
     try {
       const queryParams = {
         possedeTarifSpecial: 'true',
@@ -1128,12 +1383,9 @@ class TarificationService {
       }
       
       const response = await api.get('tarif-api.php', queryParams);
-      
-      if (response && response.success) {
-        // ✅ UTILISATION DE LA NORMALISATION BOOLÉENNE
-        return toBoolean(response.possedeTarifSpecial);
-      }
-      return false;
+      const result = response && response.success ? toBoolean(response.possedeTarifSpecial) : false;
+      this._cacheResultat[cacheKey] = result;
+      return result;
     } catch (error) {
       console.error('Erreur lors de la vérification des tarifs spéciaux:', error);
       return false;
@@ -1146,22 +1398,29 @@ class TarificationService {
    * @returns {Promise<string>} Message d'information sur le tarif
    */
   async getTarifInfoMessage(client) {
+    const cacheKey = `tarifInfo_${client.id}`;
+    
+    // Vérifier le cache
+    if (this._cacheResultat[cacheKey]) {
+      return this._cacheResultat[cacheKey];
+    }
+
     try {
       // Vérifier si le client possède un tarif spécial
       const possedeTarifSpecial = await this.possedeTarifSpecialDefini(client.id);
       
+      let message;
       if (possedeTarifSpecial) {
-        return 'Tarif spécial appliqué';
+        message = 'Tarif spécial appliqué';
+      } else {
+        // Vérifier si le client est thérapeute
+        const estTherapeute = await this.estTherapeute(client.id);
+        message = estTherapeute ? 'Tarif thérapeute appliqué' : 'Tarif standard appliqué';
       }
       
-      // Vérifier si le client est thérapeute
-      const estTherapeute = await this.estTherapeute(client.id);
-      
-      if (estTherapeute) {
-        return 'Tarif thérapeute appliqué';
-      }
-      
-      return 'Tarif standard appliqué';
+      // Mettre en cache
+      this._cacheResultat[cacheKey] = message;
+      return message;
     } catch (error) {
       console.error('Erreur lors de la détermination du message de tarif:', error);
       return 'Information de tarif indisponible';
@@ -1175,6 +1434,14 @@ class TarificationService {
    * @returns {Promise<Array>} Liste des unités avec leurs détails
    */
   async getUnitesApplicablesPourClient(clientId, date = null) {
+    const cacheKey = `unitesClient_${clientId}_${date || 'nodate'}`;
+    
+    // Vérifier le cache
+    if (this._cacheResultat[cacheKey]) {
+      console.log('🔄 Unités client retournées depuis le cache');
+      return this._cacheResultat[cacheKey];
+    }
+
     try {
       const queryParams = {
         unitesClient: 'true',
@@ -1185,13 +1452,18 @@ class TarificationService {
         queryParams.date = date;
       }
       
+      console.log('📥 Chargement des unités applicables pour le client depuis l\'API', queryParams);
       const response = await api.get('tarif-api.php', queryParams);
       
-      return response && response.success 
-        ? response.unites || [] 
-        : [];
+      const result = response && response.success ? response.unites || [] : [];
+      
+      // Mettre en cache
+      this._cacheResultat[cacheKey] = result;
+      
+      console.log('✅ Unités applicables pour le client chargées:', result.length);
+      return result;
     } catch (error) {
-      console.error('Erreur lors de la récupération des unités pour le client:', error);
+      console.error('❌ Erreur lors de la récupération des unités pour le client:', error);
       return [];
     }
   }

@@ -26,7 +26,7 @@ export class TarifFormService {
             ${ModalComponents.createTextInput(
               'nom', 
               'Nom du service', 
-              itemData.nom || '', 
+              itemData.nomService || '', 
               'text', 
               true, 
               isReadOnly,
@@ -93,7 +93,7 @@ export class TarifFormService {
             ${ModalComponents.createTextInput(
               'nom', 
               'Nom de l\'unité', 
-              itemData.nom || '', 
+              itemData.nomUnite || '', 
               'text', 
               true, 
               isReadOnly,
@@ -160,11 +160,11 @@ export class TarifFormService {
       case FORM_TYPES.TARIF:
         // ✅ VÉRIFICATION ET SÉCURISATION des données avant .map()
         const serviceOptions = (services && Array.isArray(services)) 
-          ? services.map(s => ({ value: s.id, text: s.nom }))
+          ? services.map(s => ({ value: s.id, text: s.nomService }))
           : [];
           
         const uniteOptions = (unites && Array.isArray(unites)) 
-          ? unites.map(u => ({ value: u.id, text: u.nom }))
+          ? unites.map(u => ({ value: u.id, text: u.nomUnite }))
           : [];
           
         const typeTarifOptions = (typesTarifs && Array.isArray(typesTarifs)) 
@@ -174,18 +174,18 @@ export class TarifFormService {
         return `
           <form id="modalForm" class="modal-form" novalidate>
             ${ModalComponents.createSelect(
-              'serviceId', 
+              'idService', 
               'Service', 
               serviceOptions,         // ✅ CORRECTION: options en 3ème position
-              itemData.service_id || '', // ✅ CORRECTION: selectedValue en 4ème position
+              itemData.idService || '', // ✅ CORRECTION: selectedValue en 4ème position
               true, 
               isReadOnly
             )}
             ${ModalComponents.createSelect(
-              'uniteId', 
+              'idUnite', 
               'Unité', 
               uniteOptions,           // ✅ CORRECTION: options en 3ème position
-              itemData.unite_id || '',   // ✅ CORRECTION: selectedValue en 4ème position
+              itemData.idUnite || '',   // ✅ CORRECTION: selectedValue en 4ème position
               true, 
               isReadOnly
             )}
@@ -250,11 +250,11 @@ export class TarifFormService {
           : [];
           
         const serviceOptionsSpecial = (services && Array.isArray(services)) 
-          ? services.map(s => ({ value: s.id, text: s.nom }))
+          ? services.map(s => ({ value: s.id, text: s.nomService }))
           : [];
           
         const uniteOptionsSpecial = (unites && Array.isArray(unites)) 
-          ? unites.map(u => ({ value: u.id, text: u.nom }))
+          ? unites.map(u => ({ value: u.id, text: u.nomUnite }))
           : [];
 
         return `
@@ -268,18 +268,18 @@ export class TarifFormService {
               isReadOnly
             )}
             ${ModalComponents.createSelect(
-              'serviceId', 
+              'idService', 
               'Service', 
               serviceOptionsSpecial,  // ✅ CORRECTION: options en 3ème position
-              itemData.service_id || '', // ✅ CORRECTION: selectedValue en 4ème position
+              itemData.idService || '', // ✅ CORRECTION: selectedValue en 4ème position
               true, 
               isReadOnly
             )}
             ${ModalComponents.createSelect(
-              'uniteId', 
+              'idUnite', 
               'Unité', 
               uniteOptionsSpecial,    // ✅ CORRECTION: options en 3ème position
-              itemData.unite_id || '',   // ✅ CORRECTION: selectedValue en 4ème position
+              itemData.idUnite || '',   // ✅ CORRECTION: selectedValue en 4ème position
               true, 
               isReadOnly
             )}
@@ -614,9 +614,9 @@ export class TarifFormService {
       case FORM_TYPES.TYPE_TARIF:
         return item.nom || item.name || item.code || item.libelle || 'Sans nom';
       case FORM_TYPES.TARIF:
-        return `${item.service_nom || item.serviceName || 'Service'} - ${item.unite_nom || item.uniteName || 'Unité'}`;
+        return `${item.nomService || item.serviceName || 'Service'} - ${item.nomUnite || item.uniteName || 'Unité'}`;
       case FORM_TYPES.TARIF_SPECIAL:
-        return `${item.client_nom || item.clientName || 'Client'} - ${item.service_nom || item.serviceName || 'Service'}`;
+        return `${item.client_nom || item.clientName || 'Client'} - ${item.nomService || item.serviceName || 'Service'}`;
       default:
         return 'Élément';
     }

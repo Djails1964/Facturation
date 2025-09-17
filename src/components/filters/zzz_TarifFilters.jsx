@@ -41,7 +41,7 @@ const TarifFilters = ({
       services: Array.from(new Set(
         filteredTarifs.map(tarif => tarif.service_id)
       )).map(serviceId => 
-        services.find(service => service.id === serviceId)
+        services.find(service => service.idService === serviceId)
       ).filter(Boolean),
 
       unites: Array.from(new Set(
@@ -84,7 +84,7 @@ const TarifFilters = ({
             >
               <option value="">Tous les services</option>
               {filteredOptions.services.map(service => (
-                <option key={service.id} value={service.id}>
+                <option key={service.idService} value={service.idService}>
                   {service.nom}
                 </option>
               ))}

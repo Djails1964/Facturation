@@ -106,8 +106,8 @@ function FacturesListe({
                 if (facture.totalAvecRistourne !== undefined) {
                     const montant = formatMontant(facture.totalAvecRistourne);
                     message = message.replace(/\[montant\]/g, montant);
-                } else if (facture.totalFacture !== undefined) {
-                    const montant = formatMontant(facture.totalFacture);
+                } else if (facture.montantTotal !== undefined) {
+                    const montant = formatMontant(facture.montantTotal);
                     message = message.replace(/\[montant\]/g, montant);
                 }
                 

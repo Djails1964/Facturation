@@ -37,7 +37,7 @@ function FactureForm({
   const {
     facture, setFacture, isLoading, setIsLoading, isSubmitting, setIsSubmitting,
     error, setError, clientData, setClientData, clientLoading, setClientLoading,
-    isLignesValid, setIsLignesValid, factureService, clientService,
+    isLignesValid, setIsLignesValid, factureService, clientService, tarificationService,
     isReadOnly, isFormValid, getFormData
   } = useFactureForm(mode, idFacture);
 
@@ -50,7 +50,7 @@ function FactureForm({
   });
 
   // Actions métier
-  const factureActions = new FactureFormActions(factureService, clientService);
+  const factureActions = new FactureFormActions(factureService, clientService, tarificationService);
 
   // Hook d'initialisation
   const {
@@ -102,24 +102,24 @@ function FactureForm({
     setIsLignesValid(validite);
 
     const lignesFormatees = lignes.map((ligne, index) => ({
-      id: ligne.id || null,
+      idLigne: ligne.idLigne || null,
       description: ligne.description,
       descriptionDates: ligne.descriptionDates || '',
       unite: ligne.unite || '',
       quantite: parseFloat(ligne.quantite) || 0,
       prixUnitaire: parseFloat(ligne.prixUnitaire) || 0,
-      total: parseFloat(ligne.total) || 0,
+      totalLigne: parseFloat(ligne.totalLigne) || 0,
       serviceId: ligne.serviceId || null,
       uniteId: ligne.uniteId || null,
       noOrdre: ligne.noOrdre || index + 1
     }));
 
-    const totalBrut = lignesFormatees.reduce((sum, ligne) => sum + ligne.total, 0);
+    const totalBrut = lignesFormatees.reduce((sum, ligne) => sum + ligne.totalLigne, 0);
 
     setFacture(prev => ({
       ...prev,
       lignes: lignesFormatees,
-      totalFacture: totalBrut,
+      montantTotal: totalBrut,
       totalAvecRistourne: Math.max(0, totalBrut - (prev.ristourne || 0))
     }));
   };
@@ -130,7 +130,7 @@ function FactureForm({
     setFacture(prev => ({
       ...prev,
       ristourne: nouvelleRistourne,
-      totalAvecRistourne: Math.max(0, prev.totalFacture - nouvelleRistourne)
+      totalAvecRistourne: Math.max(0, prev.montantTotal - nouvelleRistourne)
     }));
   };
 
@@ -138,7 +138,7 @@ function FactureForm({
     setFacture(prev => ({
       ...prev,
       ristourne: 0,
-      totalAvecRistourne: prev.totalFacture
+      totalAvecRistourne: prev.montantTotal
     }));
   };
 
@@ -186,8 +186,7 @@ function FactureForm({
           numeroFacture: facture.numeroFacture,
           dateFacture: facture.dateFacture || new Date().toISOString().split('T')[0],
           clientId: facture.clientId,
-          totalFacture: facture.totalFacture,
-          montantTotal: facture.totalFacture, // ✅ AJOUT: Support backend
+          montantTotal: facture.montantTotal,
           ristourne: facture.ristourne || 0,
           lignes: facture.lignes,
           
@@ -200,7 +199,7 @@ function FactureForm({
         const result = await factureActions.submitFacture(factureData, mode, idFacture);
         
         if (result?.success) {
-          const newFactureId = result.id || facture.id;
+          const newFactureId = result.idFacture || facture.idFacture;
           const message = mode === FORM_MODES.CREATE ? 'Facture créée avec succès' : 'Facture modifiée avec succès';
           handleSuccessfulSave(newFactureId, message, { onFactureCreated, onRetourListe });
         } else {

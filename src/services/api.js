@@ -187,6 +187,91 @@ function extractAndConvertUrlParams(url) {
   return { baseUrl, convertedParams: params };
 }
 
+/**
+ * Convertit récursivement les données de requête (camelCase vers snake_case)
+ * Similaire à convertApiResponse mais dans l'autre sens
+ */
+function convertRequestDataRecursively(data, context = null) {
+  if (!data || typeof data !== 'object') {
+    return data;
+  }
+  
+  console.log('🔄 convertRequestDataRecursively - Données entrantes:', data);
+  console.log('🔄 convertRequestDataRecursively - Contexte:', context);
+  
+  // Si c'est un tableau, convertir chaque élément
+  if (Array.isArray(data)) {
+    const converted = FieldConverter.convertArray(data, 'toApi', { context });
+    console.log('✅ Tableau converti vers API:', converted);
+    return converted;
+  }
+  
+  // Convertir l'objet avec FieldConverter
+  const converted = FieldConverter.toApiFormat(data, { context });
+  console.log('🔄 Objet converti initial:', converted);
+  
+  // Propriétés spécifiques qui contiennent des données imbriquées
+  const nestedDataProperties = [
+    'lignes', 'lines', 'items', 'data', 'services', 'unites', 
+    'clients', 'factures', 'paiements', 'details'
+  ];
+  
+  // Convertir récursivement les propriétés imbriquées
+  nestedDataProperties.forEach(prop => {
+    if (converted[prop]) {
+      console.log(`🔄 Conversion récursive de la propriété '${prop}':`, converted[prop]);
+      
+      if (Array.isArray(converted[prop])) {
+        // Convertir chaque élément du tableau
+        converted[prop] = converted[prop].map(item => {
+          if (typeof item === 'object' && item !== null) {
+            return convertRequestDataRecursively(item, context);
+          }
+          return item;
+        });
+        console.log(`✅ Tableau '${prop}' converti récursivement:`, converted[prop]);
+      } else if (typeof converted[prop] === 'object' && converted[prop] !== null) {
+        // Convertir l'objet récursivement
+        converted[prop] = convertRequestDataRecursively(converted[prop], context);
+        console.log(`✅ Objet '${prop}' converti récursivement:`, converted[prop]);
+      }
+    }
+  });
+  
+  // Parcourir toutes les autres propriétés pour traiter les objets imbriqués
+  Object.keys(converted).forEach(key => {
+    if (!nestedDataProperties.includes(key) && converted[key]) {
+      if (Array.isArray(converted[key])) {
+        // Convertir les tableaux imbriqués
+        converted[key] = converted[key].map(item => {
+          if (typeof item === 'object' && item !== null) {
+            return convertRequestDataRecursively(item, context);
+          }
+          return item;
+        });
+      } else if (typeof converted[key] === 'object' && converted[key] !== null) {
+        // Traitement spécial pour les objets unite/service dans les lignes
+        if (key === 'unite' || key === 'service') {
+          // Si c'est un objet unite/service, extraire seulement le code
+          if (converted[key].code) {
+            console.log(`🔄 Simplification objet ${key}:`, converted[key], '→', converted[key].code);
+            converted[key] = converted[key].code;
+          } else if (converted[key].nom) {
+            console.log(`🔄 Simplification objet ${key}:`, converted[key], '→', converted[key].nom);
+            converted[key] = converted[key].nom;
+          }
+        } else {
+          // Pour les autres objets, conversion récursive normale
+          converted[key] = convertRequestDataRecursively(converted[key], context);
+        }
+      }
+    }
+  });
+  
+  console.log('✅ Objet final converti récursivement:', converted);
+  return converted;
+}
+
 // ============================================
 // INTERCEPTEURS AVEC FIELD CONVERTER ÉTENDU
 // ============================================
@@ -197,8 +282,8 @@ apiClient.interceptors.request.use(
     // Ajouter un timestamp pour éviter le cache
     const timestamp = new Date().getTime();
     
-    // 🔧 NOUVELLE FONCTIONNALITÉ: CONVERSION DES PARAMÈTRES D'URL POUR GET
-    if (config.method === 'get' && config.url && config.url.includes('?')) {
+    // 🔧 NOUVELLE FONCTIONNALITÉ: CONVERSION DES PARAMÈTRES D'URL
+    if (config.url && config.url.includes('?')) {
       const { baseUrl, convertedParams } = extractAndConvertUrlParams(config.url);
       
       // Remplacer l'URL par la version sans paramètres
@@ -228,32 +313,31 @@ apiClient.interceptors.request.use(
       if (shouldConvertEndpoint(config.url)) {
         const context = getConversionContext(config.url);
         
-        console.log('🔄 Conversion Frontend → API avec gestion dates:', {
+        console.log('🔄 Conversion Frontend → API avec récursion complète:', {
           url: config.url,
           context,
           originalData: config.data
         });
         
-        // ✅ UTILISATION de la conversion avec gestion des dates
+        // Utiliser la nouvelle fonction de conversion récursive
         let convertedData;
         
         if (ENDPOINT_CONVERSION_CONFIG.useDateHandling) {
-          // Conversion avec gestion spéciale des dates
+          // Première passe : conversion avec gestion des dates
           convertedData = toApiFormatWithDateHandling(config.data, {
             context,
             preserveUnknown: true
           });
+          // Deuxième passe : conversion récursive pour les objets imbriqués
+          convertedData = convertRequestDataRecursively(convertedData, context);
         } else {
-          // Conversion normale
-          convertedData = FieldConverter.toApiFormat(config.data, {
-            context,
-            preserveUnknown: true
-          });
+          // Conversion récursive directe
+          convertedData = convertRequestDataRecursively(config.data, context);
         }
         
         config.data = convertedData;
         
-        console.log('✅ Données converties avec gestion dates:', convertedData);
+        console.log('✅ Données converties avec récursion complète:', convertedData);
       }
     }
     
@@ -406,6 +490,7 @@ function convertApiResponse(data, context = null) {
   }
   
   console.log('🔄 convertApiResponse - Données entrantes:', data);
+  console.log('typeof data:', typeof data);
   console.log('🔄 convertApiResponse - Contexte:', context);
   
   // Si c'est un tableau, convertir chaque élément
@@ -417,17 +502,25 @@ function convertApiResponse(data, context = null) {
   
   // ✅ CORRECTION: Traiter les objets de réponse wrap (success, paiement, etc.)
   const converted = { ...data };
+  console.log('🔄 Objet converti initial:', converted);
   
   // ✅ NOUVEAU: Propriétés spécifiques aux paiements
   const paiementProperties = [
     'paiement', 'paiements'
   ];
-  
+
+  const factureProperties = ['facture', 'factures'];
+
+  // ✅ AJOUT: Propriété spécifique aux lignes de facture
+  const lignesProperties = ['lignes'];
+
   // ✅ NOUVEAU: Propriétés spécifiques aux autres entités
   const dataProperties = [
-    'services', 'unites', 'typesTarifs', 'tarifs', 'tarifsSpeciaux',
-    'clients', 'factures', 'users', 'items', 'data', 'result',
-    ...paiementProperties
+    'services', 'unites', 'servicesUnites', 'typesTarifs', 'tarifs', 'tarifsSpeciaux',
+    'clients', 'users', 'items', 'data', 'result',
+    ...paiementProperties,
+    ...factureProperties,
+    ...lignesProperties  // ← AJOUT IMPORTANT
   ];
   
   // Convertir les propriétés qui contiennent des données métier
@@ -439,7 +532,8 @@ function convertApiResponse(data, context = null) {
         converted[prop] = FieldConverter.convertArray(converted[prop], 'toFrontend', { context });
         console.log(`✅ Tableau '${prop}' converti:`, converted[prop]);
       } else if (typeof converted[prop] === 'object') {
-        converted[prop] = FieldConverter.toFrontendFormat(converted[prop], { context });
+        // ✅ CORRECTION PRINCIPALE: Conversion récursive complète des objets
+        converted[prop] = convertObjectRecursively(converted[prop], context);
         console.log(`✅ Objet '${prop}' converti:`, converted[prop]);
       }
     }
@@ -458,6 +552,38 @@ function convertApiResponse(data, context = null) {
   }
   
   console.log('✅ Réponse finale convertie:', converted);
+  return converted;
+}
+
+/**
+ * ✅ NOUVELLE FONCTION: Conversion récursive complète d'un objet
+ * Cette fonction s'assure que tous les tableaux imbriqués sont aussi convertis
+ */
+function convertObjectRecursively(obj, context = null) {
+  if (!obj || typeof obj !== 'object') {
+    return obj;
+  }
+
+  // Si c'est un tableau, convertir chaque élément
+  if (Array.isArray(obj)) {
+    return FieldConverter.convertArray(obj, 'toFrontend', { context });
+  }
+
+  // Convertir l'objet avec FieldConverter
+  const converted = FieldConverter.toFrontendFormat(obj, { context });
+  
+  // ✅ CORRECTION PRINCIPALE: Parcourir toutes les propriétés pour convertir les tableaux imbriqués
+  Object.keys(converted).forEach(key => {
+    if (Array.isArray(converted[key])) {
+      console.log(`🔄 Conversion tableau imbriqué '${key}':`, converted[key]);
+      converted[key] = FieldConverter.convertArray(converted[key], 'toFrontend', { context });
+      console.log(`✅ Tableau imbriqué '${key}' converti:`, converted[key]);
+    } else if (converted[key] && typeof converted[key] === 'object' && !Array.isArray(converted[key])) {
+      // Conversion récursive pour les objets imbriqués
+      converted[key] = convertObjectRecursively(converted[key], context);
+    }
+  });
+
   return converted;
 }
 

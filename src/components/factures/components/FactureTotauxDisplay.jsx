@@ -21,8 +21,9 @@ function FactureTotauxDisplay({
     const debounceTimeout = useRef(null);
 
     // Calculer le total brut à partir des lignes
+    console.log('🔍 Calcul du total brut à partir des lignes:', lignes);
     const totalBrut = lignes.reduce((sum, ligne) => {
-        const ligneTotal = parseFloat(ligne.total) || 0;
+        const ligneTotal = parseFloat(ligne.totalLigne) || 0;
         console.log(`Ligne total: ${ligne.description} = ${ligneTotal}`);
         return sum + ligneTotal;
     }, 0);

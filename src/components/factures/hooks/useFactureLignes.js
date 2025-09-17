@@ -1,280 +1,482 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import DateService from '../../../utils/DateService';
+import { validateFactureLines } from '../utils/factureValidation';
+
+/**
+ * Utilitaires pour la gestion des objets enrichis dans les lignes
+ */
+const EnrichedObjectManager = {
+    /**
+     * Préserve les objets enrichis lors de l'initialisation
+     */
+    preserveEnrichedObjects: (lignesInitiales, services, unites) => {
+        if (!lignesInitiales || !Array.isArray(lignesInitiales)) {
+            return [];
+        }
+
+        return lignesInitiales.map((ligne, index) => {
+            const lignePreservee = { ...ligne };
+
+            // Si on a déjà des objets enrichis, les préserver
+            if (ligne.service && typeof ligne.service === 'object') {
+                lignePreservee.serviceEnrichi = ligne.service;
+                lignePreservee.serviceType = ligne.service.codeService || ligne.service.code;
+                lignePreservee.serviceId = ligne.service.idService || ligne.service.id;
+            }
+
+            if (ligne.unite && typeof ligne.unite === 'object') {
+                lignePreservee.uniteEnrichie = ligne.unite;
+                lignePreservee.uniteCode = ligne.unite.code;
+                lignePreservee.uniteId = ligne.unite.idUnite || ligne.unite.id;
+            }
+
+            // S'assurer que les propriétés de base existent
+            lignePreservee.noOrdre = ligne.noOrdre || index + 1;
+            lignePreservee.description = ligne.description || '';
+            lignePreservee.descriptionDates = ligne.descriptionDates || '';
+            lignePreservee.quantite = ligne.quantite || '';
+            lignePreservee.prixUnitaire = ligne.prixUnitaire || '';
+            lignePreservee.totalLigne = ligne.totalLigne || 0;
+
+            return lignePreservee;
+        });
+    },
+
+    /**
+     * Met à jour une ligne en préservant les objets enrichis
+     */
+    updateLinePreservingObjects: (ligne, champ, valeur, services, unites) => {
+        const ligneUpdated = { ...ligne };
+
+        // Mise à jour standard
+        ligneUpdated[champ] = valeur;
+
+        // Gestion spéciale pour les services
+        if (champ === 'serviceType' || champ === 'service') {
+            if (champ === 'serviceType') {
+                // Trouver l'objet service complet
+                const serviceObj = services?.find(s => s.codeService === valeur);
+                if (serviceObj) {
+                    ligneUpdated.service = serviceObj;
+                    ligneUpdated.serviceEnrichi = serviceObj;
+                    ligneUpdated.serviceId = serviceObj.idService;
+                } else {
+                    ligneUpdated.service = null;
+                    ligneUpdated.serviceEnrichi = null;
+                    ligneUpdated.serviceId = null;
+                }
+            } else if (champ === 'service' && valeur && typeof valeur === 'object') {
+                // Objet service complet fourni
+                ligneUpdated.serviceEnrichi = valeur;
+                ligneUpdated.serviceType = valeur.codeService || valeur.code;
+                ligneUpdated.serviceId = valeur.idService || valeur.id;
+            }
+        }
+
+        // Gestion spéciale pour les unités
+        if (champ === 'unite') {
+            if (typeof valeur === 'string') {
+                // Code d'unité fourni, chercher l'objet complet
+                const uniteObj = unites?.find(u => u.code === valeur);
+                if (uniteObj) {
+                    ligneUpdated.unite = uniteObj;
+                    ligneUpdated.uniteEnrichie = uniteObj;
+                    ligneUpdated.uniteCode = uniteObj.code;
+                    ligneUpdated.uniteId = uniteObj.idUnite || uniteObj.id;
+                } else {
+                    // Créer un objet minimal
+                    ligneUpdated.unite = { code: valeur, nom: valeur };
+                    ligneUpdated.uniteEnrichie = { code: valeur, nom: valeur };
+                    ligneUpdated.uniteCode = valeur;
+                    ligneUpdated.uniteId = null;
+                }
+            } else if (valeur && typeof valeur === 'object') {
+                // Objet unité complet fourni
+                ligneUpdated.uniteEnrichie = valeur;
+                ligneUpdated.uniteCode = valeur.code;
+                ligneUpdated.uniteId = valeur.idUnite || valeur.id;
+            }
+        }
+
+        // Recalcul du total si quantité ou prix changé
+        if (champ === 'quantite' || champ === 'prixUnitaire') {
+            const quantite = parseFloat(ligneUpdated.quantite) || 0;
+            const prix = parseFloat(ligneUpdated.prixUnitaire) || 0;
+            ligneUpdated.totalLigne = quantite * prix;
+        }
+
+        return ligneUpdated;
+    },
+
+    /**
+     * Crée une nouvelle ligne avec les valeurs par défaut
+     */
+    createNewLine: (defaultService, defaultUnites, noOrdre) => {
+        console.log('Création d\'une nouvelle ligne avec:', { defaultService, defaultUnites, noOrdre });
+        const nouvelleLigne = {
+            id: null,
+            noOrdre: noOrdre,
+            description: '',
+            descriptionDates: '',
+            quantite: '',
+            prixUnitaire: '',
+            totalLigne: 0,
+            serviceType: '',
+            serviceId: null,
+            uniteId: null,
+            service: null,
+            unite: null,
+            serviceEnrichi: null,
+            uniteEnrichie: null,
+            serviceTypeCode: '',
+            uniteCode: ''
+        };
+
+        // Appliquer les valeurs par défaut si disponibles
+        if (defaultService) {
+        nouvelleLigne.serviceType = defaultService.codeService;
+        nouvelleLigne.serviceTypeCode = defaultService.codeService;
+        nouvelleLigne.service = defaultService;
+        nouvelleLigne.serviceEnrichi = defaultService;
+        nouvelleLigne.serviceId = defaultService.idService;
+
+            // ✅ CORRECTION : Chercher l'unité par défaut pour ce service
+            if (defaultUnites && Array.isArray(defaultUnites)) {
+                // Chercher dans le tableau d'unités celle qui correspond au service
+                const uniteParDefaut = defaultUnites.find(unite => 
+                    unite && unite.idService === defaultService.idService
+                );
+                
+                console.log('Unité par défaut trouvée pour le service:', uniteParDefaut);
+                
+                if (uniteParDefaut) {
+                    // ✅ Assigner l'objet unité complet
+                    nouvelleLigne.unite = uniteParDefaut;
+                    nouvelleLigne.uniteEnrichie = uniteParDefaut;
+                    nouvelleLigne.uniteCode = uniteParDefaut.codeUnite;
+                    nouvelleLigne.uniteId = uniteParDefaut.idUnite;
+                    
+                    console.log('✅ Unité assignée:', {
+                        code: uniteParDefaut.codeUnite,
+                        nom: uniteParDefaut.nomUnite,
+                        id: uniteParDefaut.idUnite
+                    });
+                } else {
+                    console.warn('⚠️ Aucune unité par défaut trouvée pour le service:', defaultService.codeService);
+                }
+            }
+        }
+
+        return nouvelleLigne;
+    }
+};
 
 /**
  * Hook personnalisé pour la gestion des lignes de facture
- * Gère le CRUD des lignes, leurs états, et la synchronisation avec le parent
+ * VERSION AVEC PRÉSERVATION DES OBJETS ENRICHIS
  */
 export function useFactureLignes(
     lignesInitiales,
     readOnly,
     onLignesChange,
     onResetRistourne,
-    services = [],
-    unites = []
+    services,
+    unites
 ) {
-    // États principaux des lignes
+    // États principaux
     const [lignes, setLignes] = useState([]);
-    
-    // États de gestion des lignes
     const [lignesOuvertes, setLignesOuvertes] = useState({});
     const [validationErrors, setValidationErrors] = useState({});
     const [draggingIndex, setDraggingIndex] = useState(null);
     
-    // Références pour éviter les re-renders inutiles
-    const prevLignesRef = useRef([]);
+    // Références
     const prixModifiesManuel = useRef({});
-    const previousLineTotals = useRef({});
+    const lastLignesLength = useRef(0);
 
     /**
-     * Initialise les lignes à partir des données initiales
+     * Initialise les lignes en préservant les objets enrichis
      */
-    const initialiserLignes = useCallback((
-        lignesInitiales, 
-        isReadOnly, 
-        servicesArray = [], 
-        unitesArray = []
-    ) => {
-        console.log('Initialisation des lignes');
+    const initialiserLignes = useCallback((lignesData, isReadOnly, servicesData, unitesData, isModification = false) => {
+        console.log('🔄 Initialisation des lignes avec préservation des objets enrichis');
         
-        if (lignesInitiales && lignesInitiales.length > 0) {
-            const lignesAvecValeurs = lignesInitiales.map((ligne, index) => {
-                // Recherche sécurisée du service
-                const serviceCorrespondant = servicesArray.find(s => 
-                    s && s.id && (s.id === ligne.serviceId || s.id === ligne.service_id)
-                );
-        
-                // Recherche sécurisée de l'unité
-                const uniteCorrespondante = unitesArray.find(u => 
-                    u && u.id && (u.id === ligne.uniteId || u.id === ligne.unite_id)
-                );
-        
-                return {
-                    ...ligne,
-                    serviceType: serviceCorrespondant ? serviceCorrespondant.code : ligne.serviceType || '',
-                    serviceId: serviceCorrespondant ? serviceCorrespondant.id : ligne.service_id || null,
-                    unite: uniteCorrespondante ? uniteCorrespondante.code : ligne.unite || '',
-                    uniteId: uniteCorrespondante ? uniteCorrespondante.id : ligne.unite_id || null,
-                    prixUnitaire: parseFloat(ligne.prixUnitaire) || 0,
-                    quantite: parseFloat(ligne.quantite) || 0,
-                    total: parseFloat(ligne.total) || parseFloat(ligne.quantite) * parseFloat(ligne.prixUnitaire) || 0,
-                    descriptionDates: ligne.descriptionDates || ''
-                };
-            });
+        const lignesPreservees = EnrichedObjectManager.preserveEnrichedObjects(
+            lignesData, 
+            servicesData, 
+            unitesData
+        );
+
+        console.log('✅ Lignes préservées:', lignesPreservees.length);
+        setLignes(lignesPreservees);
+
+        // ✅ CORRECTION: Logique d'ouverture différente selon le contexte
+        if (!isReadOnly && lignesPreservees.length > 0) {
+            const nouvellesLignesOuvertes = {};
             
-            setLignes(lignesAvecValeurs);
-            
-            // En mode modification, toutes les lignes existantes sont fermées initialement
-            const lignesOuvertesInitiales = {};
-            lignesAvecValeurs.forEach((_, index) => {
-                lignesOuvertesInitiales[index] = false;
-            });
-            setLignesOuvertes(lignesOuvertesInitiales);
-            
-            // Marquer les prix comme modifiés manuellement en mode modification
-            if (!isReadOnly) {
-                const indices = lignesAvecValeurs.map((_, idx) => idx);
-                const marquage = indices.reduce((obj, idx) => ({...obj, [idx]: true}), {});
-                prixModifiesManuel.current = marquage;
+            if (isModification) {
+                // ✅ En mode modification, toutes les lignes sont fermées par défaut
+                lignesPreservees.forEach((_, index) => {
+                    nouvellesLignesOuvertes[index] = false;
+                });
+                console.log('📝 Mode modification: lignes fermées par défaut');
+            } else {
+                // En mode création, ouvrir toutes les lignes
+                lignesPreservees.forEach((_, index) => {
+                    nouvellesLignesOuvertes[index] = true;
+                });
+                console.log('➕ Mode création: lignes ouvertes par défaut');
             }
+            
+            setLignesOuvertes(nouvellesLignesOuvertes);
+        } else if (isReadOnly) {
+            // ✅ En mode lecture seule, toutes les lignes fermées
+            const nouvellesLignesOuvertes = {};
+            lignesPreservees.forEach((_, index) => {
+                nouvellesLignesOuvertes[index] = false;
+            });
+            setLignesOuvertes(nouvellesLignesOuvertes);
+            console.log('👁️ Mode lecture: lignes fermées par défaut');
         }
-    }, []);
+
+        // Validation initiale
+        if (lignesPreservees.length > 0) {
+            const validite = validateFactureLines(lignesPreservees);
+            setValidationErrors(validite ? {} : { global: ['Erreurs de validation détectées'] });
+        }
+    }, [services, unites]);
 
     /**
-     * Ajoute une nouvelle ligne
-     */
-    const ajouterLigne = useCallback((defaultService = null, defaultUnites = {}) => {
-        if (readOnly) return;
-        
-        // Réinitialiser la ristourne lors de l'ajout d'une ligne
-        if (typeof onResetRistourne === 'function' && lignes.length > 0) {
-            onResetRistourne();
-        }
-
-        const defaultServiceCode = defaultService ? defaultService.code : '';
-        const defaultUniteCode = defaultService && defaultUnites[defaultService.code] 
-            ? defaultUnites[defaultService.code] 
-            : '';
-        
-        console.log('➕ Ajout nouvelle ligne:', { 
-            defaultServiceCode, 
-            defaultUniteCode,
-            defaultService: defaultService?.nom 
-        });
-        
-        // Créer la nouvelle ligne avec les valeurs par défaut
-        const nouvelleLigne = { 
-            description: '',
-            descriptionDates: '',
-            serviceType: defaultServiceCode,
-            unite: defaultUniteCode, 
-            quantite: '',
-            prixUnitaire: '', // ✅ Sera calculé automatiquement par le hook parent
-            total: 0 
-        };
-        
-        // Ajouter les IDs si possible
-        if (defaultServiceCode) {
-            const serviceObj = services.find(s => s.code === defaultServiceCode);
-            if (serviceObj) {
-                nouvelleLigne.serviceId = serviceObj.id;
-                console.log('✅ Service par défaut configuré:', serviceObj.nom);
-            }
-        }
-        
-        if (defaultUniteCode) {
-            const uniteObj = unites.find(u => u.code === defaultUniteCode);
-            if (uniteObj) {
-                nouvelleLigne.uniteId = uniteObj.id;
-                console.log('✅ Unité par défaut configurée:', uniteObj.nom);
-            }
-        }
-        
-        // Mettre à jour les lignes
-        const lignesActualisees = [...lignes, nouvelleLigne];
-        setLignes(lignesActualisees);
-        
-        // La nouvelle ligne est ouverte par défaut
-        const nouvelIndex = lignesActualisees.length - 1;
-        setLignesOuvertes(prev => ({
-            ...prev,
-            [nouvelIndex]: true
-        }));
-        
-        // ✅ CORRECTION : NE PAS marquer le prix comme modifié manuellement
-        // pour permettre le calcul automatique
-        if (prixModifiesManuel.current[nouvelIndex]) {
-            delete prixModifiesManuel.current[nouvelIndex];
-        }
-        
-        console.log('✅ Nouvelle ligne ajoutée à l\'index:', nouvelIndex);
-        
-    }, [lignes, readOnly, services, unites, onResetRistourne]);
-
-    /**
-     * Modifie une ligne
+     * Modifie une ligne en préservant les objets enrichis
      */
     const modifierLigne = useCallback((index, champ, valeur) => {
+        setLignes(prevLignes => {
+            const nouvelleLignes = [...prevLignes];
+            if (index >= 0 && index < nouvelleLignes.length) {
+                const ligneActuelle = nouvelleLignes[index];
+                let ligneUpdated = { ...ligneActuelle };
+
+                // Mise à jour standard
+                ligneUpdated[champ] = valeur;
+
+                // ✅ CORRECTION: Gestion spéciale pour les services
+                if (champ === 'serviceType' || champ === 'service') {
+                    if (champ === 'serviceType') {
+                        // Trouver l'objet service complet
+                        const serviceObj = services?.find(s => s.codeService === valeur);
+                        if (serviceObj) {
+                            ligneUpdated.service = serviceObj;
+                            ligneUpdated.serviceEnrichi = serviceObj;
+                            ligneUpdated.serviceId = serviceObj.idService;
+                            console.log('✅ Service enrichi mis à jour:', serviceObj.nomService);
+                        } else {
+                            ligneUpdated.service = null;
+                            ligneUpdated.serviceEnrichi = null;
+                            ligneUpdated.serviceId = null;
+                        }
+                    } else if (champ === 'service' && valeur && typeof valeur === 'object') {
+                        // Objet service complet fourni
+                        ligneUpdated.serviceEnrichi = valeur;
+                        ligneUpdated.serviceType = valeur.codeService || valeur.code;
+                        ligneUpdated.serviceId = valeur.idService || valeur.id;
+                        console.log('✅ Service objet mis à jour:', valeur.nomService || valeur.nom);
+                    }
+                }
+
+                // ✅ CORRECTION PRINCIPALE: Gestion spéciale pour les unités - MISE À JOUR FORCÉE
+                if (champ === 'unite') {
+                    if (typeof valeur === 'string') {
+                        // Code d'unité fourni, chercher l'objet complet
+                        const uniteObj = unites?.find(u => u.code === valeur || u.codeUnite === valeur);
+                        if (uniteObj) {
+                            // ✅ CORRECTION CRITIQUE: Remplacer COMPLÈTEMENT l'objet unité
+                            ligneUpdated.unite = { ...uniteObj }; // Nouvel objet
+                            ligneUpdated.uniteEnrichie = { ...uniteObj }; // Nouvel objet
+                            ligneUpdated.uniteCode = uniteObj.code || uniteObj.codeUnite;
+                            ligneUpdated.uniteId = uniteObj.idUnite || uniteObj.id;
+                            console.log('✅ Unité enrichie REMPLACÉE (string):', uniteObj.nom || uniteObj.nomUnite, 'ID:', uniteObj.idUnite);
+                        } else {
+                            // Créer un objet minimal
+                            ligneUpdated.unite = { code: valeur, nom: valeur };
+                            ligneUpdated.uniteEnrichie = { code: valeur, nom: valeur };
+                            ligneUpdated.uniteCode = valeur;
+                            ligneUpdated.uniteId = null;
+                            console.log('✅ Unité minimale créée:', valeur);
+                        }
+                    } else if (valeur && typeof valeur === 'object') {
+                        // ✅ CORRECTION CRITIQUE: Objet unité complet fourni - REMPLACEMENT COMPLET
+                        ligneUpdated.unite = { ...valeur }; // Nouvel objet complet
+                        ligneUpdated.uniteEnrichie = { ...valeur }; // Nouvel objet complet
+                        ligneUpdated.uniteCode = valeur.code || valeur.codeUnite;
+                        ligneUpdated.uniteId = valeur.idUnite || valeur.id;
+                        console.log('✅ Unité objet REMPLACÉE complètement:', valeur.nom || valeur.nomUnite, 'ID:', valeur.idUnite);
+                        
+                        // ✅ VÉRIFICATION: S'assurer que les propriétés sont bien mises à jour
+                        console.log('🔍 Vérification objet unité final:', {
+                            unite: ligneUpdated.unite,
+                            uniteEnrichie: ligneUpdated.uniteEnrichie,
+                            uniteCode: ligneUpdated.uniteCode,
+                            uniteId: ligneUpdated.uniteId
+                        });
+                    } else if (valeur === null) {
+                        // Nettoyage
+                        ligneUpdated.unite = null;
+                        ligneUpdated.uniteEnrichie = null;
+                        ligneUpdated.uniteCode = null;
+                        ligneUpdated.uniteId = null;
+                        console.log('✅ Unité nettoyée');
+                    }
+                }
+
+                // ✅ CORRECTION: Gestion directe des codes et IDs pour synchronisation
+                if (champ === 'uniteCode') {
+                    ligneUpdated.uniteCode = valeur;
+                    // ✅ CORRECTION: Mettre à jour l'objet unité pour rester cohérent
+                    if (ligneUpdated.unite && typeof ligneUpdated.unite === 'object') {
+                        ligneUpdated.unite = { ...ligneUpdated.unite, code: valeur, codeUnite: valeur };
+                        ligneUpdated.uniteEnrichie = { ...ligneUpdated.unite };
+                    }
+                    console.log('✅ UniteCode mis à jour et objet synchronisé:', valeur);
+                }
+
+                if (champ === 'uniteId') {
+                    ligneUpdated.uniteId = valeur;
+                    // ✅ CORRECTION: Mettre à jour l'objet unité pour rester cohérent
+                    if (ligneUpdated.unite && typeof ligneUpdated.unite === 'object') {
+                        ligneUpdated.unite = { ...ligneUpdated.unite, idUnite: valeur };
+                        ligneUpdated.uniteEnrichie = { ...ligneUpdated.unite };
+                    }
+                    console.log('✅ UniteId mis à jour et objet synchronisé:', valeur);
+                }
+
+                // Recalcul du totalLigne si quantité ou prix changé
+                if (champ === 'quantite' || champ === 'prixUnitaire') {
+                    const quantite = parseFloat(ligneUpdated.quantite) || 0;
+                    const prix = parseFloat(ligneUpdated.prixUnitaire) || 0;
+                    ligneUpdated.totalLigne = quantite * prix;
+                }
+
+                nouvelleLignes[index] = ligneUpdated;
+                
+                // ✅ DEBUG: Log de la ligne finale pour vérification
+                if (champ === 'unite' || champ === 'uniteCode' || champ === 'uniteId') {
+                    console.log('🔍 Ligne finale après modification:', {
+                        champ,
+                        valeur,
+                        unite: nouvelleLignes[index].unite,
+                        uniteCode: nouvelleLignes[index].uniteCode,
+                        uniteId: nouvelleLignes[index].uniteId
+                    });
+                }
+            }
+            return nouvelleLignes;
+        });
+    }, [services, unites]);
+
+    /**
+     * Ajoute une nouvelle ligne avec objets enrichis
+     */
+    const ajouterLigne = useCallback((defaultService, defaultUnites) => {
+        console.log('➕ Ajout d\'une nouvelle ligne');
         if (readOnly) return;
 
-        const nouvellesLignes = [...lignes];
-        const previousTotal = nouvellesLignes[index].total || 0;
         
-        // Mettre à jour la valeur du champ
-        nouvellesLignes[index][champ] = valeur;
+        console.log('ajouterLigne - defaultService:', defaultService);
+        console.log('ajouterLigne - defaultUnites:', defaultUnites);
 
-        // Gestion spécifique selon le type de champ
-        switch (champ) {
-            case 'descriptionDates':
-                handleDatesChange(nouvellesLignes, index, valeur);
-                break;
-                
-            case 'serviceType':
-                handleServiceTypeChange(nouvellesLignes, index, valeur);
-                break;
-                
-            case 'unite':
-                handleUniteChange(nouvellesLignes, index, valeur);
-                break;
-                
-            case 'quantite':
-            case 'prixUnitaire':
-                handleNumericChange(nouvellesLignes, index, champ);
-                break;
-        }
-
-        // Mettre à jour l'état
-        setLignes(nouvellesLignes);
-
-        // Gestion de la ristourne pour les changements de total
-        if ((champ === 'quantite' || champ === 'prixUnitaire') && typeof onResetRistourne === 'function') {
-            const newTotal = nouvellesLignes[index].total || 0;
+        setLignes(prevLignes => {
+            const noOrdre = prevLignes.length + 1;
+            const nouvelleLigne = EnrichedObjectManager.createNewLine(
+                defaultService, 
+                defaultUnites, 
+                noOrdre
+            );
             
-            if (!previousLineTotals.current[index]) {
-                previousLineTotals.current[index] = previousTotal;
-            }
+            const nouvelleLignes = [...prevLignes, nouvelleLigne];
             
-            if (Math.abs(newTotal - previousLineTotals.current[index]) > 0.01) {
-                previousLineTotals.current[index] = newTotal;
-                onResetRistourne();
-            }
-        }
-    }, [lignes, readOnly, services, unites, onResetRistourne]);
+            // Ouvrir automatiquement la nouvelle ligne
+            setLignesOuvertes(prev => ({
+                ...prev,
+                [prevLignes.length]: true
+            }));
+
+            console.log('➕ Nouvelle ligne ajoutée avec objets enrichis:', nouvelleLigne);
+            return nouvelleLignes;
+        });
+    }, [readOnly]);
 
     /**
      * Supprime une ligne
      */
     const supprimerLigne = useCallback((index) => {
-        if (readOnly || lignes.length <= 1) return;
-        
-        // Réinitialiser la ristourne lors de la suppression
-        if (typeof onResetRistourne === 'function') {
+        if (readOnly) return;
+
+        setLignes(prevLignes => {
+            const nouvelleLignes = prevLignes.filter((_, i) => i !== index);
+            
+            // Réorganiser les numéros d'ordre
+            return nouvelleLignes.map((ligne, i) => ({
+                ...ligne,
+                noOrdre: i + 1
+            }));
+        });
+
+        // Nettoyer les états associés
+        setLignesOuvertes(prev => {
+            const newState = { ...prev };
+            delete newState[index];
+            
+            // Réorganiser les clés
+            const reorganized = {};
+            Object.keys(newState).forEach(key => {
+                const oldIndex = parseInt(key);
+                if (oldIndex > index) {
+                    reorganized[oldIndex - 1] = newState[key];
+                } else if (oldIndex < index) {
+                    reorganized[oldIndex] = newState[key];
+                }
+            });
+            
+            return reorganized;
+        });
+
+        setValidationErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors[index];
+            return newErrors;
+        });
+
+        delete prixModifiesManuel.current[index];
+
+        if (onResetRistourne) {
             onResetRistourne();
         }
-
-        const nouvellesLignes = [...lignes];
-        nouvellesLignes.splice(index, 1);
-        setLignes(nouvellesLignes);
-        
-        // Mettre à jour l'état des lignes ouvertes
-        const nouvellesLignesOuvertes = {};
-        Object.keys(lignesOuvertes).forEach(idx => {
-            const numIdx = parseInt(idx);
-            if (numIdx < index) {
-                nouvellesLignesOuvertes[numIdx] = lignesOuvertes[numIdx];
-            } else if (numIdx > index) {
-                nouvellesLignesOuvertes[numIdx - 1] = lignesOuvertes[numIdx];
-            }
-        });
-        setLignesOuvertes(nouvellesLignesOuvertes);
-    }, [lignes, lignesOuvertes, readOnly, onResetRistourne]);
+    }, [readOnly, onResetRistourne]);
 
     /**
-     * Copie une ligne
+     * Copie une ligne en préservant les objets enrichis
      */
     const copierLigne = useCallback((index) => {
-        if (readOnly) return;
-        
-        const ligneCopie = { 
-            ...lignes[index], 
-            id: undefined, 
-            noOrdre: lignes.length + 1
+        if (readOnly || index < 0 || index >= lignes.length) return;
+
+        const ligneACopier = lignes[index];
+        const nouvelleLigne = {
+            ...ligneACopier,
+            id: null, // Nouvelle ligne sans ID
+            noOrdre: lignes.length + 1,
+            description: `Copie de ${ligneACopier.description || 'ligne'}`.slice(0, 200)
         };
-        
-        // Trouver les IDs si nécessaire
-        if (ligneCopie.serviceType) {
-            const serviceObj = services.find(s => s.code === ligneCopie.serviceType);
-            if (serviceObj) {
-                ligneCopie.serviceId = serviceObj.id;
-            }
-        }
-        
-        if (ligneCopie.unite) {
-            const uniteObj = unites.find(u => u.code === ligneCopie.unite);
-            if (uniteObj) {
-                ligneCopie.uniteId = uniteObj.id;
-            }
-        }
-        
-        // Ajouter la ligne copiée
-        const nouvellesLignes = [...lignes, ligneCopie];
-        const nouveauIndex = nouvellesLignes.length - 1;
-        setLignes(nouvellesLignes);
-        
-        // Ouvrir la nouvelle ligne
+
+        setLignes(prevLignes => [...prevLignes, nouvelleLigne]);
+
+        // Ouvrir la ligne copiée
         setLignesOuvertes(prev => ({
             ...prev,
-            [nouveauIndex]: true
+            [lignes.length]: true
         }));
-        
-        // Réinitialiser la ristourne
-        if (typeof onResetRistourne === 'function') {
-            onResetRistourne();
-        }
-    }, [readOnly, lignes, services, unites, onResetRistourne]);
+
+        console.log('📋 Ligne copiée avec objets enrichis préservés:', nouvelleLigne);
+    }, [readOnly, lignes]);
 
     /**
-     * Basculer l'état ouvert/fermé d'une ligne
+     * Toggle l'état ouvert/fermé d'une ligne
      */
     const toggleLigneOuverte = useCallback((index) => {
         setLignesOuvertes(prev => ({
@@ -284,306 +486,154 @@ export function useFactureLignes(
     }, []);
 
     /**
-     * Met à jour la quantité depuis les dates sélectionnées
+     * Validation des lignes
      */
-    const updateQuantityFromDates = useCallback((index, formattedDates, quantity) => {
-        if (readOnly) return;
+    const validateLignes = useCallback((lignesAValider = lignes) => {
+        const validite = validateFactureLines(lignesAValider);
+        return validite;
+    }, [lignes]);
 
-        const nouvellesLignes = [...lignes];
-        
-        // Mettre à jour les dates et la quantité
-        nouvellesLignes[index].descriptionDates = formattedDates;
-        nouvellesLignes[index].quantite = quantity;
-        
-        // Recalculer le total
-        const prixUnitaire = parseFloat(nouvellesLignes[index].prixUnitaire) || 0;
-        nouvellesLignes[index].total = quantity * prixUnitaire;
-        
-        setLignes(nouvellesLignes);
-        
-        // Déclencher onResetRistourne si nécessaire
-        if (typeof onResetRistourne === 'function') {
-            onResetRistourne();
-        }
-    }, [lignes, readOnly, onResetRistourne]);
+    const validateAllLignes = useCallback(() => {
+        const erreurs = {};
+        let hasErrors = false;
 
-    // Gestionnaires pour les changements de champs spécifiques
-    function handleDatesChange(nouvellesLignes, index, valeur) {
-        nouvellesLignes[index].descriptionDates = valeur;
-        
-        try {
-            const parsedDates = DateService.parseDatesFromCompact(valeur);
-            if (parsedDates.length > 0) {
-                nouvellesLignes[index].quantite = parsedDates.length;
-                
-                // Recalculer le total
-                const prixUnitaire = parseFloat(nouvellesLignes[index].prixUnitaire) || 0;
-                nouvellesLignes[index].total = parsedDates.length * prixUnitaire;
-            }
-        } catch (error) {
-            console.error('Erreur lors de l\'analyse des dates:', error);
-        }
-    }
-
-    function handleServiceTypeChange(nouvellesLignes, index, valeur) {
-        const serviceObj = services.find(s => s.code === valeur);
-        nouvellesLignes[index].serviceId = serviceObj ? serviceObj.id : null;
-        
-        // Réinitialiser l'unité et le prix
-        nouvellesLignes[index].unite = '';
-        nouvellesLignes[index].uniteId = null;
-        nouvellesLignes[index].prixUnitaire = '';
-        nouvellesLignes[index].total = 0;
-        
-        // Réinitialiser le marqueur de prix modifié
-        delete prixModifiesManuel.current[index];
-    }
-
-    function handleUniteChange(nouvellesLignes, index, valeur) {
-        const uniteObj = unites.find(u => u.code === valeur);
-        nouvellesLignes[index].uniteId = uniteObj ? uniteObj.id : null;
-        
-        // Réinitialiser le prix (sera recalculé par le hook pricing)
-        nouvellesLignes[index].prixUnitaire = '';
-        nouvellesLignes[index].total = 0;
-        
-        // Effacer le marqueur de prix modifié
-        delete prixModifiesManuel.current[index];
-    }
-
-    function handleNumericChange(nouvellesLignes, index, champ) {
-        const quantite = parseFloat(nouvellesLignes[index].quantite) || 0;
-        const prix = parseFloat(nouvellesLignes[index].prixUnitaire) || 0;
-        nouvellesLignes[index].total = quantite * prix;
-        
-        // Marquer le prix comme modifié manuellement si nécessaire
-        if (champ === 'prixUnitaire') {
-            prixModifiesManuel.current[index] = true;
-        }
-    }
-
-    /**
-     * Valide les lignes
-     */
-    const validateLignes = useCallback((lignes) => {
-        const errors = {};
-        
         lignes.forEach((ligne, index) => {
-            errors[index] = {};
-            
-            if (!ligne.description || ligne.description.trim() === '') {
-                errors[index].description = 'La description est obligatoire';
+            const ligneErrors = {};
+
+            if (!ligne.serviceType && !ligne.service) {
+                ligneErrors.serviceType = 'Service requis';
+                hasErrors = true;
             }
-            
-            if (!ligne.serviceType) {
-                errors[index].serviceType = 'Le type de service est obligatoire';
+
+            if (!ligne.unite && !ligne.uniteCode) {
+                ligneErrors.unite = 'Unité requise';
+                hasErrors = true;
             }
-            
-            if (!ligne.unite) {
-                errors[index].unite = 'L\'unité est obligatoire';
+
+            if (!ligne.description?.trim()) {
+                ligneErrors.description = 'Description requise';
+                hasErrors = true;
             }
-            
-            if (!ligne.quantite || parseFloat(ligne.quantite) <= 0) {
-                errors[index].quantite = 'La quantité doit être supérieure à 0';
+
+            if (!ligne.quantite || ligne.quantite <= 0) {
+                ligneErrors.quantite = 'Quantité requise';
+                hasErrors = true;
             }
-            
-            if (!ligne.prixUnitaire || parseFloat(ligne.prixUnitaire) <= 0) {
-                errors[index].prixUnitaire = 'Le prix unitaire doit être supérieur à 0';
+
+            if (!ligne.prixUnitaire || ligne.prixUnitaire <= 0) {
+                ligneErrors.prixUnitaire = 'Prix requis';
+                hasErrors = true;
+            }
+
+            if (Object.keys(ligneErrors).length > 0) {
+                erreurs[index] = ligneErrors;
             }
         });
-        
-        return errors;
-    }, []);
 
-    /**
-     * Vérifie si toutes les lignes sont valides
-     */
-    const validateAllLignes = useCallback(() => {
-        if (!lignes || lignes.length === 0) {
-            return false;
-        }
-        
-        return lignes.every(ligne => (
-            ligne.description && 
-            ligne.description.trim() !== '' && 
-            ligne.serviceType && 
-            ligne.unite && 
-            parseFloat(ligne.quantite) > 0 && 
-            parseFloat(ligne.prixUnitaire) > 0
-        ));
+        setValidationErrors(erreurs);
+        return !hasErrors;
     }, [lignes]);
 
     /**
-     * Calcule le total général
-     */
-    const totalGeneral = lignes.reduce((sum, ligne) => sum + (parseFloat(ligne.total) || 0), 0);
-
-    /**
-     * Gestion du drag and drop
+     * Fonctions de drag and drop
      */
     const handleDragStart = useCallback((e, index) => {
-        e.dataTransfer.setData('text/plain', index);
         setDraggingIndex(index);
-        e.currentTarget.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', index.toString());
     }, []);
-    
+
     const handleDragOver = useCallback((e) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
     }, []);
-    
+
     const handleDrop = useCallback((e, targetIndex) => {
         e.preventDefault();
-        const sourceIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
         
+        const sourceIndex = parseInt(e.dataTransfer.getData('text/plain'));
         if (sourceIndex === targetIndex) return;
-        
-        // Réordonner les lignes
-        const reorderedLignes = [...lignes];
-        const [removed] = reorderedLignes.splice(sourceIndex, 1);
-        reorderedLignes.splice(targetIndex, 0, removed);
-        
-        // Mettre à jour les numéros d'ordre
-        const updatedLignes = reorderedLignes.map((ligne, index) => ({
-            ...ligne,
-            noOrdre: index + 1
-        }));
-        
-        setLignes(updatedLignes);
-        
-        // Mettre à jour l'état des lignes ouvertes
-        const newLignesOuvertes = {};
-        Object.keys(lignesOuvertes).forEach(idx => {
-            const isOpen = lignesOuvertes[idx];
-            const oldIndex = parseInt(idx);
-            let newIndex;
-            
-            if (oldIndex === sourceIndex) {
-                newIndex = targetIndex;
-            } else if (oldIndex < sourceIndex && oldIndex < targetIndex) {
-                newIndex = oldIndex;
-            } else if (oldIndex > sourceIndex && oldIndex <= targetIndex) {
-                newIndex = oldIndex - 1;
-            } else if (oldIndex < sourceIndex && oldIndex >= targetIndex) {
-                newIndex = oldIndex + 1;
-            } else {
-                newIndex = oldIndex;
-            }
-            
-            newLignesOuvertes[newIndex] = isOpen;
+
+        setLignes(prevLignes => {
+            const nouvelleLignes = [...prevLignes];
+            const [ligneDeplacee] = nouvelleLignes.splice(sourceIndex, 1);
+            nouvelleLignes.splice(targetIndex, 0, ligneDeplacee);
+
+            // Réorganiser les numéros d'ordre
+            return nouvelleLignes.map((ligne, index) => ({
+                ...ligne,
+                noOrdre: index + 1
+            }));
         });
-        
-        setLignesOuvertes(newLignesOuvertes);
+
         setDraggingIndex(null);
-    }, [lignes, lignesOuvertes]);
-    
-    const handleDragEnd = useCallback((e) => {
-        e.currentTarget.classList.remove('dragging');
+    }, []);
+
+    const handleDragEnd = useCallback(() => {
         setDraggingIndex(null);
     }, []);
 
     /**
-     * Effet pour notifier les changements au parent
+     * Calcul du total général
+     */
+    const totalGeneral = lignes.reduce((total, ligne) => {
+        return total + (parseFloat(ligne.totalLigne) || 0);
+    }, 0);
+
+    /**
+     * Mise à jour automatique des dates et quantité
+     */
+    const updateQuantityFromDates = useCallback((index, datesStr, count) => {
+        modifierLigne(index, 'descriptionDates', datesStr);
+        modifierLigne(index, 'quantite', count);
+    }, [modifierLigne]);
+
+    /**
+     * Effet pour notifier les changements
      */
     useEffect(() => {
-        if (typeof onLignesChange === 'function' && lignes.length > 0) {
-            // Vérifier s'il y a des changements
-            let hasChanged = false;
-            
-            if (prevLignesRef.current.length !== lignes.length) {
-                hasChanged = true;
-            } else {
-                for (let i = 0; i < lignes.length; i++) {
-                    const prevLigne = prevLignesRef.current[i] || {};
-                    const currentLigne = lignes[i];
-                    
-                    if (
-                        prevLigne.description !== currentLigne.description ||
-                        prevLigne.descriptionDates !== currentLigne.descriptionDates ||
-                        prevLigne.serviceType !== currentLigne.serviceType ||
-                        prevLigne.unite !== currentLigne.unite ||
-                        prevLigne.quantite !== currentLigne.quantite ||
-                        prevLigne.prixUnitaire !== currentLigne.prixUnitaire ||
-                        prevLigne.total !== currentLigne.total
-                    ) {
-                        hasChanged = true;
-                        break;
-                    }
-                }
-            }
-            
-            if (hasChanged) {
-                // Valider et formater les lignes
-                const errors = validateLignes(lignes);
-                setValidationErrors(errors);
-                
-                const lignesFormatees = lignes.map((ligne, index) => {
-                    // Rechercher les noms d'unités
-                    let uniteNom = ligne.unite;
-                    if (ligne.unite) {
-                        const uniteObj = unites.find(u => u.code === ligne.unite);
-                        if (uniteObj) {
-                            ligne.uniteId = uniteObj.id;
-                            uniteNom = uniteObj.nom;
-                        }
-                    }
-                    
-                    return {
-                        description: ligne.description || '',
-                        descriptionDates: ligne.descriptionDates || '',
-                        serviceType: ligne.serviceType || '',
-                        unite: uniteNom || '',
-                        quantite: parseFloat(ligne.quantite) || 0,
-                        prixUnitaire: parseFloat(ligne.prixUnitaire) || 0,
-                        total: parseFloat(ligne.total) || 0,
-                        serviceId: ligne.serviceId || null,
-                        uniteId: ligne.uniteId || null,
-                        noOrdre: ligne.noOrdre || index + 1
-                    };
-                });
-                
-                onLignesChange(lignesFormatees);
-                prevLignesRef.current = JSON.parse(JSON.stringify(lignes));
-            }
+        // Notifier TOUS les changements de lignes, pas seulement les changements de longueur
+        if (onLignesChange && typeof onLignesChange === 'function') {
+            console.log('Notification des changements de lignes:', {
+                nombreLignes: lignes.length,
+                totalGeneral: totalGeneral
+            });
+            onLignesChange(lignes);
         }
-    }, [lignes, onLignesChange, services, unites, validateLignes]);
+        
+        lastLignesLength.current = lignes.length;
+    }, [lignes, onLignesChange, totalGeneral]); // ← Déclencher sur tout changement de lignes
 
     return {
-        // États principaux
+        // États
         lignes,
         setLignes,
-        totalGeneral,
-        
-        // États de gestion
         lignesOuvertes,
         setLignesOuvertes,
         validationErrors,
         setValidationErrors,
         draggingIndex,
         setDraggingIndex,
+        totalGeneral,
         
-        // Méthodes CRUD
+        // Références
+        prixModifiesManuel,
+        
+        // Méthodes
+        initialiserLignes,
         ajouterLigne,
         modifierLigne,
         supprimerLigne,
         copierLigne,
-        
-        // Méthodes de gestion
         toggleLigneOuverte,
-        updateQuantityFromDates,
-        initialiserLignes,
-        
-        // Validation
         validateLignes,
         validateAllLignes,
+        updateQuantityFromDates,
         
-        // Drag & Drop
+        // Drag and drop
         handleDragStart,
         handleDragOver,
         handleDrop,
-        handleDragEnd,
-        
-        // Références
-        prixModifiesManuel
+        handleDragEnd
     };
 }

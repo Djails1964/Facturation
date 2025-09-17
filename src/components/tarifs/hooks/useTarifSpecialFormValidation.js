@@ -48,7 +48,7 @@ export const useTarifSpecialFormValidation = (formState) => {
                     break;
                     
                 default:
-                    if (!value && ['serviceId', 'uniteId'].includes(fieldName)) {
+                    if (!value && ['idService', 'idUnite'].includes(fieldName)) {
                         errors[fieldName] = 'Ce champ est obligatoire';
                     }
                     break;
@@ -75,8 +75,8 @@ export const useTarifSpecialFormValidation = (formState) => {
         try {
             // Validation synchrone
             if (!tarifSpecial.clientId) errors.clientId = 'Le client est obligatoire';
-            if (!tarifSpecial.serviceId) errors.serviceId = 'Le service est obligatoire';
-            if (!tarifSpecial.uniteId) errors.uniteId = 'L\'unité est obligatoire';
+            if (!tarifSpecial.idService) errors.idService = 'Le service est obligatoire';
+            if (!tarifSpecial.idUnite) errors.idUnite = 'L\'unité est obligatoire';
             if (!tarifSpecial.prix || isNaN(parseFloat(tarifSpecial.prix)) || parseFloat(tarifSpecial.prix) <= 0) {
                 errors.prix = 'Le prix doit être un nombre positif';
             }
@@ -96,12 +96,12 @@ export const useTarifSpecialFormValidation = (formState) => {
             }
             
             // Validation métier (conflits de tarifs spéciaux)
-            if (tarifSpecial.clientId && tarifSpecial.serviceId && tarifSpecial.uniteId && tarifSpecial.date_debut) {
+            if (tarifSpecial.clientId && tarifSpecial.idService && tarifSpecial.idUnite && tarifSpecial.date_debut) {
                 try {
                     const conflictCheck = await tarificationService.checkTarifSpecialConflict({
                         clientId: tarifSpecial.clientId,
-                        serviceId: tarifSpecial.serviceId,
-                        uniteId: tarifSpecial.uniteId,
+                        idService: tarifSpecial.idService,
+                        idUnite: tarifSpecial.idUnite,
                         date_debut: tarifSpecial.date_debut,
                         date_fin: tarifSpecial.date_fin,
                         excludeId: tarifSpecial.id // Pour l'édition

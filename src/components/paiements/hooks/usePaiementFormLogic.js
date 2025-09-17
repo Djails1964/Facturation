@@ -126,6 +126,7 @@ export const usePaiementFormLogic = (formState) => {
         setError(null);
         
         try {
+            console.log('📥 Appel API paiementService.getPaiement avec ID:', idPaiement);
             const paiementData = await paiementService.getPaiement(idPaiement);
             console.log('🔥 Données brutes reçues:', paiementData);
             if (paiementData) {

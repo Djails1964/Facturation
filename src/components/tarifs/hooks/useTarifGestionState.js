@@ -154,23 +154,23 @@ export const useTarifGestionState = () => {
     }
   }, [tarificationService]);
   
-  const loadUnitesByService = useCallback(async (serviceId) => {
+  const loadUnitesByService = useCallback(async (idService) => {
     if (!tarificationService) return;
     
     try {
-      console.log('📡 Chargement des unités pour service:', serviceId);
-      const unitesForService = await tarificationService.chargerUnites(serviceId);
+      console.log('📡 Chargement des unités pour service:', idService);
+      const unitesForService = await tarificationService.chargerUnites(idService);
       
       setServiceUnites(prev => ({
         ...prev,
-        [serviceId]: Array.isArray(unitesForService) ? unitesForService : []
+        [idService]: Array.isArray(unitesForService) ? unitesForService : []
       }));
       
       const defaultUnite = unitesForService?.find(u => u.isDefault);
       if (defaultUnite) {
         setDefaultUnites(prev => ({
           ...prev,
-          [serviceId]: defaultUnite.id
+          [idService]: defaultUnite.id
         }));
       }
     } catch (error) {

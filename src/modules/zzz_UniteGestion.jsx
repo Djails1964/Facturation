@@ -97,7 +97,7 @@ const UniteGestion = ({
         setConfirmModal({
           isOpen: true,
           title: 'Suppression impossible',
-          message: `L'unité "${unite.nom}" ne peut pas être supprimée car elle est utilisée dans des factures ou des tarifs.`,
+          message: `L'unité "${unite.nomUnite}" ne peut pas être supprimée car elle est utilisée dans des factures ou des tarifs.`,
           onConfirm: () => {
             setConfirmModal(prev => ({ ...prev, isOpen: false }));
           },
@@ -111,7 +111,7 @@ const UniteGestion = ({
         setConfirmModal({
           isOpen: true,
           title: 'Confirmation de suppression',
-          message: `Êtes-vous sûr de vouloir supprimer l'unité "${unite.nom}" ?`,
+          message: `Êtes-vous sûr de vouloir supprimer l'unité "${unite.nomUnite}" ?`,
           onConfirm: async () => {
             try {
               const result = await tarificationService.deleteUnite(id);
@@ -151,7 +151,7 @@ const UniteGestion = ({
     // ✅ Titre dynamique sur une seule ligne
   const getTitle = () => {
     if (editUnite) {
-      return `Gestion des unités - Modifier l'unité "${editUnite?.nom || ''}"`;
+      return `Gestion des unités - Modifier l'unité "${editUnite?.nomUnite || ''}"`;
     }
     return "Gestion des unités - Ajouter une unité";
   };

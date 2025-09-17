@@ -19,23 +19,23 @@ const TarifFormDataSection = ({
             <div className="input-group">
                 <select
                     id="tarif-service"
-                    name="serviceId"
-                    value={tarif.serviceId || ""}
+                    name="idService"
+                    value={tarif.idService || ""}
                     onChange={onInputChange}
                     required
                     disabled={isReadOnly}
-                    className={validationErrors.serviceId ? 'error' : ''}
+                    className={validationErrors.idService ? 'error' : ''}
                 >
                     <option value="">Sélectionner un service</option>
                     {services.map(service => (
-                        <option key={service.id} value={service.id}>
-                            {service.nom}
+                        <option key={service.idService} value={service.idService}>
+                            {service.nomService}
                         </option>
                     ))}
                 </select>
                 <label htmlFor="tarif-service" className="required">Service</label>
-                {validationErrors.serviceId && (
-                    <span className="error-message">{validationErrors.serviceId}</span>
+                {validationErrors.idService && (
+                    <span className="error-message">{validationErrors.idService}</span>
                 )}
             </div>
 
@@ -43,23 +43,23 @@ const TarifFormDataSection = ({
             <div className="input-group">
                 <select
                     id="tarif-unite"
-                    name="uniteId"
-                    value={tarif.uniteId || ""}
+                    name="idUnite"
+                    value={tarif.idUnite || ""}
                     onChange={onInputChange}
                     required
-                    disabled={isReadOnly || !tarif.serviceId}
-                    className={validationErrors.uniteId ? 'error' : ''}
+                    disabled={isReadOnly || !tarif.idService}
+                    className={validationErrors.idUnite ? 'error' : ''}
                 >
                     <option value="">Sélectionner une unité</option>
-                    {tarif.serviceId && serviceUnites[tarif.serviceId]?.map(unite => (
-                        <option key={unite.id} value={unite.id}>
-                            {unite.nom}
+                    {tarif.idService && serviceUnites[tarif.idService]?.map(unite => (
+                        <option key={unite.idUnite} value={unite.idUnite}>
+                            {unite.nomUnite}
                         </option>
                     ))}
                 </select>
                 <label htmlFor="tarif-unite" className="required">Unité</label>
-                {validationErrors.uniteId && (
-                    <span className="error-message">{validationErrors.uniteId}</span>
+                {validationErrors.idUnite && (
+                    <span className="error-message">{validationErrors.idUnite}</span>
                 )}
             </div>
 

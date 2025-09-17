@@ -167,9 +167,9 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
             userContext={userContext}
             // Callbacks d'intégration
             onTarifAction={handleTarifIntegrationAction}
-            onNavigateToFacture={(serviceId, tarifId) => {
+            onNavigateToFacture={(idService, tarifId) => {
               handleTarifIntegrationAction('create-facture-from-tarif', {
-                selectedService: serviceId,
+                selectedService: idService,
                 selectedTarif: tarifId
               });
             }}

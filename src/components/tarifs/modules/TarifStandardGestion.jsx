@@ -15,7 +15,7 @@ const TarifStandardGestion = ({
   serviceUnites, 
   loadUnitesByService,
   tarificationService, 
-  setSelectedServiceId, 
+  setSelectedidService, 
   setMessage, 
   setMessageType, 
   setConfirmModal,
@@ -93,8 +93,8 @@ const TarifStandardGestion = ({
 
   // Utilitaire pour obtenir le nom d'affichage d'un tarif
   const getTarifDisplayName = (tarif) => {
-    const service = services.find(s => s.id === (tarif.service_id || tarif.serviceId));
-    const unite = unites.find(u => u.id === (tarif.unite_id || tarif.uniteId));
+    const service = services.find(s => s.id === (tarif.idService));
+    const unite = unites.find(u => u.id === (tarif.idUnite));
     const typeTarif = typesTarifs.find(t => t.id === (tarif.type_tarif_id || tarif.typeTarifId));
     
     return `${service?.nomService || 'Service'} - ${unite?.nomUnite || 'Unité'} - ${typeTarif?.nomTypeTarif || 'Type'}`;

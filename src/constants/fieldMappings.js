@@ -1,6 +1,7 @@
 // src/constants/fieldMappings.js - Configuration centralisée des mappings de champs
 // Intégré avec la structure existante de votre application + gestion des dates vides
 
+import { MdNotificationAdd } from 'react-icons/md';
 import FieldConverter from '../utils/FieldConverter';
 
 /**
@@ -24,6 +25,7 @@ const GENERIC_MAPPINGS = {
   id: 'id',
   userId: 'user_id',
   companyId: 'company_id',
+  
   
   // États et flags
   isActive: 'is_active',
@@ -67,9 +69,15 @@ const FACTURATION_MAPPINGS = {
   prixUnitaire: 'prix_unitaire',
   prixTotal: 'prix_total',
   tauxTva: 'taux_tva',
+  descriptionDates: 'description_dates',
+  noOrdre: 'no_ordre',
+  idLigne: 'id_ligne',
+  totalLigne: 'total_ligne',
 
     // Relations
-  IdClient: 'id_client',
+  idClient: 'id_client',
+  serviceId: 'service_id',
+  uniteId: 'unite_id',
   
   // Devis
   numeroDevis: 'numero_devis',
@@ -123,6 +131,7 @@ const PAIEMENT_MAPPINGS = {
   // Paiements
   idPaiement: 'id_paiement',
   paiementId: 'paiement_id',
+  numeroPaiement: 'numero_paiement',
   datePaiement: 'date_paiement',
   montantPaye: 'montant_paye',
   methodePaiement: 'methode_paiement',
@@ -136,6 +145,7 @@ const PAIEMENT_MAPPINGS = {
   // Informations système
   dateAnnulation: 'date_annulation',
   raisonAnnulation: 'raison_annulation',
+  motifAnnulation: 'motif_annulation',
   userCree: 'user_cree',
   userModifie: 'user_modifie'
 };
@@ -512,7 +522,7 @@ function debugFieldMappings() {
  */
 function testFieldConversion(testData = null) {
   const defaultTestData = {
-    serviceId: 1,
+    idService: 1,
     dateFin: '',
     dateDebut: '2024-01-01',
     prix: 100.50,

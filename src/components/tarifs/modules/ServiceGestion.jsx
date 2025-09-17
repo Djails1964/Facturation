@@ -37,7 +37,7 @@ const ServiceGestion = ({
   const handleEditClick = (service, event) => {
     if (onEditService) {
       // Utiliser le nouveau système unifié
-      onEditService(service.idService || service.id, event);
+      onEditService(service.idService, event);
     } else {
       // Fallback vers l'ancien système (deprecated)
       console.warn('⚠️ onEditService non fourni, utilisation du système legacy');
@@ -48,7 +48,7 @@ const ServiceGestion = ({
   const handleDeleteClick = (service, event) => {
     if (onDeleteService) {
       // Utiliser le nouveau système unifié
-      onDeleteService(service.idService || service.id, service.nom, event);
+      onDeleteService(service.idService, service.nomService, event);
     } else {
       // Fallback vers l'ancien système (deprecated)
       console.warn('⚠️ onDeleteService non fourni, utilisation du système legacy');

@@ -70,24 +70,24 @@ export const useTarifList = (tarifs = [], services = [], unites = [], typesTarif
     // 🔧 FIX: Fonction d'enrichissement stable avec support des deux formats
     const enrichTarif = useCallback((tarif) => {
         // Support camelCase ET snake_case pour les IDs
-        const serviceId = tarif.serviceId || tarif.service_id;
-        const uniteId = tarif.uniteId || tarif.unite_id;
+        const idService = tarif.idService;
+        const idUnite = tarif.idUnite;
         const typeTarifId = tarif.typeTarifId || tarif.type_tarif_id;
         
-        const service = services.find(s => s.id == serviceId);
-        const unite = unites.find(u => u.id == uniteId);
+        const service = services.find(s => s.id == idService);
+        const unite = unites.find(u => u.id == idUnite);
         const typeTarif = typesTarifs.find(t => t.id == typeTarifId);
         
         return {
             ...tarif,
             // 🔧 FIX: Créer les noms en camelCase pour compatibilité
-            serviceNom: service?.nom || `Service ${serviceId}`,
-            uniteNom: unite?.nom || `Unité ${uniteId}`,
+            nomService: service?.nomService || `Service ${idService}`,
+            uniteNom: unite?.nomUnite || `Unité ${idUnite}`,
             typeTarifNom: typeTarif?.nom || `Type ${typeTarifId}`,
             // Garder aussi les versions snake_case si elles n'existent pas
-            service_nom: tarif.service_nom || (service?.nom || `Service ${serviceId}`),
-            unite_nom: tarif.unite_nom || (unite?.nom || `Unité ${uniteId}`),
-            type_tarif_nom: tarif.type_tarif_nom || (typeTarif?.nom || `Type ${typeTarifId}`),
+            nomService: tarif.nomService || (service?.nomService || `Service ${idService}`),
+            uniteNom: tarif.uniteNom || (unite?.nomUnite || `Unité ${idUnite}`),
+            typeTarifNom: tarif.typeTarifNom || (typeTarif?.nom || `Type ${typeTarifId}`),
             isValid: isTarifValid(tarif)
         };
     }, [services, unites, typesTarifs, isTarifValid]);
@@ -105,17 +105,17 @@ export const useTarifList = (tarifs = [], services = [], unites = [], typesTarif
         // Filtrer
         let filtered = enrichedTarifs.filter(tarif => {
             // Support camelCase ET snake_case pour les filtres
-            const serviceId = tarif.serviceId || tarif.service_id;
-            const uniteId = tarif.uniteId || tarif.unite_id;
+            const idService = tarif.idService;
+            const idUnite = tarif.idUnite;
             const typeTarifId = tarif.typeTarifId || tarif.type_tarif_id;
             
             // Filtre par service
-            if (filters.service && serviceId != filters.service) {
+            if (filters.service && idService != filters.service) {
                 return false;
             }
             
             // Filtre par unité
-            if (filters.unite && uniteId != filters.unite) {
+            if (filters.unite && idUnite != filters.unite) {
                 return false;
             }
             
@@ -141,19 +141,19 @@ export const useTarifList = (tarifs = [], services = [], unites = [], typesTarif
             
             switch (sorting.field) {
                 case 'service':
-                case 'serviceNom':
-                    aValue = a.serviceNom || a.service_nom || '';
-                    bValue = b.serviceNom || b.service_nom || '';
+                case 'nomService':
+                    aValue = a.nomService || '';
+                    bValue = b.nomService || '';
                     break;
                 case 'unite':
                 case 'uniteNom':
-                    aValue = a.uniteNom || a.unite_nom || '';
-                    bValue = b.uniteNom || b.unite_nom || '';
+                    aValue = a.uniteNom || '';
+                    bValue = b.uniteNom || '';
                     break;
                 case 'typeTarif':
                 case 'typeTarifNom':
-                    aValue = a.typeTarifNom || a.type_tarif_nom || '';
-                    bValue = b.typeTarifNom || b.type_tarif_nom || '';
+                    aValue = a.typeTarifNom || '';
+                    bValue = b.typeTarifNom || '';
                     break;
                 case 'prix':
                     aValue = parseFloat(a.prix) || 0;

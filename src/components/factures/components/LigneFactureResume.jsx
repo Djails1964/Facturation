@@ -2,19 +2,19 @@ import React from 'react';
 import { formatMontant } from '../../../utils/formatters';
 
 // Import du CSS spécifique
-import '../../../styles/components/factures/FactureLigneResume.css';
+import '../../../styles/components/factures/LigneFactureResume.css';
 
 /**
  * Composant de résumé pour une ligne de facture
  * Affiche un aperçu concis des détails de la ligne
  */
-const FactureLigneResume = ({ 
+const LigneFactureResume = ({ 
     serviceType, 
     unite, 
     description, 
     quantite, 
     prixUnitaire, 
-    total 
+    totalLigne
 }) => {
     return (
         <div className="ligne-facture-resume">
@@ -37,11 +37,11 @@ const FactureLigneResume = ({
                     Prix : {formatMontant(prixUnitaire)} CHF
                 </div>
                 <div className="ligne-resume-total">
-                    Total : {formatMontant(total)} CHF
+                    Total : {formatMontant(totalLigne)} CHF
                 </div>
             </div>
         </div>
     );
 };
 
-export default FactureLigneResume;
+export default LigneFactureResume;

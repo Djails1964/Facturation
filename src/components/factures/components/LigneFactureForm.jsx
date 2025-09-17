@@ -2,7 +2,7 @@ import React from 'react';
 import { FiMove } from 'react-icons/fi';
 
 // Composant existant (ne change pas)
-import LigneFactureResume from './FactureLigneResume';
+import LigneFactureResume from './LigneFactureResume';
 
 // CORRECTION : Import correct depuis FactureUIComponents
 import { 
@@ -10,12 +10,69 @@ import {
     OrderBadge 
 } from '../../shared/FactureUIComponents';
 
-// Composant des champs
+// Composant des champs avec nouvelle approche
 import LigneFactureFields from './LigneFactureFields';
 
 /**
+ * Utilitaires pour l'extraction des données depuis les objets enrichis
+ * COHÉRENT avec LigneFactureFields
+ */
+const EnrichedDataExtractor = {
+    /**
+     * Extrait le nom d'affichage d'un service depuis l'objet enrichi
+     */
+    getServiceDisplayName: (ligne) => {
+        if (ligne.service && typeof ligne.service === 'object') {
+            return ligne.service.nomService || ligne.service.codeService || ligne.service.nom || 'Service inconnu';
+        }
+        if (ligne.serviceType) {
+            return ligne.serviceType;
+        }
+        return 'Service non défini';
+    },
+
+    /**
+     * Extrait le nom d'affichage d'une unité depuis l'objet enrichi
+     */
+    getUniteDisplayName: (ligne) => {
+        console.log("Extraction de l'unité pour la ligne:", ligne);
+        console.log("Type de l'unité:", typeof ligne.unite, ligne.unite);
+        if (ligne.unite && typeof ligne.unite === 'object') {
+            return ligne.unite.nomUnite || ligne.unite.codeUnite || 'Unité inconnue';
+        }
+        if (typeof ligne.unite === 'string') {
+            return ligne.unite;
+        }
+        return 'Unité non définie';
+    },
+
+    /**
+     * Vérifie si la ligne a des objets enrichis valides
+     */
+    hasEnrichedData: (ligne) => {
+        const hasService = ligne.service && typeof ligne.service === 'object';
+        const hasUnite = ligne.unite && typeof ligne.unite === 'object';
+        return hasService || hasUnite;
+    },
+
+    /**
+     * Prépare les données pour l'affichage en mode résumé
+     */
+    prepareForResume: (ligne) => {
+        return {
+            serviceType: EnrichedDataExtractor.getServiceDisplayName(ligne),
+            unite: EnrichedDataExtractor.getUniteDisplayName(ligne),
+            description: ligne.description,
+            quantite: ligne.quantite,
+            prixUnitaire: ligne.prixUnitaire,
+            totalLigne: ligne.totalLigne
+        };
+    }
+};
+
+/**
  * Composant pour une ligne de facture individuelle
- * VERSION CORRIGÉE - Adaptation aux vraies données
+ * VERSION CORRIGÉE - Préservation complète des objets enrichis
  */
 function LigneFactureForm({
     ligne,
@@ -49,9 +106,18 @@ function LigneFactureForm({
     const noOrdre = ligne.noOrdre || index + 1;
     const isDragging = draggingIndex === index;
 
-    // ✅ CORRECTION : Obtenir les noms complets avec les bons champs
-    const serviceNom = getServiceName(ligne.serviceType, services);
-    const uniteNom = getUniteName(ligne.unite, unites);
+    // NOUVELLE APPROCHE : Extraction des noms via les utilitaires cohérents
+    const serviceNom = EnrichedDataExtractor.getServiceDisplayName(ligne);
+    const uniteNom = EnrichedDataExtractor.getUniteDisplayName(ligne);
+
+    // Debug pour vérifier la cohérence des données
+    console.log(`Ligne ${index} - Service: ${serviceNom}, Unité: ${uniteNom}`, {
+        hasEnrichedData: EnrichedDataExtractor.hasEnrichedData(ligne),
+        serviceType: typeof ligne.service,
+        uniteType: typeof ligne.unite,
+        serviceObj: ligne.service,
+        uniteObj: ligne.unite
+    });
 
     // Props pour le drag & drop
     const dragProps = readOnly ? {} : {
@@ -69,7 +135,7 @@ function LigneFactureForm({
         hasLineErrors && 'fdf_has-errors'
     ].filter(Boolean).join(' ');
 
-    // ✅ CORRECTION : Vérification des composants requis
+    // Vérification des composants requis
     const ActionsComponent = LigneFactureActions || DefaultActions;
     const OrderComponent = OrderBadge || DefaultOrderBadge;
 
@@ -81,15 +147,10 @@ function LigneFactureForm({
             />
 
             {!isOuverte ? (
-                // Mode résumé (ligne fermée)
+                // Mode résumé (ligne fermée) - UTILISE LES OBJETS ENRICHIS
                 <div className="fdf_line-resume-container">
                     <LigneFactureResume 
-                        serviceType={serviceNom}
-                        unite={uniteNom}
-                        description={ligne.description}
-                        quantite={ligne.quantite}
-                        prixUnitaire={ligne.prixUnitaire}
-                        total={ligne.total}
+                        {...EnrichedDataExtractor.prepareForResume(ligne)}
                     />
                     
                     <ActionsComponent
@@ -110,13 +171,13 @@ function LigneFactureForm({
                     )}
                 </div>
             ) : (
-                // Mode détaillé (ligne ouverte)
+                // Mode détaillé (ligne ouverte) - PRÉSERVE LES OBJETS ENRICHIS
                 <div className="fdf_line-flex-container">
                     <ActionsComponent
                         index={index}
                         readOnly={readOnly}
                         hasErrors={hasLineErrors}
-                        canDelete={services && services.length > 1} // Logique métier
+                        canDelete={services && services.length > 1}
                         isOpen={true}
                         onCopy={() => onCopy && onCopy(index)}
                         onDelete={() => onDelete && onDelete(index)}
@@ -147,7 +208,7 @@ function LigneFactureForm({
     );
 }
 
-// ✅ CORRECTION : Utilitaires adaptés aux vrais champs
+// Fonctions de compatibilité (gardées pour la transition)
 function getServiceName(serviceCode, services) {
     if (!serviceCode || !services) return "";
     const serviceObj = services.find(s => s && s.code === serviceCode);
@@ -160,7 +221,7 @@ function getUniteName(uniteCode, unites) {
     return uniteObj?.nom || uniteCode;
 }
 
-// ✅ Composants de fallback si les imports ne fonctionnent pas
+// Composants de fallback si les imports ne fonctionnent pas
 function DefaultOrderBadge({ number, draggable }) {
     return (
         <div className={`fdf_order-badge ${draggable ? 'draggable' : ''}`}>

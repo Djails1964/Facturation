@@ -21,8 +21,8 @@ export class FieldConverter {
     montantTotal: 'montant_total',
     
     // Champs tarification
-    serviceId: 'service_id',
-    uniteId: 'unite_id',
+    idService: 'service_id',
+    idUnite: 'unite_id',
     typeTarifId: 'type_tarif_id', 
     clientId: 'client_id',
     tarifId: 'tarif_id',

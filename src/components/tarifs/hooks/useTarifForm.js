@@ -6,8 +6,8 @@ import { FORM_MODES } from '../../../constants/tarifConstants';
 export const useTarifForm = ({ mode, tarifId, onRetourListe, onTarifCreated }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [tarif, setTarif] = useState({
-        serviceId: '',
-        uniteId: '',
+        idService: '',
+        idUnite: '',
         typeTarifId: '',
         prix: '',
         date_debut: '',
@@ -108,12 +108,12 @@ export const useTarifForm = ({ mode, tarifId, onRetourListe, onTarifCreated }) =
         }
     };
     
-    const loadServiceUnites = async (serviceId) => {
+    const loadServiceUnites = async (idService) => {
         try {
-            const unitesForService = await tarificationService.chargerUnites(serviceId);
+            const unitesForService = await tarificationService.chargerUnites(idService);
             setServiceUnites(prev => ({
                 ...prev,
-                [serviceId]: Array.isArray(unitesForService) ? unitesForService : []
+                [idService]: Array.isArray(unitesForService) ? unitesForService : []
             }));
         } catch (error) {
             console.error('Erreur chargement unités service:', error);
@@ -126,8 +126,8 @@ export const useTarifForm = ({ mode, tarifId, onRetourListe, onTarifCreated }) =
             if (tarifData) {
                 setTarif(tarifData);
                 // Charger les unités pour le service sélectionné
-                if (tarifData.serviceId) {
-                    await loadServiceUnites(tarifData.serviceId);
+                if (tarifData.idService) {
+                    await loadServiceUnites(tarifData.idService);
                 }
             } else {
                 throw new Error('Tarif non trouvé');

@@ -15,13 +15,15 @@ export const createFactureDetailsSection = (facture, formatMontant, formatDate) 
         return '<div class="details-container"><!-- Détails non disponibles --></div>';
     }
 
+    console.log('📄 createFactureDetailsSection - Données reçues:', facture);
+
     // ✅ CORRECTION: Vérifier les propriétés optionnelles
     const numeroFacture = facture.numeroFacture || 'N/A';
     const clientNom = facture.client ? `${facture.client.prenom || ''} ${facture.client.nom || ''}`.trim() : 'N/A';
     const dateFacture = facture.dateFacture && formatDate ? formatDate(facture.dateFacture) : (facture.dateFacture || 'N/A');
-    const montant = (facture.montantTotal || facture.totalFacture) && formatMontant ? 
-        formatMontant(facture.montantTotal || facture.totalFacture) : 
-        (facture.montantTotal || facture.totalFacture || 'N/A');
+    const montant = (facture.montantTotal || facture.montantTotal) && formatMontant ? 
+        formatMontant(facture.montantTotal || facture.montantTotal) : 
+        (facture.montantTotal || facture.montantTotal || 'N/A');
     const etat = facture.etat || 'N/A';
 
     return `

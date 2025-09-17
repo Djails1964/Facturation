@@ -4,8 +4,8 @@ const ServiceUniteAssociation = ({
   services,
   unites,
   serviceUnites,
-  selectedServiceId,
-  setSelectedServiceId,
+  selectedidService,
+  setSelectedidService,
   defaultUnites,
   onLink,
   onUnlink,
@@ -17,32 +17,32 @@ const ServiceUniteAssociation = ({
         <label htmlFor="service-association">Sélectionner un service :</label>
         <select
           id="service-association"
-          value={selectedServiceId}
-          onChange={(e) => setSelectedServiceId(e.target.value)}
+          value={selectedidService}
+          onChange={(e) => setSelectedidService(e.target.value)}
           className="form-select"
         >
           <option value="">Sélectionner un service</option>
           {services.map(service => (
-            <option key={service.id} value={service.id}>
-              {service.nom}
+            <option key={service.idService} value={service.idService}>
+              {service.nomService}
             </option>
           ))}
         </select>
       </div>
 
-      {selectedServiceId && (
+      {selectedidService && (
         <div className="service-unite-association">
           <div className="form-group">
             <label>Unités disponibles :</label>
             <div className="unite-list">
               {unites.map(unite => {
-                const isAssociated = serviceUnites[selectedServiceId]?.some(u => u.id === unite.id);
+                const isAssociated = serviceUnites[selectedidService]?.some(u => u.idUnite === unite.idUnite);
                 return (
-                  <div key={`association-unite-${unite.id}`} className="unite-item">
-                    <span>{unite.nom}</span>
+                  <div key={`association-unite-${unite.idUnite}`} className="unite-item">
+                    <span>{unite.nomUnite}</span>
                     {isAssociated ? (
                       <button 
-                        onClick={() => onUnlink(selectedServiceId, unite.id)}
+                        onClick={() => onUnlink(selectedidService, unite.idUnite)}
                         className="btn-unlink"
                         title="Dissocier"
                       >
@@ -50,7 +50,7 @@ const ServiceUniteAssociation = ({
                       </button>
                     ) : (
                       <button 
-                        onClick={() => onLink(selectedServiceId, unite.id)}
+                        onClick={() => onLink(selectedidService, unite.idUnite)}
                         className="btn-link"
                         title="Associer"
                       >
@@ -69,13 +69,13 @@ const ServiceUniteAssociation = ({
             <select 
               id="default-unite-selection"
               className="form-select"
-              value={defaultUnites[selectedServiceId] || ""}
-              onChange={(e) => onDefaultChange(selectedServiceId, e.target.value)}
+              value={defaultUnites[selectedidService] || ""}
+              onChange={(e) => onDefaultChange(selectedidService, e.target.value)}
             >
               <option value="">Sélectionner une unité</option>
-              {serviceUnites[selectedServiceId]?.map(unite => (
-                <option key={unite.id} value={unite.id}>
-                  {unite.nom} {unite.isDefault ? '(défaut actuel)' : ''}
+              {serviceUnites[selectedidService]?.map(unite => (
+                <option key={unite.idUnite} value={unite.idUnite}>
+                  {unite.nomUnite} {unite.isDefault ? '(défaut actuel)' : ''}
                 </option>
               ))}
             </select>

@@ -62,15 +62,15 @@ export class TarifValidationService {
   static getRequiredFields(formType) {
     switch (formType) {
       case FORM_TYPES.SERVICE:
-        return ['code', 'nom'];
+        return ['code', 'nomService'];
       case FORM_TYPES.UNITE:
-        return ['code', 'nom'];
+        return ['code', 'nomUnite'];
       case FORM_TYPES.TYPE_TARIF:
-        return ['code', 'nom'];
+        return ['code', 'nomTypeTarif'];
       case FORM_TYPES.TARIF:
-        return ['serviceId', 'uniteId', 'typeTarifId', 'prix', 'dateDebut'];
+        return ['idService', 'idUnite', 'typeTarifId', 'prix', 'dateDebut'];
       case FORM_TYPES.TARIF_SPECIAL:
-        return ['clientId', 'serviceId', 'uniteId', 'prix', 'note'];
+        return ['clientId', 'idService', 'idUnite', 'prix', 'note'];
       default:
         return [];
     }
@@ -83,8 +83,8 @@ export class TarifValidationService {
       code: 'Code',
       nom: 'Nom',
       description: 'Description',
-      serviceId: 'Service',
-      uniteId: 'Unité',
+      idService: 'Service',
+      idUnite: 'Unité',
       typeTarifId: 'Type de tarif',
       clientId: 'Client',
       prix: 'Prix',
@@ -153,23 +153,23 @@ export class TarifValidationService {
     }
     
     // Validation du nom
-    if (formData.nom) {
-      const nom = formData.nom.trim();
+    if (formData.nomService) {
+      const nomService = formData.nomService.trim();
       
       // Longueur
-      if (nom.length > 100) {
-        errors.nom = 'Le nom ne peut pas dépasser 100 caractères';
+      if (nomService.length > 100) {
+        errors.nomService = 'Le nom ne peut pas dépasser 100 caractères';
       }
       
       // Unicité
       const nomExists = existingItems.some(item => 
-        item.nom && 
-        item.nom.toLowerCase() === nom.toLowerCase() && 
+        item.nomService && 
+        item.nomService.toLowerCase() === nomService.toLowerCase() && 
         item.id !== itemId
       );
       
       if (nomExists) {
-        errors.nom = `Le nom "${nom}" existe déjà`;
+        errors.nomService = `Le nom "${nomService}" existe déjà`;
       }
     }
     
@@ -214,23 +214,23 @@ export class TarifValidationService {
     }
     
     // ✅ VALIDATION DU NOM AVEC UNICITÉ
-    if (formData.nom) {
-        const nom = formData.nom.trim();
+    if (formData.nomUnite) {
+        const nomUnite = formData.nomUnite.trim();
         
         // Longueur
-        if (nom.length > 50) {
-        errors.nom = 'Le nom ne peut pas dépasser 50 caractères';
+        if (nomUnite.length > 50) {
+        errors.nomUnite = 'Le nom ne peut pas dépasser 50 caractères';
         }
         
         // ✅ UNICITÉ - Vérifier qu'aucune autre unité n'a le même nom
         const nomExists = existingItems.some(item => 
-        item.nom && 
-        item.nom.toLowerCase() === nom.toLowerCase() && 
+        item.nomUnite && 
+        item.nomUnite.toLowerCase() === nomUnite.toLowerCase() && 
         item.id !== itemId
         );
         
         if (nomExists) {
-        errors.nom = `Le nom "${nom}" existe déjà`;
+        errors.nomUnite = `Le nom "${nomUnite}" existe déjà`;
         }
     }
     
@@ -417,12 +417,12 @@ export class TarifValidationService {
     const warnings = [];
     
     // Règle métier: Pas de chevauchement de dates pour même service/unité/type
-    if (formData.serviceId && formData.uniteId && formData.typeTarifId) {
+    if (formData.idService && formData.idUnite && formData.typeTarifId) {
       const chevauchement = existingItems.find(tarif => {
         if (tarif.id === itemId) return false;
         
-        return tarif.service_id === formData.serviceId &&
-               tarif.unite_id === formData.uniteId &&
+        return tarif.idService === formData.idService &&
+               tarif.idUnite === formData.idUnite &&
                tarif.type_tarif_id === formData.typeTarifId &&
                this.datesOverlap(
                  formData.date_debut, formData.date_fin,
@@ -443,13 +443,13 @@ export class TarifValidationService {
     const warnings = [];
     
     // Règle métier: Pas de chevauchement pour même client/service/unité
-    if (formData.clientId && formData.serviceId && formData.uniteId) {
+    if (formData.clientId && formData.idService && formData.idUnite) {
       const chevauchement = existingItems.find(tarif => {
         if (tarif.id === itemId) return false;
         
         return tarif.client_id === formData.clientId &&
-               tarif.service_id === formData.serviceId &&
-               tarif.unite_id === formData.uniteId &&
+               tarif.idService === formData.idService &&
+               tarif.idUnite === formData.idUnite &&
                this.datesOverlap(
                  formData.date_debut, formData.date_fin,
                  tarif.date_debut, tarif.date_fin

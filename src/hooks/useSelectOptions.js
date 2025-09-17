@@ -6,7 +6,7 @@ import { formatSelectOptions } from '../utils/formUtils';
  */
 export function useSelectOptions() {
     const createServiceOptions = useMemo(() => (services) => {
-        return formatSelectOptions(services, 'code', 'nom');
+        return formatSelectOptions(services, 'code', 'nomService');
     }, []);
 
     const createUniteOptions = useMemo(() => (ligne, unites, unitesByService) => {
@@ -22,14 +22,14 @@ export function useSelectOptions() {
                     return {
                         key: `unite-${unite}`,
                         value: unite,
-                        label: uniteObj?.nom || unite,
+                        label: uniteObj?.nomUnite || unite,
                         data: uniteObj
                     };
                 } else if (typeof unite === 'object' && unite !== null) {
                     return {
-                        key: `unite-${unite.code || unite.id}`,
-                        value: unite.code || unite.id,
-                        label: unite.nom || unite.code || unite.id,
+                        key: `unite-${unite.codeUnite || unite.idUnite}`,
+                        value: unite.codeUnite || unite.idUnite,
+                        label: unite.nomUnite || unite.codeUnite || unite.idUnite,
                         data: unite
                     };
                 }

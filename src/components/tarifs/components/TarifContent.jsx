@@ -42,13 +42,13 @@ const TarifContent = ({
             createButtonRef.current = event?.target;
             return onCreateItem(FORM_TYPES.SERVICE, createButtonRef);
           }}
-          onEditService={(serviceId, event) => {
+          onEditService={(idService, event) => {
             editButtonRef.current = event?.target;
-            return onEditItem(FORM_TYPES.SERVICE, serviceId, editButtonRef);
+            return onEditItem(FORM_TYPES.SERVICE, idService, editButtonRef);
           }}
-          onDeleteService={(serviceId, serviceName, event) => {
+          onDeleteService={(idService, serviceName, event) => {
             deleteButtonRef.current = event?.target;
-            return onDeleteItem(FORM_TYPES.SERVICE, serviceId, serviceName, deleteButtonRef);
+            return onDeleteItem(FORM_TYPES.SERVICE, idService, serviceName, deleteButtonRef);
           }}
         />
       );
@@ -64,13 +64,13 @@ const TarifContent = ({
             createButtonRef.current = event?.target;
             return onCreateItem(FORM_TYPES.UNITE, createButtonRef);
           }}
-          onEditUnite={(uniteId, event) => {
+          onEditUnite={(idUnite, event) => {
             editButtonRef.current = event?.target;
-            return onEditItem(FORM_TYPES.UNITE, uniteId, editButtonRef);
+            return onEditItem(FORM_TYPES.UNITE, idUnite, editButtonRef);
           }}
-          onDeleteUnite={(uniteId, uniteName, event) => {
+          onDeleteUnite={(idUnite, uniteName, event) => {
             deleteButtonRef.current = event?.target;
-            return onDeleteItem(FORM_TYPES.UNITE, uniteId, uniteName, deleteButtonRef);
+            return onDeleteItem(FORM_TYPES.UNITE, idUnite, uniteName, deleteButtonRef);
           }}
         />
       );
@@ -119,7 +119,7 @@ const TarifContent = ({
           serviceUnites={gestionState.serviceUnites}
           loadUnitesByService={gestionState.loadUnitesByService}
           loadTarifs={gestionState.loadTarifs}
-          setSelectedServiceId={() => {}} // Simplified
+          setSelectedidService={() => {}} // Simplified
           highlightedId={createdIds.tarif}
           onCreateTarif={(preselectedData, event) => {
             createButtonRef.current = event?.target;
@@ -149,7 +149,7 @@ const TarifContent = ({
           serviceUnites={gestionState.serviceUnites}
           loadUnitesByService={gestionState.loadUnitesByService}
           loadTarifsSpeciaux={gestionState.loadTarifsSpeciaux}
-          setSelectedServiceId={() => {}} // Simplified
+          setSelectedidService={() => {}} // Simplified
           highlightedId={createdIds.tarifSpecial}
           onCreateTarifSpecial={(preselectedData, event) => {
             createButtonRef.current = event?.target;

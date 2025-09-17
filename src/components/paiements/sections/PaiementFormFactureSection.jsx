@@ -64,7 +64,7 @@ const PaiementFormFactureSection = ({
                 <div className="facture-details">
                     <div className="details-row">
                         <span>{LABELS.MONTANT_TOTAL}:</span>
-                        <span>{formatMontant(factureSelectionnee.totalAvecRistourne || factureSelectionnee.totalFacture)} CHF</span>
+                        <span>{formatMontant(factureSelectionnee.totalAvecRistourne || factureSelectionnee.montantTotal)} CHF</span>
                     </div>
                     <div className="details-row">
                         <span>{LABELS.DEJA_PAYE}:</span>
@@ -75,7 +75,7 @@ const PaiementFormFactureSection = ({
                         <span className="montant-restant">
                             {formatMontant(
                                 factureSelectionnee.montantRestant || 
-                                (factureSelectionnee.totalAvecRistourne || factureSelectionnee.totalFacture) - (factureSelectionnee.montantPayeTotal || 0)
+                                (factureSelectionnee.totalAvecRistourne || factureSelectionnee.montantTotal) - (factureSelectionnee.montantPayeTotal || 0)
                             )} CHF
                         </span>
                     </div>

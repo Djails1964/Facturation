@@ -31,14 +31,14 @@ export class DeleteModalHandler {
         const anchorRef = this.createAnchorRef(event);
         
         console.log('🚀 DeleteModalHandler - Début suppression/annulation facture ID:', idFacture);
-        const facture = this.filteredFactures?.find(f => f.id === idFacture);
+        const facture = this.filteredFactures?.find(f => f.idFacture === idFacture);
         if (!facture) {
             console.error('❌ Facture non trouvée:', idFacture);
             return;
         }
 
         console.log('📋 Facture trouvée:', {
-            id: facture.id,
+            idFacture: facture.idFacture,
             numeroFacture: facture.numeroFacture,
             etat: facture.etat,
             montantTotal: facture.montantTotal
@@ -125,7 +125,7 @@ export class DeleteModalHandler {
                 : 'Êtes-vous sûr de vouloir supprimer cette facture ?'
         );
         
-        // Détails de la facture - ✅ CORRECTION: Utiliser montantTotal au lieu de totalFacture
+        // Détails de la facture 
         content += `
             <div class="details-container">
                 <div class="info-row">

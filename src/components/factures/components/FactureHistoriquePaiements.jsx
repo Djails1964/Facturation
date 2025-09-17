@@ -26,6 +26,8 @@ function FactureHistoriquePaiements({
   const chargerHistoriquePaiements = async () => {
     if (!idFacture || loadingHistorique) return;
 
+    console.log('🚀 Début du chargement de l\'historique des paiements...');
+
     setLoadingHistorique(true);
     try {
       console.log('🔍 Chargement historique pour facture:', idFacture);

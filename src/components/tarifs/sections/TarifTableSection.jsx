@@ -62,9 +62,9 @@ const TarifTableSection = ({
     return {
       ...tarif,
       id: tarif.id || tarif.tarif_id || tarif.idTarifStandard || index,
-      nomService: tarif.nomService || tarif.service_nom || tarif.serviceName || `Service ${tarif.serviceId || tarif.service_id || '?'}`,
-      nomUnite: tarif.nomUnite || tarif.unite_nom || tarif.uniteName || `Unité ${tarif.uniteId || tarif.unite_id || '?'}`,
-      nomTypeTarif: tarif.nomTypeTarif || tarif.type_tarif_nom || tarif.typeTarifName || `Type ${tarif.typeTarifId || tarif.type_tarif_id || '?'}`,
+      nomService: tarif.nomService || `Service ${tarif.idService || '?'}`,
+      nomUnite: tarif.nomUnite || `Unité ${tarif.idUnite || '?'}`,
+      nomTypeTarif: tarif.nomTypeTarif || `Type ${tarif.typeTarifId || tarif.type_tarif_id || '?'}`,
       statutCalcule: status.label,
       statusClass: status.classe,
       dateDebut: dateDebut,

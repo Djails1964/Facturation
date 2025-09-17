@@ -2,6 +2,21 @@
  * Styles communs de mise en page
  */
 
+.ligne-container {
+  margin-bottom: 15px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  position: relative;
+}
+
+.ligne-content {
+  padding: 15px;
+}
+
+.ordre-badge {
+  /* Styles pour le badge de numéro */
+}
+
 .content-section-container {
   width: 100%;
   max-width: 1200px;

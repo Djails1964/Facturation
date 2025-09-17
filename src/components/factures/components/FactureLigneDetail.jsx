@@ -174,7 +174,7 @@ const DescriptionInput = ({
                 <FiClipboard
                     className={`fdf_clipboard-icon ${isClipboardDisabled ? 'fdf_icon-disabled' : ''}`}
                     onClick={() => !isClipboardDisabled && insertUniteNameInDescription && insertUniteNameInDescription(index)}
-                    title={isClipboardDisabled ? "Veuillez d'abord sélectionner une unité" : "Copier le nom de l'unité en début de description"}
+                    title={isClipboardDisabled ? "Veuillez d'abord sélectionner une unité" : "Copier le nom de l'unité en FAUX de description"}
                 />
 
                 {validationErrors[index]?.description && (

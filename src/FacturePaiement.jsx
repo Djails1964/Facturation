@@ -28,7 +28,7 @@ function FacturePaiement({ idFacture, onClose, onFacturePayee, position }) {
                     setFacture(factureData);
                     
                     // Initialiser le montant payé avec le montant total de la facture
-                    const montant = parseFloat(factureData.totalFacture).toFixed(2);
+                    const montant = parseFloat(factureData.montantTotal).toFixed(2);
                     setMontantPaye(montant);
                     setMontantPayeFormatted(formatMontant(montant));
                     
@@ -173,7 +173,7 @@ function FacturePaiement({ idFacture, onClose, onFacturePayee, position }) {
                             <div className="facture-info-row">
                                 <div className="facture-info-label">Montant facture:</div>
                                 <div className="facture-info-value">
-                                    {formatMontant(facture.totalFacture)} CHF
+                                    {formatMontant(facture.montantTotal)} CHF
                                 </div>
                             </div>
                         </div>

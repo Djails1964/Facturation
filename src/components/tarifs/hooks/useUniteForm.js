@@ -29,20 +29,20 @@ export const useUniteForm = () => {
     const validateUnite = () => {
         const errors = {};
         
-        if (!unite.code.trim()) {
+        if (!unite.codeUnite.trim()) {
             errors.code = 'Le code est obligatoire';
         }
         
-        if (!unite.nom.trim()) {
+        if (!unite.nomUnite.trim()) {
             errors.nom = 'Le nom est obligatoire';
         }
         
         // Validation longueur
-        if (unite.code.length > 10) {
+        if (unite.codeUnite.length > 10) {
             errors.code = 'Le code ne peut pas dépasser 10 caractères';
         }
         
-        if (unite.nom.length > 50) {
+        if (unite.nomUnite.length > 50) {
             errors.nom = 'Le nom ne peut pas dépasser 50 caractères';
         }
         

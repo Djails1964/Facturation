@@ -136,8 +136,8 @@ export const useUnsavedChanges = (
             description: l.description,
             quantite: parseFloat(l.quantite) || 0,
             prixUnitaire: parseFloat(l.prixUnitaire) || 0,
-            serviceId: l.serviceId,
-            uniteId: l.uniteId
+            idService: l.idService,
+            idUnite: l.idUnite
           })) || []
         };
         
@@ -150,8 +150,8 @@ export const useUnsavedChanges = (
             description: l.description,
             quantite: parseFloat(l.quantite) || 0,
             prixUnitaire: parseFloat(l.prixUnitaire) || 0,
-            serviceId: l.serviceId,
-            uniteId: l.uniteId
+            idService: l.idService,
+            idUnite: l.idUnite
           })) || []
         };
         

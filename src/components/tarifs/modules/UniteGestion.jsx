@@ -48,7 +48,7 @@ const UniteGestion = ({
   const handleEditClick = (unite, event) => {
     if (onEditUnite) {
       // Utiliser le nouveau système unifié
-      onEditUnite(unite.idUnite || unite.id, event);
+      onEditUnite(unite.idUnite, event);
     } else {
       // Fallback vers l'ancien système (deprecated)
       console.warn('⚠️ onEditUnite non fourni, utilisation du système legacy');
@@ -59,7 +59,7 @@ const UniteGestion = ({
   const handleDeleteClick = (unite, event) => {
     if (onDeleteUnite) {
       // Utiliser le nouveau système unifié
-      onDeleteUnite(unite.idUnite || unite.id, unite.nom, event);
+      onDeleteUnite(unite.idUnite, unite.nomUnite, event);
     } else {
       // Fallback vers l'ancien système (deprecated)
       console.warn('⚠️ onDeleteUnite non fourni, utilisation du système legacy');

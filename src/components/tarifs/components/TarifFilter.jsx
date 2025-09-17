@@ -61,7 +61,7 @@ const TarifFilter = ({
     switch (filterType) {
       case 'services':
         return {
-          fields: ['code', 'nom', 'description', 'statut'],
+          fields: ['code', 'nomService', 'description', 'statut'],
           labels: {
             code: 'Code',
             nom: 'Nom',
@@ -79,7 +79,7 @@ const TarifFilter = ({
       case 'unites':
         // PAS DE STATUT POUR LES UNITÉS
         return {
-          fields: ['code', 'nom', 'description'],
+          fields: ['code', 'nomUnite', 'description'],
           labels: {
             code: 'Code',
             nom: 'Nom',
@@ -225,19 +225,17 @@ const TarifFilter = ({
           }
           break;
         case 'service':
-          value = item.service_nom || item.serviceNom || item.nomService;
+          value = item.nomService;
           // 🔍 DEBUG: Afficher valeurs possibles pour le service
           if (index < 3) {
             console.log(`🔍 DEBUG: Service item ${index}:`, {
-              service_nom: item.service_nom,
-              serviceNom: item.serviceNom,
               nomService: item.nomService,
               final_value: value
             });
           }
           break;
         case 'unite':
-          value = item.unite_nom || item.uniteNom || item.nomUnite;
+          value = item.nomUnite;
           break;
         case 'typeTarif':
           // Correction: Amélioration de la récupération du type de tarif
@@ -363,16 +361,16 @@ const TarifFilter = ({
       options = [
         { value: '', label: filterConfig.defaultLabels[field] },
         ...services.map(service => ({
-          value: service.nom, // Utilise le nom pour le filtrage
-          label: service.nom
+          value: service.nomService, // Utilise le nomService pour le filtrage
+          label: service.nomService
         }))
       ];
     } else if (field === 'unite' && unites.length > 0) {
       options = [
         { value: '', label: filterConfig.defaultLabels[field] },
         ...unites.map(unite => ({
-          value: unite.nom, // Utilise le nom pour le filtrage
-          label: unite.nom
+          value: unite.nomUnite, // Utilise le nom pour le filtrage
+          label: unite.nomUnite
         }))
       ];
     } else if (field === 'client' && clients.length > 0) {

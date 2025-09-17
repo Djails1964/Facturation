@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { FORM_MODES } from '../../../constants/factureConstants';
 import FactureService from '../../../services/FactureService';
 import ClientService from '../../../services/ClientService';
+import TarificationService from '../../../services/TarificationService';
 
 export const useFactureForm = (mode, idFacture) => {
   // États principaux
@@ -10,7 +11,7 @@ export const useFactureForm = (mode, idFacture) => {
     numeroFacture: '',
     dateFacture: '',
     clientId: null,
-    totalFacture: 0,
+    montantTotal: 0,
     ristourne: 0,
     totalAvecRistourne: 0,
     lignes: [],
@@ -30,6 +31,7 @@ export const useFactureForm = (mode, idFacture) => {
   // Services avec mémorisation
   const factureService = useMemo(() => new FactureService(), []);
   const clientService = useMemo(() => new ClientService(), []);
+  const tarificationService = useMemo(() => new TarificationService(), []);
 
   // Utilitaires
   const isReadOnly = mode === FORM_MODES.VIEW;
@@ -48,7 +50,7 @@ export const useFactureForm = (mode, idFacture) => {
       clientId: facture.clientId,
       lignes: facture.lignes,
       ristourne: facture.ristourne,
-      totalFacture: facture.totalFacture,
+      montantTotal: facture.montantTotal,
       totalAvecRistourne: facture.totalAvecRistourne
     };
   }, [facture]);
@@ -73,6 +75,7 @@ export const useFactureForm = (mode, idFacture) => {
     // Services
     factureService,
     clientService,
+    tarificationService,
     
     // Utilitaires
     isReadOnly,

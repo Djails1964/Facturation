@@ -14,7 +14,7 @@ const TarifSpecialGestion = ({
   serviceUnites, 
   loadUnitesByService,
   tarificationService, 
-  setSelectedServiceId, 
+  setSelectedidService, 
   setMessage, 
   setMessageType, 
   setConfirmModal,
@@ -69,17 +69,15 @@ const TarifSpecialGestion = ({
     // Enrichir avec les noms des entités liées pour le filtrage
     return tarifsWithEtat.map(tarif => {
       const client = clients.find(c => c.id == (tarif.client_id || tarif.clientId));
-      const service = services.find(s => s.id == (tarif.service_id || tarif.serviceId));
-      const unite = unites.find(u => u.id == (tarif.unite_id || tarif.uniteId));
+      const service = services.find(s => s.id == (tarif.idService));
+      const unite = unites.find(u => u.id == (tarif.idUnite));
       
       return {
         ...tarif,
         client_nom: client ? `${client.prenom} ${client.nom}` : '',
         clientNom: client ? `${client.prenom} ${client.nom}` : '',
-        service_nom: service?.nom || '',
-        serviceNom: service?.nom || '',
-        unite_nom: unite?.nom || '',
-        uniteNom: unite?.nom || '',
+        nomService: service?.nomService || '',
+        uniteNom: unite?.nomUnite || '',
         statut: tarif.etat // Mapper etat vers statut pour le filtre
       };
     });
@@ -142,10 +140,10 @@ const TarifSpecialGestion = ({
   // Utilitaire pour obtenir le nom d'affichage d'un tarif spécial
   const getTarifSpecialDisplayName = (tarifSpecial) => {
     const client = clients.find(c => c.id == (tarifSpecial.client_id || tarifSpecial.clientId));
-    const service = services.find(s => s.id == (tarifSpecial.service_id || tarifSpecial.serviceId));
+    const service = services.find(s => s.id == (tarifSpecial.idService));
     
     const clientName = client ? `${client.prenom} ${client.nom}` : 'Client introuvable';
-    const serviceName = service?.nom || 'Service introuvable';
+    const serviceName = service?.nomService || 'Service introuvable';
     
     return `${clientName} - ${serviceName}`;
   };

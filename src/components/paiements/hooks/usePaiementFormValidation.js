@@ -25,7 +25,11 @@ export const usePaiementFormValidation = (formState) => {
             };
         }
         
-        const daysAgo = DateService.getDaysFromDate(dateObj);
+        // ✅ CORRECTION: Calcul manuel des jours au lieu d'utiliser getDaysFromDate
+        const today = new Date();
+        const diffTime = today.getTime() - dateObj.getTime();
+        const daysAgo = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
         if (daysAgo > 365) {
             return { 
                 isValid: false, 

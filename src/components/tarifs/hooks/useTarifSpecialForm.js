@@ -7,8 +7,8 @@ export const useTarifSpecialForm = ({ mode, tarifSpecialId, onRetourListe, onTar
     const [isLoading, setIsLoading] = useState(true);
     const [tarifSpecial, setTarifSpecial] = useState({
         clientId: '',
-        serviceId: '',
-        uniteId: '',
+        idService: '',
+        idUnite: '',
         prix: '',
         date_debut: '',
         date_fin: '',
@@ -93,12 +93,12 @@ export const useTarifSpecialForm = ({ mode, tarifSpecialId, onRetourListe, onTar
         }
     };
     
-    const loadServiceUnites = async (serviceId) => {
+    const loadServiceUnites = async (idService) => {
         try {
-            const unitesForService = await tarificationService.chargerUnites(serviceId);
+            const unitesForService = await tarificationService.chargerUnites(idService);
             setServiceUnites(prev => ({
                 ...prev,
-                [serviceId]: Array.isArray(unitesForService) ? unitesForService : []
+                [idService]: Array.isArray(unitesForService) ? unitesForService : []
             }));
         } catch (error) {
             console.error('Erreur chargement unités service:', error);
@@ -111,8 +111,8 @@ export const useTarifSpecialForm = ({ mode, tarifSpecialId, onRetourListe, onTar
             if (tarifSpecialData) {
                 setTarifSpecial(tarifSpecialData);
                 // Charger les unités pour le service sélectionné
-                if (tarifSpecialData.serviceId) {
-                    await loadServiceUnites(tarifSpecialData.serviceId);
+                if (tarifSpecialData.idService) {
+                    await loadServiceUnites(tarifSpecialData.idService);
                 }
             } else {
                 throw new Error('Tarif spécial non trouvé');

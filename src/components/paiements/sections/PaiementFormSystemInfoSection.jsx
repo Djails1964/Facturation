@@ -10,25 +10,10 @@ const PaiementFormSystemInfoSection = ({ logsInfo, paiement, logsLoading }) => {
         const userInfo = userName || 'Utilisateur inconnu';
         const dateInfo = date ? DateService.formatSingleDate(date, 'datetime') : '';
         
-        return (
-            <>
-                {userInfo} le {dateInfo}
-                {details && details.length > 0 && (
-                    <>
-                        {' - '}
-                        {details.map((change, idx) => (
-                            <span key={idx}>
-                                {idx > 0 && ', '}
-                                <strong>{change.field}</strong>: 
-                                <span className="change-old">{change.oldValue}</span>
-                                <span className="change-arrow"> → </span>
-                                <span className="change-new">{change.newValue}</span>
-                            </span>
-                        ))}
-                    </>
-                )}
-            </>
-        );
+        return `${userInfo} le ${dateInfo}${details && details.length > 0 ? 
+            ' - ' + details.map(change => 
+                `${change.field}: ${change.oldValue} → ${change.newValue}`
+            ).join(', ') : ''}`;
     };
     
     return (
@@ -45,11 +30,14 @@ const PaiementFormSystemInfoSection = ({ logsInfo, paiement, logsLoading }) => {
                 logsInfo.allLogs.map((logEntry, index) => (
                     <div key={index} className="form-row">
                         <div className="input-group">
-                            {/* ✅ Div qui imite un input mais utilise les styles existants */}
-                            <div className="input-like-display">
-                                {renderLogLineWithColors(logEntry)}
-                            </div>
-                            <label className="log-label">{logEntry.action}</label>
+                            {/* ✅ Utilisation d'un vrai input pour le label flottant */}
+                            <input
+                                type="text"
+                                value={renderLogLineWithColors(logEntry)}
+                                readOnly
+                                placeholder=" " // Important pour le comportement du label flottant
+                            />
+                            <label>{logEntry.action}</label>
                         </div>
                     </div>
                 ))
@@ -60,6 +48,7 @@ const PaiementFormSystemInfoSection = ({ logsInfo, paiement, logsLoading }) => {
                             type="text"
                             value="Aucune information disponible"
                             readOnly
+                            placeholder=" "
                         />
                         <label>Statut</label>
                     </div>

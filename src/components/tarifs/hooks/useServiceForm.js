@@ -3,7 +3,7 @@ import { useState } from 'react';
 export const useServiceForm = () => {
     const [service, setService] = useState({
         code: '',
-        nom: '',
+        nomService: '',
         description: '',
         actif: true,
         isDefault: false
@@ -31,20 +31,20 @@ export const useServiceForm = () => {
     const validateService = () => {
         const errors = {};
         
-        if (!service.code.trim()) {
+        if (!service.codeService.trim()) {
             errors.code = 'Le code est obligatoire';
         }
         
-        if (!service.nom.trim()) {
+        if (!service.nomService.trim()) {
             errors.nom = 'Le nom est obligatoire';
         }
         
         // Validation longueur
-        if (service.code.length > 10) {
+        if (service.codeService.length > 10) {
             errors.code = 'Le code ne peut pas dépasser 10 caractères';
         }
         
-        if (service.nom.length > 100) {
+        if (service.nomService.length > 100) {
             errors.nom = 'Le nom ne peut pas dépasser 100 caractères';
         }
         
@@ -55,7 +55,7 @@ export const useServiceForm = () => {
     const resetForm = () => {
         setService({
             code: '',
-            nom: '',
+            nomService: '',
             description: '',
             actif: true,
             isDefault: false

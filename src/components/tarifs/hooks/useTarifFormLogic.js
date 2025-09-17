@@ -22,8 +22,8 @@ export const useTarifFormLogic = (formState) => {
             };
             
             // Si le service change, réinitialiser l'unité et charger les nouvelles unités
-            if (name === 'serviceId') {
-                newTarif.uniteId = '';
+            if (name === 'idService') {
+                newTarif.idUnite = '';
                 // Charger les unités pour ce service
                 if (value) {
                     loadServiceUnites(value);
@@ -39,11 +39,11 @@ export const useTarifFormLogic = (formState) => {
     const validateTarif = useCallback(() => {
         const errors = [];
         
-        if (!tarif.serviceId) {
+        if (!tarif.idService) {
             errors.push('Le service est obligatoire');
         }
         
-        if (!tarif.uniteId) {
+        if (!tarif.idUnite) {
             errors.push('L\'unité est obligatoire');
         }
         
@@ -78,8 +78,8 @@ export const useTarifFormLogic = (formState) => {
     
     const resetForm = useCallback(() => {
         setTarif({
-            serviceId: '',
-            uniteId: '',
+            idService: '',
+            idUnite: '',
             typeTarifId: '',
             prix: '',
             date_debut: '',

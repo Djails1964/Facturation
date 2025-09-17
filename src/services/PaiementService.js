@@ -148,19 +148,19 @@ class PaiementService {
         return paiementsData.map(paiement => ({
           idPaiement: paiement.idPaiement,
           idFacture: paiement.idFacture,
-          numeroFacture: paiement.numero_facture,
+          numeroFacture: paiement.numeroFacture,
           clientId: paiement.id_client,
           nomClient: paiement.nom_client,
-          datePaiement: paiement.date_paiement,
-          montantPaye: parseFloat(paiement.montant_paye),
-          methodePaiement: paiement.methode_paiement,
+          datePaiement: paiement.datePaiement,
+          montantPaye: parseFloat(paiement.montantPaye),
+          methodePaiement: paiement.methodePaiement,
           commentaire: paiement.commentaire,
-          numeroPaiement: paiement.numero_paiement,
-          dateCreation: paiement.date_creation,
+          numeroPaiement: paiement.numeroPaiement,
+          dateCreation: paiement.dateCreation,
           statut: paiement.statut || PAIEMENT_ETATS.VALIDE,
-          dateAnnulation: paiement.date_annulation || null,
+          dateAnnulation: paiement.dateAnnulation || null,
           motifAnnulation: paiement.motif_annulation || null,
-          montantTotalFacture: parseFloat(paiement.montant_total || 0),
+          montantTotalFacture: parseFloat(paiement.montantTotal || 0),
           ristourneFacture: parseFloat(paiement.ristourne || 0)
         }));
       }
@@ -179,6 +179,7 @@ class PaiementService {
    */
   async createPaiement(paiementData) {
     try {
+      console.log('Création du paiement avec les données:', paiementData);
       const response = await api.post('paiement-api.php', paiementData);
       
       if (response && response.success) {
@@ -206,6 +207,7 @@ class PaiementService {
    */
   async updatePaiement(id, paiementData) {
     try {
+      console.log(`Mise à jour du paiement ${id} avec les données:`, paiementData);
       const response = await api.put(`paiement-api.php?idPaiement=${id}`, paiementData);
       
       if (response && response.success) {
