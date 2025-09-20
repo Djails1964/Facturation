@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import ClientsListe from './ClientsListe';
 import { ClientForm, FORM_MODES } from './ClientForm';
-import ClientService from './services/ClientService';
-import { toBoolean } from './utils/booleanHelper'; // ✅ IMPORT du helper
+import ClientService from '../../services/ClientService';
+import { toBoolean } from '../../utils/booleanHelper'; // ✅ IMPORT du helper
 
 // Créer une instance unique du service de clients
 const clientService = new ClientService();

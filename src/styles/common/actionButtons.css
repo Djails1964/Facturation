@@ -358,6 +358,24 @@
   }
 }
 
+/* ========== STYLES SPÉCIFIQUES POUR LES CARTES CLIENTS ========== */
+
+/* Tailles d'icônes pour les cartes clients */
+.cl-card-actions .bouton-action svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Animations hover pour les cartes clients */
+.cl-card-actions .bouton-action:hover:not(.bouton-desactive) svg {
+  transform: scale(1.1);
+}
+
+.cl-card-actions .bouton-action:active:not(.bouton-desactive) svg {
+  transform: scale(0.95);
+}
+
+
 /* ========== CONTRASTE ÉLEVÉ ========== */
 @media (prefers-contrast: high) {
   .action-edit-icon,
@@ -384,5 +402,20 @@
   
   .bulk-selection-actions {
     border: 2px solid #000000;
+  }
+}
+
+/* Responsive pour les cartes clients */
+@media (max-width: 768px) {
+  .cl-card-actions .bouton-action svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .cl-card-actions .bouton-action svg {
+    width: 13px;
+    height: 13px;
   }
 }

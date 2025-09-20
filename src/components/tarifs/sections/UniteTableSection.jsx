@@ -13,7 +13,7 @@ const UniteTableSection = ({
   const columns = [
     {
       label: 'Code',
-      field: 'code',
+      field: 'codeUnite',
       width: '100px',
       render: (unite) => (
         <span className="unite-code">{unite.codeUnite}</span>
@@ -21,7 +21,7 @@ const UniteTableSection = ({
     },
     {
       label: 'Nom',
-      field: 'nom',
+      field: 'nomUnite',
       width: '25%',
       render: (unite) => (
         <span className="unite-name">{unite.nomUnite}</span>
@@ -29,11 +29,11 @@ const UniteTableSection = ({
     },
     {
       label: 'Description',
-      field: 'description',
+      field: 'descriptionUnite',
       width: 'auto',
       render: (unite) => (
         <span className="unite-description">
-          {unite.description || <em>Aucune description</em>}
+          {unite.descriptionUnite || <em>Aucune description</em>}
         </span>
       )
     },

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { FiEdit, FiEye, FiTrash2, FiMail, FiPhone, FiMapPin, FiSlack } from 'react-icons/fi';
-import './ClientsListe.css';
-import ConfirmationModal from './components/shared/ConfirmationModal';
-import ClientService from './services/ClientService';
-import { toBoolean, normalizeBooleanFieldsArray } from './utils/booleanHelper'; // ✅ IMPORT du helper
+import '../../styles/components/clients/ClientsListe.css';
+import ConfirmationModal from '../shared/ConfirmationModal';
+import ClientService from '../../services/ClientService';
+import { toBoolean, normalizeBooleanFieldsArray } from '../../utils/booleanHelper'; // ✅ IMPORT du helper
 
 function ClientsListe({ 
     nouveauClientId = null, 
@@ -399,36 +399,36 @@ function ClientsListe({
                                 
                                 <div className="cl-card-actions">
                                     <button 
-                                        className="cl-btn-icon"
+                                        className="bouton-action"
                                         aria-label="Afficher le client"
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             afficherClient(client.id);
                                         }}
                                     >
-                                        <FiEye size={16} color="#800020" />
+                                        <FiEye className="action-view-icon" />
                                     </button>
 
                                     <button 
-                                        className="cl-btn-icon"
+                                        className="bouton-action"
                                         aria-label="Modifier le client"
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             modifierClient(client.id);
                                         }}
                                     >
-                                        <FiEdit size={16} color="#800020" />
+                                        <FiEdit className="action-edit-icon" />
                                     </button>
 
                                     <button 
-                                        className="cl-btn-icon"
+                                        className="bouton-action"
                                         aria-label="Supprimer le client"
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             supprimerClient(client.id);
                                         }}
                                     >
-                                        <FiTrash2 size={16} color="#800020" />
+                                        <FiTrash2 className="action-delete-icon" />
                                     </button>
                                 </div>
                             </div>

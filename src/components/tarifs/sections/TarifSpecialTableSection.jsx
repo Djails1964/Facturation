@@ -36,8 +36,8 @@ const TarifSpecialTableSection = ({
 
       // Recherche des entités liées
       const client = clients.find(c => c.id == clientId);
-      const service = services.find(s => s.id == idService);
-      const unite = unites.find(u => u.id == idUnite);
+      const service = services.find(s => s.idService == idService);
+      const unite = unites.find(u => u.idUnite == idUnite);
 
       // Utilisation de la méthode centralisée pour calculer l'état
       const dateDebut = tarifSpecial.dateDebutTarifSpecial || tarifSpecial.date_debut_tarif_special;
@@ -87,7 +87,7 @@ const TarifSpecialTableSection = ({
     },
     {
       label: 'Unité',
-      field: 'uniteNom',
+      field: 'nomUnite',
       width: '120px',
       sortable: true
     },

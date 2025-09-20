@@ -2,9 +2,9 @@ import { useState } from 'react';
 
 export const useUniteForm = () => {
     const [unite, setUnite] = useState({
-        code: '',
-        nom: '',
-        description: ''
+        codeUnite: '',
+        nomUnite: '',
+        descriptionUnite: ''
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [validationErrors, setValidationErrors] = useState({});
@@ -52,9 +52,9 @@ export const useUniteForm = () => {
     
     const resetForm = () => {
         setUnite({
-            code: '',
-            nom: '',
-            description: ''
+            codeUnite: '',
+            nomUnite: '',
+            descriptionUnite: ''
         });
         setValidationErrors({});
     };

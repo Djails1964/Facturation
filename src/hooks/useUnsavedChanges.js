@@ -1,13 +1,10 @@
-// src/hooks/useUnsavedChanges.js - Version corrigée pour gérer la création
+// src/hooks/useUnsavedChanges.js - Version avec modal système unifié
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { showConfirm } from '../utils/modalSystem';
 
 /**
  * Hook personnalisé pour détecter les modifications non sauvegardées
- * @param {Object} initialData - Données initiales du formulaire
- * @param {Object} currentData - Données actuelles du formulaire
- * @param {boolean} isSaving - Indique si une sauvegarde est en cours
- * @param {boolean} hasJustSaved - Indique si une sauvegarde vient d'être effectuée
- * @returns {Object} État et fonctions pour gérer les modifications non sauvegardées
+ * ✅ VERSION UNIFIÉE : Utilise le modal system au lieu de modales locales
  */
 export const useUnsavedChanges = (
   initialData = {},
@@ -17,7 +14,7 @@ export const useUnsavedChanges = (
 ) => {
   // États
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+  // ✅ SUPPRIMÉ : Plus besoin de showUnsavedModal car on utilise le modal system
   const [pendingNavigation, setPendingNavigation] = useState(null);
 
   // Références
@@ -26,21 +23,20 @@ export const useUnsavedChanges = (
   const initialDataString = JSON.stringify(initialData);
   const currentDataString = JSON.stringify(currentData);
 
-  // Fonction pour vérifier si les données sont "vides" (état initial pour création)
+  // Fonction pour vérifier si les données sont "vides"
   const isEmptyFormData = useCallback((data) => {
     if (!data || typeof data !== 'object') return true;
     
     const keys = Object.keys(data);
     if (keys.length === 0) return true;
     
-    // Vérifier si tous les champs sont vides/falsy (sauf les booléens qui peuvent être false)
     return keys.every(key => {
       const value = data[key];
-      if (typeof value === 'boolean') return false; // Les booléens comptent comme "non vides"
-      if (typeof value === 'number') return value === 0; // Les nombres 0 sont considérés comme vides
+      if (typeof value === 'boolean') return false;
+      if (typeof value === 'number') return value === 0;
       if (Array.isArray(value)) return value.length === 0;
       if (typeof value === 'string') return value.trim() === '';
-      return !value; // null, undefined, etc.
+      return !value;
     });
   }, []);
 
@@ -60,7 +56,6 @@ export const useUnsavedChanges = (
       const val1 = obj1[key];
       const val2 = obj2[key];
 
-      // Gestion spéciale pour les tableaux
       if (Array.isArray(val1) && Array.isArray(val2)) {
         if (val1.length !== val2.length) return false;
         for (let i = 0; i < val1.length; i++) {
@@ -69,13 +64,11 @@ export const useUnsavedChanges = (
         continue;
       }
 
-      // Gestion spéciale pour les objets imbriqués
       if (typeof val1 === 'object' && typeof val2 === 'object') {
         if (!deepCompare(val1, val2)) return false;
         continue;
       }
 
-      // Comparaison directe pour les primitives
       if (val1 !== val2) return false;
     }
 
@@ -84,7 +77,6 @@ export const useUnsavedChanges = (
 
   // Initialiser les données de référence au premier chargement
   useEffect(() => {
-    // Initialiser dès qu'on a des données initiales (même vides)
     const shouldInitialize = !isInitialized.current && 
       initialData && 
       Object.keys(initialData).length > 0;
@@ -111,22 +103,16 @@ export const useUnsavedChanges = (
       isEmpty: isEmptyFormData(currentData)
     });
 
-    // Ne pas détecter les changements si :
-    // - Pas encore initialisé
-    // - En cours de sauvegarde
-    // - Pas de données actuelles valides
     if (!isInitialized.current || isSaving || !currentData) {
       console.log('🚫 Détection bloquée - conditions non remplies');
       return;
     }
 
-    // Attendre un délai pour éviter les détections transitoires
     const detectionTimer = setTimeout(() => {
-      // ✅ LOGIQUE AMÉLIORÉE : Pour les factures, utiliser une comparaison filtrée
       let hasChanges = false;
       
       if (currentData.lignes !== undefined) {
-        // C'est probablement FactureForm - utiliser une comparaison plus intelligente
+        // Factures - comparaison filtrée
         const currentFiltered = {
           numeroFacture: currentData.numeroFacture,
           dateFacture: currentData.dateFacture,
@@ -157,7 +143,7 @@ export const useUnsavedChanges = (
         
         hasChanges = !deepCompare(savedFiltered, currentFiltered);
       } else {
-        // Comparaison directe pour les autres formulaires
+        // Autres formulaires - comparaison directe
         hasChanges = !deepCompare(lastSavedData.current, currentData);
       }
       
@@ -170,7 +156,7 @@ export const useUnsavedChanges = (
       });
 
       setHasUnsavedChanges(hasChanges);
-    }, 500); // ✅ Délai plus long pour la stabilité
+    }, 500);
 
     return () => clearTimeout(detectionTimer);
   }, [currentDataString, deepCompare, isSaving, isEmptyFormData]);
@@ -200,31 +186,63 @@ export const useUnsavedChanges = (
     }
   }, [currentDataString]);
 
-  const confirmNavigation = useCallback(() => {
-    setShowUnsavedModal(false);
-    if (pendingNavigation) {
-      pendingNavigation();
-      setPendingNavigation(null);
-    }
-  }, [pendingNavigation]);
-
-  const cancelNavigation = useCallback(() => {
-    setShowUnsavedModal(false);
-    setPendingNavigation(null);
-  }, []);
-
+  // ✅ NOUVEAU : Utilise le modal system unifié au lieu d'un état local
   const requestNavigation = useCallback((navigationFn) => {
     if (hasUnsavedChanges && !isSaving) {
-      setPendingNavigation(() => navigationFn);
-      setShowUnsavedModal(true);
+      console.log('🎭 MODAL UNIFIÉE - Affichage modal pour modifications non sauvegardées');
+      
+      const modalConfig = {
+        title: "Modifications non sauvegardées",
+        message: "Vous avez des modifications non sauvegardées. Souhaitez-vous vraiment quitter sans sauvegarder ?",
+        confirmText: "Quitter sans sauvegarder",
+        cancelText: "Continuer l'édition",
+        type: 'warning',
+        size: 'medium'
+      };
+
+      showConfirm(modalConfig)
+        .then((result) => {
+          if (result.action === 'confirm') {
+            console.log('✅ MODAL UNIFIÉE - Navigation confirmée par l\'utilisateur');
+            console.log('🚀 MODAL UNIFIÉE - Exécution du callback de navigation');
+            
+            // ✅ CORRECTIF : Vérifier et exécuter le callback
+            if (typeof navigationFn === 'function') {
+              try {
+                navigationFn();
+                console.log('✅ MODAL UNIFIÉE - Callback de navigation exécuté avec succès');
+              } catch (error) {
+                console.error('❌ MODAL UNIFIÉE - Erreur lors de l\'exécution du callback:', error);
+              }
+            } else {
+              console.error('❌ MODAL UNIFIÉE - navigationFn n\'est pas une fonction:', typeof navigationFn);
+            }
+          } else {
+            console.log('❌ MODAL UNIFIÉE - Navigation annulée par l\'utilisateur');
+          }
+        })
+        .catch((error) => {
+          console.error('❌ Erreur dans la modal unifiée:', error);
+        });
+        
       return false; // Bloquer la navigation
     }
     return true; // Autoriser la navigation
   }, [hasUnsavedChanges, isSaving]);
 
+  // ✅ SIMPLIFIÉES : Plus besoin de ces fonctions avec le modal system
+  const confirmNavigation = useCallback(() => {
+    // Cette fonction n'est plus utilisée avec le modal system
+    console.log('⚠️ confirmNavigation appelé - mais utilise le modal system maintenant');
+  }, []);
+
+  const cancelNavigation = useCallback(() => {
+    // Cette fonction n'est plus utilisée avec le modal system
+    console.log('⚠️ cancelNavigation appelé - mais utilise le modal system maintenant');
+  }, []);
+
   const resetChanges = useCallback(() => {
     setHasUnsavedChanges(false);
-    setShowUnsavedModal(false);
     setPendingNavigation(null);
     console.log('🔄 Reset des changements');
   }, []);
@@ -232,12 +250,12 @@ export const useUnsavedChanges = (
   return {
     // États
     hasUnsavedChanges,
-    showUnsavedModal,
+    showUnsavedModal: false, // ✅ Toujours false car on utilise le modal system
     // Fonctions
     markAsSaved,
-    confirmNavigation,
-    cancelNavigation,
-    requestNavigation,
+    confirmNavigation, // Gardée pour compatibilité mais non utilisée
+    cancelNavigation,  // Gardée pour compatibilité mais non utilisée
+    requestNavigation, // ✅ Utilise maintenant le modal system
     resetChanges,
     // État d'initialisation pour debug
     isInitialized: isInitialized.current,

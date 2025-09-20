@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import ParametresContent from './admin/ParametresContent';
-import ClientGestion from './ClientGestion';
+import ClientGestion from './components/clients/ClientGestion';
 import FactureGestion from './components/factures/FactureGestion';
 import PaiementGestion from './components/paiements/PaiementGestion'; // ✅ NOUVEAU
 import TarifGestion from './components/tarifs/TarifGestion';

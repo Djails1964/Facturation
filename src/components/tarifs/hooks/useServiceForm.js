@@ -2,9 +2,9 @@ import { useState } from 'react';
 
 export const useServiceForm = () => {
     const [service, setService] = useState({
-        code: '',
+        codeService: '',
         nomService: '',
-        description: '',
+        descriptionService: '',
         actif: true,
         isDefault: false
     });
@@ -54,9 +54,9 @@ export const useServiceForm = () => {
     
     const resetForm = () => {
         setService({
-            code: '',
+            codeService: '',
             nomService: '',
-            description: '',
+            descriptionService: '',
             actif: true,
             isDefault: false
         });

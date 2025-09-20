@@ -67,11 +67,12 @@ export const useFactureFilters = (facturesNonFiltrees, chargerFactures) => {
     // Fonction pour appliquer les filtres
     const appliquerFiltres = useCallback(() => {
         let resultats = [...facturesNonFiltrees];
+        console.log('resultats facturesNonFiltrees:', resultats);
         
         // Filtrer par client
         if (clientSelectionne) {
             resultats = resultats.filter(facture => 
-                facture.client.id === parseInt(clientSelectionne)
+                facture.client.idClient === parseInt(clientSelectionne)
             );
         }
         

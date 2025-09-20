@@ -213,21 +213,16 @@
     gap: 5px;
 }
 
-.cl-btn-icon {
-    background: white;
-    border: none;
-    cursor: pointer;
-    padding: 8px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+/* Ajustements spécifiques pour les cartes clients */
+.cl-card-actions .bouton-action {
+    width: 32px;
+    height: 32px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    transition: background-color 0.2s;
 }
 
-.cl-btn-icon:hover {
-    background-color: rgba(128, 0, 32, 0.1);
+/* Animation hover pour les cartes clients */
+.cl-card-actions .bouton-action:hover:not(.bouton-desactive) {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* Chargement et messages */
@@ -266,5 +261,18 @@
 @media (max-width: 768px) {
     .cl-client-card {
         width: 100%;
+    }
+}
+
+/* Responsive pour les cartes clients */
+@media (max-width: 768px) {
+    .cl-card-actions .bouton-action {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .cl-card-actions .bouton-action svg {
+        width: 14px;
+        height: 14px;
     }
 }

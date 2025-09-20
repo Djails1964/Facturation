@@ -13,7 +13,7 @@ const ServiceTableSection = ({
   const columns = [
     {
       label: 'Code',
-      field: 'code',
+      field: 'codeService',
       width: '100px', // Largeur fixe pour le code
       className: 'col-code',
       sortable: true,
@@ -33,13 +33,13 @@ const ServiceTableSection = ({
     },
     {
       label: 'Description',
-      field: 'description',
+      field: 'descriptionService',
       width: 'auto', // Prend l'espace restant
       className: 'col-description',
       sortable: true,
       render: (service) => (
-        <span className="service-description" title={service.description}>
-          {service.description || <em>Aucune description</em>}
+        <span className="service-description" title={service.descriptionService}>
+          {service.descriptionService || <em>Aucune description</em>}
         </span>
       )
     },

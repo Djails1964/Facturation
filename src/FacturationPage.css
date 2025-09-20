@@ -173,24 +173,6 @@
 }
 
 
-/* Styles génériques pour les boutons d'action dans les listes */
-.facturation-content .cl-btn-icon {
-    background: white;
-    border: none;
-    cursor: pointer;
-    padding: 8px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    transition: background-color 0.2s;
-}
-
-.facturation-content .cl-btn-icon:hover {
-    background-color: rgba(128, 0, 32, 0.1);
-}
-
 /* Style pour les boutons désactivés */
 .facturation-content .bouton-desactive {
     opacity: 0.5;
