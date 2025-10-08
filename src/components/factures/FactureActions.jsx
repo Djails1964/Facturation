@@ -79,11 +79,6 @@ const FactureActions = ({
         );
     };
 
-    // ✅ Suppression du log de debug excessif (garde uniquement pour le développement)
-    if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 FactureActions - ID extrait:', id);
-    }
-
     return (
         <>
             <div className="lf-table-cell lf-actions-cell">

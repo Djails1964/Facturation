@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useTarifList } from '../hooks/useTarifList';
+// src/components/tarifs/modules/TarifStandardGestion.jsx
+// ✅ VERSION COMPLÈTE avec UnifiedFilter et normalisation
+
+import React, { useState, useMemo } from 'react';
 import TarifTableSection from '../sections/TarifTableSection';
 import TarifFormHeader from '../sections/TarifFormHeader';
 import { AddButton } from '../../../components/ui/buttons';
-import TarifFilter from '../components/TarifFilter';
+import UnifiedFilter from '../../../components/shared/filters/UnifiedFilter';
 import { useTarifFilter, createInitialFilters, enrichTarifsWithEtat } from '../hooks/useTarifFilter';
 
 const TarifStandardGestion = ({ 
@@ -26,7 +28,6 @@ const TarifStandardGestion = ({
   onNew,
   onCreateFacture,
   onBulkAction,
-  // Nouveaux handlers du système unifié
   onCreateTarif,
   onEditTarif,
   onDeleteTarif
@@ -34,14 +35,80 @@ const TarifStandardGestion = ({
   const [selectedTarifs, setSelectedTarifs] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ===== INTÉGRATION DU NOUVEAU FILTRE CENTRALISÉ =====
+  // ===== ENRICHISSEMENT ET NORMALISATION DES DONNÉES =====
   
-  // Enrichir les tarifs avec leur état calculé
+  // 1. Enrichir les tarifs avec leur état (valide/invalide)
   const enrichedTarifs = useMemo(() => {
+    if (!tarifs || tarifs.length === 0) {
+      console.log('⚠️ Aucun tarif à enrichir');
+      return [];
+    }
+    
+    // Debug: Afficher les tarifs BRUTS avant enrichissement
+    if (tarifs.length > 0) {
+      console.log('🔍 TARIF BRUT (premier élément):', tarifs[0]);
+      console.log('🔍 Propriétés du tarif brut:', Object.keys(tarifs[0]));
+    }
+    
     return enrichTarifsWithEtat(tarifs || []);
   }, [tarifs]);
 
-  // Utiliser le hook de filtrage centralisé
+  // 2. Normaliser les tarifs pour le filtrage
+  const normalizedTarifs = useMemo(() => {
+    console.log('🔧 Normalisation des tarifs pour filtrage...');
+    console.log('📊 Tarifs enrichis:', enrichedTarifs.length);
+    
+    const normalized = enrichedTarifs.map(tarif => {
+      // Trouver les entités liées
+      const service = services.find(s => 
+        (s.id || s.idService) === (tarif.idService)
+      );
+      const unite = unites.find(u => 
+        (u.id || u.idUnite) === (tarif.idUnite)
+      );
+      const typeTarif = typesTarifs.find(t => 
+        (t.id || t.idTypeTarif) === (tarif.idTypeTarif || tarif.type_tarif_id)
+      );
+
+      // S'assurer que statut a la bonne valeur
+      const tarifStatut = tarif.etat || 'invalide';
+      
+      console.log('📝 Tarif normalisé:', {
+        id: tarif.id || tarif.idTarifStandard,
+        etat: tarif.etat,
+        statut: tarifStatut,
+        service: service?.nomService,
+        dates: {
+          debut: tarif.dateDebutTarifStandard || tarif.date_debut,
+          fin: tarif.dateFinTarifStandard || tarif.date_fin
+        }
+      });
+
+      return {
+        ...tarif,
+        // Propriétés normalisées pour le filtrage
+        service: service?.nomService || '',
+        unite: unite?.nomUnite || '',
+        typeTarif: typeTarif?.nomTypeTarif || '',
+        statut: tarifStatut, // 'valide' ou 'invalide'
+        
+        // Conserver aussi les noms pour l'affichage
+        nomService: service?.nomService || '',
+        nomUnite: unite?.nomUnite || '',
+        nomTypeTarif: typeTarif?.nomTypeTarif || ''
+      };
+    });
+    
+    console.log('✅ Tarifs normalisés:', normalized.length);
+    console.log('📊 Répartition des statuts:', {
+      valides: normalized.filter(t => t.statut === 'valide').length,
+      invalides: normalized.filter(t => t.statut === 'invalide').length
+    });
+    
+    return normalized;
+  }, [enrichedTarifs, services, unites, typesTarifs]);
+
+  // ===== FILTRAGE =====
   const {
     filters,
     showFilters,
@@ -50,7 +117,40 @@ const TarifStandardGestion = ({
     handleFilterChange,
     handleResetFilters,
     handleToggleFilters
-  } = useTarifFilter(enrichedTarifs, 'tarifs-standards', createInitialFilters('tarifs-standards'));
+  } = useTarifFilter(normalizedTarifs, 'tarifs-standards', createInitialFilters('tarifs-standards'));
+
+  // ===== OPTIONS DE FILTRAGE =====
+  const filterOptions = useMemo(() => {
+    console.log('🔍 Préparation filterOptions pour tarifs standards');
+    
+    // ✅ CORRECTION: Extraire uniquement les services/unités/types UTILISÉS dans les tarifs
+    const uniqueServices = [...new Set(
+      normalizedTarifs.map(t => t.service).filter(Boolean)
+    )].sort();
+    
+    const uniqueUnites = [...new Set(
+      normalizedTarifs.map(t => t.unite).filter(Boolean)
+    )].sort();
+    
+    const uniqueTypesTarifs = [...new Set(
+      normalizedTarifs.map(t => t.typeTarif).filter(Boolean)
+    )].sort();
+    
+    console.log('📊 Services utilisés dans les tarifs:', uniqueServices);
+    console.log('📊 Unités utilisées dans les tarifs:', uniqueUnites);
+    console.log('📊 Types de tarifs utilisés:', uniqueTypesTarifs);
+    
+    const options = {
+      service: uniqueServices,
+      unite: uniqueUnites,
+      typeTarif: uniqueTypesTarifs,
+      statut: ['valide', 'invalide']
+    };
+    
+    console.log('📋 Options de filtrage configurées:', options);
+    
+    return options;
+  }, [normalizedTarifs]);
 
   // ===== HANDLERS POUR LE SYSTÈME UNIFIÉ =====
   
@@ -58,172 +158,65 @@ const TarifStandardGestion = ({
     if (onCreateTarif) {
       onCreateTarif(event);
     } else {
-      console.warn('⚠️ onCreateTarif non fourni, utilisation du système legacy');
-      handleLegacyCreate();
+      console.warn('⚠️ onCreateTarif non fourni');
     }
   };
   
   const handleEditClick = (tarif, event) => {
+    const tarifId = tarif.id || tarif.idTarifStandard;
     if (onEditTarif) {
-      onEditTarif(tarif.id || tarif.idTarifStandard, event);
+      onEditTarif(tarifId, event);
     } else {
-      console.warn('⚠️ onEditTarif non fourni, utilisation du système legacy');
-      handleLegacyEdit(tarif);
+      console.warn('⚠️ onEditTarif non fourni');
     }
   };
   
   const handleDeleteClick = (tarif, event) => {
+    const tarifId = tarif.id || tarif.idTarifStandard;
+    const tarifName = `${tarif.nomService} - ${tarif.nomUnite} - ${tarif.nomTypeTarif}`;
     if (onDeleteTarif) {
-      onDeleteTarif(tarif.id || tarif.idTarifStandard, getTarifDisplayName(tarif), event);
+      onDeleteTarif(tarifId, tarifName, event);
     } else {
-      console.warn('⚠️ onDeleteTarif non fourni, utilisation du système legacy');
-      handleSupprimerTarif(tarif);
+      console.warn('⚠️ onDeleteTarif non fourni');
     }
   };
 
-  // ===== ANCIEN SYSTÈME (DEPRECATED - À SUPPRIMER) =====
-
-  const handleLegacyCreate = async () => {
-    console.log('🚨 Système legacy de création de tarif utilisé - À MIGRER');
+  // ===== HANDLERS DE SÉLECTION =====
+  const handleSelectTarif = (tarifId) => {
+    setSelectedTarifs(prev => 
+      prev.includes(tarifId)
+        ? prev.filter(id => id !== tarifId)
+        : [...prev, tarifId]
+    );
   };
 
-  const handleLegacyEdit = async (tarif) => {
-    console.log('🚨 Système legacy d\'édition de tarif utilisé - À MIGRER');
-  };
-
-  // Utilitaire pour obtenir le nom d'affichage d'un tarif
-  const getTarifDisplayName = (tarif) => {
-    const service = services.find(s => s.id === (tarif.idService));
-    const unite = unites.find(u => u.id === (tarif.idUnite));
-    const typeTarif = typesTarifs.find(t => t.id === (tarif.type_tarif_id || tarif.typeTarifId));
-    
-    return `${service?.nomService || 'Service'} - ${unite?.nomUnite || 'Unité'} - ${typeTarif?.nomTypeTarif || 'Type'}`;
-  };
-
-  // Actions legacy (à supprimer progressivement)
-  const handleSupprimerTarif = (tarif) => {
-    setConfirmModal({
-      isOpen: true,
-      title: 'Confirmer la suppression',
-      message: `Êtes-vous sûr de vouloir supprimer ce tarif ?`,
-      type: 'danger',
-      confirmText: 'Supprimer',
-      onConfirm: () => confirmerSuppression(tarif.id),
-      entityType: 'tarif'
-    });
-  };
-
-  const confirmerSuppression = async (tarifId) => {
-    try {
-      const result = await tarificationService.supprimerTarif(tarifId);
-      
-      if (result.success) {
-        setMessage('Tarif supprimé avec succès');
-        setMessageType('success');
-        loadTarifs();
-      } else {
-        throw new Error(result.message || 'Erreur lors de la suppression');
-      }
-    } catch (error) {
-      console.error('Erreur suppression tarif:', error);
-      setMessage('Erreur lors de la suppression: ' + error.message);
-      setMessageType('error');
+  const handleSelectAll = (selected) => {
+    if (selected) {
+      setSelectedTarifs(tarifsFiltered.map(t => t.id || t.idTarifStandard));
+    } else {
+      setSelectedTarifs([]);
     }
   };
 
-  // Actions groupées
-  const handleBulkDelete = () => {
-    if (selectedTarifs.length === 0) return;
-    
-    setConfirmModal({
-      isOpen: true,
-      title: 'Confirmer la suppression groupée',
-      message: `Êtes-vous sûr de vouloir supprimer ${selectedTarifs.length} tarif(s) ?`,
-      type: 'danger',
-      confirmText: 'Supprimer tout',
-      onConfirm: () => confirmerSuppressionGroupee(),
-      entityType: 'tarifs'
-    });
-  };
-
-  const confirmerSuppressionGroupee = async () => {
-    try {
-      const result = await tarificationService.supprimerTarifsGroupes(selectedTarifs);
-      
-      if (result.success) {
-        setMessage(`${selectedTarifs.length} tarif(s) supprimé(s) avec succès`);
-        setMessageType('success');
-        setSelectedTarifs([]);
-        loadTarifs();
-      } else {
-        throw new Error(result.message || 'Erreur lors de la suppression groupée');
-      }
-    } catch (error) {
-      console.error('Erreur suppression groupée:', error);
-      setMessage('Erreur lors de la suppression groupée: ' + error.message);
-      setMessageType('error');
-    }
-  };
-
-  const handleBulkExport = () => {
-    if (onBulkAction) {
-      const tarifsToExport = tarifsFiltered.filter(t => 
-        selectedTarifs.includes(t.id)
-      );
-      onBulkAction('export', tarifsToExport);
-    }
-  };
-
-  // Rendu des actions de liste
-  const renderListActions = () => (
-    <div className="list-actions">
-      <div className="bulk-controls">
-        {selectedTarifs.length > 0 && (
-          <>
-            <span className="selection-count">
-              {selectedTarifs.length} sélectionné(s)
-            </span>
-            <button 
-              className="btn btn-outline-danger"
-              onClick={handleBulkDelete}
-            >
-              🗑️ Supprimer
-            </button>
-            <button 
-              className="btn btn-outline-primary"
-              onClick={handleBulkExport}
-            >
-              📊 Exporter
-            </button>
-          </>
-        )}
-      </div>
-    </div>
-  );
-
+  // ===== RENDU PRINCIPAL =====
+  
   return (
     <div className="tarif-standard-gestion">
-      {/* EN-TÊTE UNIFIÉ AVEC BOUTON D'ACTION */}
+      
+      {/* Header avec bouton de création */}
       <TarifFormHeader
-        titre="Tarifs standards"
-        description="Tarifs de base appliqués par défaut à tous vos clients"
+        titre="Gestion des tarifs standards"
+        description="Gérez les tarifs standards applicables à tous les clients"
       >
         <AddButton onClick={handleCreateClick}>
-          Nouveau tarif standard
+          Nouveau tarif
         </AddButton>
       </TarifFormHeader>
 
-      <div className="gestion-header">
-        {renderListActions()}
-      </div>
-
-      {/* ===== NOUVEAU FILTRE CENTRALISÉ ===== */}
-      <TarifFilter
+      {/* Filtres unifiés */}
+      <UnifiedFilter
         filterType="tarifs-standards"
-        data={enrichedTarifs}
-        services={services}
-        unites={unites}
-        typesTarifs={typesTarifs}
+        filterOptions={filterOptions}
         filters={filters}
         onFilterChange={handleFilterChange}
         onResetFilters={handleResetFilters}
@@ -234,43 +227,23 @@ const TarifStandardGestion = ({
         className="filter-tarifs-standards"
       />
 
-      {tarifsFiltered.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-icon">💰</div>
-          <h4>
-            {(tarifs?.length || 0) === 0 
-              ? "Aucun tarif standard"
-              : "Aucun tarif trouvé"
-            }
-          </h4>
-          <p>
-            {(tarifs?.length || 0) === 0 
-              ? "Les tarifs que vous créerez apparaîtront ici"
-              : "Aucun tarif ne correspond aux filtres sélectionnés"
-            }
-          </p>
-          {(tarifs?.length || 0) > 0 && filterStats.hasActiveFilters && (
-            <button 
-              className="btn-secondary"
-              onClick={handleResetFilters}
-            >
-              Réinitialiser les filtres
-            </button>
-          )}
-        </div>
-      ) : (
-        <>
-          <TarifTableSection
-            tarifs={tarifsFiltered}
-            onEdit={handleEditClick}
-            onDelete={handleDeleteClick}
-            highlightedId={highlightedId}
-            isSubmitting={false}
-          />
-        </>
-      )}
+      {/* Tableau des tarifs */}
+      <TarifTableSection
+        tarifs={tarifsFiltered}
+        services={services}
+        unites={unites}
+        typesTarifs={typesTarifs}
+        selectedTarifs={selectedTarifs}
+        onSelectTarif={handleSelectTarif}
+        onSelectAll={handleSelectAll}
+        onEdit={handleEditClick}
+        onDelete={handleDeleteClick}
+        onView={onView}
+        highlightedId={highlightedId}
+        isSubmitting={isSubmitting}
+      />
       
-      {/* Informations de debug en mode développement */}
+      {/* Informations de debug */}
       {process.env.NODE_ENV === 'development' && (
         <div className="debug-info" style={{
           marginTop: '20px',
@@ -282,12 +255,17 @@ const TarifStandardGestion = ({
         }}>
           <strong>🔧 Debug TarifStandardGestion :</strong><br/>
           - Tarifs chargés : {tarifs?.length || 0}<br/>
+          - Tarifs enrichis : {enrichedTarifs.length}<br/>
+          - Tarifs normalisés : {normalizedTarifs.length}<br/>
           - Tarifs filtrés : {tarifsFiltered.length}<br/>
           - Filtres actifs : {filterStats.hasActiveFilters ? 'Oui' : 'Non'}<br/>
+          - Filtres actuels : {JSON.stringify(filters)}<br/>
+          - Services : {services?.length || 0}<br/>
+          - Unités : {unites?.length || 0}<br/>
+          - Types de tarifs : {typesTarifs?.length || 0}<br/>
+          - Sélectionnés : {selectedTarifs.length}<br/>
           - Highlighted ID : {highlightedId || 'aucun'}<br/>
-          - Système unifié : {onCreateTarif ? '✅ Actif' : '❌ Non connecté'}<br/>
-          - Is submitting : {isSubmitting ? 'Oui' : 'Non'}<br/>
-          - Filtres actuels : {JSON.stringify(filters)}
+          - ✅ MIGRATION UNIFIEDFILTER COMPLÈTE
         </div>
       )}
     </div>

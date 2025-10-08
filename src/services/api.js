@@ -385,31 +385,68 @@ apiClient.interceptors.request.use(
   }
 );
 
+// ✅ FONCTION DE GESTION SESSION EXPIRÉE
+function handleSessionExpired() {
+  console.warn('🚨 Gestion de session expirée...');
+  
+  // Nettoyer l'authentification locale
+  localStorage.removeItem('user');
+  
+  // Déclencher l'événement global pour informer l'app
+  const event = new CustomEvent('auth-expired', {
+    detail: { 
+      message: 'Votre session a expiré. Veuillez vous reconnecter.',
+      timestamp: Date.now()
+    }
+  });
+  window.dispatchEvent(event);
+  
+  // Rediriger vers login après un court délai
+  setTimeout(() => {
+    window.location.hash = '#/login?session_expired=true';
+  }, 100);
+}
+
 // Intercepteur pour les réponses - AVEC CONVERSION AUTOMATIQUE
 apiClient.interceptors.response.use(
   response => {
     console.log('📥 Intercepteur réponse - URL:', response.config.url);
     console.log('📥 Intercepteur réponse - Données brutes:', response.data);
     
-    // Conversion automatique des réponses
+    // ✅ VÉRIFICATION SESSION EXPIRÉE
+    if (response.data) {
+      const data = response.data;
+      
+      // Vérifier les différents indicateurs de session expirée
+      if (data.session_expired === true || 
+          data.error === 'Session expirée' || 
+          data.error === 'Non authentifié' ||
+          data.message === 'Session expirée' ||
+          data.message === 'Non authentifié') {
+        
+        console.warn('🚨 Session expirée détectée dans la réponse API');
+        handleSessionExpired();
+        return Promise.reject(new Error('SESSION_EXPIRED'));
+      }
+    }
+    
+    // Conversion automatique des réponses (code existant)
     if (response.data && shouldConvertEndpoint(response.config.url)) {
       const context = getConversionContext(response.config.url);
       
-      console.log('🔄 Conversion API → Frontend:', {
-        url: response.config.url,
-        context,
-        shouldConvert: true,
-        originalData: response.data
-      });
+      // console.log('🔄 Conversion API → Frontend:', {
+      //   url: response.config.url,
+      //   context,
+      //   shouldConvert: true,
+      //   originalData: response.data
+      // });
       
-      // Convertir les données de réponse
       const convertedData = convertApiResponse(response.data, context);
       response.data = convertedData;
       
       console.log('✅ Réponse convertie:', convertedData);
     } else {
-      console.log('⏭️ Pas de conversion pour:', response.config.url);
-      console.log('⏭️ shouldConvert:', shouldConvertEndpoint(response.config.url));
+      console.log('⭐️ Pas de conversion pour:', response.config.url);
     }
     
     // Journalisation en mode développement
@@ -421,7 +458,7 @@ apiClient.interceptors.response.use(
     return response;
   },
   error => {
-    // Journalisation des erreurs (code existant)
+    // Journalisation des erreurs
     const debugMode = window.APP_CONFIG?.debugMode || process.env.REACT_APP_DEBUG === 'true';
     if (debugMode) {
       console.error('❌ Erreur API:', 
@@ -430,46 +467,33 @@ apiClient.interceptors.response.use(
       );
     }
     
-    // Gestion des erreurs de session (code existant)
+    // ✅ GESTION DES ERREURS 401 - Session expirée
     if (error.response && error.response.status === 401) {
       console.warn('🚨 Session expirée ou non authentifiée');
       
-      if (process.env.REACT_APP_API_BASE_URL || process.env.NODE_ENV === 'development') {
-        console.log('🔄 Mode séparé - Gestion auth côté React');
-        window.dispatchEvent(new CustomEvent('auth-expired'));
-        return Promise.reject(new Error('Session expirée. Veuillez vous reconnecter.'));
-      } else {
-        console.log('🔄 Mode hybride - Redirection vers PHP');
-        window.location.href = 'index.php?session_expired=1';
-        return Promise.reject(new Error('Session expirée. Veuillez vous reconnecter.'));
-      }
-    }
-    
-    // Autres gestions d'erreur (code existant)
-    if (error.response && error.response.status === 404) {
-      console.error('❌ Ressource non trouvée:', error.response.config.url);
-      return Promise.reject(new Error(`La ressource demandée n'a pas été trouvée (${error.response.config.url})`));
-    }
-    
-    if (error.response && error.response.status >= 500) {
-      console.error('❌ Erreur serveur:', error.response.status, error.response.data);
-      return Promise.reject(new Error('Une erreur est survenue sur le serveur. Veuillez réessayer plus tard.'));
-    }
-    
-    if (!error.response) {
-      console.error('❌ Erreur réseau/CORS:', error.message);
+      // Nettoyer le localStorage
+      localStorage.removeItem('user');
       
-      if (error.message.includes('Network Error') && process.env.NODE_ENV === 'development') {
-        return Promise.reject(new Error('Erreur de connexion. Vérifiez que le serveur backend est démarré et que CORS est configuré.'));
-      }
+      // Émettre un événement personnalisé pour que App.js puisse gérer la déconnexion
+      window.dispatchEvent(new CustomEvent('auth-expired', {
+        detail: { message: 'Votre session a expiré. Veuillez vous reconnecter.' }
+      }));
       
-      return Promise.reject(new Error('Erreur de connexion au serveur. Veuillez vérifier votre connexion internet.'));
+      // Empêcher l'affichage du message générique "Erreur de connexion"
+      return Promise.reject({
+        response: {
+          status: 401,
+          data: {
+            success: false,
+            message: 'Session expirée',
+            code: 401
+          }
+        },
+        isAuthError: true // ✅ Flag pour identifier les erreurs d'authentification
+      });
     }
     
-    if (error.response.data && error.response.data.message) {
-      return Promise.reject(new Error(error.response.data.message));
-    }
-    
+    // Pour toutes les autres erreurs, retourner l'erreur normale
     return Promise.reject(error);
   }
 );

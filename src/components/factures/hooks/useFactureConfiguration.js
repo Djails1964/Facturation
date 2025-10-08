@@ -118,8 +118,8 @@ export function useFactureConfiguration(client, readOnly) {
         return servicesTous;
     }
 
-    async function loadUnites(service, clientId) {
-        const unitesTous = await service.getUnitesApplicablesPourClient(clientId);
+    async function loadUnites(service, idClient) {
+        const unitesTous = await service.getUnitesApplicablesPourClient(idClient);
         console.log("Unités applicables pour le client:", unitesTous);
         return unitesTous;
     }
@@ -144,7 +144,7 @@ export function useFactureConfiguration(client, readOnly) {
                 // ✅ CORRECTION PRINCIPALE : Améliorer le filtrage avec debug
                 const liaisonsService = serviceUnites.filter(liaison => {
                     // Normaliser les IDs en strings pour comparaison
-                    const liaisonServiceId = String(liaison.idService || liaison.serviceId || '');
+                    const liaisonServiceId = String(liaison.idService || liaison.idService || '');
                     const currentServiceId = String(service.idService || '');
                     
                     const matches = liaisonServiceId === currentServiceId;
@@ -163,8 +163,8 @@ export function useFactureConfiguration(client, readOnly) {
                 if (liaisonsService.length === 0) {
                     console.warn(`⚠️ Aucune liaison trouvée pour le service ${service.codeService} (ID: ${service.idService})`);
                     console.warn("Liaisons disponibles:", serviceUnites.map(l => ({
-                        serviceId: l.idService || l.serviceId,
-                        uniteId: l.idUnite || l.uniteId
+                        idService: l.idService || l.idService,
+                        idUnite: l.idUnite || l.idUnite
                     })));
                 }
                 
@@ -172,7 +172,7 @@ export function useFactureConfiguration(client, readOnly) {
                     console.log(`🔍 Traitement de la liaison:`, liaison);
                     
                     // Normaliser les IDs pour la recherche d'unité
-                    const liaisonUniteId = liaison.idUnite || liaison.uniteId;
+                    const liaisonUniteId = liaison.idUnite || liaison.idUnite;
                     
                     // ✅ CORRECTION CRITIQUE : Debug et recherche par ID
                     console.log(`🔍 Recherche d'unité avec ID: ${liaisonUniteId}`);
@@ -183,9 +183,9 @@ export function useFactureConfiguration(client, readOnly) {
                     })));
                     
                     const unite = unites.find(u => {
-                        const uniteId = u.idUnite || u.uniteId || u.id;
-                        const matches = String(uniteId) === String(liaisonUniteId);
-                        console.log(`🔍 Test unité ${u.nomUnite} (ID: ${uniteId}) === ${liaisonUniteId} ? ${matches}`);
+                        const idUnite = u.idUnite || u.idUnite || u.id;
+                        const matches = String(idUnite) === String(liaisonUniteId);
+                        console.log(`🔍 Test unité ${u.nomUnite} (ID: ${idUnite}) === ${liaisonUniteId} ? ${matches}`);
                         return matches;
                     });
                     
@@ -195,7 +195,7 @@ export function useFactureConfiguration(client, readOnly) {
                     } else {
                         console.warn(`❌ Aucune unité trouvée pour liaison:`, liaison);
                         console.warn("Unités disponibles:", unites.map(u => ({
-                            id: u.idUnite || u.uniteId || u.id,
+                            id: u.idUnite || u.idUnite || u.id,
                             code: u.codeUnite || u.code
                         })));
                         return null;
@@ -214,7 +214,7 @@ export function useFactureConfiguration(client, readOnly) {
                     
                     // Fallback : chercher les unités directement liées au service
                     const unitesDirectes = unites.filter(u => {
-                        const uniteServiceId = String(u.idService || u.serviceId || '');
+                        const uniteServiceId = String(u.idService || u.idService || '');
                         const currentServiceId = String(service.idService || '');
                         return uniteServiceId === currentServiceId;
                     });
@@ -232,7 +232,7 @@ export function useFactureConfiguration(client, readOnly) {
             services.forEach(service => {
                 // ✅ CORRECTION : Utiliser la logique de fallback directement
                 const unitesForService = unites.filter(u => {
-                    const uniteServiceId = String(u.idService || u.serviceId || '');
+                    const uniteServiceId = String(u.idService || u.idService || '');
                     const currentServiceId = String(service.idService || '');
                     return uniteServiceId === currentServiceId;
                 });
@@ -283,7 +283,7 @@ export function useFactureConfiguration(client, readOnly) {
                         // ✅ CORRECTION : Chercher par idService converti
                         const unitesPourService = unites.filter(u => 
                             u.idService === serviceObj.idService || 
-                            u.serviceId === serviceObj.idService
+                            u.idService === serviceObj.idService
                         );
                         
                         if (unitesPourService.length > 0) {

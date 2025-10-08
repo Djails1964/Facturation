@@ -1,5 +1,9 @@
-/* PaiementForm.css - SEULEMENT les styles spécifiques au paiement */
-/* Tout le reste utilise forms.css, buttons.css, layout.css */
+/* 
+ * PaiementForm.css - Styles complets pour le formulaire de paiement
+ * Inclut les styles existants + intégration avec GlobalDateInputField
+ */
+
+/* ========== STYLES EXISTANTS PRÉSERVÉS ========== */
 
 /* Badge d'état harmonisé avec FactureHeader */
 .paiement-header-etat-simple {
@@ -15,20 +19,85 @@
 .form-section h3 {
     padding-top: 20px;
     padding-bottom: 20px;
+    margin: 0;
+    color: #495057;
+    font-size: 18px;
+    font-weight: 600;
+    border-bottom: 1px solid #dee2e6;
 }
 
-/* Section des détails de facture (spécifique au paiement) */
+.form-section h3 + .form-row {
+    margin-top: 25px;  /* ✅ Espace entre la ligne du titre et le premier champ */
+}
+
+/* ========== MESSAGES ET NOTIFICATIONS ========== */
+
+.loading-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6c757d;
+    font-size: 16px;
+}
+
+.error-message {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 15px 20px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    border: 1px solid #f5c6cb;
+}
+
+.notification {
+    padding: 12px 15px;
+    margin: 0 0 15px 0;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.notification.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.notification.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.notification.info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #b8daff;
+}
+
+/* ========== SECTION DES DÉTAILS DE FACTURE ========== */
+
 .facture-details {
     background: #f8f9fa;
     border: 1px solid #dee2e6;
     border-radius: 6px;
     padding: 20px;
-    margin-top: 15px;
+    margin-top: 20px; /* Plus d'espace après le nouveau layout */
+}
+
+.facture-details h4 {
+    margin: 0 0 15px 0;
+    color: #495057;
+    font-size: 16px;
+    font-weight: 600;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 8px;
 }
 
 .details-row {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     padding: 8px 0;
     border-bottom: 1px solid #e9ecef;
     font-size: 14px;
@@ -39,81 +108,324 @@
     font-weight: 600;
 }
 
+.details-row span:first-child {
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.details-row span:last-child {
+    color: #212529;
+    font-weight: 600;
+}
+
 .montant-restant {
     color: #28a745 !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
+    font-size: 15px !important;
 }
 
 /* ========== BADGE D'ÉTAT PAIEMENT DANS LE FORMULAIRE ========== */
 
 .paiement-etat-badge-container {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  margin-bottom: 25px;
-  padding: 0;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    margin-bottom: 25px;
+    padding: 0;
 }
 
 .paiement-etat-badge-container span {
-  /* Le badge utilisera automatiquement les styles définis dans getBadgeClasses avec size='normal' */
-  font-size: 14px;
-  font-weight: 500;
-  padding: 8px 16px;
-  border-radius: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  line-height: 1;
+    /* Le badge utilisera automatiquement les styles définis dans getBadgeClasses avec size='normal' */
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height: 1;
+    background-color: #6c757d;
+    color: white;
 }
 
 /* ========== ESPACEMENT AVEC LA SECTION FACTURE ========== */
 
 .form-section:first-of-type {
-  margin-top: 0;
+    margin-top: 0;
 }
 
 /* Si le badge est présent, ajouter de l'espace avec la première section */
 .paiement-etat-badge-container + .notification,
 .paiement-etat-badge-container + .form-section {
-  margin-top: 15px;
+    margin-top: 15px;
 }
 
 /* Espacement entre les notifications et les sections */
 .notification + .form-section {
-  margin-top: 20px;
+    margin-top: 20px;
 }
 
-/* ========== RESPONSIVE POUR LE BADGE ========== */
+/* ========== ACTIONS DU FORMULAIRE ========== */
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    padding-top: 30px;
+    margin-top: 30px;
+    border-top: 1px solid #dee2e6;
+}
+
+.form-actions .btn {
+    min-width: 120px;
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.form-actions .btn-primary {
+    background-color: #800000;
+    color: white;
+    border: 1px solid #800000;
+}
+
+.form-actions .btn-primary:hover:not(:disabled) {
+    background-color: #600000;
+    border-color: #600000;
+}
+
+.form-actions .btn-primary:disabled {
+    background-color: #cccccc;
+    border-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.form-actions .btn-secondary {
+    background-color: #6c757d;
+    color: white;
+    border: 1px solid #6c757d;
+}
+
+.form-actions .btn-secondary:hover {
+    background-color: #5a6268;
+    border-color: #545b62;
+}
+
+.form-actions .btn-danger {
+    background-color: #dc3545;
+    color: white;
+    border: 1px solid #dc3545;
+}
+
+.form-actions .btn-danger:hover {
+    background-color: #c82333;
+    border-color: #bd2130;
+}
+
+/* ========== INTÉGRATION AVEC GlobalDateInputField ========== */
+
+/* Permet à GlobalDateInputField de s'intégrer dans les form-row */
+.form-row .gdf-field-container {
+    margin-bottom: 0; /* forms.css gère l'espacement via form-row */
+    width: 100%;
+    flex: 1; /* Prend l'espace disponible dans la form-row */
+}
+
+.form-row .gdf-floating-label-input {
+    margin-bottom: 0; /* Aligne avec les autres input-group */
+    margin-top: 0;
+}
+
+/* Harmonise la hauteur avec les autres champs du formulaire */
+.form-row .gdf-form-control {
+    height: auto; /* Même hauteur que les inputs de forms.css */
+    line-height: normal;
+    box-sizing: border-box;
+}
+
+/* Harmonisation des labels required */
+.paiement-form-container .gdf-required {
+    color: var(--color-primary, #800000) !important;
+    font-weight: normal;
+}
+
+/* Aligner le style des labels required avec forms.css */
+.paiement-form-container .gdf-floating-label-input.gdf-focused .gdf-required,
+.paiement-form-container .gdf-floating-label-input.gdf-filled .gdf-required {
+    color: var(--color-primary, #800000) !important;
+}
+
+/* Ajustements pour l'icône calendrier */
+.paiement-form-container .gdf-calendar-icon {
+    z-index: 10; /* Au-dessus des autres éléments */
+    transition: color 0.2s ease;
+    font-size: 16px;
+}
+
+.paiement-form-container .gdf-calendar-icon:hover {
+    color: var(--color-primary, #800000);
+    opacity: 0.8;
+}
+
+/* States et focus harmonisés avec le reste du formulaire */
+.paiement-form-container .gdf-floating-label-input.gdf-focused .gdf-form-control {
+    border-bottom-color: var(--color-primary, #800000);
+}
+
+/* État d'erreur cohérent avec forms.css */
+.paiement-form-container .gdf-form-control.gdf-error {
+    border-bottom-color: #d32f2f;
+}
+
+.paiement-form-container .gdf-error-message {
+    color: #d32f2f;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+/* ========== RESPONSIVE ========== */
 
 @media (max-width: 768px) {
-  .paiement-etat-badge-container {
-    justify-content: center;
-    margin-bottom: 20px;
-  }
-  
-  .paiement-etat-badge-container span {
-    font-size: 13px;
-    padding: 7px 14px;
-  }
+    /* Badge d'état centré sur mobile */
+    .paiement-etat-badge-container {
+        justify-content: center;
+        margin-bottom: 20px;
+    }
+    
+    .paiement-etat-badge-container span {
+        font-size: 13px;
+        padding: 7px 14px;
+    }
+    
+    /* Détails de facture adaptés pour mobile */
+    .facture-details {
+        padding: 15px;
+        margin-top: 15px;
+    }
+    
+    .details-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+        padding: 10px 0;
+    }
+    
+    .details-row span:first-child {
+        font-size: 13px;
+        color: #6c757d;
+    }
+    
+    .details-row span:last-child {
+        font-size: 14px;
+        color: #212529;
+    }
+    
+    /* GlobalDateInputField responsive dans form-row */
+    .form-row .gdf-field-container {
+        margin-bottom: 15px; /* Espacement sur mobile comme les autres input-group */
+    }
+    
+    .form-row .gdf-field-container:last-child {
+        margin-bottom: 0;
+    }
+    
+    /* Ajustement de l'icône calendrier sur petit écran */
+    .paiement-form-container .gdf-calendar-icon {
+        font-size: 14px;
+        right: 6px;
+    }
+    
+    /* Actions du formulaire en colonne sur mobile */
+    .form-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    
+    .form-actions .btn {
+        min-width: auto;
+        width: 100%;
+    }
 }
 
 @media (max-width: 480px) {
-  .paiement-etat-badge-container {
-    margin-bottom: 18px;
-  }
-  
-  .paiement-etat-badge-container span {
-    font-size: 12px;
-    padding: 6px 12px;
-  }
+    /* Très petit écran */
+    .paiement-etat-badge-container {
+        margin-bottom: 18px;
+    }
+    
+    .paiement-etat-badge-container span {
+        font-size: 12px;
+        padding: 6px 12px;
+    }
+    
+    .form-row .gdf-field-container {
+        margin-bottom: 12px;
+    }
+    
+    .paiement-form-container .gdf-calendar-icon {
+        font-size: 13px;
+    }
+    
+    .form-section h3 {
+        font-size: 16px;
+        padding-top: 15px;
+        padding-bottom: 15px;
+    }
+    
+    .paiement-form-container {
+        padding: 10px;
+    }
 }
 
-/* Responsive pour facture-details */
-@media (max-width: 768px) {
-    .details-row {
-        flex-direction: column;
-        gap: 5px;
+/* ========== ACCESSIBILITÉ ========== */
+
+/* Focus visible pour les éléments interactifs */
+.form-actions .btn:focus,
+.paiement-form-container .gdf-calendar-icon:focus {
+    outline: 2px solid #800000;
+    outline-offset: 2px;
+}
+
+/* États désactivés clairement visibles */
+.form-actions .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Contraste suffisant pour les messages d'erreur */
+.error-message {
+    font-weight: 500;
+}
+
+/* ========== PRINT STYLES ========== */
+
+@media print {
+    .paiement-form-container {
+        box-shadow: none;
+        border: 1px solid #000;
+    }
+    
+    .form-actions {
+        display: none;
+    }
+    
+    .paiement-etat-badge-container span {
+        background-color: #fff !important;
+        color: #000 !important;
+        border: 1px solid #000;
+    }
+    
+    .notification {
+        border: 1px solid #000;
+        background-color: #fff !important;
+        color: #000 !important;
     }
 }

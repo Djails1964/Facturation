@@ -53,6 +53,8 @@ export const useFactureInitialization = (mode, idFacture, factureActions) => {
     const initializeData = async () => {
       // Marquer comme en cours
       initRef.current.isProcessing = true;
+
+      let factureDataRef = null;
       
       try {
         console.log('🚀 Début initialisation pour mode:', currentMode, 'ID:', currentId);
@@ -65,7 +67,7 @@ export const useFactureInitialization = (mode, idFacture, factureActions) => {
             ...prev,
             dateFacture: today.toISOString().split('T')[0],
             numeroFacture: '',
-            clientId: null,
+            idClient: null,
             lignes: []
           }));
           
@@ -74,10 +76,11 @@ export const useFactureInitialization = (mode, idFacture, factureActions) => {
         } else if ((currentMode === FORM_MODES.VIEW || currentMode === FORM_MODES.EDIT) && currentId) {
           // ✅ MODE VIEW/EDIT avec ID
           console.log('🔄 Chargement facture pour mode:', currentMode, 'ID:', currentId);
-          await chargerFacture(currentId);
+          const loadedFacture = await chargerFacture(currentId);
+          console.log('📦 Données facture chargées:', loadedFacture);
           
-          // ✅ ATTENDRE que les données soient réellement chargées
-          console.log('⏳ Attente propagation des données...');
+          // Stocker les données pour l'initialisation
+          factureDataRef = loadedFacture;
         }
 
         // ✅ FINALISATION
@@ -92,31 +95,30 @@ export const useFactureInitialization = (mode, idFacture, factureActions) => {
         setIsLoading(false);
         
         // ✅ CORRECTION: Attendre plus longtemps pour que les données se propagent
-        setTimeout(() => {
-          const finalFormData = getFormData();
-          console.log('📊 Données finales récupérées:', finalFormData);
-          
-          // ✅ Vérifier que nous avons vraiment des données avant de marquer comme initialisé
-          const hasValidData = currentMode === FORM_MODES.CREATE ? 
-            finalFormData.numeroFacture : 
-            finalFormData.numeroFacture || finalFormData.clientId; // Au moins l'un des deux
-          
-          if (hasValidData || currentMode === FORM_MODES.VIEW) {
+        if (currentMode === FORM_MODES.CREATE) {
+          // Mode création
+          setTimeout(() => {
+            const finalFormData = getFormData();
+            console.log('📊 Données finales (CREATE):', finalFormData);
             setInitialFormData(finalFormData);
             setIsFullyInitialized(true);
-            console.log('✅ Initialisation REELLEMENT terminée avec données:', finalFormData);
-          } else {
-            console.log('⚠️ Pas encore de données, nouvel essai...');
-            // Réessayer dans 200ms
-            setTimeout(() => {
-              const retryFormData = getFormData();
-              console.log('🔄 Retry - Données récupérées:', retryFormData);
-              setInitialFormData(retryFormData);
-              setIsFullyInitialized(true);
-              console.log('✅ Initialisation terminée (retry) pour mode:', currentMode);
-            }, 200);
-          }
-        }, 300); // Augmenté de 100ms à 300ms
+          }, 300);
+        } else if (factureDataRef) {  // ✅ Changé de factureData à factureDataRef
+          // Mode EDIT/VIEW : utiliser directement factureDataRef de l'API
+          setTimeout(() => {
+            console.log('✅ Utilisation des données API directes:', factureDataRef);
+            setInitialFormData({
+              numeroFacture: factureDataRef.numeroFacture || '',
+              dateFacture: factureDataRef.dateFacture || '',
+              idClient: factureDataRef.idClient || null,
+              lignes: factureDataRef.lignes || [],
+              ristourne: factureDataRef.ristourne || 0,
+              montantTotal: factureDataRef.montantTotal || 0,
+              totalAvecRistourne: factureDataRef.totalAvecRistourne || 0
+            });
+            setIsFullyInitialized(true);
+          }, 500);
+        }
 
       } catch (error) {
         console.error('❌ Erreur lors de l\'initialisation:', error);

@@ -70,7 +70,7 @@ export class TarifValidationService {
       case FORM_TYPES.TARIF:
         return ['idService', 'idUnite', 'typeTarifId', 'prix', 'dateDebut'];
       case FORM_TYPES.TARIF_SPECIAL:
-        return ['clientId', 'idService', 'idUnite', 'prix', 'note'];
+        return ['idClient', 'idService', 'idUnite', 'prix', 'note'];
       default:
         return [];
     }
@@ -86,7 +86,7 @@ export class TarifValidationService {
       idService: 'Service',
       idUnite: 'Unité',
       typeTarifId: 'Type de tarif',
-      clientId: 'Client',
+      idClient: 'Client',
       prix: 'Prix',
       dateDebut: 'Date de début',
       dateFin: 'Date de fin',
@@ -443,11 +443,11 @@ export class TarifValidationService {
     const warnings = [];
     
     // Règle métier: Pas de chevauchement pour même client/service/unité
-    if (formData.clientId && formData.idService && formData.idUnite) {
+    if (formData.idClient && formData.idService && formData.idUnite) {
       const chevauchement = existingItems.find(tarif => {
         if (tarif.id === itemId) return false;
         
-        return tarif.client_id === formData.clientId &&
+        return tarif.id === formData.idClient &&
                tarif.idService === formData.idService &&
                tarif.idUnite === formData.idUnite &&
                this.datesOverlap(

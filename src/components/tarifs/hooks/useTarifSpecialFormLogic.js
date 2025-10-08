@@ -39,7 +39,7 @@ export const useTarifSpecialFormLogic = (formState) => {
     const validateTarifSpecial = useCallback(() => {
         const errors = [];
         
-        if (!tarifSpecial.clientId) {
+        if (!tarifSpecial.idClient) {
             errors.push('Le client est obligatoire');
         }
         
@@ -82,7 +82,7 @@ export const useTarifSpecialFormLogic = (formState) => {
     
     const resetForm = useCallback(() => {
         setTarifSpecial({
-            clientId: '',
+            idClient: '',
             idService: '',
             idUnite: '',
             prix: '',

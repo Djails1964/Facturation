@@ -18,7 +18,7 @@ export function useFactureDetailsForm(
     onResetRistourne
 ) {
     console.log('useFactureDetailsForm - Initialisation', {
-        clientId: client?.id,
+        idClient: client?.id,
         readOnly,
         lignesCount: lignesInitiales?.length || 0
     });
@@ -54,7 +54,7 @@ export function useFactureDetailsForm(
     // Références pour éviter les re-calculs multiples
     const initializationRef = useRef({
         isComplete: false,
-        clientId: null,
+        idClient: null,
         hasProcessedLines: false
     });
     
@@ -72,7 +72,7 @@ export function useFactureDetailsForm(
         message: configuration.message,
         messageType: configuration.messageType,
         unitesByServiceKeys: Object.keys(configuration.unitesByService || {}).length,
-        clientId: client?.id,
+        idClient: client?.id,
         readOnly,
         lignesInitialesLength: lignesInitiales?.length || 0,
         isInitialized,
@@ -173,7 +173,7 @@ export function useFactureDetailsForm(
         console.log('Effet d\'initialisation - État complet:', {
             isComplete: initializationRef.current.isComplete,
             hasProcessedLines: initializationRef.current.hasProcessedLines,
-            clientId: initializationRef.current.clientId,
+            idClient: initializationRef.current.idClient,
             configLoading: configuration.isLoading,
             servicesLength: configuration.services?.length,
             unitesLength: configuration.unites?.length,
@@ -196,9 +196,9 @@ export function useFactureDetailsForm(
         }
 
         // Vérifier le changement de client
-        if (client?.id !== initializationRef.current.clientId) {
+        if (client?.id !== initializationRef.current.idClient) {
             console.log('Nouveau client détecté:', client?.id);
-            initializationRef.current.clientId = client?.id;
+            initializationRef.current.idClient = client?.id;
             initializationRef.current.hasProcessedLines = false;
         }
 
@@ -311,8 +311,8 @@ export function useFactureDetailsForm(
         
         // ✅ CORRECTION: Étendre la détection des changements
         const champsRecalcul = [
-            'serviceType', 'serviceId', 'service',  // Service
-            'unite', 'uniteCode', 'uniteId',       // Unité
+            'serviceType', 'idService', 'service',  // Service
+            'unite', 'uniteCode', 'idUnite',       // Unité
             '_forceRecalculPrix'                   // Signal force
         ];
         
@@ -323,7 +323,7 @@ export function useFactureDetailsForm(
                 console.log('Déclenchement du recalcul automatique du prix');
                 
                 // ✅ AJOUT: Forcer le recalcul pour les changements de service
-                const forceRecalcul = ['serviceType', 'serviceId', 'service', '_forceRecalculPrix'].includes(champ);
+                const forceRecalcul = ['serviceType', 'idService', 'service', '_forceRecalculPrix'].includes(champ);
                 
                 setTimeout(() => {
                     if (forceRecalcul) {

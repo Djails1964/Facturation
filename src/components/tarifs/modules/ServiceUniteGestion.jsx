@@ -73,7 +73,7 @@ const ServiceUniteGestion = ({
         let defaultId = null;
         if (defaultUnite && typeof defaultUnite === 'object') {
           // Si c'est un objet avec idUnite
-          defaultId = defaultUnite.idUnite || defaultUnite.unite_id || defaultUnite.id;
+          defaultId = defaultUnite.idUnite || defaultUnite.id;
         } else if (defaultUnite && (typeof defaultUnite === 'number' || typeof defaultUnite === 'string')) {
           // Si c'est directement l'ID
           defaultId = defaultUnite;

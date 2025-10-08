@@ -1,3 +1,4 @@
+// src/hooks/paiement/usePaiementFormValidation.js
 import { useCallback } from 'react';
 import DateService from '../../../utils/DateService';
 import { VALIDATION_MESSAGES } from '../../../constants/paiementConstants';
@@ -25,7 +26,7 @@ export const usePaiementFormValidation = (formState) => {
             };
         }
         
-        // ✅ CORRECTION: Calcul manuel des jours au lieu d'utiliser getDaysFromDate
+        // Calcul manuel des jours au lieu d'utiliser getDaysFromDate
         const today = new Date();
         const diffTime = today.getTime() - dateObj.getTime();
         const daysAgo = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -63,6 +64,32 @@ export const usePaiementFormValidation = (formState) => {
     }, [factureSelectionnee, isCreate]);
 
     /**
+     * ✅ AJOUT: Valider la méthode de paiement
+     */
+    const validateMethodePaiement = useCallback((methodePaiement) => {
+        if (!methodePaiement || methodePaiement.trim() === '') {
+            return { isValid: false, error: VALIDATION_MESSAGES.METHODE_REQUIRED };
+        }
+
+        // Liste des méthodes valides
+        const methodesValides = [
+            'virement',
+            'especes',
+            'cheque',
+            'carte',
+            'twint',
+            'paypal',
+            'autre'
+        ];
+
+        if (!methodesValides.includes(methodePaiement)) {
+            return { isValid: false, error: 'Méthode de paiement non valide' };
+        }
+
+        return { isValid: true };
+    }, []);
+
+    /**
      * Valider tous les champs du formulaire
      */
     const validateForm = useCallback(() => {
@@ -84,16 +111,18 @@ export const usePaiementFormValidation = (formState) => {
         }
         
         // Validation de la méthode de paiement
-        if (!paiement.methodePaiement) {
-            return { isValid: false, error: VALIDATION_MESSAGES.METHODE_REQUIRED };
+        const methodeValidation = validateMethodePaiement(paiement.methodePaiement);
+        if (!methodeValidation.isValid) {
+            return methodeValidation;
         }
         
         return { isValid: true };
-    }, [paiement, validateDatePaiement, validateMontant]);
+    }, [paiement, validateDatePaiement, validateMontant, validateMethodePaiement]);
 
     return {
         validateDatePaiement,
         validateMontant,
+        validateMethodePaiement,  // ✅ AJOUT dans le return
         validateForm
     };
 };

@@ -1,3 +1,6 @@
+// src/components/paiements/sections/PaiementFormFactureSection.jsx
+// Version corrigée qui utilise l'ID correct dans le select
+
 import React from 'react';
 import { formatMontant } from '../../../utils/formatters';
 import { SECTION_TITLES, LABELS } from '../../../constants/paiementConstants';
@@ -10,6 +13,20 @@ const PaiementFormFactureSection = ({
     facturesLoading, 
     factureSelectionnee 
 }) => {
+    // 🔍 DEBUG - Logs au début du rendu
+    console.log('🎯 PaiementFormFactureSection - Rendu avec:', {
+        isCreate,
+        facturesCount: factures?.length || 0,
+        facturesLoading,
+        paiementIdFacture: paiement?.idFacture,
+        hasOnInputChange: !!onInputChange
+    });
+
+    // 🔍 DEBUG - Afficher les 3 premières factures
+    if (factures && factures.length > 0) {
+        console.log('📋 Premières factures disponibles:', factures.slice(0, 3));
+    }
+
     return (
         <div className="form-section">
             <h3>{SECTION_TITLES.FACTURE}</h3>
@@ -20,26 +37,48 @@ const PaiementFormFactureSection = ({
                         <>
                             <select
                                 id="idFacture"
-                                value={paiement.idFacture}
-                                onChange={(e) => onInputChange('idFacture', e.target.value)}
+                                value={paiement.idFacture || ''}
+                                onChange={(e) => {
+                                    console.log('🔄 Select onChange - Valeur sélectionnée:', e.target.value);
+                                    onInputChange('idFacture', e.target.value);
+                                }}
                                 required
                                 disabled={facturesLoading}
                             >
                                 <option value="">Sélectionner une facture</option>
-                                {factures.map(facture => {
+                                {factures && factures.map(facture => {
+                                    const factureId = facture.id || facture.idFacture;
+                                    
+                                    if (!factureId) {
+                                        console.warn('⚠️ Facture sans ID:', facture);
+                                        return null;
+                                    }
+                                    
                                     const montantRestant = facture.montantRestant || 
                                         (facture.totalAvecRistourne ? 
                                             facture.totalAvecRistourne - (facture.montantPayeTotal || 0) :
                                             facture.montantTotal - (facture.montantPayeTotal || 0)
                                         );
                                     
+                                    const clientInfo = facture.client ? 
+                                        `${facture.client.prenom} ${facture.client.nom}` : 
+                                        'Client inconnu';
+                                    const montantInfo = `(${formatMontant(montantRestant)} CHF à payer)`;
+                                    
+                                    const optionText = `${facture.numeroFacture} - ${clientInfo} ${montantInfo}`;
+                                    
+                                    // 🔍 DEBUG - Log pour chaque option
+                                    console.log(`✅ Option créée: ${factureId} - ${optionText}`);
+                                    
                                     return (
-                                        <option key={facture.id} value={facture.id}>
-                                            {facture.numeroFacture} - {facture.client.prenom} {facture.client.nom} 
-                                            ({formatMontant(montantRestant)} CHF à payer)
+                                        <option 
+                                            key={factureId} 
+                                            value={factureId}
+                                        >
+                                            {optionText}
                                         </option>
                                     );
-                                })}
+                                }).filter(Boolean)}
                             </select>
                             <label htmlFor="idFacture" className="required">{LABELS.FACTURE}</label>
                         </>
@@ -47,9 +86,9 @@ const PaiementFormFactureSection = ({
                         <>
                             <input
                                 type="text"
-                                value={factureSelectionnee ? 
-                                    `${factureSelectionnee.numeroFacture} - ${factureSelectionnee.client?.prenom} ${factureSelectionnee.client?.nom}` 
-                                    : 'Chargement...'
+                                value={factureSelectionnee ?
+                                    `${factureSelectionnee.numeroFacture} - ${factureSelectionnee.client?.prenom} ${factureSelectionnee.client?.nom}` : 
+                                    'Facture non trouvée'
                                 }
                                 readOnly
                                 placeholder=" "
@@ -59,28 +98,6 @@ const PaiementFormFactureSection = ({
                     )}
                 </div>
             </div>
-            
-            {factureSelectionnee && (
-                <div className="facture-details">
-                    <div className="details-row">
-                        <span>{LABELS.MONTANT_TOTAL}:</span>
-                        <span>{formatMontant(factureSelectionnee.totalAvecRistourne || factureSelectionnee.montantTotal)} CHF</span>
-                    </div>
-                    <div className="details-row">
-                        <span>{LABELS.DEJA_PAYE}:</span>
-                        <span>{formatMontant(factureSelectionnee.montantPayeTotal || 0)} CHF</span>
-                    </div>
-                    <div className="details-row">
-                        <span>{LABELS.MONTANT_RESTANT}:</span>
-                        <span className="montant-restant">
-                            {formatMontant(
-                                factureSelectionnee.montantRestant || 
-                                (factureSelectionnee.totalAvecRistourne || factureSelectionnee.montantTotal) - (factureSelectionnee.montantPayeTotal || 0)
-                            )} CHF
-                        </span>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

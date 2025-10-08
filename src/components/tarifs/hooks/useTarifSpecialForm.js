@@ -6,7 +6,7 @@ import { FORM_MODES } from '../../../constants/tarifConstants';
 export const useTarifSpecialForm = ({ mode, tarifSpecialId, onRetourListe, onTarifSpecialCreated }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [tarifSpecial, setTarifSpecial] = useState({
-        clientId: '',
+        idClient: '',
         idService: '',
         idUnite: '',
         prix: '',

@@ -31,7 +31,9 @@ export class DeleteModalHandler {
         const anchorRef = this.createAnchorRef(event);
         
         console.log('🚀 DeleteModalHandler - Début suppression/annulation facture ID:', idFacture);
+        console.log('this.filteredFactures: ', this.filteredFactures);
         const facture = this.filteredFactures?.find(f => f.idFacture === idFacture);
+        console.log('facture à supprimer : ', facture);
         if (!facture) {
             console.error('❌ Facture non trouvée:', idFacture);
             return;

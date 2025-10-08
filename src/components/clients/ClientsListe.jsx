@@ -1,9 +1,16 @@
+// src/components/clients/ClientsListe.jsx
+// ✅ VERSION MIGRÉE vers le système modal unifié
+
 import React, { useState, useEffect, useCallback } from 'react';
-import { FiEdit, FiEye, FiTrash2, FiMail, FiPhone, FiMapPin, FiSlack } from 'react-icons/fi';
+import { FiEdit, FiEye, FiTrash2, FiMail, FiPhone, FiMapPin } from 'react-icons/fi';
 import '../../styles/components/clients/ClientsListe.css';
-import ConfirmationModal from '../shared/ConfirmationModal';
+
+// ✅ CHANGEMENT: Remplacer ConfirmationModal par le système unifié
+import { showConfirm, showLoading, showCustom } from '../../utils/modalSystem';
+import ModalComponents from '../shared/ModalComponents';
+
 import ClientService from '../../services/ClientService';
-import { toBoolean, normalizeBooleanFieldsArray } from '../../utils/booleanHelper'; // ✅ IMPORT du helper
+import { toBoolean, normalizeBooleanFieldsArray } from '../../utils/booleanHelper';
 
 function ClientsListe({ 
     nouveauClientId = null, 
@@ -22,274 +29,199 @@ function ClientsListe({
     const [termeRecherche, setTermeRecherche] = useState('');
     const [clientService] = useState(() => new ClientService());
 
-    const [confirmModal, setConfirmModal] = useState({
-        isOpen: false,
-        title: '',
-        message: '',
-        onConfirm: () => {},
-        type: 'warning',
-        details: null,
-        singleButton: false
-    });
+    // ✅ SUPPRESSION: Plus besoin de confirmModal state
+    // const [confirmModal, setConfirmModal] = useState({ ... });
 
-    // ✅ FONCTION DE NORMALISATION DES CLIENTS
+    // Fonction de normalisation des clients
     const normalizeClientsData = React.useCallback((clientsData) => {
         if (!Array.isArray(clientsData)) return clientsData;
         return normalizeBooleanFieldsArray(clientsData, ['estTherapeute']);
     }, []);
     
-    // Effet pour sélectionner automatiquement le nouveau client une fois les clients chargés
-    useEffect(() => {
-        if (nouveauClientId && clients.length > 0) {
-            const idToSelect = parseInt(nouveauClientId);
-            const clientExists = clients.some(client => client.id === idToSelect);
-            
-            if (clientExists) {
-                setClientSelectionne(idToSelect);
-                
-                setTimeout(() => {
-                    const element = document.querySelector(`.cl-client-card.cl-selected`);
-                    if (element) {
-                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
-                }, 100);
-            }
-        }
-    }, [nouveauClientId, clients]);
-    
-    // ✅ FONCTION DE RECHERCHE SIMPLIFIÉE (TRI SUPPRIMÉ)
-    const appliquerRechercheEtTri = React.useCallback(() => {
-        let clientsFiltres = [...clientsNonFiltres];
-        
-        // Appliquer la recherche sur tous les champs si un terme est saisi
-        if (termeRecherche.trim()) {
-            const termeBas = termeRecherche.toLowerCase();
-            clientsFiltres = clientsFiltres.filter(client => {
-                // Recherche dans tous les champs du client
-                return Object.values(client).some(value => {
-                    // Vérifier que la valeur est une string ou un nombre avant de chercher
-                    if (value === null || value === undefined) return false;
-                    return String(value).toLowerCase().includes(termeBas);
-                });
-            });
-        }
-        
-        setClients(clientsFiltres);
-    }, [clientsNonFiltres, termeRecherche]); // ✅ SUPPRESSION DE triDirection DES DÉPENDANCES
-
-    // ✅ EFFET AVEC DÉPENDANCE CORRECTE
-    useEffect(() => {
-        appliquerRechercheEtTri();
-    }, [appliquerRechercheEtTri]);
-
-    // Effet pour effacer la notification après un certain temps
-    useEffect(() => {
-        if (notification.message) {
-            const timer = setTimeout(() => {
-                if (onClearNotification) onClearNotification();
-            }, 5000); // La notification disparaît après 5 secondes
-            return () => clearTimeout(timer);
-        }
-    }, [notification, onClearNotification]);
-
+    // Charger les clients
     const chargerClients = useCallback(async () => {
         setIsLoading(true);
-        setError(null);
-    
         try {
-            // Utiliser le service client pour charger les clients
-            const clientsData = await clientService.chargerClients();
-            
-            // ✅ NORMALISATION PRÉVENTIVE DES DONNÉES CLIENTS
-            const normalizedClients = normalizeClientsData(clientsData);
-            
-            console.log('Clients avant normalisation:', clientsData.slice(0, 2));
-            console.log('Clients après normalisation:', normalizedClients.slice(0, 2));
-            
-            setClientsNonFiltres(normalizedClients);
-            setClients(normalizedClients);
-        } catch (error) {
-            console.error('Erreur lors du chargement des clients:', error);
-            setError('Une erreur est survenue lors du chargement des clients');
+            const data = await clientService.chargerClients();
+            const normalizedData = normalizeClientsData(data);
+            setClientsNonFiltres(normalizedData);
+            setClients(normalizedData);
+            setError(null);
+        } catch (err) {
+            console.error('Erreur lors du chargement des clients:', err);
+            setError('Impossible de charger les clients. Veuillez réessayer.');
         } finally {
             setIsLoading(false);
         }
     }, [clientService, normalizeClientsData]);
 
-    // Charger les clients au chargement initial
     useEffect(() => {
         chargerClients();
     }, [chargerClients]);
 
-
+    // Recherche client
     const handleRechercheChange = (e) => {
+        const terme = e.target.value.toLowerCase();
         setTermeRecherche(e.target.value);
-        // Ne pas effacer la sélection lors de la recherche
-        // pour garder le nouveau client sélectionné si besoin
-    };
 
-    const handleSelectionClient = (clientId) => {
-        setClientSelectionne(clientId === clientSelectionne ? null : clientId);
+        if (terme === '') {
+            setClients(clientsNonFiltres);
+        } else {
+            const resultats = clientsNonFiltres.filter(client =>
+                `${client.prenom} ${client.nom}`.toLowerCase().includes(terme) ||
+                (client.email && client.email.toLowerCase().includes(terme)) ||
+                (client.telephone && client.telephone.includes(terme)) ||
+                (client.localite && client.localite.toLowerCase().includes(terme))
+            );
+            setClients(resultats);
+        }
     };
 
     const viderRecherche = () => {
         setTermeRecherche('');
+        setClients(clientsNonFiltres);
     };
 
-    const afficherClient = (clientId) => {
-        if (!clientId) return;
-        
-        // Si onAfficherClient a été fourni, l'utiliser
-        if (onAfficherClient) {
-            onAfficherClient(clientId);
-        } else {
-            // Comportement par défaut: redirection
-            window.location.href = `client-detail.php?id=${clientId}`;
-        }
-    };
-
-    const modifierClient = (clientId) => {
-        if (!clientId) return;
-        
-        // Au lieu de rediriger, appeler la fonction du parent si elle existe
+    const modifierClient = (idClient) => {
         if (onModifierClient) {
-            onModifierClient(clientId);
-        } else {
-            // Conserver le comportement par défaut pour la compatibilité
-            window.location.href = `client-modification.php?id=${clientId}`;
+            onModifierClient(idClient);
         }
     };
 
-    const openConfirmModal = (title, message, onConfirm, type = 'warning', details = null, singleButton = false) => {
-        setConfirmModal({
-            isOpen: true,
-            title,
-            message,
-            onConfirm,
-            type,
-            details,
-            singleButton
-        });
-    };
-    
-    const closeConfirmModal = () => {
-        setConfirmModal({
-            ...confirmModal,
-            isOpen: false
-        });
+    const afficherClient = (idClient) => {
+        if (onAfficherClient) {
+            onAfficherClient(idClient);
+        }
     };
 
-    // Fonction pour supprimer un client
-    const supprimerClient = async (clientId) => {
-        console.log('🗑️ DEBUG - supprimerClient appelé avec ID:', clientId);
-        
-        if (!clientId) return;
-        
-        // 🔧 CORRECTION: Comparaison compatible avec les types
-        const client = clients.find(c => String(c.id) === String(clientId));
-        
-        if (!client) {
-            console.log('❌ DEBUG - Client non trouvé pour ID:', clientId);
-            return;
+    // ✅ NOUVELLE VERSION: Suppression client avec système modal unifié
+    const handleSupprimerClient = async (idClient, event) => {
+        if (event) {
+            event.stopPropagation();
         }
-        
-        console.log('✅ DEBUG - Client trouvé:', client);
-    
-        // Préparer les détails du client à afficher dans la modal
-        const clientDetails = {
-            client: `${client.prenom} ${client.nom}`
-        };
-    
+
+        const client = clients.find(c => c.id === idClient);
+        if (!client) return;
+
+        // Créer anchorRef pour le positionnement
+        const anchorRef = React.createRef();
+        if (event && event.currentTarget) {
+            anchorRef.current = event.currentTarget;
+        }
+
         try {
-            console.log('🔍 DEBUG - Appel checkClientDeletable pour ID:', clientId);
-        
-            // Utiliser le service client pour vérifier si le client peut être supprimé
-            const checkResult = await clientService.checkClientDeletable(clientId);
-        
-            console.log('✅ DEBUG - Résultat checkClientDeletable:', checkResult);
-            
-            // ✅ UTILISATION SÉCURISÉE DU HELPER BOOLÉEN
-            if (toBoolean(checkResult.aUneFacture)) {
-                // Le client est lié à une facture, afficher une modal d'erreur
-                openConfirmModal(
-                    'Suppression impossible',
-                    'Ce client ne peut pas être supprimé car il est lié à une ou plusieurs factures.',
-                    () => {
-                        closeConfirmModal();
-                    },
-                    'info',
-                    {
-                        client: clientDetails.client,
-                        hasBilling: true,
-                        singleButton: true
-                    },
-                    true
-                );
-            } else {
-                // Le client n'est pas lié à des factures, on peut afficher la modale de confirmation
-                openConfirmModal(
-                    'Confirmer la suppression',
-                    'Êtes-vous sûr de vouloir supprimer ce client ?',
-                    async () => {
-                        try {
-                            // Appel au service client pour supprimer le client
-                            const result = await clientService.deleteClient(clientId);
-                            
-                            if (result.success) {
-                                // Notifier le parent de la suppression réussie
-                                if (onClientSupprime) {
-                                    onClientSupprime(result.message);
-                                }
-                                
-                                // Recharger la liste des clients
-                                await chargerClients();
-                                setClientSelectionne(null);
-                            } else {
-                                throw new Error(result.message || 'Erreur lors de la suppression');
-                            }
-                        } catch (error) {
-                            console.error('Erreur:', error);
-                            // Notifier le parent de l'erreur
-                            if (onSetNotification) {
-                                onSetNotification('Une erreur est survenue lors de la suppression du client: ' + error.message, 'error');
-                            }
-                        } finally {
-                            // Fermer la modal
-                            closeConfirmModal();
+            // 1. Vérifier si le client a des factures
+            const checkResult = await showLoading(
+                {
+                    title: "Vérification...",
+                    content: ModalComponents.createLoadingContent("Vérification des factures associées..."),
+                    anchorRef,
+                    size: 'small',
+                    position: 'smart'
+                },
+                async () => {
+                    return await clientService.checkClientDeletable(idClient);
+                }
+            );
+
+            console.log('✅ checkResult:', checkResult);
+
+            // 2. Si le client a des factures, afficher l'erreur
+            // checkResult.aUneFacture est un booléen
+            if (checkResult.aUneFacture === true) {
+                // ✅ Utiliser showCustom pour avoir un seul bouton
+                await showCustom({
+                    title: "Suppression impossible",
+                    content: ModalComponents.createWarningSection(
+                        "⚠️ Client lié à des factures",
+                        `Le client "${client.prenom} ${client.nom}" ne peut pas être supprimé car il possède une ou plusieurs facture(s) associée(s).<br><br>Veuillez d'abord supprimer ou réassigner les factures avant de supprimer ce client.`,
+                        "error"
+                    ),
+                    anchorRef,
+                    size: 'medium',
+                    position: 'smart',
+                    buttons: [
+                        {
+                            text: "Compris",
+                            action: "close",
+                            className: "primary"
                         }
-                    },
-                    'danger', // Type 'danger' pour la modal de suppression
-                    clientDetails // Passer les détails du client
-                );
+                    ]
+                });
+                return;
             }
+
+            // 3. Demander confirmation de suppression
+            const confirmResult = await showConfirm({
+                title: "Confirmer la suppression",
+                message: `Êtes-vous sûr de vouloir supprimer le client "${client.prenom} ${client.nom}" ?\n\n⚠️ Cette action est irréversible.`,
+                confirmText: "Supprimer définitivement",
+                cancelText: "Annuler",
+                type: 'danger',
+                anchorRef,
+                position: 'smart',
+                size: 'medium'
+            });
+
+            if (confirmResult.action !== 'confirm') {
+                return; // Utilisateur a annulé
+            }
+
+            // 4. Effectuer la suppression
+            const deleteResult = await showLoading(
+                {
+                    title: "Suppression en cours...",
+                    content: ModalComponents.createLoadingContent("Suppression du client..."),
+                    anchorRef,
+                    size: 'small',
+                    position: 'smart'
+                },
+                async () => {
+                    return await clientService.deleteClient(idClient);
+                }
+            );
+
+            // 5. Traiter le résultat
+            if (deleteResult.success) {
+                // Notifier le succès
+                if (onClientSupprime) {
+                    onClientSupprime(deleteResult.message || 'Client supprimé avec succès');
+                }
+
+                // Recharger la liste
+                await chargerClients();
+                setClientSelectionne(null);
+            } else {
+                throw new Error(deleteResult.message || 'Erreur lors de la suppression');
+            }
+
         } catch (error) {
-            console.error('❌ DEBUG - Erreur dans checkClientDeletable:', error);
-            console.error('Erreur lors de la vérification des factures:', error);
-            // Notifier le parent de l'erreur
+            console.error('Erreur lors de la suppression du client:', error);
             if (onSetNotification) {
-                onSetNotification('Une erreur est survenue lors de la vérification des factures: ' + error.message, 'error');
+                onSetNotification(
+                    'Une erreur est survenue lors de la suppression du client: ' + error.message,
+                    'error'
+                );
             }
         }
     };
 
     // Formater l'adresse complète
     const formaterAdresse = (client) => {
-        // Vérifier que chaque champ existe et n'est pas undefined
         const rue = client.rue || '';
         const numero = client.numero || '';
         const codePostal = client.code_postal || '';
         const localite = client.localite || '';
     
-        // Construire l'adresse uniquement avec les champs non vides
         const adresseParts = [
             rue && numero ? `${rue} ${numero}` : (rue || numero),
             codePostal && localite ? `${codePostal} ${localite}` : (codePostal || localite)
-        ].filter(part => part); // Supprimer les parties vides
+        ].filter(part => part);
     
         return adresseParts.length > 0 ? adresseParts.join(', ') : 'Adresse non renseignée';
     };
 
-    // Composant pour afficher les notifications
+    // Afficher les notifications
     const renderNotification = () => {
         if (!notification.message) return null;
         
@@ -354,25 +286,15 @@ function ClientsListe({
                         {clients.map(client => (
                             <div 
                                 key={client.id}
-                                className={`cl-client-card ${clientSelectionne === client.id ? 'cl-selected' : ''}`}
-                                onClick={() => handleSelectionClient(client.id)}
-                                data-client-id={client.id}
-                                // ✅ UTILISATION SÉCURISÉE DU HELPER BOOLÉEN
-                                data-therapist={toBoolean(client.estTherapeute) ? "true" : "false"}
+                                className={`cl-client-card ${clientSelectionne === client.id ? 'selected' : ''}`}
+                                onClick={() => setClientSelectionne(client.id)}
                             >
                                 <div className="cl-client-header">
-                                    <div className="cl-client-info">
-                                        <div className="cl-client-name">
-                                            {String(client.prenom || '')} {String(client.nom || '')}
-                                            {/* ✅ UTILISATION SÉCURISÉE DU HELPER BOOLÉEN */}
-                                            {toBoolean(client.estTherapeute) && (
-                                                <span className="cl-therapist-icon" title="Thérapeute">
-                                                    <FiSlack size={16} color="#22c55e" />
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="cl-client-type">
-                                            {/* ✅ UTILISATION SÉCURISÉE DU HELPER BOOLÉEN */}
+                                    <div className="cl-client-name-section">
+                                        <h3 className="cl-client-name">
+                                            {client.prenom} {client.nom}
+                                        </h3>
+                                        <div className="cl-client-badge">
                                             {toBoolean(client.estTherapeute) ? 'Thérapeute' : 'Client'}
                                         </div>
                                     </div>
@@ -421,12 +343,9 @@ function ClientsListe({
                                     </button>
 
                                     <button 
-                                        className="bouton-action"
+                                        className="bouton-action bouton-supprimer"
                                         aria-label="Supprimer le client"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            supprimerClient(client.id);
-                                        }}
+                                        onClick={(e) => handleSupprimerClient(client.id, e)}
                                     >
                                         <FiTrash2 className="action-delete-icon" />
                                     </button>
@@ -436,18 +355,8 @@ function ClientsListe({
                     </div>
                 )}
             </div>
-            <ConfirmationModal
-                isOpen={confirmModal.isOpen}
-                title={confirmModal.title}
-                message={confirmModal.message}
-                onConfirm={confirmModal.onConfirm}
-                onCancel={closeConfirmModal}
-                type={confirmModal.type}
-                confirmText="Confirmer"
-                cancelText="Annuler"
-                details={confirmModal.details}
-                singleButton={confirmModal.singleButton}
-            />
+
+            {/* ✅ SUPPRESSION: Plus de <ConfirmationModal /> ici */}
         </div>
     );
 }

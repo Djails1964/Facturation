@@ -19,12 +19,12 @@ const TarifSpecialFormDataSection = ({
             <div className="input-group">
                 <select
                     id="tarif-special-client"
-                    name="clientId"
-                    value={tarifSpecial.clientId || ""}
+                    name="idClient"
+                    value={tarifSpecial.idClient || ""}
                     onChange={onInputChange}
                     required
                     disabled={isReadOnly}
-                    className={validationErrors.clientId ? 'error' : ''}
+                    className={validationErrors.idClient ? 'error' : ''}
                 >
                     <option value="">Sélectionner un client</option>
                     {clients.map(client => (
@@ -34,8 +34,8 @@ const TarifSpecialFormDataSection = ({
                     ))}
                 </select>
                 <label htmlFor="tarif-special-client" className="required">Client</label>
-                {validationErrors.clientId && (
-                    <span className="error-message">{validationErrors.clientId}</span>
+                {validationErrors.idClient && (
+                    <span className="error-message">{validationErrors.idClient}</span>
                 )}
             </div>
 

@@ -214,6 +214,14 @@
   animation: fadeInPrivileged 0.3s ease-in-out;
 }
 
+.tarif-container-hidden {
+  display: none;
+}
+
+.tarif-container-visible {
+  display: block;
+}
+
 @keyframes fadeInPrivileged {
   from {
     opacity: 0;

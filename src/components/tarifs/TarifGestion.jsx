@@ -1,6 +1,6 @@
 // TarifGestion.jsx - Version refactorisée (de 1000+ lignes à ~150 lignes)
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigationGuard } from '../../App';
 
 // Hooks personnalisés
@@ -27,6 +27,17 @@ const TarifGestion = ({
   onNavigateToFacture,
   preselectedData = {}
 }) => {
+
+  // ✅ AJOUT: Logs pour tracker le cycle de vie
+  console.log('🎬 TarifGestion - RENDER');
+  
+  useEffect(() => {
+    console.log('✅ TarifGestion - MOUNTED');
+    return () => {
+      console.log('❌ TarifGestion - UNMOUNTED (démontage)');
+    };
+  }, []);
+
   // État de base et données
   const gestionState = useTarifGestionState();
   const { interceptNavigation } = useNavigationGuard();
@@ -150,9 +161,9 @@ const TarifGestion = ({
         notifications={notifications}
         onRemoveNotification={removeNotification}
       />
-      
       <div className="tarif-gestion-container">
-        {gestionState.isLoading ? (
+      {/* Afficher le loader seulement si pas de données */}
+        {gestionState.services.length === 0 ? (
           <div className="loading-container">
             <p>Chargement des données...</p>
           </div>

@@ -38,6 +38,8 @@ const EnrichedObjectHelpers = {
      * Extrait le nom d'affichage d'une unité depuis l'objet enrichi
      */
     getUniteDisplayName: (ligne) => {
+        console.log('getUniteDisplayName - ligne:', ligne);
+        
         if (ligne.unite && typeof ligne.unite === 'object') {
             return ligne.unite.nomUnite || ligne.unite.codeUnite || 'Unité inconnue';
         }
@@ -52,7 +54,7 @@ const EnrichedObjectHelpers = {
      */
     getUniteCode: (ligne) => {
         if (ligne.unite && typeof ligne.unite === 'object') {
-            return ligne.unite.code || ligne.unite.nom || '';
+            return ligne.unite.codeUnite || ligne.unite.nomUnite || '';
         }
         if (typeof ligne.unite === 'string') {
             return ligne.unite;
@@ -336,7 +338,7 @@ function ServiceTypeSelect({
             // Mettre à jour le service
             onModify(index, 'service', serviceObj);
             onModify(index, 'serviceType', serviceCode);
-            onModify(index, 'serviceId', serviceObj.idService);
+            onModify(index, 'idService', serviceObj.idService);
             
             console.log('🔍 DEBUG MAPPING:', unitesByService);
             console.log('🔍 DEBUG SITEWEB:', unitesByService?.SiteWeb);
@@ -349,18 +351,18 @@ function ServiceTypeSelect({
                 // Nettoyer l'unité actuelle
                 onModify(index, 'unite', null);
                 onModify(index, 'uniteCode', '');
-                onModify(index, 'uniteId', null);
+                onModify(index, 'idUnite', null);
             }
         } else {
             // Nettoyer si pas de service trouvé
             onModify(index, 'service', null);
             onModify(index, 'serviceType', serviceCode);
-            onModify(index, 'serviceId', null);
+            onModify(index, 'idService', null);
             
             // Nettoyer aussi l'unité
             onModify(index, 'unite', null);
             onModify(index, 'uniteCode', '');
-            onModify(index, 'uniteId', null);
+            onModify(index, 'idUnite', null);
         }
     };
     
@@ -430,7 +432,7 @@ function ServiceTypeSelect({
         // Nettoyer l'unité si aucune trouvée
         onModify(index, 'unite', null);
         onModify(index, 'uniteCode', '');
-        onModify(index, 'uniteId', null);
+        onModify(index, 'idUnite', null);
     };
     
     /**
@@ -447,7 +449,7 @@ function ServiceTypeSelect({
         // Mettre à jour l'objet unité enrichi
         onModify(index, 'unite', uniteObj);
         onModify(index, 'uniteCode', uniteObj.codeUnite || uniteObj.code);
-        onModify(index, 'uniteId', uniteObj.idUnite || uniteObj.id);
+        onModify(index, 'idUnite', uniteObj.idUnite || uniteObj.id);
         
         // Forcer la mise à jour de l'UI
         setTimeout(() => {
@@ -558,7 +560,7 @@ function UniteSelect({
             
             // 2. Mettre à jour immédiatement le code et l'ID
             onModify(index, 'uniteCode', uniteObj.codeUnite || uniteObj.code);
-            onModify(index, 'uniteId', uniteObj.idUnite);
+            onModify(index, 'idUnite', uniteObj.idUnite);
             
             console.log('✅ Unité mise à jour:', {
                 code: uniteObj.codeUnite || uniteObj.code,
@@ -570,7 +572,7 @@ function UniteSelect({
             // Nettoyer si pas d'unité trouvée
             onModify(index, 'unite', null);
             onModify(index, 'uniteCode', null);
-            onModify(index, 'uniteId', null);
+            onModify(index, 'idUnite', null);
         }
     };
     
@@ -847,8 +849,8 @@ function getUniteOptions(ligne, unites, unitesByService) {
     const unitesForService = unites.filter(unite => {
         if (!unite || !ligne.service) return false;
         // Vérifier si l'unité appartient au service sélectionné
-        const belongsToService = unite.idService === ligne.serviceId || 
-                                 unite.serviceId === ligne.serviceId ||
+        const belongsToService = unite.idService === ligne.idService || 
+                                 unite.idService === ligne.idService ||
                                  (ligne.service && unite.idService === ligne.service.idService);
         
         console.log(`🔍 Unité ${unite.nomUnite} (${unite.codeUnite}) appartient au service ${currentServiceType}:`, belongsToService);

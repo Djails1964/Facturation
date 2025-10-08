@@ -3,30 +3,21 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import ClientService from '../../../services/ClientService';
 
-/**
- * Hook personnalisé pour gérer les filtres des factures
- * 
- * @param {Array} facturesNonFiltrees - Liste de toutes les factures à filtrer
- * @param {Function} chargerFactures - Fonction pour recharger les factures
- * @returns {Object} État et fonctions pour gérer les filtres
- */
-export const useFactureFilters = (facturesNonFiltrees, chargerFactures) => {
-    // Initialisation du service client
+export const useFactureFilters = (facturesNonFiltrees, chargerFactures, anneeSelectionneeFromParent, setAnneeSelectionneeFromParent) => {
     const clientService = useMemo(() => new ClientService(), []);
     
-    // États des filtres
+    // États des filtres (SANS anneeSelectionnee qui vient du parent)
     const [clients, setClients] = useState([]);
     const [clientSelectionne, setClientSelectionne] = useState('');
     const [etatSelectionne, setEtatSelectionne] = useState('');
     const [isLoadingClients, setIsLoadingClients] = useState(false);
-    const [anneeSelectionnee, setAnneeSelectionnee] = useState(new Date().getFullYear());
     const [filteredFactures, setFilteredFactures] = useState([]);
 
     // Listes pour les filtres
     const etats = useMemo(() => [
         'Tous', 
         'Payée', 
-        'Partiellement payée',  // ✅ NOUVEAU
+        'Partiellement payée',
         'Éditée', 
         'En attente', 
         'Retard', 
@@ -34,7 +25,7 @@ export const useFactureFilters = (facturesNonFiltrees, chargerFactures) => {
         'Envoyée'
     ], []);
     
-    // Générer les options d'années (année courante - 5 ans)
+    // Générer les options d'années
     const anneesOptions = useMemo(() => {
         const anneeActuelle = new Date().getFullYear();
         const options = [];
@@ -44,10 +35,9 @@ export const useFactureFilters = (facturesNonFiltrees, chargerFactures) => {
         return options;
     }, []);
 
-    // Fonction pour charger les clients
+    // Charger les clients
     const chargerClients = useCallback(async () => {
         setIsLoadingClients(true);
-        
         try {
             const clientsData = await clientService.chargerClients();
             setClients(clientsData);
@@ -59,45 +49,45 @@ export const useFactureFilters = (facturesNonFiltrees, chargerFactures) => {
         }
     }, [clientService]);
 
-    // Charger les clients au chargement initial
     useEffect(() => {
         chargerClients();
     }, [chargerClients]);
 
-    // Fonction pour appliquer les filtres
+    // Fonction pour appliquer les filtres (client et état uniquement)
     const appliquerFiltres = useCallback(() => {
         let resultats = [...facturesNonFiltrees];
-        console.log('resultats facturesNonFiltrees:', resultats);
+        console.log('📊 Filtrage - Factures initiales:', resultats.length);
         
         // Filtrer par client
         if (clientSelectionne) {
             resultats = resultats.filter(facture => 
                 facture.client.idClient === parseInt(clientSelectionne)
             );
+            console.log('📊 Après filtre client:', resultats.length);
         }
         
-        // Filtrer par état
+        // ✅ Filtrer par état - utiliser etatAffichage pour gérer "Retard"
         if (etatSelectionne && etatSelectionne !== 'Tous') {
-            resultats = resultats.filter(facture => 
-                facture.etat === etatSelectionne
-            );
+            resultats = resultats.filter(facture => {
+                const etatAComparer = facture.etatAffichage || facture.etat;
+                return etatAComparer === etatSelectionne;
+            });
+            console.log(`📊 Après filtre état "${etatSelectionne}":`, resultats.length);
         }
         
         setFilteredFactures(resultats);
     }, [clientSelectionne, etatSelectionne, facturesNonFiltrees]);
 
-    // Appliquer les filtres quand ils changent
     useEffect(() => {
         appliquerFiltres();
     }, [clientSelectionne, etatSelectionne, facturesNonFiltrees, appliquerFiltres]);
 
-    // Gestionnaires d'événements pour les changements de filtres
+    // ✅ Gestionnaire d'année - appelle setAnneeSelectionneeFromParent
     const handleAnneeChange = useCallback((e) => {
         const nouvelleAnnee = parseInt(e.target.value);
-        setAnneeSelectionnee(nouvelleAnnee);
-        // On peut avoir besoin de recharger les factures avec la nouvelle année
-        setTimeout(() => chargerFactures(), 0);
-    }, [chargerFactures]);
+        console.log('📅 Changement d\'année:', nouvelleAnnee);
+        setAnneeSelectionneeFromParent(nouvelleAnnee);
+    }, [setAnneeSelectionneeFromParent]);
 
     const handleClientChange = useCallback((e) => {
         setClientSelectionne(e.target.value);
@@ -107,11 +97,10 @@ export const useFactureFilters = (facturesNonFiltrees, chargerFactures) => {
         setEtatSelectionne(e.target.value);
     }, []);
 
-    // Retourner tous les états et fonctions nécessaires
     return {
         clients,
         isLoadingClients,
-        anneeSelectionnee,
+        anneeSelectionnee: anneeSelectionneeFromParent, // ✅ Retourner celle du parent
         clientSelectionne,
         etatSelectionne,
         filteredFactures,

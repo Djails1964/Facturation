@@ -216,8 +216,8 @@
 
 .paiements-table-header .table-cell:nth-child(5),
 .table-row .table-cell:nth-child(5) {
-  flex: 0 0 18%; /* Méthode - 18% */
-  min-width: 120px;
+  flex: 0 0 12%; /* Méthode - 18% */
+  min-width: 90px;
   padding: 0 8px;
 }
 
@@ -231,9 +231,9 @@
 
 .paiements-table-header .table-cell:nth-child(7),
 .table-row .table-cell:nth-child(7) {
-  flex: 0 0 130px !important; /* Actions - largeur fixe en pixels */
-  min-width: 130px !important;
-  max-width: 130px !important;
+  flex: 0 0 170px !important; /* Actions - largeur fixe en pixels */
+  min-width: 170px !important;
+  max-width: 170px !important;
   justify-content: flex-end !important; 
   padding: 0 8px 0 0 !important; /* Pas de padding à droite */
 }
@@ -247,8 +247,8 @@
   display: flex !important;
   align-items: center !important;
   justify-content: flex-end !important;
-  gap: 4px !important;
-  padding: 0 !important; /* Aucun padding pour aller jusqu'au bord */
+  gap: 8px !important;
+  padding: 0 12px 0 0 !important; /* Aucun padding pour aller jusqu'au bord */
   box-sizing: border-box !important;
   border: none !important;
 }
@@ -409,8 +409,8 @@ button.bouton-action:disabled .action-cancel-icon {
   
   .paiements-table-header .table-cell:nth-child(5),
   .table-row .table-cell:nth-child(5) {
-    flex: 0 0 110px;
-    min-width: 110px;
+    flex: 0 0 100px;
+    min-width: 100px;
   }
   
   .paiements-table-header .table-cell:nth-child(6),
@@ -422,9 +422,9 @@ button.bouton-action:disabled .action-cancel-icon {
   /* Actions responsive sur écrans moyens - POSITIONNEMENT SEULEMENT */
   .paiements-table-header .table-cell:nth-child(7),
   .table-row .table-cell:nth-child(7) {
-    flex: 0 0 120px !important; /* Plus d'espace sur écrans moyens */
-    min-width: 120px !important;
-    max-width: 120px !important;
+    flex: 0 0 150px !important; /* Plus d'espace sur écrans moyens */
+    min-width: 150px !important;
+    max-width: 150px !important;
     padding: 0 !important;
   }
   
@@ -455,6 +455,24 @@ button.bouton-action:disabled .action-cancel-icon {
     font-size: 13px;
   }
   
+  /* Ajustements pour tablettes */
+  .paiements-table-header .table-cell:nth-child(5),
+  .table-row .table-cell:nth-child(5) {
+    flex: 0 0 90px !important;
+    min-width: 90px !important;
+  }
+  
+  .paiements-table-header .table-cell:nth-child(7),
+  .table-row .table-cell:nth-child(7) {
+    flex: 0 0 130px !important;
+    min-width: 130px !important;
+    max-width: 130px !important;
+  }
+  
+  .table-cell.lf-actions-cell {
+    gap: 6px !important; /* Espacement réduit sur tablettes */
+    padding: 0 8px 0 0 !important;
+  }
   /* Note: Les styles de boutons responsive sont dans buttons.css */
 }
 

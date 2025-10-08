@@ -1,6 +1,6 @@
-// src/components/factures/hooks/useFactures.js - VERSION CORRIGÉE
-
+// src/components/factures/hooks/useFactures.js
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useApiCall } from '../../../hooks/useApiCall';
 import FactureService from '../../../services/FactureService';
 
 /**
@@ -15,36 +15,41 @@ export const useFactures = (nouvelleFactureId, factureModified, onResetFactureMo
     // Initialisation du service facture
     const factureService = useMemo(() => new FactureService(), []);
     
-    // ✅ CORRECTION : Un seul état pour les factures (suppression du doublon)
+    // ✅ Hook API centralisé
+    const { execute, isLoading, error: apiError } = useApiCall();
+    
+    // États
     const [facturesNonFiltrees, setFacturesNonFiltrees] = useState([]);
     const [factureSelectionnee, setFactureSelectionnee] = useState(nouvelleFactureId || null);
-    const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [anneeSelectionnee, setAnneeSelectionnee] = useState(new Date().getFullYear());
 
-    // Fonction pour charger les factures
+    // ✅ MODIFIÉ : Fonction pour charger et enrichir les factures
     const chargerFactures = useCallback(async () => {
-        setIsLoading(true);
-        setError(null);
-        
-        try {
-            const facturesData = await factureService.chargerFactures(anneeSelectionnee);
-            
-            console.log(`Chargement des factures pour l'année ${anneeSelectionnee}:`, facturesData);
-            // ✅ CORRECTION : Un seul setState au lieu de deux
-            setFacturesNonFiltrees(facturesData);
-            
-            console.log(`✅ ${facturesData.length} factures chargées pour l'année ${anneeSelectionnee}`);
-        } catch (error) {
-            console.error('Erreur lors du chargement des factures:', error);
-            setError('Une erreur est survenue lors du chargement des factures: ' + error.message);
-            
-            // ✅ CORRECTION : Un seul setState au lieu de deux
-            setFacturesNonFiltrees([]);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [anneeSelectionnee, factureService]);
+        await execute(
+            async () => {
+                console.log(`📥 Chargement des factures pour l'année ${anneeSelectionnee}...`);
+                const facturesData = await factureService.chargerFactures(anneeSelectionnee);
+                
+                console.log(`🔄 Enrichissement de ${facturesData.length} factures avec états calculés (Retard)...`);
+                // ✅ Enrichir avec etatAffichage qui inclut le calcul de Retard
+                const facturesEnrichies = await factureService.enrichirFacturesAvecEtatAffichage(facturesData);
+                
+                return facturesEnrichies;
+            },
+            (facturesEnrichies) => {
+                console.log(`✅ ${facturesEnrichies.length} factures enrichies chargées pour l'année ${anneeSelectionnee}`);
+                setFacturesNonFiltrees(facturesEnrichies);
+                setError(null);
+            },
+            (err) => {
+                console.error('❌ Erreur lors du chargement des factures:', err);
+                const errorMessage = 'Une erreur est survenue lors du chargement des factures: ' + err.message;
+                setError(errorMessage);
+                setFacturesNonFiltrees([]);
+            }
+        );
+    }, [anneeSelectionnee, factureService, execute]);
 
     // Effet pour recharger les factures si une a été modifiée
     useEffect(() => {
@@ -86,12 +91,11 @@ export const useFactures = (nouvelleFactureId, factureModified, onResetFactureMo
         });
     }, []);
 
-    // ✅ CORRECTION : Retourner seulement les états nécessaires
+    // Retourner les états nécessaires
     return {
-        // factures supprimé car doublon de facturesNonFiltrees
         facturesNonFiltrees,
         isLoading,
-        error,
+        error: error || apiError, // Combiner les erreurs
         factureSelectionnee,
         anneeSelectionnee,
         chargerFactures,

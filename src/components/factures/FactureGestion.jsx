@@ -181,8 +181,16 @@ function FactureGestion({
     };
 
     return (
-        <div className="facture-gestion-container">
+        <div className="paiement-gestion-container">
             {renderContent()}
+            
+            {/* Bouton flottant pour ajouter une nouvelle facture (visible uniquement si on est dans la vue liste) */}
+            {activeView === 'liste' && section !== 'nouvelle' && (
+                <div className="floating-button" onClick={handleNouvelleFacture}>
+                    <span>+</span>
+                    <div className="floating-tooltip">Nouvelle facture</div>
+                </div>
+            )}
         </div>
     );
 }

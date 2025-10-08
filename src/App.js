@@ -84,52 +84,57 @@ function App() {
   }, []);
 
   // Vérification d'authentification au démarrage (code existant identique)
-  useEffect(() => {
-    const checkAuthentication = async () => {
-      console.log('🔍 Vérification de l\'authentification...');
-      try {
-        if (authService.isAuthenticated()) {
-          const currentUser = authService.getCurrentUser();
-          if (authService.checkAuth) {
-            const authData = await authService.checkAuth();
-            if (authData && authData.user) {
-              console.log('✅ Session valide:', authData.user);
-              setUser(authData.user);
-              setAuthenticated(true);
-            } else {
-              console.log('❌ Session invalide');
-              setAuthenticated(false);
-            }
-          } else {
-            console.log('✅ Utilisateur trouvé en localStorage:', currentUser);
-            setUser(currentUser);
+useEffect(() => {
+  const checkAuthentication = async () => {
+    console.log('🔍 Vérification de l\'authentification...');
+    try {
+      if (authService.isAuthenticated()) {
+        const currentUser = authService.getCurrentUser();
+        if (authService.checkAuth) {
+          const authData = await authService.checkAuth();
+          if (authData && authData.user) {
+            console.log('✅ Session valide:', authData.user);
+            setUser(authData.user);
             setAuthenticated(true);
+          } else {
+            console.log('❌ Session invalide');
+            setAuthenticated(false);
           }
         } else {
-          console.log('❌ Aucun utilisateur trouvé');
-          setAuthenticated(false);
+          console.log('✅ Utilisateur trouvé en localStorage:', currentUser);
+          setUser(currentUser);
+          setAuthenticated(true);
         }
-      } catch (error) {
-        console.error('❌ Erreur d\'authentification:', error);
+      } else {
+        console.log('❌ Aucun utilisateur trouvé');
         setAuthenticated(false);
-      } finally {
-        setLoading(false);
       }
-    };
-
-    checkAuthentication();
-
-    const handleAuthExpired = () => {
-      console.log('🚨 Session expirée détectée');
+    } catch (error) {
+      console.error('❌ Erreur d\'authentification:', error);
       setAuthenticated(false);
-      setUser(null);
-    };
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    window.addEventListener('auth-expired', handleAuthExpired);
-    return () => {
-      window.removeEventListener('auth-expired', handleAuthExpired);
-    };
-  }, []);
+  checkAuthentication();
+
+  // ✅ Gestionnaire d'événement auth-expired
+  const handleAuthExpired = () => {
+    console.log('🚨 Session expirée détectée - Déconnexion');
+    setAuthenticated(false);
+    setUser(null);
+    localStorage.removeItem('user');
+    // Optionnel : afficher un message
+    alert('Votre session a expiré. Veuillez vous reconnecter.');
+  };
+
+  window.addEventListener('auth-expired', handleAuthExpired);
+  
+  return () => {
+    window.removeEventListener('auth-expired', handleAuthExpired);
+  };
+}, []);
 
   useEffect(() => {
     console.log('🔄 useEffect authentification - authenticated:', authenticated, 'user:', user);

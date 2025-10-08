@@ -1,0 +1,82 @@
+/* src/components/shared/filters/UnifiedFilter.css */
+
+/* Container principal */
+.unified-filters {
+  margin-bottom: 20px;
+}
+
+/* Le bouton utilise déjà btn-primary de buttons.css */
+.filters-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filters-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Badge de filtres actifs */
+.filter-active-badge {
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  margin-left: 8px;
+}
+
+/* Panel de filtres */
+.filters-panel {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ligne de filtres */
+.filter-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+/* Les input-group utilisent déjà forms.css */
+.unified-filters .input-group {
+  min-width: 200px;
+  flex: 1;
+}
+
+/* Actions de filtre */
+.filter-actions {
+  display: flex;
+  align-items: flex-end;
+}
+
+/* Les boutons utilisent déjà btn-secondary de buttons.css */
+
+/* Responsive */
+@media (max-width: 768px) {
+  .filter-row {
+    flex-direction: column;
+  }
+  
+  .unified-filters .input-group {
+    width: 100%;
+  }
+}

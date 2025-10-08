@@ -130,11 +130,11 @@ export class FieldConverter {
       }
     });
     
-    console.log('🔄 Conversion API → Frontend:', { 
-      original: data, 
-      converted,
-      mapping: Object.keys(mapping).filter(k => data.hasOwnProperty(k))
-    });
+    // console.log('🔄 Conversion API → Frontend:', { 
+    //   original: data, 
+    //   converted,
+    //   mapping: Object.keys(mapping).filter(k => data.hasOwnProperty(k))
+    // });
     
     return converted;
   }

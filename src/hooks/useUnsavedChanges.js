@@ -116,7 +116,7 @@ export const useUnsavedChanges = (
         const currentFiltered = {
           numeroFacture: currentData.numeroFacture,
           dateFacture: currentData.dateFacture,
-          clientId: currentData.clientId,
+          idClient: currentData.idClient,
           ristourne: currentData.ristourne || 0,
           lignes: currentData.lignes?.map(l => ({
             description: l.description,
@@ -130,7 +130,7 @@ export const useUnsavedChanges = (
         const savedFiltered = {
           numeroFacture: lastSavedData.current.numeroFacture,
           dateFacture: lastSavedData.current.dateFacture,
-          clientId: lastSavedData.current.clientId,
+          idClient: lastSavedData.current.idClient,
           ristourne: lastSavedData.current.ristourne || 0,
           lignes: lastSavedData.current.lignes?.map(l => ({
             description: l.description,
@@ -140,6 +140,12 @@ export const useUnsavedChanges = (
             idUnite: l.idUnite
           })) || []
         };
+
+        console.log('📊 Comparaison lignes facture:', {
+          currentLignes: currentFiltered.lignes,
+          savedLignes: savedFiltered.lignes,
+          equal: deepCompare(currentFiltered.lignes, savedFiltered.lignes)
+        });
         
         hasChanges = !deepCompare(savedFiltered, currentFiltered);
       } else {

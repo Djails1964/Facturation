@@ -189,6 +189,13 @@ export const LIMITS = {
     MAX_REASON_LENGTH: 250
 };
 
+export const DEFAULT_VALUES = {
+    METHODE_PAIEMENT: METHODES_PAIEMENT.ESPECES, // 'virement' par défaut
+    DATE_PAIEMENT: null, // Sera initialisé par DateService.getTodayInputFormat()
+    MONTANT_PAYE: '',
+    COMMENTAIRE: ''
+};
+
 // ✅ EXPORT PAR DÉFAUT
 const paiementConstants = {
     FORM_MODES,
@@ -205,7 +212,8 @@ const paiementConstants = {
     NOTIFICATIONS,
     LOADING_MESSAGES,
     HELP_TEXTS,
-    LIMITS
+    LIMITS,
+    DEFAULT_VALUES
 };
 
 export default paiementConstants;

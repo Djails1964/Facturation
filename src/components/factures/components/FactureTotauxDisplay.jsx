@@ -37,7 +37,20 @@ function FactureTotauxDisplay({
     useEffect(() => {
         console.log('⭐ Effet de synchronisation ristourneInitiale:', ristourneInitiale);
         isUpdatingFromProp.current = true;
-        const nouveauMontant = parseFloat(ristourneInitiale) || 0;
+        
+        // ✅ CORRECTION: Gérer le cas où ristourneInitiale est un objet ou un nombre
+        let nouveauMontant = 0;
+        
+        if (typeof ristourneInitiale === 'object' && ristourneInitiale !== null) {
+            // Si c'est un objet, extraire la propriété ristourne
+            nouveauMontant = parseFloat(ristourneInitiale.ristourne) || 0;
+        } else {
+            // Sinon, c'est un nombre
+            nouveauMontant = parseFloat(ristourneInitiale) || 0;
+        }
+        
+        console.log('🔍 nouveauMontant extrait:', nouveauMontant);
+        
         setRistourne(nouveauMontant);
         setRistourneDisplay(formatMontant(nouveauMontant));
         setTimeout(() => {
@@ -75,31 +88,35 @@ function FactureTotauxDisplay({
     // Gérer le changement de valeur de la ristourne
     const handleRistourneChange = (e) => {
         const valeurSaisie = e.target.value;
-        
-        setRistourneDisplay(valeurSaisie);
-        
-        const valeurNumerique = valeurSaisie.replace(',', '.');
-        const nouvelleValeur = valeurNumerique === '' ? 0 : parseFloat(valeurNumerique);
-        
-        if (!isNaN(nouvelleValeur)) {
-            setRistourne(nouvelleValeur);
-            notifyParentWithDelay(nouvelleValeur);
-        }
+        setRistourneDisplay(valeurSaisie); // Juste afficher, pas parser
     };
 
-    // Gérer la perte de focus pour formater correctement
+    // Au blur : parser et formater
     const handleRistourneBlur = () => {
-        setRistourneDisplay(formatMontant(ristourne));
+        console.log('🔍 BLUR - ristourneDisplay:', ristourneDisplay);
         
-        if (debounceTimeout.current) {
-            clearTimeout(debounceTimeout.current);
-            if (onChange && !readOnly && !isUpdatingFromProp.current) {
-                onChange({
-                    totalBrut,
-                    ristourne,
-                    totalNet: Math.max(0, totalBrut - ristourne)
-                });
-            }
+        // Nettoyer la valeur : accepter TOUS les séparateurs (virgule, point, apostrophe)
+        const valeurNettoyee = ristourneDisplay
+            .replace(/['\s]/g, '')  // Supprimer apostrophes et espaces
+            .replace(',', '.');      // Remplacer virgule par point
+        
+        console.log('🔍 BLUR - valeurNettoyee:', valeurNettoyee);
+        
+        const nouvelleValeur = valeurNettoyee === '' ? 0 : parseFloat(valeurNettoyee) || 0;
+        
+        console.log('🔍 BLUR - nouvelleValeur:', nouvelleValeur);
+        
+        setRistourne(nouvelleValeur);
+        setRistourneDisplay(formatMontant(nouvelleValeur));
+        
+        console.log('🔍 BLUR - après formatage:', formatMontant(nouvelleValeur));
+        
+        if (onChange && !readOnly) {
+            onChange({
+                totalBrut,
+                ristourne: nouvelleValeur,
+                totalNet: Math.max(0, totalBrut - nouvelleValeur)
+            });
         }
     };
     

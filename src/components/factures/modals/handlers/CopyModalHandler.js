@@ -243,32 +243,28 @@ export class CopyModalHandler {
      * ✅ CORRECTION: Préparer les données avec les bons noms de champs pour le backend
      */
     prepareNewFactureData(factureData, nouveauNumero) {
-        // ✅ Utiliser les noms de champs attendus par le backend PHP
-        console.log('🔄 Préparation des données pour la nouvelle facture avec numéro:', nouveauNumero);
-        console.log('🔄 Données source:', factureData);
+        console.log('📄 Préparation des données pour la nouvelle facture avec numéro:', nouveauNumero);
+        console.log('📄 Données source:', factureData);
+        
+        // ✅ Construction du nom du client de manière robuste
+        let clientNom = 'Client inconnu';
+        if (factureData.client && factureData.client.prenom && factureData.client.nom) {
+            clientNom = `${factureData.client.prenom} ${factureData.client.nom}`;
+        } else if (factureData.prenom && factureData.nom) {
+            // Cas où prenom/nom sont directement dans factureData
+            clientNom = `${factureData.prenom} ${factureData.nom}`;
+        }
+        
+        console.log('✅ Nom du client pour la copie:', clientNom);
+        
         return {
-            // Champs principaux avec les bons noms
             numeroFacture: nouveauNumero,
             dateFacture: new Date().toISOString().split('T')[0],
             idClient: factureData.idClient,
-            montantTotal: factureData.montantTotal,  // ✅ Changé de montant de la facture
+            montantTotal: factureData.montantTotal,
             ristourne: factureData.ristourne || 0,
-            
-            // Informations client pour le logging
-            client_nom: factureData.client ? `${factureData.client.prenom} ${factureData.client.nom}` : 'Client inconnu',
-            
-            // État et flags
+            clientNom: clientNom,  // ✅ Utiliser camelCase (sera converti en client_nom)
             etat: 'En attente',
-            est_imprimee: false,
-            est_envoyee: false,
-            est_annulee: false,
-            est_payee: false,
-            datePaiement: null,
-            dateAnnulation: null,
-            factfilename: null,
-            documentPath: null,
-            
-            // Lignes de facturation
             lignes: factureData.lignes.map(ligne => ({
                 description: ligne.description,
                 descriptionDates: ligne.descriptionDates || '',

@@ -1,86 +1,70 @@
 // src/components/clients/hooks/useClientForm.js
-// Hook principal pour la gestion du formulaire client
-// ✅ CORRECTIF FINAL : Gestion unifiée du guard global et local
-
-import { useState, useCallback, useMemo, useEffect } from 'react';
-import { FORM_MODES } from '../../../constants/clientConstants';
-import { normalizeBooleanFields, toBoolean } from '../../../utils/booleanHelper';
-import { getDefaultClient, getFormData, normalizeClientForAPI } from '../utils/clientHelpers';
-import { validateAllClientFields } from '../utils/clientValidators';
-import { useUnsavedChanges } from '../../../hooks/useUnsavedChanges';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigationGuard } from '../../../App';
+import { useUnsavedChanges } from '../../../hooks/useUnsavedChanges';
+import { useAutoNavigationGuard } from '../../../hooks/useAutoNavigationGuard';
+import { showConfirm } from '../../../utils/modalSystem';
+import { FORM_MODES, VALIDATION_MESSAGES } from '../../../constants/clientConstants';
 import ClientService from '../../../services/ClientService';
+import { normalizeBooleanFields, toBoolean } from '../../../utils/booleanHelper';
 
-/**
- * Hook principal pour la gestion du formulaire client
- * ✅ CORRECTIF FINAL : Guard global qui utilise les gestionnaires de useClientNavigation
- */
-export function useClientForm(mode, clientId, clientService = ClientService) {
-  // ================================
-  // ÉTAT LOCAL
-  // ================================
-  
-  const [client, setClient] = useState(getDefaultClient());
-  const [isLoading, setIsLoading] = useState(true);
+export const useClientForm = (mode, idClient, propClientService = null) => {
+  // Navigation protection
+  const { unregisterGuard } = useNavigationGuard();
+  const guardId = `client-form-${idClient || 'new'}`;
+
+  // Service client
+  const clientService = propClientService || ClientService;
+  const isReadOnly = mode === FORM_MODES.VIEW;
+
+  // États principaux
+  const [client, setClient] = useState({
+    titre: '',
+    nom: '',
+    prenom: '',
+    rue: '',
+    numero: '',
+    code_postal: '',
+    localite: '',
+    telephone: '',
+    email: '',
+    estTherapeute: false
+  });
+
+  const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
-  
-  // États pour la détection des modifications
-  const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
-  const [isFullyInitialized, setIsFullyInitialized] = useState(false);
-  const [initialFormData, setInitialFormData] = useState({});
-
-  // États de validation
-  const [fieldErrors, setFieldErrors] = useState({
-    email: null,
-    telephone: null
-  });
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [fieldWarnings, setFieldWarnings] = useState({});
   const [phoneType, setPhoneType] = useState(null);
 
-  // ✅ NOUVEAU : État pour gestionnaires globaux (fourni par useClientNavigation)
-  const [globalNavigationHandlers, setGlobalNavigationHandlers] = useState({
-    setShowGlobalModal: null,
-    setGlobalNavigationCallback: null
-  });
+  // États pour le système de navigation
+  const [isFullyInitialized, setIsFullyInitialized] = useState(false);
+  const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
+  const [initialFormData, setInitialFormData] = useState({});
+  const [showGlobalModal, setShowGlobalModal] = useState(false);
+  const [globalNavigationCallback, setGlobalNavigationCallback] = useState(null);
 
-  // ================================
-  // NAVIGATION GUARD UNIFIÉ
-  // ================================
-  
-  const { registerGuard, unregisterGuard } = useNavigationGuard();
-  const guardId = `client-form-${client.id || 'new'}`;
+  // Référence pour éviter la double initialisation
+  const hasInitialized = useRef(false);
 
-  // ================================
-  // PROPRIÉTÉS DÉRIVÉES
-  // ================================
-  
-  const isReadOnly = mode === FORM_MODES.VIEW;
-  
-  // Données actuelles du formulaire pour détection de modifications
-  const currentFormData = useMemo(() => {
-    return getFormData(client);
+  // Fonction pour obtenir les données du formulaire
+  const getFormData = useCallback(() => {
+    return {
+      titre: client.titre,
+      nom: client.nom,
+      prenom: client.prenom,
+      rue: client.rue,
+      numero: client.numero,
+      code_postal: client.code_postal,
+      localite: client.localite,
+      telephone: client.telephone,
+      email: client.email,
+      estTherapeute: client.estTherapeute
+    };
   }, [client]);
 
-  // Validation globale du formulaire
-  const validationResult = useMemo(() => {
-    return validateAllClientFields(client);
-  }, [client]);
-
-  const isFormValid = validationResult.isValid && !fieldErrors.email && !fieldErrors.telephone;
-  const hasErrors = !isFormValid;
-
-  // ✅ DEBUG temporaire pour diagnostiquer le problème de validation
-  console.log('🔍 DEBUG validation détaillée:', {
-    'validationResult': validationResult,
-    'validationResult.isValid': validationResult.isValid,
-    'validationResult.errors': validationResult.errors,
-    'fieldErrors': fieldErrors,
-    'client data': client,
-    'mode': mode,
-    'isFormValid final': isFormValid
-  });
-
-  // Fonction pour vérifier si on peut détecter les modifications
+  // Fonction pour vérifier si on peut détecter les changements
   const canDetectChanges = useCallback(() => {
     return !isLoading && 
            !isSubmitting && 
@@ -90,17 +74,13 @@ export function useClientForm(mode, clientId, clientService = ClientService) {
            mode !== FORM_MODES.VIEW;
   }, [isLoading, isSubmitting, isInitialLoadDone, isFullyInitialized, initialFormData, mode]);
 
-  // ================================
-  // ✅ HOOK UNIFIÉ POUR DÉTECTION DES MODIFICATIONS
-  // ================================
+  // Données actuelles pour la détection
+  const currentFormData = useMemo(() => {
+    const data = canDetectChanges() ? getFormData() : {};
+    return data;
+  }, [canDetectChanges, client]);
 
-  const unsavedChangesHook = useUnsavedChanges(
-    initialFormData,
-    currentFormData,
-    isSubmitting,
-    false // pas de debug par défaut
-  );
-
+  // Hook de détection des modifications
   const {
     hasUnsavedChanges,
     showUnsavedModal,
@@ -109,314 +89,267 @@ export function useClientForm(mode, clientId, clientService = ClientService) {
     cancelNavigation,
     requestNavigation,
     resetChanges
-  } = unsavedChangesHook;
+  } = useUnsavedChanges(
+    initialFormData,
+    currentFormData,
+    isSubmitting,
+    false
+  );
 
-  // ================================
-  // ✅ ENREGISTREMENT DU GUARD UNIFIÉ (Version compatible système global)
-  // ================================
+  // Protection automatique de navigation
+  useAutoNavigationGuard(hasUnsavedChanges, {
+    isActive: mode !== FORM_MODES.VIEW && isFullyInitialized,
+    guardId: guardId,
+    debug: false
+  });
 
+  // Gestion des événements de navigation globale
   useEffect(() => {
-    if (mode !== FORM_MODES.VIEW && isFullyInitialized) {
-      console.log('🛡️ CLIENT FORM - Enregistrement du guard unifié:', guardId);
-      
-      // ✅ CORRECTIF FINAL : Utiliser la signature compatible avec le système global
-      const guardFunction = async () => {
-        console.log('🔍 CLIENT FORM - Guard appelé:', { guardId, hasUnsavedChanges });
-        
-        // Retourner true si des modifications non sauvegardées existent (bloquer la navigation)
-        return hasUnsavedChanges;
-      };
-      
-      registerGuard(guardId, guardFunction);
-      
-      return () => {
-        console.log('🗑️ CLIENT FORM - Désenregistrement du guard unifié:', guardId);
-        unregisterGuard(guardId);
-      };
-    }
-  }, [mode, isFullyInitialized, guardId, registerGuard, unregisterGuard, hasUnsavedChanges]);
+    if (mode === FORM_MODES.VIEW || !hasUnsavedChanges) return;
 
-  // ✅ GESTION DES ÉVÉNEMENTS DE NAVIGATION GLOBALE (comme PaiementForm)
-  useEffect(() => {
-    if (mode !== FORM_MODES.VIEW && hasUnsavedChanges) {
-      const handleGlobalNavigation = (event) => {
-        console.log('🌐 CLIENT FORM - Événement navigation-blocked reçu:', event.detail);
-        
-        if (event.detail && event.detail.source && event.detail.callback) {
-          console.log('🔗 CLIENT FORM - Stockage du callback de navigation globale');
-          
-          // Utiliser les gestionnaires de useClientNavigation
-          if (globalNavigationHandlers.setShowGlobalModal && globalNavigationHandlers.setGlobalNavigationCallback) {
-            globalNavigationHandlers.setGlobalNavigationCallback(() => event.detail.callback);
-            globalNavigationHandlers.setShowGlobalModal(true);
+    const handleNavigationBlocked = async (event) => {
+      console.log('🌍 CLIENT FORM - Événement navigation-blocked reçu:', event.detail);
+      
+      if (event.detail && event.detail.callback) {
+        try {
+          const result = await showConfirm({
+            title: "Modifications non sauvegardées",
+            message: "Vous avez des modifications non sauvegardées. Souhaitez-vous vraiment quitter sans sauvegarder ?",
+            confirmText: "Quitter sans sauvegarder",
+            cancelText: "Continuer l'édition",
+            type: 'warning'
+          });
+
+          if (result.action === 'confirm') {
+            console.log('✅ CLIENT - Navigation confirmée');
+            resetChanges();
+            unregisterGuard(guardId);
+            if (event.detail.callback) {
+              event.detail.callback();
+            }
+          } else {
+            console.log('❌ CLIENT - Navigation annulée');
           }
+        } catch (error) {
+          console.error('Erreur dans la modal de navigation:', error);
         }
-      };
+      }
+    };
 
-      window.addEventListener('navigation-blocked', handleGlobalNavigation);
-      return () => window.removeEventListener('navigation-blocked', handleGlobalNavigation);
+    window.addEventListener('navigation-blocked', handleNavigationBlocked);
+    
+    return () => {
+      window.removeEventListener('navigation-blocked', handleNavigationBlocked);
+    };
+  }, [mode, hasUnsavedChanges, resetChanges, unregisterGuard, guardId]);
+
+  // Fonction pour charger un client
+  const chargerClient = async (id) => {
+    if (hasInitialized.current) {
+      console.log('Client déjà initialisé, skip');
+      return;
     }
-  }, [mode, hasUnsavedChanges, globalNavigationHandlers]);
 
-  // ================================
-  // FONCTIONS DE VALIDATION
-  // ================================
-
-  const validateField = useCallback((fieldName, value) => {
-    const { validateEmail, validatePhone } = require('../utils/clientValidators');
-    
-    switch (fieldName) {
-      case 'email':
-        const emailResult = validateEmail(value);
-        setFieldErrors(prev => ({
-          ...prev,
-          email: emailResult.isValid ? null : emailResult.error
-        }));
-        return emailResult.isValid;
-        
-      case 'telephone':
-        const phoneResult = validatePhone(value);
-        setFieldErrors(prev => ({
-          ...prev,
-          telephone: phoneResult.isValid ? null : phoneResult.error
-        }));
-        if (phoneResult.isValid && phoneResult.type) {
-          setPhoneType(phoneResult.type);
-        }
-        return phoneResult.isValid;
-        
-      default:
-        return true;
-    }
-  }, []);
-
-  // ================================
-  // GESTIONNAIRES D'ÉVÉNEMENTS
-  // ================================
-
-  const handleChange = useCallback((e) => {
-    const { name, value, type, checked } = e.target;
-    const fieldValue = type === 'checkbox' ? checked : value;
-    
-    setClient(prev => ({
-      ...prev,
-      [name]: fieldValue
-    }));
-    
-    // Validation en temps réel
-    validateField(name, fieldValue);
-  }, [validateField]);
-
-  const toggleTherapeute = useCallback(() => {
-    setClient(prev => ({
-      ...prev,
-      estTherapeute: !toBoolean(prev.estTherapeute)
-    }));
-  }, []);
-
-  // ================================
-  // CHARGEMENT ET PERSISTANCE
-  // ================================
-
-  const chargerClient = useCallback(async (id) => {
     try {
       setIsLoading(true);
-      console.log('📄 Chargement du client:', id);
-      
+      hasInitialized.current = true;
+
       const data = await clientService.getClient(id);
       if (data) {
         const normalizedClient = normalizeBooleanFields(data, ['estTherapeute']);
         setClient(normalizedClient);
         
         // Validation initiale
-        validateField('email', normalizedClient.email || '');
-        validateField('telephone', normalizedClient.telephone || '');
-        
-        console.log('✅ Client chargé:', normalizedClient);
-      } else {
-        throw new Error('Client introuvable');
+        validateEmail(normalizedClient.email || '');
+        validatePhone(normalizedClient.telephone || '');
+
+        // Sauvegarder les données initiales
+        const formData = {
+          titre: normalizedClient.titre || '',
+          nom: normalizedClient.nom || '',
+          prenom: normalizedClient.prenom || '',
+          rue: normalizedClient.rue || '',
+          numero: normalizedClient.numero || '',
+          code_postal: normalizedClient.code_postal || '',
+          localite: normalizedClient.localite || '',
+          telephone: normalizedClient.telephone || '',
+          email: normalizedClient.email || '',
+          estTherapeute: normalizedClient.estTherapeute || false
+        };
+
+        setInitialFormData(formData);
+        setIsInitialLoadDone(true);
+        setIsFullyInitialized(true);
       }
-    } catch (err) {
-      console.error('❌ Erreur lors du chargement du client:', err);
-      setError(`Erreur lors du chargement du client: ${err.message}`);
+    } catch (error) {
+      console.error('Erreur lors du chargement du client:', error);
+      setError(error.message);
     } finally {
       setIsLoading(false);
     }
-  }, [clientService, validateField]);
+  };
 
-  // ================================
-  // SOUMISSION DU FORMULAIRE
-  // ================================
-
-  const handleSubmit = useCallback(async (e) => {
-    if (e) e.preventDefault();
-    
-    if (isSubmitting || !isFormValid) {
-      console.warn('⚠️ Soumission bloquée:', { isSubmitting, isFormValid });
-      return null;
+  // Validation email
+  const validateEmail = (email) => {
+    if (!email) {
+      setFieldErrors(prev => ({ ...prev, email: null }));
+      return true;
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setFieldErrors(prev => ({ ...prev, email: 'Format d\'email invalide' }));
+      return false;
+    }
+
+    setFieldErrors(prev => ({ ...prev, email: null }));
+    return true;
+  };
+
+  // Validation téléphone
+  const validatePhone = (phone) => {
+    if (!phone) {
+      setFieldErrors(prev => ({ ...prev, telephone: null }));
+      setPhoneType(null);
+      return true;
+    }
+
+    const swissRegex = /^(\+41|0041|0)[1-9]\d{8}$/;
+    const foreignRegex = /^\+(?!41)\d{1,3}\d{6,14}$/;
+
+    if (swissRegex.test(phone.replace(/\s/g, ''))) {
+      setPhoneType('swiss');
+      setFieldErrors(prev => ({ ...prev, telephone: null }));
+      return true;
+    } else if (foreignRegex.test(phone.replace(/\s/g, ''))) {
+      setPhoneType('foreign');
+      setFieldErrors(prev => ({ ...prev, telephone: null }));
+      return true;
+    } else {
+      setPhoneType(null);
+      setFieldErrors(prev => ({ ...prev, telephone: 'Format de téléphone invalide' }));
+      return false;
+    }
+  };
+
+  // Gestionnaire de changement de champ
+  const handleChange = useCallback((e) => {
+    if (isReadOnly) return;
+
+    const { name, value } = e.target;
+    setClient(prev => ({ ...prev, [name]: value }));
+
+    // Validation en temps réel
+    if (name === 'email') {
+      validateEmail(value);
+    } else if (name === 'telephone') {
+      validatePhone(value);
+    }
+  }, [isReadOnly]);
+
+  // Toggle thérapeute
+  const toggleTherapeute = useCallback(() => {
+    if (isReadOnly) return;
+    setClient(prev => ({ ...prev, estTherapeute: !prev.estTherapeute }));
+  }, [isReadOnly]);
+
+  // Soumission du formulaire
+  const handleSubmit = useCallback(async () => {
+    if (isReadOnly || isSubmitting) return { success: false };
+
+    // Validation finale
+    const isEmailValid = validateEmail(client.email);
+    const isPhoneValid = validatePhone(client.telephone);
+
+    if (!isEmailValid || !isPhoneValid) {
+      setError(VALIDATION_MESSAGES.INVALID_FIELDS);
+      return { success: false, message: VALIDATION_MESSAGES.INVALID_FIELDS };
+    }
+
+    if (!client.nom || !client.prenom) {
+      setError(VALIDATION_MESSAGES.REQUIRED_FIELDS);
+      return { success: false, message: VALIDATION_MESSAGES.REQUIRED_FIELDS };
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+
     try {
-      setIsSubmitting(true);
-      setError(null);
-      
-      console.log('📤 Soumission du formulaire client:', mode);
-      
-      // Normaliser les données pour l'API
-      const clientData = normalizeClientForAPI(client);
-      
       let result;
-      
       if (mode === FORM_MODES.CREATE) {
-        console.log('➕ Création du client:', clientData);
-        result = await clientService.createClient(clientData);
+        result = await clientService.createClient(client);
       } else if (mode === FORM_MODES.EDIT) {
-        console.log('✏️ Modification du client:', clientData);
-        result = await clientService.updateClient(client.id, clientData);
+        result = await clientService.updateClient(idClient, client);
       }
 
-      if (result) {
-        console.log('✅ Client sauvegardé avec succès:', result);
-        
-        // ✅ Mettre à jour les données initiales via le système unifié
-        const newFormData = getFormData(client);
-        setInitialFormData(newFormData);
+      if (result && result.success) {
         markAsSaved();
-        
-        return result;
+        return {
+          success: true,
+          idClient: result.idClient || idClient,
+          message: mode === FORM_MODES.CREATE ? 'Client créé avec succès' : 'Client modifié avec succès'
+        };
       } else {
-        throw new Error('Aucune réponse du serveur');
+        throw new Error(result?.message || 'Erreur lors de la sauvegarde');
       }
-      
-    } catch (err) {
-      console.error('❌ Erreur lors de la soumission:', err);
-      setError(`Erreur lors de la sauvegarde: ${err.message}`);
-      throw err;
+    } catch (error) {
+      console.error('Erreur lors de la soumission:', error);
+      setError(error.message);
+      return { success: false, message: error.message };
     } finally {
       setIsSubmitting(false);
     }
-  }, [client, mode, isSubmitting, isFormValid, clientService, markAsSaved]);
+  }, [mode, idClient, client, isReadOnly, isSubmitting, clientService, markAsSaved]);
 
-  // ================================
-  // INITIALISATION
-  // ================================
-
-  // Chargement initial des données
+  // Initialisation
   useEffect(() => {
-    const loadData = async () => {
-      if (clientId && (mode === FORM_MODES.VIEW || mode === FORM_MODES.EDIT)) {
-        await chargerClient(clientId);
-      } else if (mode === FORM_MODES.CREATE) {
-        const defaultClient = getDefaultClient();
-        setClient(defaultClient);
-        setFieldErrors({ email: null, telephone: null });
-        setPhoneType(null);
-        setIsLoading(false);
-      }
-      
+    if (mode === FORM_MODES.CREATE) {
+      setInitialFormData(getFormData());
       setIsInitialLoadDone(true);
-    };
-
-    loadData();
-  }, [clientId, mode, chargerClient]);
-
-  // Finalisation de l'initialisation pour la détection de modifications
-  useEffect(() => {
-    if (isInitialLoadDone && !isLoading && !isFullyInitialized) {
-      const timer = setTimeout(() => {
-        const currentData = getFormData(client);
-        
-        // Vérifier que nous avons des données valides
-        const hasValidData = mode === FORM_MODES.CREATE ?
-          true : (currentData && Object.keys(currentData).some(key => currentData[key]));
-
-        if (hasValidData) {
-          setInitialFormData(currentData);
-          setIsFullyInitialized(true);
-          
-          console.log('🔧 Initialisation terminée pour la détection de modifications:', {
-            mode,
-            hasData: Object.keys(currentData).length > 0,
-            initialData: currentData
-          });
-        }
-      }, 200);
-
-      return () => clearTimeout(timer);
+      setIsFullyInitialized(true);
+    } else if (mode !== FORM_MODES.CREATE && idClient && !hasInitialized.current) {
+      chargerClient(idClient);
     }
-  }, [isInitialLoadDone, isLoading, isFullyInitialized, mode, client]);
-
-  // ================================
-  // FONCTIONS UTILITAIRES
-  // ================================
-
-  const resetForm = useCallback(() => {
-    const defaultClient = getDefaultClient();
-    setClient(defaultClient);
-    setFieldErrors({ email: null, telephone: null });
-    setPhoneType(null);
-    setError(null);
-    setInitialFormData(getFormData(defaultClient));
-  }, []);
-
-  // ✅ NOUVEAU : Méthode pour enregistrer les gestionnaires globaux
-  const setGlobalHandlers = useCallback((handlers) => {
-    setGlobalNavigationHandlers(handlers);
-  }, []);
-
-  // ================================
-  // RETOUR DU HOOK
-  // ================================
+  }, [mode, idClient]);
 
   return {
-    // État principal
+    // États
     client,
-    setClient,
     isLoading,
     isSubmitting,
     error,
-    
-    // Validation
     fieldErrors,
+    fieldWarnings,
     phoneType,
-    isFormValid,
-    hasErrors,
-    validationResult,
-    validateField,
+    isReadOnly,
     
-    // Gestionnaires
+    // Navigation
+    hasUnsavedChanges,
+    showUnsavedModal,
+    showGlobalModal,
+    globalNavigationCallback,
+    guardId,
+    isFullyInitialized,
+    
+    // Fonctions
     handleChange,
     toggleTherapeute,
     handleSubmit,
+    setClient,
+    setError,
+    setFieldErrors,
+    setFieldWarnings,
     
-    // Gestion des données
-    chargerClient,
-    resetForm,
-    
-    // Propriétés dérivées
-    isReadOnly,
-    currentFormData,
-    initialFormData,
-    
-    // État d'initialisation
-    isInitialLoadDone,
-    isFullyInitialized,
-    canDetectChanges: canDetectChanges(),
-    
-    // ✅ DONNÉES UNIFIÉES de useUnsavedChanges (pour useClientNavigation)
-    hasUnsavedChanges,
-    showUnsavedModal,
+    // Navigation functions
     markAsSaved,
     confirmNavigation,
     cancelNavigation,
     requestNavigation,
     resetChanges,
-    
-    // ✅ NOUVEAU : Méthode pour connecter avec useClientNavigation
-    setGlobalHandlers,
+    unregisterGuard,
     
     // Utilitaires
-    clientService,
-    guardId
+    getFormData,
+    canDetectChanges
   };
-}
+};

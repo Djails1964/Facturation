@@ -7,9 +7,9 @@ import { toBoolean } from '../../utils/booleanHelper'; // ✅ IMPORT du helper
 // Créer une instance unique du service de clients
 const clientService = new ClientService();
 
-function ClientGestion({ section = 'liste', clientId = null, onClientCreated = null, onSectionChange = null }) {
+function ClientGestion({ section = 'liste', idClient = null, onClientCreated = null, onSectionChange = null }) {
     const [activeView, setActiveView] = useState(section);
-    const [selectedClientId, setSelectedClientId] = useState(clientId);
+    const [selectedClientId, setSelectedClientId] = useState(idClient);
     const [notification, setNotification] = useState({ message: '', type: '' });
 
     // Effet pour mettre à jour la vue active quand la prop section change
@@ -17,12 +17,12 @@ function ClientGestion({ section = 'liste', clientId = null, onClientCreated = n
         setActiveView(section);
     }, [section]);
 
-    // Effet pour mettre à jour l'ID du client sélectionné quand la prop clientId change
+    // Effet pour mettre à jour l'ID du client sélectionné quand la prop idClient change
     useEffect(() => {
-        if (clientId !== null) {
-            setSelectedClientId(clientId);
+        if (idClient !== null) {
+            setSelectedClientId(idClient);
         }
-    }, [clientId]);
+    }, [idClient]);
 
     // Notification au parent quand la section change
     useEffect(() => {
@@ -32,11 +32,11 @@ function ClientGestion({ section = 'liste', clientId = null, onClientCreated = n
     }, [activeView, onSectionChange]);
 
     // Fonction pour gérer le retour à la liste des clients
-    const handleRetourListe = async (clientId = null, success = false, message = '', type = '') => {
-        console.log('🔄 handleRetourListe appelé avec:', { clientId, success, message, type });
+    const handleRetourListe = async (idClient = null, success = false, message = '', type = '') => {
+        console.log('🔄 handleRetourListe appelé avec:', { idClient, success, message, type });
         
-        if (clientId) {
-            setSelectedClientId(clientId);
+        if (idClient) {
+            setSelectedClientId(idClient);
         }
         
         // ✅ CORRECTION : Gérer correctement les paramètres dans l'ordre
@@ -50,16 +50,16 @@ function ClientGestion({ section = 'liste', clientId = null, onClientCreated = n
         };
 
     // Fonction pour gérer la création réussie d'un client
-    const handleClientCreated = async (clientId, message = 'Client créé avec succès') => {
-        setSelectedClientId(clientId);
+    const handleClientCreated = async (idClient, message = 'Client créé avec succès') => {
+        setSelectedClientId(idClient);
         setNotification({ message, type: 'success' });
         
         // ✅ VÉRIFICATION SÉCURISÉE DU STATUT THÉRAPEUTE AVEC LE HELPER
         try {
-            const estTherapeute = await clientService.estTherapeute(clientId);
+            const estTherapeute = await clientService.estTherapeute(idClient);
             const statutTherapeute = toBoolean(estTherapeute);
             
-            console.log(`Le client ${clientId} est${statutTherapeute ? '' : ' pas'} thérapeute`);
+            console.log(`Le client ${idClient} est${statutTherapeute ? '' : ' pas'} thérapeute`);
             
             // Possibilité d'ajouter une logique spécifique selon le statut
             if (statutTherapeute) {
@@ -71,7 +71,7 @@ function ClientGestion({ section = 'liste', clientId = null, onClientCreated = n
         
         // Si un gestionnaire externe a été fourni, l'appeler et laisser le parent gérer la navigation
         if (onClientCreated) {
-            onClientCreated(clientId);
+            onClientCreated(idClient);
         } else {
             // Comportement par défaut si aucun gestionnaire n'est fourni
             setActiveView('liste');
@@ -79,14 +79,14 @@ function ClientGestion({ section = 'liste', clientId = null, onClientCreated = n
     };
 
     // Fonction pour gérer la modification d'un client
-    const handleModifierClient = (clientId) => {
-        setSelectedClientId(clientId);
+    const handleModifierClient = (idClient) => {
+        setSelectedClientId(idClient);
         setActiveView('modifier');
     };
 
     // Fonction pour gérer l'affichage d'un client
-    const handleAfficherClient = (clientId) => {
-        setSelectedClientId(clientId);
+    const handleAfficherClient = (idClient) => {
+        setSelectedClientId(idClient);
         setActiveView('afficher');
     };
 
@@ -101,15 +101,15 @@ function ClientGestion({ section = 'liste', clientId = null, onClientCreated = n
     };
 
     // ✅ GESTIONNAIRE AMÉLIORÉ avec utilisation du helper booléen
-    const handleVerifierSuppressionClient = async (clientId) => {
+    const handleVerifierSuppressionClient = async (idClient) => {
         try {
-            const result = await clientService.checkClientDeletable(clientId);
+            const result = await clientService.checkClientDeletable(idClient);
             
             // ✅ UTILISATION SÉCURISÉE DU HELPER BOOLÉEN
             const aUneFacture = toBoolean(result.aUneFacture);
             
             console.log('✅ DEBUG - Vérification suppression client:', {
-                clientId,
+                idClient,
                 aUneFacture,
                 resultBrut: result.aUneFacture,
                 resultNormalise: aUneFacture
@@ -151,7 +151,7 @@ function ClientGestion({ section = 'liste', clientId = null, onClientCreated = n
                     <ClientForm 
                         mode={FORM_MODES.EDIT}
                         onRetourListe={handleRetourListe}
-                        clientId={selectedClientId}
+                        idClient={selectedClientId}
                         clientService={clientService} // Passer le service au formulaire
                     />
                 );
@@ -159,7 +159,7 @@ function ClientGestion({ section = 'liste', clientId = null, onClientCreated = n
                 return (
                     <ClientForm 
                         mode={FORM_MODES.VIEW}
-                        clientId={selectedClientId}
+                        idClient={selectedClientId}
                         onRetourListe={handleRetourListe}
                         clientService={clientService} // Passer le service au formulaire
                     />
@@ -188,9 +188,9 @@ function ClientGestion({ section = 'liste', clientId = null, onClientCreated = n
             
             {/* Bouton flottant pour ajouter un nouveau client (visible uniquement si on est dans la vue liste) */}
             {activeView === 'liste' && section !== 'nouveau-client' && (
-                <div className="cl-floating-button" onClick={handleNouveauClient}>
+                <div className="floating-button" onClick={handleNouveauClient}>
                     <span>+</span>
-                    <div className="cl-floating-tooltip">Nouveau client</div>
+                    <div className="floating-tooltip">Nouveau client</div>
                 </div>
             )}
         </div>

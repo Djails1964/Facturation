@@ -1,9 +1,11 @@
-// UniteGestion.jsx - Version avec UniteTableSection et filtre intégré
-import React, { useState, useEffect } from 'react';
+// src/components/tarifs/modules/UniteGestion.jsx
+// ✅ VERSION MIGRÉE vers UnifiedFilter avec normalisation des données
+
+import React, { useState, useMemo } from 'react';
 import UniteTableSection from '../sections/UniteTableSection';
 import { AddButton } from '../../../components/ui/buttons';
 import TarifFormHeader from '../sections/TarifFormHeader';
-import TarifFilter from '../components/TarifFilter';
+import UnifiedFilter from '../../../components/shared/filters/UnifiedFilter';
 import { useTarifFilter, createInitialFilters } from '../hooks/useTarifFilter';
 
 const UniteGestion = ({ 
@@ -14,14 +16,26 @@ const UniteGestion = ({
   setMessage,
   setMessageType,
   setConfirmModal,
-  // Nouveaux handlers du système unifié
   onCreateUnite,
   onEditUnite,
   onDeleteUnite
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // ===== INTÉGRATION DU FILTRE =====
+  // ===== NORMALISATION DES DONNÉES =====
+  // 🔧 Normaliser les unités pour que le filtrage fonctionne
+  const normalizedUnites = useMemo(() => {
+    return unites.map(unite => ({
+      ...unite,
+      // Ajouter les propriétés normalisées attendues par useTarifFilter
+      code: unite.codeUnite,
+      nom: unite.nomUnite,
+      description: unite.descriptionUnite || ''
+      // Note: Les unités n'ont pas de statut actif/inactif
+    }));
+  }, [unites]);
+  
+  // ===== FILTRAGE =====
   const {
     filters,
     showFilters,
@@ -30,54 +44,64 @@ const UniteGestion = ({
     handleFilterChange,
     handleResetFilters,
     handleToggleFilters
-  } = useTarifFilter(unites, 'unites', createInitialFilters('unites'));
+  } = useTarifFilter(normalizedUnites, 'unites', createInitialFilters('unites'));
+
+  // ===== OPTIONS DE FILTRAGE =====
+  const filterOptions = useMemo(() => {
+    console.log('🔍 Préparation filterOptions pour unités:', unites.length);
+    
+    // Extraire les valeurs uniques pour chaque champ
+    const uniqueCodes = [...new Set(
+      unites.map(u => u.codeUnite).filter(Boolean)
+    )].sort();
+    
+    const uniqueNoms = [...new Set(
+      unites.map(u => u.nomUnite).filter(Boolean)
+    )].sort();
+    
+    const uniqueDescriptions = [...new Set(
+      unites.map(u => u.descriptionUnite).filter(Boolean)
+    )].sort();
+    
+    console.log('📊 Codes uniques:', uniqueCodes);
+    console.log('📊 Noms uniques:', uniqueNoms);
+    console.log('📊 Descriptions uniques:', uniqueDescriptions);
+    
+    return {
+      code: uniqueCodes,
+      nom: uniqueNoms,
+      description: uniqueDescriptions
+      // Note: Pas de statut pour les unités
+    };
+  }, [unites]);
 
   // ===== HANDLERS POUR LE SYSTÈME UNIFIÉ =====
   
   const handleCreateClick = (event) => {
     if (onCreateUnite) {
-      // Utiliser le nouveau système unifié
       onCreateUnite(event);
     } else {
-      // Fallback vers l'ancien système (deprecated)
-      console.warn('⚠️ onCreateUnite non fourni, utilisation du système legacy');
-      handleLegacyCreate();
+      console.warn('⚠️ onCreateUnite non fourni');
     }
   };
   
   const handleEditClick = (unite, event) => {
+    const idUnite = unite.id || unite.idUnite;
     if (onEditUnite) {
-      // Utiliser le nouveau système unifié
-      onEditUnite(unite.idUnite, event);
+      onEditUnite(idUnite, event);
     } else {
-      // Fallback vers l'ancien système (deprecated)
-      console.warn('⚠️ onEditUnite non fourni, utilisation du système legacy');
-      handleLegacyEdit(unite);
+      console.warn('⚠️ onEditUnite non fourni');
     }
   };
   
   const handleDeleteClick = (unite, event) => {
+    const idUnite = unite.id || unite.idUnite;
+    const uniteName = unite.nomUnite || unite.nom;
     if (onDeleteUnite) {
-      // Utiliser le nouveau système unifié
-      onDeleteUnite(unite.idUnite, unite.nomUnite, event);
+      onDeleteUnite(idUnite, uniteName, event);
     } else {
-      // Fallback vers l'ancien système (deprecated)
-      console.warn('⚠️ onDeleteUnite non fourni, utilisation du système legacy');
-      handleLegacyDelete(unite);
+      console.warn('⚠️ onDeleteUnite non fourni');
     }
-  };
-  
-  // ===== LEGACY HANDLERS (DEPRECATED) =====
-  const handleLegacyCreate = () => {
-    console.log('🔧 Legacy create handler appelé');
-  };
-  
-  const handleLegacyEdit = (unite) => {
-    console.log('🔧 Legacy edit handler appelé:', unite);
-  };
-  
-  const handleLegacyDelete = (unite) => {
-    console.log('🔧 Legacy delete handler appelé:', unite);
   };
 
   // ===== RENDU PRINCIPAL =====
@@ -95,10 +119,10 @@ const UniteGestion = ({
         </AddButton>
       </TarifFormHeader>
       
-      {/* ===== FILTRE - NOUVELLE INTÉGRATION ===== */}
-      <TarifFilter
+      {/* Filtres unifiés */}
+      <UnifiedFilter
         filterType="unites"
-        data={unites}
+        filterOptions={filterOptions}
         filters={filters}
         onFilterChange={handleFilterChange}
         onResetFilters={handleResetFilters}
@@ -109,7 +133,7 @@ const UniteGestion = ({
         className="filter-unites"
       />
       
-      {/* Utilisation d'UniteTableSection avec données filtrées */}
+      {/* Tableau des unités */}
       <UniteTableSection
         unites={unitesFiltered}
         onEdit={handleEditClick}
@@ -118,7 +142,7 @@ const UniteGestion = ({
         isSubmitting={isSubmitting}
       />
       
-      {/* Informations de debug en mode développement */}
+      {/* Informations de debug */}
       {process.env.NODE_ENV === 'development' && (
         <div className="debug-info" style={{
           marginTop: '20px',
@@ -130,12 +154,12 @@ const UniteGestion = ({
         }}>
           <strong>🔧 Debug UniteGestion :</strong><br/>
           - Unités chargées : {unites.length}<br/>
+          - Unités normalisées : {normalizedUnites.length}<br/>
           - Unités filtrées : {unitesFiltered.length}<br/>
           - Filtres actifs : {filterStats.hasActiveFilters ? 'Oui' : 'Non'}<br/>
+          - Filtres actuels : {JSON.stringify(filters)}<br/>
           - Highlighted ID : {highlightedId || 'aucun'}<br/>
-          - Système unifié : {onCreateUnite ? '✅ Actif' : '❌ Non connecté'}<br/>
-          - Is submitting : {isSubmitting ? 'Oui' : 'Non'}<br/>
-          - Filtres actuels : {JSON.stringify(filters)}
+          - ✅ MIGRATION UNIFIEDFILTER COMPLÈTE
         </div>
       )}
     </div>

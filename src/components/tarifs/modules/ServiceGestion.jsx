@@ -1,9 +1,11 @@
-// ServiceGestion.jsx - Version avec filtre intégré
-import React, { useState, useEffect } from 'react';
+// src/components/tarifs/modules/ServiceGestion.jsx
+// ✅ VERSION CORRIGÉE avec normalisation des données pour le filtrage
+
+import React, { useState, useMemo } from 'react';
 import ServiceTableSection from '../sections/ServiceTableSection';
 import { AddButton } from '../../../components/ui/buttons';
 import TarifFormHeader from '../sections/TarifFormHeader';
-import TarifFilter from '../components/TarifFilter';
+import UnifiedFilter from '../../../components/shared/filters/UnifiedFilter';
 import { useTarifFilter, createInitialFilters } from '../hooks/useTarifFilter';
 
 const ServiceGestion = ({ 
@@ -14,61 +16,31 @@ const ServiceGestion = ({
   setMessage,
   setMessageType,
   setConfirmModal,
-  // Nouveaux handlers du système unifié
   onCreateService,
   onEditService,
   onDeleteService
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // ✅ SOLUTION: N'afficher le composant que quand les données sont prêtes
+  const isDataReady = services.length > 0;
   
-  // ===== HANDLERS POUR LE SYSTÈME UNIFIÉ =====
   
-  const handleCreateClick = (event) => {
-    if (onCreateService) {
-      // Utiliser le nouveau système unifié
-      onCreateService(event);
-    } else {
-      // Fallback vers l'ancien système (deprecated)
-      console.warn('⚠️ onCreateService non fourni, utilisation du système legacy');
-      handleLegacyCreate();
-    }
-  };
+  // ===== NORMALISATION DES DONNÉES =====
+  // 🔧 CORRECTION: Normaliser les services pour que le filtrage fonctionne
+  const normalizedServices = useMemo(() => {
+    return services.map(service => ({
+      ...service,
+      // Ajouter les propriétés normalisées attendues par useTarifFilter
+      code: service.codeService,
+      nom: service.nomService,
+      description: service.descriptionService,
+      // Le statut est basé sur la propriété 'actif'
+      statut: service.actif ? 'Actif' : 'Inactif'
+    }));
+  }, [services]);
   
-  const handleEditClick = (service, event) => {
-    if (onEditService) {
-      // Utiliser le nouveau système unifié
-      onEditService(service.idService, event);
-    } else {
-      // Fallback vers l'ancien système (deprecated)
-      console.warn('⚠️ onEditService non fourni, utilisation du système legacy');
-      handleLegacyEdit(service);
-    }
-  };
-  
-  const handleDeleteClick = (service, event) => {
-    if (onDeleteService) {
-      // Utiliser le nouveau système unifié
-      onDeleteService(service.idService, service.nomService, event);
-    } else {
-      // Fallback vers l'ancien système (deprecated)
-      console.warn('⚠️ onDeleteService non fourni, utilisation du système legacy');
-      handleLegacyDelete(service);
-    }
-  };
-  
-  // ===== LEGACY HANDLERS (DEPRECATED) =====
-  const handleLegacyCreate = () => {
-    console.log('🔧 Legacy create handler appelé');
-  };
-  
-  const handleLegacyEdit = (service) => {
-    console.log('🔧 Legacy edit handler appelé:', service);
-  };
-  
-  const handleLegacyDelete = (service) => {
-    console.log('🔧 Legacy delete handler appelé:', service);
-  };
-  // ===== INTÉGRATION DU FILTRE =====
+  // ===== FILTRAGE =====
   const {
     filters,
     showFilters,
@@ -77,10 +49,87 @@ const ServiceGestion = ({
     handleFilterChange,
     handleResetFilters,
     handleToggleFilters
-  } = useTarifFilter(services, 'services', createInitialFilters('services'));
+  } = useTarifFilter(normalizedServices, 'services', createInitialFilters('services'));
 
-  // ===== RENDU PRINCIPAL =====
+  // ===== OPTIONS DE FILTRAGE =====
+  const filterOptions = useMemo(() => {
+    console.log('🔍 Préparation filterOptions pour services:', services.length);
+    
+    // Extraire les valeurs uniques pour chaque champ
+    const uniqueCodes = [...new Set(
+      services.map(s => s.codeService).filter(Boolean)
+    )].sort();
+    
+    const uniqueNoms = [...new Set(
+      services.map(s => s.nomService).filter(Boolean)
+    )].sort();
+    
+    const uniqueDescriptions = [...new Set(
+      services.map(s => s.descriptionService).filter(Boolean)
+    )].sort();
+    
+    console.log('📊 Codes uniques:', uniqueCodes);
+    console.log('📊 Noms uniques:', uniqueNoms);
+    console.log('📊 Descriptions uniques:', uniqueDescriptions);
+    
+    return {
+      code: uniqueCodes,
+      nom: uniqueNoms,
+      description: uniqueDescriptions,
+      statut: ['Actif', 'Inactif']
+    };
+  }, [services]);
+
+  // ✅ AJOUT: État de chargement pendant l'initialisation
+  if (!isDataReady) {
+    return (
+      <div className="service-gestion">
+        <TarifFormHeader
+          titre="Gestion des services"
+          description="Chargement des services..."
+        />
+        <div className="loading-container" style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '40px',
+          minHeight: '300px'
+        }}>
+          <div className="spinner"></div>
+          <span style={{ marginLeft: '10px' }}>Chargement des données...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // ===== HANDLERS =====
+  const handleCreateClick = (event) => {
+    if (onCreateService) {
+      onCreateService(event);
+    } else {
+      console.warn('⚠️ onCreateService non fourni');
+    }
+  };
   
+  const handleEditClick = (service, event) => {
+    const idService = service.id || service.idService;
+    if (onEditService) {
+      onEditService(idService, event);
+    } else {
+      console.warn('⚠️ onEditService non fourni');
+    }
+  };
+  
+  const handleDeleteClick = (service, event) => {
+    const idService = service.id || service.idService;
+    const serviceName = service.nomService || service.nom;
+    if (onDeleteService) {
+      onDeleteService(idService, serviceName, event);
+    } else {
+      console.warn('⚠️ onDeleteService non fourni');
+    }
+  };
+
   return (
     <div className="service-gestion">
       
@@ -94,10 +143,10 @@ const ServiceGestion = ({
         </AddButton>
       </TarifFormHeader>
       
-      {/* ===== FILTRE - NOUVELLE INTÉGRATION ===== */}
-      <TarifFilter
+      {/* Filtres unifiés */}
+      <UnifiedFilter
         filterType="services"
-        data={services}
+        filterOptions={filterOptions}
         filters={filters}
         onFilterChange={handleFilterChange}
         onResetFilters={handleResetFilters}
@@ -108,7 +157,7 @@ const ServiceGestion = ({
         className="filter-services"
       />
       
-      {/* Utilisation de ServiceTableSection avec données filtrées */}
+      {/* Tableau des services */}
       <ServiceTableSection
         services={servicesFiltered}
         onEdit={handleEditClick}
@@ -117,7 +166,7 @@ const ServiceGestion = ({
         isSubmitting={isSubmitting}
       />
       
-      {/* Informations de debug en mode développement */}
+      {/* Informations de debug */}
       {process.env.NODE_ENV === 'development' && (
         <div className="debug-info" style={{
           marginTop: '20px',
@@ -129,12 +178,12 @@ const ServiceGestion = ({
         }}>
           <strong>🔧 Debug ServiceGestion :</strong><br/>
           - Services chargés : {services.length}<br/>
+          - Services normalisés : {normalizedServices.length}<br/>
           - Services filtrés : {servicesFiltered.length}<br/>
           - Filtres actifs : {filterStats.hasActiveFilters ? 'Oui' : 'Non'}<br/>
+          - Filtres actuels : {JSON.stringify(filters)}<br/>
           - Highlighted ID : {highlightedId || 'aucun'}<br/>
-          - Système unifié : {onCreateService ? '✅ Actif' : '❌ Non connecté'}<br/>
-          - Is submitting : {isSubmitting ? 'Oui' : 'Non'}<br/>
-          - Filtres actuels : {JSON.stringify(filters)}
+          - ✅ NORMALISATION ACTIVE
         </div>
       )}
     </div>

@@ -73,14 +73,26 @@ function PaiementGestion({
 
     // Gestion du retour à la liste
     const handleRetourListe = (idPaiement = null, modified = false, message = '', type = '') => {
+        console.log('📥 PaiementGestion.handleRetourListe appelé avec:', { 
+            idPaiement, 
+            modified, 
+            message, 
+            type 
+        });
+        
         if (idPaiement) {
+            console.log('🔄 Mise à jour selectedPaiementId:', idPaiement);
             setSelectedPaiementId(idPaiement);
         }
         
         if (message) {
+            console.log('🔔 Définition de la notification:', { message, type: type || 'success' });
             setNotification({ message, type: type || 'success' });
+        } else {
+            console.log('⚠️ Pas de message de notification');
         }
         
+        console.log('🔄 Changement de vue vers liste');
         setActiveView('liste');
     };
 
@@ -188,6 +200,14 @@ function PaiementGestion({
     return (
         <div className="paiement-gestion-container">
             {renderContent()}
+            
+            {/* Bouton flottant pour ajouter un nouveau paiement (visible uniquement si on est dans la vue liste) */}
+            {activeView === 'liste' && section !== 'nouveau-paiement' && (
+                <div className="floating-button" onClick={handleNouveauPaiement}>
+                    <span>+</span>
+                    <div className="floating-tooltip">Nouveau paiement</div>
+                </div>
+            )}
         </div>
     );
 }

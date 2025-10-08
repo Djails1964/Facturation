@@ -10,7 +10,7 @@ import { normalizeBooleanFields } from '../../../utils/booleanHelper';
  * Hook pour l'initialisation et le chargement des données client
  * Gère le cycle de vie complet du chargement et de l'initialisation
  */
-export function useClientInitialization(mode, clientId, dependencies = {}) {
+export function useClientInitialization(mode, idClient, dependencies = {}) {
   const {
     setClient,
     setIsLoading,
@@ -114,15 +114,15 @@ export function useClientInitialization(mode, clientId, dependencies = {}) {
   // ================================
 
   const retryLoad = useCallback(async () => {
-    if (!clientId || mode === FORM_MODES.CREATE) return;
+    if (!idClient || mode === FORM_MODES.CREATE) return;
     
     const newRetryCount = retryCount + 1;
     setRetryCount(newRetryCount);
     
-    console.log(`🔄 Tentative de rechargement #${newRetryCount} pour le client:`, clientId);
+    console.log(`🔄 Tentative de rechargement #${newRetryCount} pour le client:`, idClient);
     
     try {
-      await chargerClient(clientId, { retry: true });
+      await chargerClient(idClient, { retry: true });
     } catch (error) {
       console.error(`❌ Échec de la tentative #${newRetryCount}:`, error);
       
@@ -134,7 +134,7 @@ export function useClientInitialization(mode, clientId, dependencies = {}) {
         );
       }
     }
-  }, [clientId, mode, retryCount, chargerClient]);
+  }, [idClient, mode, retryCount, chargerClient]);
 
   // ================================
   // RÉINITIALISATION
@@ -151,7 +151,7 @@ export function useClientInitialization(mode, clientId, dependencies = {}) {
     setRetryCount(0);
     
     const targetMode = newMode || mode;
-    const targetClientId = newClientId || clientId;
+    const targetClientId = newClientId || idClient;
     
     // Chargement selon le mode
     if (targetClientId && (targetMode === FORM_MODES.VIEW || targetMode === FORM_MODES.EDIT)) {
@@ -161,7 +161,7 @@ export function useClientInitialization(mode, clientId, dependencies = {}) {
     }
     
     setIsInitialLoadDone(true);
-  }, [mode, clientId, chargerClient, initializerForCreation]);
+  }, [mode, idClient, chargerClient, initializerForCreation]);
 
   // ================================
   // FINALISATION DE L'INITIALISATION
@@ -181,7 +181,7 @@ export function useClientInitialization(mode, clientId, dependencies = {}) {
       console.log('🎯 Initialisation finalisée pour la détection de modifications:', {
         mode,
         hasData: Object.keys(currentData).length > 0,
-        clientId: client.id || 'nouveau'
+        idClient: client.id || 'nouveau'
       });
       
       return true;
@@ -196,11 +196,11 @@ export function useClientInitialization(mode, clientId, dependencies = {}) {
 
   useEffect(() => {
     const initializeData = async () => {
-      console.log('🚀 Début d\'initialisation:', { mode, clientId });
+      console.log('🚀 Début d\'initialisation:', { mode, idClient });
       
       try {
-        if (clientId && (mode === FORM_MODES.VIEW || mode === FORM_MODES.EDIT)) {
-          await chargerClient(clientId);
+        if (idClient && (mode === FORM_MODES.VIEW || mode === FORM_MODES.EDIT)) {
+          await chargerClient(idClient);
         } else if (mode === FORM_MODES.CREATE) {
           initializerForCreation();
         }
@@ -215,7 +215,7 @@ export function useClientInitialization(mode, clientId, dependencies = {}) {
     if (!isInitialLoadDone) {
       initializeData();
     }
-  }, [clientId, mode, chargerClient, initializerForCreation, isInitialLoadDone]);
+  }, [idClient, mode, chargerClient, initializerForCreation, isInitialLoadDone]);
 
   // ================================
   // UTILITAIRES DE STATUS
@@ -230,11 +230,11 @@ export function useClientInitialization(mode, clientId, dependencies = {}) {
       retryCount,
       canRetry: retryCount < 3 && !!loadingError && mode !== FORM_MODES.CREATE,
       mode,
-      clientId: clientId || 'nouveau'
+      idClient: idClient || 'nouveau'
     };
   }, [
     isInitialLoadDone, isFullyInitialized, loadingError, 
-    retryCount, mode, clientId
+    retryCount, mode, idClient
   ]);
 
   const isReady = useCallback(() => {
@@ -269,7 +269,7 @@ export function useClientInitialization(mode, clientId, dependencies = {}) {
     // Pour debug
     _internal: {
       mode,
-      clientId,
+      idClient,
       hasValidationHook: !!validation
     }
   };

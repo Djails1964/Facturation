@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
+// src/components/tarifs/modules/TypeTarifGestion.jsx
+// ✅ VERSION MIGRÉE vers UnifiedFilter avec normalisation des données
+
+import React, { useState, useMemo } from 'react';
 import TypeTarifTableSection from '../sections/TypeTarifTableSection';
 import TarifFormHeader from '../sections/TarifFormHeader';
 import { AddButton } from '../../../components/ui/buttons';
-import TarifFilter from '../components/TarifFilter';
+import UnifiedFilter from '../../../components/shared/filters/UnifiedFilter';
 import { useTarifFilter, createInitialFilters } from '../hooks/useTarifFilter';
 
 const TypeTarifGestion = ({ 
@@ -21,9 +24,9 @@ const TypeTarifGestion = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // ===== NORMALISATION DES DONNÉES =====
-  // Les types de tarifs arrivent avec les propriétés : idTypeTarif, codeTypeTarif, nomTypeTarif, descriptionTypeTarif
-  // On doit les normaliser pour le système de filtrage et d'affichage
-  const normalizedTypesTarifs = React.useMemo(() => {
+  // Les types de tarifs arrivent avec : idTypeTarif, codeTypeTarif, nomTypeTarif, descriptionTypeTarif
+  // On les normalise pour le système de filtrage
+  const normalizedTypesTarifs = useMemo(() => {
     if (!typesTarifs || !Array.isArray(typesTarifs)) return [];
     
     return typesTarifs.map(typeTarif => {
@@ -31,7 +34,7 @@ const TypeTarifGestion = ({
       
       return {
         ...typeTarif,
-        // Normalisation vers les propriétés attendues
+        // Normalisation vers les propriétés attendues par useTarifFilter
         id: typeTarif.idTypeTarif || typeTarif.id,
         code: typeTarif.codeTypeTarif || typeTarif.code,
         nom: typeTarif.nomTypeTarif || typeTarif.nom,
@@ -40,7 +43,7 @@ const TypeTarifGestion = ({
     }).filter(Boolean);
   }, [typesTarifs]);
 
-  // ===== INTÉGRATION DU FILTRE CENTRALISÉ =====
+  // ===== FILTRAGE =====
   const {
     filters,
     showFilters,
@@ -51,99 +54,83 @@ const TypeTarifGestion = ({
     handleToggleFilters
   } = useTarifFilter(normalizedTypesTarifs, 'types-tarifs', createInitialFilters('types-tarifs'));
 
+  // ===== OPTIONS DE FILTRAGE =====
+  const filterOptions = useMemo(() => {
+    console.log('🔍 Préparation filterOptions pour types de tarifs:', typesTarifs.length);
+    
+    // Extraire les valeurs uniques pour chaque champ
+    const uniqueCodes = [...new Set(
+      typesTarifs.map(t => t.codeTypeTarif).filter(Boolean)
+    )].sort();
+    
+    const uniqueNoms = [...new Set(
+      typesTarifs.map(t => t.nomTypeTarif).filter(Boolean)
+    )].sort();
+    
+    const uniqueDescriptions = [...new Set(
+      typesTarifs.map(t => t.descriptionTypeTarif).filter(Boolean)
+    )].sort();
+    
+    console.log('📊 Codes uniques:', uniqueCodes);
+    console.log('📊 Noms uniques:', uniqueNoms);
+    console.log('📊 Descriptions uniques:', uniqueDescriptions);
+    
+    return {
+      code: uniqueCodes,
+      nom: uniqueNoms,
+      description: uniqueDescriptions
+      // Note: Pas de statut pour les types de tarifs
+    };
+  }, [typesTarifs]);
+
   // ===== HANDLERS POUR LE SYSTÈME UNIFIÉ =====
   
   const handleCreateClick = (event) => {
     if (onCreateTypeTarif) {
       onCreateTypeTarif(event);
     } else {
-      console.warn('⚠️ onCreateTypeTarif non fourni, utilisation du système legacy');
-      handleLegacyCreate();
+      console.warn('⚠️ onCreateTypeTarif non fourni');
     }
   };
   
   const handleEditClick = (typeTarif, event) => {
+    const typeTarifId = typeTarif.id || typeTarif.idTypeTarif;
     if (onEditTypeTarif) {
-      // Utiliser l'ID normalisé
-      const id = typeTarif.idTypeTarif || typeTarif.id;
-      onEditTypeTarif(id, event);
+      onEditTypeTarif(typeTarifId, event);
     } else {
-      console.warn('⚠️ onEditTypeTarif non fourni, utilisation du système legacy');
-      handleLegacyEdit(typeTarif);
+      console.warn('⚠️ onEditTypeTarif non fourni');
     }
   };
   
   const handleDeleteClick = (typeTarif, event) => {
+    const typeTarifId = typeTarif.id || typeTarif.idTypeTarif;
+    const typeTarifName = typeTarif.nomTypeTarif || typeTarif.nom;
     if (onDeleteTypeTarif) {
-      // Utiliser les valeurs normalisées
-      const id = typeTarif.idTypeTarif || typeTarif.id;
-      const nom = typeTarif.nom || typeTarif.nomTypeTarif;
-      onDeleteTypeTarif(id, nom, event);
+      onDeleteTypeTarif(typeTarifId, typeTarifName, event);
     } else {
-      console.warn('⚠️ onDeleteTypeTarif non fourni, utilisation du système legacy');
-      handleSupprimerTypeTarif(typeTarif);
+      console.warn('⚠️ onDeleteTypeTarif non fourni');
     }
   };
 
-  // ===== ANCIEN SYSTÈME (DEPRECATED - À SUPPRIMER) =====
-
-  const handleLegacyCreate = async () => {
-    console.log('🚨 Système legacy de création de type de tarif utilisé - À MIGRER');
-  };
-
-  const handleLegacyEdit = async (typeTarif) => {
-    console.log('🚨 Système legacy d\'édition de type de tarif utilisé - À MIGRER');
-  };
-
-  const handleSupprimerTypeTarif = (typeTarif) => {
-    const nom = typeTarif.nom || typeTarif.nomTypeTarif;
-    const id = typeTarif.idTypeTarif || typeTarif.id;
-    
-    setConfirmModal({
-      isOpen: true,
-      title: 'Confirmer la suppression',
-      message: `Êtes-vous sûr de vouloir supprimer le type de tarif "${nom}" ?`,
-      type: 'danger',
-      confirmText: 'Supprimer',
-      onConfirm: () => confirmerSuppression(id),
-      entityType: 'typeTarif'
-    });
-  };
-
-  const confirmerSuppression = async (typeTarifId) => {
-    try {
-      const result = await tarificationService.supprimerTypeTarif(typeTarifId);
-      
-      if (result.success) {
-        setMessage('Type de tarif supprimé avec succès');
-        setMessageType('success');
-        loadTypesTarifs();
-      } else {
-        throw new Error(result.message || 'Erreur lors de la suppression');
-      }
-    } catch (error) {
-      console.error('Erreur suppression type tarif:', error);
-      setMessage('Erreur lors de la suppression: ' + error.message);
-      setMessageType('error');
-    }
-  };
-
+  // ===== RENDU PRINCIPAL =====
+  
   return (
     <div className="type-tarif-gestion">
+      
       {/* Header avec bouton de création */}
       <TarifFormHeader
-        titre="Types de tarifs"
-        description="Définissez les différents types de tarification (normal, urgent, weekend, etc.)"
+        titre="Gestion des types de tarifs"
+        description="Gérez les différents types de tarification (Normal, Étudiant, Thérapeutique, etc.)"
       >
         <AddButton onClick={handleCreateClick}>
           Nouveau type de tarif
         </AddButton>
       </TarifFormHeader>
 
-      {/* ===== FILTRE CENTRALISÉ ===== */}
-      <TarifFilter
+      {/* Filtres unifiés */}
+      <UnifiedFilter
         filterType="types-tarifs"
-        data={normalizedTypesTarifs}
+        filterOptions={filterOptions}
         filters={filters}
         onFilterChange={handleFilterChange}
         onResetFilters={handleResetFilters}
@@ -154,7 +141,7 @@ const TypeTarifGestion = ({
         className="filter-types-tarifs"
       />
 
-      {/* Table des types de tarifs filtrés */}
+      {/* Tableau des types de tarifs filtrés */}
       <TypeTarifTableSection
         typesTarifs={typeTarifsFiltered}
         onEdit={handleEditClick}
@@ -163,7 +150,7 @@ const TypeTarifGestion = ({
         isSubmitting={isSubmitting}
       />
       
-      {/* Informations de debug en mode développement */}
+      {/* Informations de debug */}
       {process.env.NODE_ENV === 'development' && (
         <div className="debug-info" style={{
           marginTop: '20px',
@@ -178,11 +165,10 @@ const TypeTarifGestion = ({
           - Types normalisés : {normalizedTypesTarifs.length}<br/>
           - Types filtrés : {typeTarifsFiltered.length}<br/>
           - Filtres actifs : {filterStats.hasActiveFilters ? 'Oui' : 'Non'}<br/>
+          - Filtres actuels : {JSON.stringify(filters)}<br/>
           - Highlighted ID : {highlightedId || 'aucun'}<br/>
-          - Système unifié : {onCreateTypeTarif ? '✅ Actif' : '❌ Non connecté'}<br/>
-          - Is submitting : {isSubmitting ? 'Oui' : 'Non'}<br/>
           - Premier type : {typesTarifs[0] ? JSON.stringify(Object.keys(typesTarifs[0])) : 'aucun'}<br/>
-          - Filtres actuels : {JSON.stringify(filters)}
+          - ✅ MIGRATION UNIFIEDFILTER COMPLÈTE
         </div>
       )}
     </div>

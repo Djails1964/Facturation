@@ -26,13 +26,13 @@ export function useFacturePricing(
      * FONCTION PRINCIPALE UNIFIÉE: Calcul du prix pour un client
      */
     const calculerPrixPourClient = useCallback(async (params) => {
-        const { clientId, idService, idUnite, forceRecalcul = false } = params;
+        const { idClient, idService, idUnite, forceRecalcul = false } = params;
 
-        console.log('Calcul prix pour client appelé avec:', { clientId, idService, idUnite, forceRecalcul });
+        console.log('Calcul prix pour client appelé avec:', { idClient, idService, idUnite, forceRecalcul });
         
         // Validation stricte des paramètres
-        if (!clientId || !idService || !idUnite) {
-            console.warn('Paramètres manquants pour calculerPrixPourClient:', { clientId, idService, idUnite });
+        if (!idClient || !idService || !idUnite) {
+            console.warn('Paramètres manquants pour calculerPrixPourClient:', { idClient, idService, idUnite });
             return 0;
         }
 
@@ -42,7 +42,7 @@ export function useFacturePricing(
         }
 
         // Clé de cache
-        const cacheKey = `${clientId}-${idService}-${idUnite}`;
+        const cacheKey = `${idClient}-${idService}-${idUnite}`;
 
         // Vérification cache ou force recalcul
         if (!forceRecalcul) {
@@ -73,7 +73,7 @@ export function useFacturePricing(
         const calculationPromise = (async () => {
             try {
                 console.log('Calcul du prix initial pour:', {
-                    clientId,
+                    idClient,
                     idService,
                     idUnite,
                     clientNom: client?.nom,
@@ -81,7 +81,7 @@ export function useFacturePricing(
                 });
 
                 const prix = await tarificationService.calculerPrix({
-                    clientId,
+                    idClient,
                     idService,
                     idUnite,
                     date: new Date().toISOString().split('T')[0]
@@ -95,7 +95,7 @@ export function useFacturePricing(
                     timestamp: Date.now()
                 });
 
-                console.log(`Prix calculé: ${finalPrix} CHF pour client ${client?.nom} (ID: ${clientId})`);
+                console.log(`Prix calculé: ${finalPrix} CHF pour client ${client?.nom} (ID: ${idClient})`);
                 return finalPrix;
             } catch (error) {
                 console.error('Erreur dans calculerPrixPourClient:', error);
@@ -143,9 +143,9 @@ export function useFacturePricing(
             idService = ligne.service.idService;
             serviceCode = ligne.service.codeService;
             console.log('Service ID depuis objet enrichi:', { serviceCode, idService });
-        } else if (ligne.serviceId) {
+        } else if (ligne.idService) {
             // ID direct
-            idService = ligne.serviceId;
+            idService = ligne.idService;
             console.log('Service ID depuis propriété directe:', idService);
         } else if (ligne.serviceType && services) {
             // Code service
@@ -173,9 +173,9 @@ export function useFacturePricing(
             idUnite = ligne.unite.idUnite;
             uniteCode = ligne.unite.code || ligne.unite.codeUnite;
             console.log('Unité ID depuis objet enrichi:', { uniteCode, idUnite });
-        } else if (ligne.uniteId) {
+        } else if (ligne.idUnite) {
             // ID direct
-            idUnite = ligne.uniteId;
+            idUnite = ligne.idUnite;
             console.log('Unité ID depuis propriété directe:', idUnite);
         } else if (ligne.uniteCode && unites) {
             // Code unité
@@ -284,7 +284,7 @@ export function useFacturePricing(
 
                     // CALCUL DU PRIX
                     const nouveauPrix = await calculerPrixPourClient({
-                        clientId: client.id,
+                        idClient: client.id,
                         idService: ids.idService,
                         idUnite: ids.idUnite,
                         forceRecalcul: shouldForceRecalcul
@@ -358,7 +358,7 @@ export function useFacturePricing(
         }
 
         return await calculerPrixPourClient({
-            clientId: client.id,
+            idClient: client.id,
             idService: service.idService,
             idUnite: unite.idUnite
         });
@@ -367,9 +367,9 @@ export function useFacturePricing(
     /**
      * Vérification si un prix est en cours de calcul
      */
-    const isPrixCalculating = useCallback((serviceId, uniteId) => {
+    const isPrixCalculating = useCallback((idService, idUnite) => {
         if (!client) return false;
-        const cacheKey = `${client.id}-${serviceId}-${uniteId}`;
+        const cacheKey = `${client.id}-${idService}-${idUnite}`;
         return calculationPromises.current.has(cacheKey);
     }, [client]);
 
@@ -391,9 +391,9 @@ export function useFacturePricing(
     /**
      * ✅ AJOUT: Fonction pour vider le cache d'une combinaison spécifique
      */
-    const clearCacheForServiceUnite = useCallback((serviceId, uniteId) => {
+    const clearCacheForServiceUnite = useCallback((idService, idUnite) => {
         if (!client) return;
-        const cacheKey = `${client.id}-${serviceId}-${uniteId}`;
+        const cacheKey = `${client.id}-${idService}-${idUnite}`;
         clearCache(cacheKey);
     }, [client, clearCache]);
 
@@ -432,12 +432,12 @@ export function useFacturePricing(
      * EFFET SIMPLIFIÉ pour changement de client
      */
     useEffect(() => {
-        if (client?.id !== lastCalculation.clientId) {
+        if (client?.id !== lastCalculation.idClient) {
             clearCache();
             
-            if (lastCalculation.clientId) { // Pas la première initialisation
+            if (lastCalculation.idClient) { // Pas la première initialisation
                 console.log('Changement de client détecté:', {
-                    ancien: lastCalculation.clientId,
+                    ancien: lastCalculation.idClient,
                     nouveau: client?.id
                 });
                 
@@ -447,11 +447,11 @@ export function useFacturePricing(
             }
             
             setLastCalculation({ 
-                clientId: client?.id, 
+                idClient: client?.id, 
                 timestamp: Date.now() 
             });
         }
-    }, [client?.id, lastCalculation.clientId, clearCache, recalculerPrixChangementClient]);
+    }, [client?.id, lastCalculation.idClient, clearCache, recalculerPrixChangementClient]);
 
     /**
      * Effet pour déclencher le calcul automatique des prix manquants

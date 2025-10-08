@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+// src/components/factures/FacturesListe.jsx
+import React, { useState, useEffect, useMemo } from 'react';
 import '../../styles/components/factures/FacturesListe.css';
 
 // Import des composants
 import FacturesFilters from './FacturesFilters';
 import FacturesTable from './FacturesTable';
+import UnifiedFilter from '../../components/shared/filters/UnifiedFilter';
 
-// ✅ Import du système de modales unifié
+// Import du système de modales unifié
 import { showCustom, showLoading } from '../../utils/modalSystem';
 
 // Import des services
@@ -18,7 +20,6 @@ import { useFactureFilters } from './hooks/useFactureFilters';
 import { useTemplates } from './hooks/useTemplates';
 import { useFactureModals } from './hooks/useFactureModals';
 import { formatMontant, formatDate } from '../../utils/formatters';
-
 
 function FacturesListe({ 
     nouvelleFactureId,
@@ -40,7 +41,7 @@ function FacturesListe({
             window.location.port === '3000';
     };
     
-    // Initialisation du service facture et du service paiement
+    // Initialisation des services
     const factureService = new FactureService();
     const paiementService = new PaiementService();
     
@@ -52,6 +53,9 @@ function FacturesListe({
     
     // État pour prévenir les doubles clics (gardé pour l'impression)
     const [impressionEnCours, setImpressionEnCours] = useState(new Set());
+
+    // Ajouter un état pour le toggle
+    const [showFilters, setShowFilters] = useState(false);
     
     // Utilisation des hooks personnalisés
     const { 
@@ -60,13 +64,14 @@ function FacturesListe({
         error, 
         chargerFactures,
         factureSelectionnee,
-        setFactureSelectionnee
+        setFactureSelectionnee,
+        anneeSelectionnee,        // ✅ Récupérer depuis useFactures
+        setAnneeSelectionnee      // ✅ Récupérer depuis useFactures
     } = useFactures(nouvelleFactureId, factureModified, onResetFactureModified);
-    
+
     const {
         clients,
         isLoadingClients, 
-        anneeSelectionnee,
         clientSelectionne,
         etatSelectionne,
         handleAnneeChange,
@@ -75,11 +80,16 @@ function FacturesListe({
         filteredFactures,
         etats,
         anneesOptions
-    } = useFactureFilters(facturesNonFiltrees, chargerFactures);
+    } = useFactureFilters(
+        facturesNonFiltrees, 
+        chargerFactures,
+        anneeSelectionnee,        // ✅ Passer depuis useFactures
+        setAnneeSelectionnee      // ✅ Passer depuis useFactures
+    );
     
     const { emailTemplates, chargerTemplatesEmail } = useTemplates();
 
-    // ✅ NOUVEAUTÉ: Configuration des dépendances pour les handlers
+    // Configuration des dépendances pour les handlers
     const modalDependencies = {
         factureService,
         paiementService,
@@ -104,148 +114,187 @@ function FacturesListe({
                 message = message.replace(/\[Numéro de facture\]/g, facture.numeroFacture || '');
                 
                 if (facture.totalAvecRistourne !== undefined) {
-                    const montant = formatMontant(facture.totalAvecRistourne);
-                    message = message.replace(/\[montant\]/g, montant);
-                } else if (facture.montantTotal !== undefined) {
-                    const montant = formatMontant(facture.montantTotal);
-                    message = message.replace(/\[montant\]/g, montant);
+                    const montantFormate = formatMontant(facture.totalAvecRistourne);
+                    message = message.replace(/\[Montant\]/g, montantFormate);
                 }
                 
-                if (facture.dateFacture) {
-                    const dateFormattee = formatDate(facture.dateFacture);
-                    message = message.replace(/\[date\]/g, dateFormattee);
+                if (facture.dateEcheance) {
+                    const dateFormatee = formatDate(facture.dateEcheance);
+                    message = message.replace(/\[Date d'échéance\]/g, dateFormatee);
                 }
-
-                message = message.replace(/\r\n/g, '\n');
                 
                 return message;
-                
             } catch (error) {
-                console.error("Erreur lors du formatage du message:", error);
+                console.error("Erreur lors du formatage du message email:", error);
                 return template;
             }
         },
         emailTemplates,
+        chargerFactures,
         onSetNotification,
         onFactureSupprimee,
-        chargerFactures,
-        filteredFactures,
-        setFactureSelectionnee,
         impressionEnCours,
-        setImpressionEnCours
+        setImpressionEnCours,
+        filteredFactures,  // ✅ AJOUTER CETTE LIGNE
+        setFactureSelectionnee
     };
 
-    // ✅ NOUVEAUTÉ: Utilisation du hook unifié pour toutes les modales
+    // Hook des modales avec handlers externalisés
     const {
         handleEnvoyerFacture,
         handleSupprimerFacture,
         handleImprimerFacture,
-        handlePayerFacture,  // ✅ Utiliser l'alias pour compatibilité
+        handleEnregistrerPaiement,
         handleCopierFacture
     } = useFactureModals(modalDependencies);
 
-    // Gestionnaires pour le tooltip du bouton flottant
-    const handleFloatingButtonMouseEnter = (e) => {
-        setFloatingButtonTooltip({
-            visible: true,
-            position: { x: e.clientX, y: e.clientY - 40 }
-        });
-    };
+    // Préparer les options de filtres
+    const filterOptions = useMemo(() => ({
+    annee: anneesOptions, // Déjà un tableau de nombres
+    client: clients.map(c => ({ 
+        value: c.id, 
+        label: `${c.prenom} ${c.nom}` 
+    })),
+    etat: etats // Déjà un tableau de strings
+    }), [anneesOptions, clients, etats]);
 
-    const handleFloatingButtonMouseMove = (e) => {
-        if (floatingButtonTooltip.visible) {
-            setFloatingButtonTooltip(prev => ({
-                ...prev,
-                position: { x: e.clientX, y: e.clientY - 40 }
-            }));
-        }
-    };
-
-    const handleFloatingButtonMouseLeave = () => {
-        setFloatingButtonTooltip({ visible: false, position: { x: 0, y: 0 } });
-    };
-
-    // ✅ SUPPRIMÉ: handleMettreAJourRetards (calculé automatiquement maintenant)
-
-    // Effects
-    useEffect(() => {
-        if (notification && notification.message) {
-            const timer = setTimeout(() => {
-                onClearNotification();
-            }, 5000);
-            return () => clearTimeout(timer);
-        }
-    }, [notification, onClearNotification]);
-
+    // Charger les templates email au montage
     useEffect(() => {
         chargerTemplatesEmail();
     }, [chargerTemplatesEmail]);
 
+    // Gérer les erreurs
+    useEffect(() => {
+        if (error) {
+            onSetNotification(error, 'error');
+        }
+    }, [error]);
+
+    // Gérer les notifications
+    useEffect(() => {
+        if (notification && notification.message) {
+            const timer = setTimeout(() => {
+                if (onClearNotification) {
+                    onClearNotification();
+                }
+            }, 5000);
+            
+            return () => clearTimeout(timer);
+        }
+    }, [notification, onClearNotification]);
+
+    // Tooltip du bouton flottant
+    const handleFloatingButtonMouseMove = (event) => {
+        setFloatingButtonTooltip({
+            visible: true,
+            position: {
+                x: event.clientX,
+                y: event.clientY
+            }
+        });
+    };
+
+    const handleFloatingButtonMouseLeave = () => {
+        setFloatingButtonTooltip({
+            visible: false,
+            position: { x: 0, y: 0 }
+        });
+    };
+
+    const renderNotification = () => {
+        if (!notification || !notification.message) return null;
+        
+        const className = notification.type === 'success' 
+            ? 'notification success'  // ✅ CORRECTION : 'notification success' au lieu de 'notification-success'
+            : 'notification error';   // ✅ CORRECTION : 'notification error' au lieu de 'notification-error'
+        
+        return (
+            <div className={className}>
+                <span>{notification.message}</span>
+                <button 
+                    onClick={onClearNotification} 
+                    className="notification-close"
+                    aria-label="Fermer la notification"
+                >
+                    ×
+                </button>
+            </div>
+        );
+    };
+
+    // Rendu
     return (
         <div className="content-section-container">
             <div className="content-section-title">
-                <h2>Factures</h2>
-                {notification && notification.message && (
-                    <div className={`notification ${notification.type}`}>
-                        {notification.message}
-                        <button onClick={onClearNotification} className="notification-close">×</button>
-                    </div>
-                )}
+                <h2>Factures ({filteredFactures.length})</h2>
             </div>
-            
-            <FacturesFilters
-                anneeSelectionnee={anneeSelectionnee}
-                clientSelectionne={clientSelectionne}
-                etatSelectionne={etatSelectionne}
-                handleAnneeChange={handleAnneeChange}
-                handleClientChange={handleClientChange}
-                handleEtatChange={handleEtatChange}
-                anneesOptions={anneesOptions}
-                clients={clients}
-                isLoadingClients={isLoadingClients}
-                etats={etats}
-                // ✅ SUPPRIMÉ: onMettreAJourRetards (calculé automatiquement)
+            {/* ✅ AJOUT : Affichage de la notification en haut */}
+            {renderNotification()}
+
+            {/* Filtres */}
+            <UnifiedFilter
+                filterType="factures"
+                filterOptions={filterOptions}
+                filters={{
+                    annee: anneeSelectionnee,
+                    client: clientSelectionne,
+                    etat: etatSelectionne
+                }}
+                onFilterChange={(field, value) => {
+                    if (field === 'annee') handleAnneeChange({ target: { value } });
+                    if (field === 'client') handleClientChange({ target: { value } });
+                    if (field === 'etat') handleEtatChange({ target: { value } });
+                }}
+                onResetFilters={() => {
+                    handleAnneeChange({ target: { value: new Date().getFullYear() } });
+                    handleClientChange({ target: { value: '' } });
+                    handleEtatChange({ target: { value: 'Tous' } });
+                }}
+                showFilters={showFilters}
+                onToggleFilters={() => setShowFilters(!showFilters)}
+                totalCount={facturesNonFiltrees.length}
+                filteredCount={filteredFactures.length}
             />
-            
-            {/* ✅ NOUVEAUTÉ: Utilisation des handlers externalisés */}
+
+            {/* Tableau des factures */}
             <FacturesTable
                 factures={filteredFactures}
                 isLoading={isLoading}
-                error={error}
                 factureSelectionnee={factureSelectionnee}
-                onSelectionFacture={setFactureSelectionnee}
+                onSelectionChange={setFactureSelectionnee}
                 onAfficherFacture={onAfficherFacture}
                 onModifierFacture={onModifierFacture}
-                onImprimerFacture={handleImprimerFacture}     // ✅ Handler externalisé
-                onCopierFacture={handleCopierFacture}         // ✅ Handler externalisé
-                onEnvoyerFacture={handleEnvoyerFacture}       // ✅ Handler externalisé
-                onPayerFacture={handlePayerFacture}           // ✅ Handler externalisé
-                onSupprimerFacture={handleSupprimerFacture}   // ✅ Handler externalisé
-                onSetNotification={onSetNotification}
+                onSupprimerFacture={handleSupprimerFacture}
+                onImprimerFacture={handleImprimerFacture}
+                onEnvoyerFacture={handleEnvoyerFacture}
+                onPayerFacture={handleEnregistrerPaiement}
+                onCopierFacture={handleCopierFacture}
+                impressionEnCours={impressionEnCours}
             />
-            
-            <div 
-                className="lf-floating-button"
-                onClick={onNouvelleFacture}
-                onMouseEnter={handleFloatingButtonMouseEnter}
-                onMouseMove={handleFloatingButtonMouseMove}
-                onMouseLeave={handleFloatingButtonMouseLeave}
-            >
-                <span>+</span>
-            </div>
 
-            {floatingButtonTooltip.visible && (
-                <div 
-                    className="cursor-tooltip"
-                    style={{
-                        left: floatingButtonTooltip.position.x,
-                        top: floatingButtonTooltip.position.y
-                    }}
+            {/* Bouton flottant pour nouvelle facture */}
+            {onNouvelleFacture && (
+                <button
+                    className="floating-action-button"
+                    onClick={onNouvelleFacture}
+                    onMouseMove={handleFloatingButtonMouseMove}
+                    onMouseLeave={handleFloatingButtonMouseLeave}
+                    aria-label="Créer une nouvelle facture"
                 >
-                    Nouvelle facture
-                </div>
+                    <span className="fab-icon">+</span>
+                    {floatingButtonTooltip.visible && (
+                        <span 
+                            className="fab-tooltip"
+                            style={{
+                                left: `${floatingButtonTooltip.position.x + 15}px`,
+                                top: `${floatingButtonTooltip.position.y - 10}px`
+                            }}
+                        >
+                            Nouvelle Facture
+                        </span>
+                    )}
+                </button>
             )}
-            
         </div>
     );
 }

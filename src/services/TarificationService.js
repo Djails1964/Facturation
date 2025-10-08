@@ -197,16 +197,16 @@ class TarificationService {
 
   /**
    * Mettre à jour l'unité par défaut d'un service
-   * @param {number} serviceId ID du service
-   * @param {number} uniteId ID de l'unité
+   * @param {number} idService ID du service
+   * @param {number} idUnite ID de l'unité
    * @returns {Promise<Object>} Résultat de la mise à jour
    */
-  async updateServiceUniteDefault(serviceId, uniteId) {
+  async updateServiceUniteDefault(idService, idUnite) {
     try {
       const response = await api.post('tarif-api.php', {
         action: 'updateServiceUniteDefault',
-        serviceId,
-        uniteId
+        idService,
+        idUnite
       });
       return response;
     } catch (error) {
@@ -233,7 +233,7 @@ class TarificationService {
 
   /**
    * Charger les unités pour un service spécifique ou tous les services
-   * @param {number} [serviceId] ID du service optionnel
+   * @param {number} [idService] ID du service optionnel
    * @returns {Promise<Array>} Liste des unités avec booléens normalisés
    */
   async chargerUnites(idService = null) {
@@ -360,16 +360,16 @@ class TarificationService {
 
   /**
    * Associer une unité à un service
-   * @param {number} serviceId ID du service
-   * @param {number} uniteId ID de l'unité
+   * @param {number} idService ID du service
+   * @param {number} idUnite ID de l'unité
    * @returns {Promise<Object>} Résultat de l'association
    */
-  async linkServiceUnite(serviceId, uniteId) {
+  async linkServiceUnite(idService, idUnite) {
     try {
       const payload = {
         action: 'linkServiceUnite',
-        serviceId: Number(serviceId),
-        uniteId: Number(uniteId)
+        idService: Number(idService),
+        idUnite: Number(idUnite)
       };
       
       console.log('Payload pour l\'association:', payload);
@@ -383,16 +383,16 @@ class TarificationService {
 
   /**
    * Dissocier une unité d'un service
-   * @param {number} serviceId ID du service
-   * @param {number} uniteId ID de l'unité
+   * @param {number} idService ID du service
+   * @param {number} idUnite ID de l'unité
    * @returns {Promise<Object>} Résultat de la dissociation
    */
-  async unlinkServiceUnite(serviceId, uniteId) {
+  async unlinkServiceUnite(idService, idUnite) {
     try {
       const params = {
         type: 'serviceUnite',
-        serviceId,
-        uniteId
+        idService,
+        idUnite
       };
       console.log('Params pour la dissociation:', params);
       const response = await api.delete('tarif-api.php', params);
@@ -420,13 +420,13 @@ class TarificationService {
 
   /**
    * Vérifie si une liaison service-unité est utilisée dans des factures
-   * @param {number} serviceId ID du service
-   * @param {number} uniteId ID de l'unité
+   * @param {number} idService ID du service
+   * @param {number} idUnite ID de l'unité
    * @returns {Promise<Object>} Résultat de la vérification
    */
-  async checkServiceUniteUsageInFacture(serviceId, uniteId) {
+  async checkServiceUniteUsageInFacture(idService, idUnite) {
     try {
-      const response = await api.get(`tarif-api.php?checkServiceUniteUsageInFacture=true&serviceId=${serviceId}&uniteId=${uniteId}`);
+      const response = await api.get(`tarif-api.php?checkServiceUniteUsageInFacture=true&idService=${idService}&idUnite=${idUnite}`);
       return response;
     } catch (error) {
       console.error('Erreur lors de la vérification de l\'utilisation de la liaison dans les factures:', error);
@@ -614,12 +614,12 @@ class TarificationService {
    * @returns {Promise<Object>} Détails du tarif
    */
   async getTarifClient(params) {
-    const { clientId, idService, idUnite, date } = params;
+    const { idClient, idService, idUnite, date } = params;
     
     try {
       const queryParams = {
         tarifClient: 'true',
-        clientId,
+        idClient,
         idService,
         idUnite,
         date: date || new Date().toISOString().split('T')[0]
@@ -670,15 +670,15 @@ class TarificationService {
    * @returns {Promise<Array>} Liste de tous les tarifs standards
    */
   async getAllTarifs(params = {}) {
-    const { serviceId, uniteId, typeTarifId } = params;
+    const { idService, idUnite, typeTarifId } = params;
     
     try {
       const queryParams = {
         allTarifs: 'true'
       };
       
-      if (serviceId) queryParams.serviceId = serviceId;
-      if (uniteId) queryParams.uniteId = uniteId;
+      if (idService) queryParams.idService = idService;
+      if (idUnite) queryParams.idUnite = idUnite;
       if (typeTarifId) queryParams.typeTarifId = typeTarifId;
 
       const response = await api.get('tarif-api.php', queryParams);
@@ -698,16 +698,16 @@ class TarificationService {
    * @returns {Promise<Array>} Liste de tous les tarifs spéciaux
    */
   async getAllTarifsSpeciaux(params = {}) {
-    const { clientId, serviceId, uniteId } = params;
+    const { idClient, idService, idUnite } = params;
     
     try {
       const queryParams = {
         allTarifsSpeciaux: 'true'
       };
       
-      if (clientId) queryParams.clientId = clientId;
-      if (serviceId) queryParams.serviceId = serviceId;
-      if (uniteId) queryParams.uniteId = uniteId;
+      if (idClient) queryParams.idClient = idClient;
+      if (idService) queryParams.idService = idService;
+      if (idUnite) queryParams.idUnite = idUnite;
 
       const response = await api.get('tarif-api.php', queryParams);
       
@@ -726,16 +726,16 @@ class TarificationService {
    * @returns {Promise<Array>} Liste des tarifs spéciaux
    */
   async getTarifsSpeciaux(params = {}) {
-    const { clientId, serviceId, uniteId, date } = params;
+    const { idClient, idService, idUnite, date } = params;
     
     try {
       const queryParams = {
         tarifsSpeciaux: 'true'
       };
       
-      if (clientId) queryParams.clientId = clientId;
-      if (serviceId) queryParams.serviceId = serviceId;
-      if (uniteId) queryParams.uniteId = uniteId;
+      if (idClient) queryParams.idClient = idClient;
+      if (idService) queryParams.idService = idService;
+      if (idUnite) queryParams.idUnite = idUnite;
       if (date) queryParams.date = date;
 
       const response = await api.get('tarif-api.php', queryParams);
@@ -991,17 +991,17 @@ class TarificationService {
       if (response && response.success) {
         const relations = response.servicesUnites || [];
         
-        // Organiser par service_id pour un accès rapide
+        // Organiser par idService pour un accès rapide
         this.servicesUnites = {};
         relations.forEach(relation => {
-          const serviceId = relation.serviceId || relation.service_id;
-          const uniteId = relation.uniteId || relation.unite_id;
+          const idService = relation.idService;
+          const idUnite = relation.idUnite;
           
-          if (serviceId && uniteId) {
-            if (!this.servicesUnites[serviceId]) {
-              this.servicesUnites[serviceId] = [];
+          if (idService && idUnite) {
+            if (!this.servicesUnites[idService]) {
+              this.servicesUnites[idService] = [];
             }
-            this.servicesUnites[serviceId].push(uniteId);
+            this.servicesUnites[idService].push(idUnite);
           }
         });
         
@@ -1029,16 +1029,16 @@ class TarificationService {
 
   /**
    * Obtenir les unités pour un service
-   * @param {string} serviceId ID du service
+   * @param {string} idService ID du service
    * @returns {Array} Codes des unités
    */
-  getUnitesForService(serviceId) {
-    if (!serviceId) {
+  getUnitesForService(idService) {
+    if (!idService) {
       return [];
     }
     
     const services = this._cache.services || this.services;
-    const service = services.find(s => s.idService === serviceId);
+    const service = services.find(s => s.idService === idService);
     if (!service) {
       return [];
     }
@@ -1053,16 +1053,16 @@ class TarificationService {
       const uniteIds = this.servicesUnites[service.idService];
       
       if (Array.isArray(uniteIds)) {
-        return uniteIds.map(uniteId => {
-          const unite = unites.find(u => u.idUnite === uniteId);
+        return uniteIds.map(idUnite => {
+          const unite = unites.find(u => u.idUnite === idUnite);
           return unite ? unite.code : null;
         }).filter(code => code !== null);
       }
     }
     
-    // Fallback: chercher les unités avec le service_id correspondant
+    // Fallback: chercher les unités avec le id correspondant
     try {
-      const unitesForService = unites.filter(u => u.serviceId === service.idService);
+      const unitesForService = unites.filter(u => u.idService === service.idService);
       return unitesForService.map(u => u.code);
     } catch (error) {
       console.error('Erreur lors du filtrage des unités:', error);
@@ -1076,10 +1076,10 @@ class TarificationService {
    * @returns {Promise<number>} Prix calculé
    */
   async calculerPrix(params) {
-    const { clientId, idService, idUnite, date } = params;
+    const { idClient, idService, idUnite, date } = params;
 
     console.log('Calcul du prix avec les paramètres:', {
-      clientId,
+      idClient,
       idService,
       idUnite,
       date
@@ -1087,7 +1087,7 @@ class TarificationService {
 
     // Essayer d'abord de récupérer un tarif spécial client
     const tarifClient = await this.getTarifClient({
-      clientId,
+      idClient,
       idService,
       idUnite,
       date
@@ -1128,8 +1128,8 @@ class TarificationService {
     
     try {
       const tousLesTarifs = await this.getAllTarifs({
-        serviceId: idService,
-        uniteId: idUnite
+        idService: idService,
+        idUnite: idUnite
       });
       
       console.log('Tous les tarifs récupérés:', tousLesTarifs);
@@ -1234,9 +1234,9 @@ class TarificationService {
       
       // Démarrer la requête en arrière-plan pour les futures demandes
       this.getTarifClient({
-        clientId: client.id,
-        serviceId: service.idService,
-        uniteId: uniteObj.idUnite,
+        idClient: client.id,
+        idService: service.idService,
+        idUnite: uniteObj.idUnite,
         date: new Date().toISOString().split('T')[0]
       }).then(tarifClient => {
         this._cacheResultat[cacheKey] = tarifClient?.prix || 0;
@@ -1253,35 +1253,35 @@ class TarificationService {
 
   /**
    * Vérifie si un service est défini comme service par défaut
-   * @param {number} serviceId ID du service à vérifier
+   * @param {number} idService ID du service à vérifier
    * @returns {boolean} True si le service est par défaut, false sinon
    */
-  isServiceDefault(serviceId) {
-    if (!serviceId) return false;
+  isServiceDefault(idService) {
+    if (!idService) return false;
     
     const services = this._cache.services || this.services;
     if (!services || !Array.isArray(services)) {
       return false;
     }
     
-    const service = services.find(s => s.idService === serviceId);
+    const service = services.find(s => s.idService === idService);
     return service ? toBoolean(service.isDefault) : false;
   }
 
   /**
    * Vérifie si une unité est définie comme unité par défaut
-   * @param {number} uniteId ID de l'unité à vérifier
+   * @param {number} idUnite ID de l'unité à vérifier
    * @returns {boolean} True si l'unité est par défaut, false sinon
    */
-  isUniteDefault(uniteId) {
-    if (!uniteId) return false;
+  isUniteDefault(idUnite) {
+    if (!idUnite) return false;
     
     const unites = this._cache.unites || this.unites;
     if (!unites || !Array.isArray(unites)) {
       return false;
     }
     
-    const unite = unites.find(u => u.idUnite === uniteId);
+    const unite = unites.find(u => u.idUnite === idUnite);
     return unite ? toBoolean(unite.isDefault) : false;
   }
 
@@ -1340,17 +1340,17 @@ class TarificationService {
 
   /**
    * Vérifie si un client est thérapeute
-   * @param {number} clientId ID du client
+   * @param {number} idClient ID du client
    * @returns {Promise<boolean>} True si le client est thérapeute, false sinon
    */
-  async estTherapeute(clientId) {
-    const cacheKey = `therapeute_${clientId}`;
+  async estTherapeute(idClient) {
+    const cacheKey = `therapeute_${idClient}`;
     if (this._cacheResultat[cacheKey] !== undefined) {
       return this._cacheResultat[cacheKey];
     }
 
     try {
-      const response = await api.get(`tarif-api.php?estTherapeute=true&clientId=${clientId}`);
+      const response = await api.get(`tarif-api.php?estTherapeute=true&idClient=${idClient}`);
       const result = response && response.success ? toBoolean(response.estTherapeute) : false;
       this._cacheResultat[cacheKey] = result;
       return result;
@@ -1362,12 +1362,12 @@ class TarificationService {
 
   /**
    * Vérifie si un client possède un tarif spécial défini
-   * @param {number} clientId ID du client
+   * @param {number} idClient ID du client
    * @param {string} [date] Date pour la vérification (format YYYY-MM-DD)
    * @returns {Promise<boolean>} True si le client possède un tarif spécial, false sinon
    */
-  async possedeTarifSpecialDefini(clientId, date = null) {
-    const cacheKey = `tarifSpecial_${clientId}_${date || 'nodate'}`;
+  async possedeTarifSpecialDefini(idClient, date = null) {
+    const cacheKey = `tarifSpecial_${idClient}_${date || 'nodate'}`;
     if (this._cacheResultat[cacheKey] !== undefined) {
       return this._cacheResultat[cacheKey];
     }
@@ -1375,7 +1375,7 @@ class TarificationService {
     try {
       const queryParams = {
         possedeTarifSpecial: 'true',
-        clientId
+        idClient
       };
       
       if (date) {
@@ -1429,12 +1429,12 @@ class TarificationService {
 
   /**
    * Récupère toutes les unités applicables pour un client spécifique
-   * @param {number} clientId ID du client
+   * @param {number} idClient ID du client
    * @param {string} [date] Date pour la recherche des tarifs valides (format YYYY-MM-DD)
    * @returns {Promise<Array>} Liste des unités avec leurs détails
    */
-  async getUnitesApplicablesPourClient(clientId, date = null) {
-    const cacheKey = `unitesClient_${clientId}_${date || 'nodate'}`;
+  async getUnitesApplicablesPourClient(idClient, date = null) {
+    const cacheKey = `unitesClient_${idClient}_${date || 'nodate'}`;
     
     // Vérifier le cache
     if (this._cacheResultat[cacheKey]) {
@@ -1445,7 +1445,7 @@ class TarificationService {
     try {
       const queryParams = {
         unitesClient: 'true',
-        clientId: clientId
+        idClient: idClient
       };
       
       if (date) {

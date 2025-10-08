@@ -1,21 +1,49 @@
-import React, { useEffect } from 'react';
-import { FiCalendar } from 'react-icons/fi';
+// src/components/paiements/PaiementForm.jsx
+// Version CORRIGÉE - Utilise VRAIMENT usePaiementFormLogic
+
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+
+// Composants partagés
 import ConfirmationModal from '../shared/ConfirmationModal';
+import GlobalDatePicker from '../../context/GlobalDatePicker';
+import { DateProvider } from '../../context/DateContext';
+
+// Sections du formulaire
 import PaiementFormHeader from './sections/PaiementFormHeader';
 import PaiementFormBadge from './sections/PaiementFormBadge';
 import PaiementFormFactureSection from './sections/PaiementFormFactureSection';
 import PaiementFormPaiementSection from './sections/PaiementFormPaiementSection';
 import PaiementFormSystemInfoSection from './sections/PaiementFormSystemInfoSection';
 import PaiementFormActions from './sections/PaiementFormActions';
+
+// ✅ AJOUT : Import des hooks personnalisés
 import { usePaiementForm } from './hooks/usePaiementForm';
 import { usePaiementFormLogic } from './hooks/usePaiementFormLogic';
-import { usePaiementFormValidation } from './hooks/usePaiementFormValidation';
 import { usePaiementFormHandlers } from './hooks/usePaiementFormHandlers';
-import { FORM_MODES, FORM_TITLES, LOADING_MESSAGES, HELP_TEXTS } from '../../constants/paiementConstants';
-import DateService from '../../utils/DateService';
+import { usePaiementFormValidation } from './hooks/usePaiementFormValidation';
+
+// Utilitaires et constantes
+import { formatDate as formatDateDisplay, formatDateToYYYYMMDD, formatMontant } from '../../utils/formatters';
+import { 
+    FORM_MODES, 
+    FORM_TITLES, 
+    LOADING_MESSAGES, 
+    HELP_TEXTS,
+    VALIDATION_MESSAGES,
+    BUTTON_TEXTS,
+    PAIEMENT_ETATS,
+    DEFAULT_VALUES
+} from '../../constants/paiementConstants';
+
+// Styles
 import '../../styles/components/paiements/PaiementForm.css';
 
-function PaiementForm({ mode = FORM_MODES.VIEW, idPaiement = null, onRetourListe, onPaiementCreated }) {
+function PaiementForm({ 
+    mode = FORM_MODES.CREATE, 
+    idPaiement = null, 
+    onRetourListe = null, 
+    onPaiementCreated = null 
+}) {
     
     console.log('🎨 PaiementForm - Props reçues:', {
         mode,
@@ -24,166 +52,213 @@ function PaiementForm({ mode = FORM_MODES.VIEW, idPaiement = null, onRetourListe
         hasOnPaiementCreated: !!onPaiementCreated
     });
 
-    // Hooks personnalisés pour la logique métier
+    // ✅ UTILISATION DES HOOKS PERSONNALISÉS
+    
+    // Hook principal pour l'état du formulaire
     const formState = usePaiementForm({ mode, idPaiement, onRetourListe, onPaiementCreated });
+    
+    // Hook pour la logique métier (chargement des données, logs, etc.)
     const formLogic = usePaiementFormLogic(formState);
+    
+    // Hook pour la validation
     const formValidation = usePaiementFormValidation(formState);
+    
+    // Hook pour les gestionnaires d'événements (✅ PASSER formValidation en 3ème paramètre)
     const formHandlers = usePaiementFormHandlers(formState, formLogic, formValidation);
 
-    // Debug log
-    console.log('🎨 Rendu PaiementForm:', {
-        mode,
-        idPaiement,
-        isLoading: formState.isLoading,
-        paiement: formState.paiement, // Développez cet objet
-        paiementKeys: Object.keys(formState.paiement || {}),
-        paiementValues: formState.paiement,
-        error: formState.error
-    });
-    
-    // Enregistrer les guards et événements
+    // ✅ EXTRACTION DES DONNÉES ET FONCTIONS DEPUIS LES HOOKS
+    const {
+        paiement,
+        factures,
+        factureSelectionnee,
+        logsInfo,
+        isLoading,
+        isSubmitting,
+        error,
+        logsLoading,
+        facturesLoading,
+        isReadOnly,
+        isPaiementAnnule,
+        isCreate,
+        isEdit,
+        isView
+    } = formState;
+
+    const {
+        chargerPaiement,
+        chargerFactures,
+        chargerLogsUtilisateur
+    } = formLogic;
+
+    const {
+        handleInputChange,
+        handleFactureChange,
+        handleSubmit,
+        handleCancel,              // ✅ AJOUT pour le retour
+        handleAnnulerPaiement,
+        handleOpenDateModal
+    } = formHandlers;
+
+    // ✅ EFFET D'INITIALISATION - VERSION SIMPLIFIÉE
     useEffect(() => {
-        if (formState.canDetectChanges()) {
-            const guardFunction = async () => {
-                return formState.hasUnsavedChanges;
-            };
-            formState.registerGuard(formState.guardId, guardFunction);
-            return () => formState.unregisterGuard(formState.guardId);
-        }
-    }, [formState.canDetectChanges, formState.hasUnsavedChanges, formState.guardId]);
-    
-    // Intercepter les navigations externes
-    useEffect(() => {
-        if (formState.canDetectChanges() && formState.hasUnsavedChanges) {
-            const handleGlobalNavigation = (event) => {
-                if (event.detail && event.detail.source && event.detail.callback) {
-                    formState.setGlobalNavigationCallback(() => event.detail.callback);
-                    formState.setShowGlobalModal(true);
+        const initialize = async () => {
+            console.log('🚀 Initialisation PaiementForm:', { mode, idPaiement });
+            
+            try {
+                // 1. Charger les factures en mode création
+                if (isCreate) {
+                    await chargerFactures();
                 }
-            };
-            window.addEventListener('navigation-blocked', handleGlobalNavigation);
-            return () => window.removeEventListener('navigation-blocked', handleGlobalNavigation);
-        }
-    }, [formState.canDetectChanges, formState.hasUnsavedChanges]);
-    
-    // Cleanup
-    useEffect(() => {
-        return () => {
-            if (mode !== FORM_MODES.VIEW && !formState.isPaiementAnnule) {
-                formState.unregisterGuard(formState.guardId);
-                formState.resetChanges();
-                formState.setIsFullyInitialized(false);
+                
+                // 2. Charger le paiement et les logs en mode édition/visualisation
+                if (idPaiement && (isEdit || isView)) {
+                    await chargerFactures(); // D'abord les factures
+                    await chargerPaiement(); // Puis le paiement
+                    await chargerLogsUtilisateur(idPaiement); // ✅ ENFIN LES LOGS
+                }
+                
+                console.log('✅ Initialisation terminée');
+                
+            } catch (error) {
+                console.error('❌ Erreur lors de l\'initialisation:', error);
             }
         };
-    }, [mode, formState.guardId]);
-    
-    // Titre du formulaire
-    const getTitre = () => {
+
+        initialize();
+    }, [mode, idPaiement, isCreate, isEdit, isView]);
+
+    // ✅ FONCTION UTILITAIRE POUR LA DATE
+    const getTodayDate = useCallback(() => {
+        return new Date().toISOString().split('T')[0];
+    }, []);
+
+    // ✅ CALCUL DU MONTANT RESTANT
+    const calculateMontantRestant = useCallback((facture) => {
+        if (!facture) return 0;
+        
+        return facture.montantRestant || 
+            (facture.totalAvecRistourne - (facture.montantPayeTotal || 0));
+    }, []);
+
+    // ✅ GESTION DU TITRE DU FORMULAIRE
+    const getTitreFormulaire = () => {
+        if (isPaiementAnnule) {
+            return isEdit ? FORM_TITLES.EDIT_CANCELLED : FORM_TITLES.VIEW_CANCELLED;
+        }
+        
         switch (mode) {
-            case FORM_MODES.CREATE: return FORM_TITLES.CREATE;
-            case FORM_MODES.EDIT: return formState.isPaiementAnnule ? FORM_TITLES.EDIT_CANCELLED : FORM_TITLES.EDIT;
-            case FORM_MODES.VIEW: return formState.isPaiementAnnule ? FORM_TITLES.VIEW_CANCELLED : FORM_TITLES.VIEW;
-            default: return 'Paiement';
+            case FORM_MODES.CREATE:
+                return FORM_TITLES.CREATE;
+            case FORM_MODES.EDIT:
+                return FORM_TITLES.EDIT;
+            case FORM_MODES.VIEW:
+                return FORM_TITLES.VIEW;
+            default:
+                return FORM_TITLES.VIEW;
         }
     };
-    
-    // Rendu conditionnel pour le chargement
-    if (formState.isLoading) {
+
+    // ✅ AFFICHAGE CONDITIONNEL DU CHARGEMENT
+    if (isLoading) {
         return (
-            <div className="content-section-container">
-                <PaiementFormHeader titre={getTitre()} />
-                <div className="paiement-form-container">
-                    <p className="loading-message">{LOADING_MESSAGES.LOADING_PAIEMENT}</p>
+            <div className="form-container">
+                <div className="loading-container">
+                    <div className="loading-spinner"></div>
+                    <p>{LOADING_MESSAGES.LOADING_PAIEMENT}</p>
                 </div>
             </div>
         );
     }
-    
+
+    // ✅ AFFICHAGE CONDITIONNEL DES ERREURS
+    if (error) {
+        return (
+            <div className="form-container">
+                <div className="error-container">
+                    <h2>Erreur</h2>
+                    <p className="error-message">{error}</p>
+                    {onRetourListe && (
+                        <button 
+                            className="btn-primary"
+                            onClick={onRetourListe}
+                        >
+                            Retour à la liste
+                        </button>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    // ✅ RENDU PRINCIPAL DU COMPOSANT
+    console.log('🔍 DEBUG PaiementForm - logsInfo:', logsInfo);
+    console.log('🔍 DEBUG PaiementForm - factureSelectionnee:', factureSelectionnee);
     return (
-        <div className="content-section-container">
-            <PaiementFormHeader titre={getTitre()} />
-            
-            <form onSubmit={formHandlers.handleSubmit} className="paiement-form">
-                <div className="paiement-form-container">
+        <DateProvider>
+            <div className="form-container">
+                <form onSubmit={handleSubmit} className="paiement-form">
                     
-                    <PaiementFormBadge etat={formState.paiement.etat} />
-                    
-                    {formState.error && (
-                        <div className="notification error">
-                            {formState.error}
-                        </div>
-                    )}
-                    
-                    {formState.isPaiementAnnule && mode !== FORM_MODES.VIEW && (
-                        <div className="notification warning">
-                            <strong>⚠️ Paiement annulé</strong><br/>
-                            {HELP_TEXTS.CANCELLED_WARNING}<br/>
-                            Annulé le {DateService.formatSingleDate(formState.paiement.dateAnnulation, 'datetime')}
-                        </div>
-                    )}
-                    
-                    <PaiementFormFactureSection 
-                        isCreate={formState.isCreate}
-                        paiement={formState.paiement}
-                        onInputChange={formHandlers.handleInputChange}
-                        factures={formState.factures}
-                        facturesLoading={formState.facturesLoading}
-                        factureSelectionnee={formState.factureSelectionnee}
+                    {/* En-tête du formulaire */}
+                    <PaiementFormHeader 
+                        titre={getTitreFormulaire()}
+                        idPaiement={idPaiement}
                     />
-                    
-                    <PaiementFormPaiementSection 
-                        paiement={formState.paiement}
-                        onInputChange={formHandlers.handleInputChange}
-                        onOpenDateModal={formHandlers.handleOpenDateModal}
-                        isReadOnly={formState.isReadOnly}
-                        isPaiementAnnule={formState.isPaiementAnnule}
-                        paiementService={formState.paiementService}
-                    />
-                    
-                    {(mode === FORM_MODES.VIEW || formState.isEdit) && (
-                        <PaiementFormSystemInfoSection 
-                            logsInfo={formState.logsInfo}
-                            paiement={formState.paiement}
-                            logsLoading={formState.logsLoading}
+
+                    {/* Badge d'état (si paiement annulé) */}
+                    {isPaiementAnnule && (
+                        <PaiementFormBadge 
+                            type="cancelled"
+                            message={HELP_TEXTS.CANCELLED_WARNING}
                         />
                     )}
 
-                    <PaiementFormActions 
-                        mode={mode}
-                        isReadOnly={formState.isReadOnly}
-                        isPaiementAnnule={formState.isPaiementAnnule}
-                        isSubmitting={formState.isSubmitting}
-                        onCancel={formHandlers.handleCancel}
-                        isCreate={formState.isCreate}
+                    {/* Section de sélection de facture */}
+                    <PaiementFormFactureSection
+                        isCreate={isCreate}                    // ✅ AJOUT
+                        paiement={paiement}
+                        onInputChange={handleInputChange}       // ✅ CORRECTION
+                        factures={factures}
+                        facturesLoading={facturesLoading}       // ✅ CORRECTION (était isLoading)
+                        factureSelectionnee={factureSelectionnee}
                     />
-                </div>
-            </form>
 
-            {/* Modals pour les modifications non sauvegardées */}
-            <ConfirmationModal
-                isOpen={formState.showUnsavedModal}
-                title="Modifications non sauvegardées"
-                message="Vous avez des modifications non sauvegardées dans le formulaire de paiement. Souhaitez-vous vraiment quitter sans sauvegarder ?"
-                type="warning"
-                onConfirm={formState.confirmNavigation}
-                onCancel={formState.cancelNavigation}
-                confirmText="Quitter sans sauvegarder"
-                cancelText="Continuer l'édition"
-                singleButton={false}
-            />
+                    {/* Section des détails du paiement */}
+                    <PaiementFormPaiementSection
+                        paiement={paiement}
+                        onInputChange={handleInputChange}
+                        onOpenDateModal={handleOpenDateModal}
+                        isReadOnly={isReadOnly}
+                        isPaiementAnnule={isPaiementAnnule}
+                        factureSelectionnee={factureSelectionnee}
+                        isCreate={isCreate}  // ✅ AJOUT de la prop isCreate
+                    />
 
-            <ConfirmationModal
-                isOpen={formState.showGlobalModal}
-                title="Modifications non sauvegardées"
-                message="Vous avez des modifications non sauvegardées dans le formulaire de paiement. Souhaitez-vous vraiment quitter sans sauvegarder ?"
-                type="warning"
-                onConfirm={formHandlers.handleConfirmGlobalNavigation}
-                onCancel={formHandlers.handleCancelGlobalNavigation}
-                confirmText="Quitter sans sauvegarder"
-                cancelText="Continuer l'édition"
-                singleButton={false}
-            />
-        </div>
+                    {/* Section des informations système et logs */}
+                    {!isCreate && (
+                        <PaiementFormSystemInfoSection
+                            logsInfo={logsInfo}           // ✅ LOGS FOURNIS PAR LE HOOK
+                            paiement={paiement}
+                            logsLoading={logsLoading}     // ✅ ÉTAT DE CHARGEMENT
+                        />
+                    )}
+
+                    {/* Actions du formulaire */}
+                    <PaiementFormActions
+                        mode={mode}
+                        isSubmitting={isSubmitting}
+                        isReadOnly={isReadOnly}
+                        isPaiementAnnule={isPaiementAnnule}
+                        isCreate={isCreate}
+                        onCancel={handleCancel}  // ✅ CORRECTION: La prop s'appelle onCancel, pas onRetourListe
+                        onAnnulerPaiement={handleAnnulerPaiement}
+                    />
+
+                </form>
+
+                {/* Modal de sélection de date */}
+                <GlobalDatePicker />
+            </div>
+        </DateProvider>
     );
 }
 

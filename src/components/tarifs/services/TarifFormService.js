@@ -260,10 +260,10 @@ export class TarifFormService {
         return `
           <form id="modalForm" class="modal-form" novalidate>
             ${ModalComponents.createSelect(
-              'clientId', 
+              'idClient', 
               'Client', 
               clientOptions,          // ✅ CORRECTION: options en 3ème position
-              itemData.client_id || '',  // ✅ CORRECTION: selectedValue en 4ème position
+              itemData.idClient || '',  // ✅ CORRECTION: selectedValue en 4ème position
               true, 
               isReadOnly
             )}

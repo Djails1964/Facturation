@@ -78,6 +78,7 @@ const FACTURATION_MAPPINGS = {
   idClient: 'id_client',
   serviceId: 'service_id',
   uniteId: 'unite_id',
+  clientNom: 'client_nom',
   
   // Devis
   numeroDevis: 'numero_devis',

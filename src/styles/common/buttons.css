@@ -334,7 +334,7 @@
 }
 
 /* ========== BOUTON FLOTTANT ========== */
-.lf-floating-button {
+.floating-button {
   position: fixed;
   bottom: 30px;
   right: 50px;
@@ -352,15 +352,15 @@
   z-index: 10;
 }
 
-.lf-floating-button span {
+.floating-button span {
   font-size: 32px;
 }
 
-.lf-floating-button:hover {
+.floating-button:hover {
   transform: scale(1.1);
 }
 
-.lf-floating-tooltip {
+.floating-tooltip {
   position: absolute;
   top: -40px;
   left: 50%;
@@ -375,7 +375,7 @@
   transition: opacity var(--transition-speed) var(--transition-ease);
 }
 
-.lf-floating-button:hover .lf-floating-tooltip {
+.floating-button:hover .floating-tooltip {
   opacity: 1;
 }
 
@@ -404,7 +404,7 @@
 
 /* ========== RESPONSIVE ========== */
 @media (max-width: 768px) {
-  .lf-floating-button {
+  .floating-button {
     bottom: 20px;
     right: 40px;
     width: 50px;
@@ -551,7 +551,7 @@
   .lf-actions-cell,
   .bouton-action,
   .cursor-tooltip,
-  .lf-floating-button,
+  .floating-button,
   .form-actions,
   .modal-actions,
   .calendar-icon {

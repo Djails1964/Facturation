@@ -20,13 +20,13 @@ const EnrichedObjectManager = {
             if (ligne.service && typeof ligne.service === 'object') {
                 lignePreservee.serviceEnrichi = ligne.service;
                 lignePreservee.serviceType = ligne.service.codeService || ligne.service.code;
-                lignePreservee.serviceId = ligne.service.idService || ligne.service.id;
+                lignePreservee.idService = ligne.service.idService || ligne.service.id;
             }
 
             if (ligne.unite && typeof ligne.unite === 'object') {
                 lignePreservee.uniteEnrichie = ligne.unite;
                 lignePreservee.uniteCode = ligne.unite.code;
-                lignePreservee.uniteId = ligne.unite.idUnite || ligne.unite.id;
+                lignePreservee.idUnite = ligne.unite.idUnite || ligne.unite.id;
             }
 
             // S'assurer que les propriétés de base existent
@@ -58,17 +58,17 @@ const EnrichedObjectManager = {
                 if (serviceObj) {
                     ligneUpdated.service = serviceObj;
                     ligneUpdated.serviceEnrichi = serviceObj;
-                    ligneUpdated.serviceId = serviceObj.idService;
+                    ligneUpdated.idService = serviceObj.idService;
                 } else {
                     ligneUpdated.service = null;
                     ligneUpdated.serviceEnrichi = null;
-                    ligneUpdated.serviceId = null;
+                    ligneUpdated.idService = null;
                 }
             } else if (champ === 'service' && valeur && typeof valeur === 'object') {
                 // Objet service complet fourni
                 ligneUpdated.serviceEnrichi = valeur;
                 ligneUpdated.serviceType = valeur.codeService || valeur.code;
-                ligneUpdated.serviceId = valeur.idService || valeur.id;
+                ligneUpdated.idService = valeur.idService || valeur.id;
             }
         }
 
@@ -81,19 +81,19 @@ const EnrichedObjectManager = {
                     ligneUpdated.unite = uniteObj;
                     ligneUpdated.uniteEnrichie = uniteObj;
                     ligneUpdated.uniteCode = uniteObj.code;
-                    ligneUpdated.uniteId = uniteObj.idUnite || uniteObj.id;
+                    ligneUpdated.idUnite = uniteObj.idUnite || uniteObj.id;
                 } else {
                     // Créer un objet minimal
                     ligneUpdated.unite = { code: valeur, nom: valeur };
                     ligneUpdated.uniteEnrichie = { code: valeur, nom: valeur };
                     ligneUpdated.uniteCode = valeur;
-                    ligneUpdated.uniteId = null;
+                    ligneUpdated.idUnite = null;
                 }
             } else if (valeur && typeof valeur === 'object') {
                 // Objet unité complet fourni
                 ligneUpdated.uniteEnrichie = valeur;
                 ligneUpdated.uniteCode = valeur.code;
-                ligneUpdated.uniteId = valeur.idUnite || valeur.id;
+                ligneUpdated.idUnite = valeur.idUnite || valeur.id;
             }
         }
 
@@ -121,8 +121,8 @@ const EnrichedObjectManager = {
             prixUnitaire: '',
             totalLigne: 0,
             serviceType: '',
-            serviceId: null,
-            uniteId: null,
+            idService: null,
+            idUnite: null,
             service: null,
             unite: null,
             serviceEnrichi: null,
@@ -137,7 +137,7 @@ const EnrichedObjectManager = {
         nouvelleLigne.serviceTypeCode = defaultService.codeService;
         nouvelleLigne.service = defaultService;
         nouvelleLigne.serviceEnrichi = defaultService;
-        nouvelleLigne.serviceId = defaultService.idService;
+        nouvelleLigne.idService = defaultService.idService;
 
             // ✅ CORRECTION : Chercher l'unité par défaut pour ce service
             if (defaultUnites && Array.isArray(defaultUnites)) {
@@ -153,7 +153,7 @@ const EnrichedObjectManager = {
                     nouvelleLigne.unite = uniteParDefaut;
                     nouvelleLigne.uniteEnrichie = uniteParDefaut;
                     nouvelleLigne.uniteCode = uniteParDefaut.codeUnite;
-                    nouvelleLigne.uniteId = uniteParDefaut.idUnite;
+                    nouvelleLigne.idUnite = uniteParDefaut.idUnite;
                     
                     console.log('✅ Unité assignée:', {
                         code: uniteParDefaut.codeUnite,
@@ -264,18 +264,18 @@ export function useFactureLignes(
                         if (serviceObj) {
                             ligneUpdated.service = serviceObj;
                             ligneUpdated.serviceEnrichi = serviceObj;
-                            ligneUpdated.serviceId = serviceObj.idService;
+                            ligneUpdated.idService = serviceObj.idService;
                             console.log('✅ Service enrichi mis à jour:', serviceObj.nomService);
                         } else {
                             ligneUpdated.service = null;
                             ligneUpdated.serviceEnrichi = null;
-                            ligneUpdated.serviceId = null;
+                            ligneUpdated.idService = null;
                         }
                     } else if (champ === 'service' && valeur && typeof valeur === 'object') {
                         // Objet service complet fourni
                         ligneUpdated.serviceEnrichi = valeur;
                         ligneUpdated.serviceType = valeur.codeService || valeur.code;
-                        ligneUpdated.serviceId = valeur.idService || valeur.id;
+                        ligneUpdated.idService = valeur.idService || valeur.id;
                         console.log('✅ Service objet mis à jour:', valeur.nomService || valeur.nom);
                     }
                 }
@@ -290,14 +290,14 @@ export function useFactureLignes(
                             ligneUpdated.unite = { ...uniteObj }; // Nouvel objet
                             ligneUpdated.uniteEnrichie = { ...uniteObj }; // Nouvel objet
                             ligneUpdated.uniteCode = uniteObj.code || uniteObj.codeUnite;
-                            ligneUpdated.uniteId = uniteObj.idUnite || uniteObj.id;
+                            ligneUpdated.idUnite = uniteObj.idUnite || uniteObj.id;
                             console.log('✅ Unité enrichie REMPLACÉE (string):', uniteObj.nom || uniteObj.nomUnite, 'ID:', uniteObj.idUnite);
                         } else {
                             // Créer un objet minimal
                             ligneUpdated.unite = { code: valeur, nom: valeur };
                             ligneUpdated.uniteEnrichie = { code: valeur, nom: valeur };
                             ligneUpdated.uniteCode = valeur;
-                            ligneUpdated.uniteId = null;
+                            ligneUpdated.idUnite = null;
                             console.log('✅ Unité minimale créée:', valeur);
                         }
                     } else if (valeur && typeof valeur === 'object') {
@@ -305,7 +305,7 @@ export function useFactureLignes(
                         ligneUpdated.unite = { ...valeur }; // Nouvel objet complet
                         ligneUpdated.uniteEnrichie = { ...valeur }; // Nouvel objet complet
                         ligneUpdated.uniteCode = valeur.code || valeur.codeUnite;
-                        ligneUpdated.uniteId = valeur.idUnite || valeur.id;
+                        ligneUpdated.idUnite = valeur.idUnite || valeur.id;
                         console.log('✅ Unité objet REMPLACÉE complètement:', valeur.nom || valeur.nomUnite, 'ID:', valeur.idUnite);
                         
                         // ✅ VÉRIFICATION: S'assurer que les propriétés sont bien mises à jour
@@ -313,14 +313,14 @@ export function useFactureLignes(
                             unite: ligneUpdated.unite,
                             uniteEnrichie: ligneUpdated.uniteEnrichie,
                             uniteCode: ligneUpdated.uniteCode,
-                            uniteId: ligneUpdated.uniteId
+                            idUnite: ligneUpdated.idUnite
                         });
                     } else if (valeur === null) {
                         // Nettoyage
                         ligneUpdated.unite = null;
                         ligneUpdated.uniteEnrichie = null;
                         ligneUpdated.uniteCode = null;
-                        ligneUpdated.uniteId = null;
+                        ligneUpdated.idUnite = null;
                         console.log('✅ Unité nettoyée');
                     }
                 }
@@ -336,14 +336,14 @@ export function useFactureLignes(
                     console.log('✅ UniteCode mis à jour et objet synchronisé:', valeur);
                 }
 
-                if (champ === 'uniteId') {
-                    ligneUpdated.uniteId = valeur;
+                if (champ === 'idUnite') {
+                    ligneUpdated.idUnite = valeur;
                     // ✅ CORRECTION: Mettre à jour l'objet unité pour rester cohérent
                     if (ligneUpdated.unite && typeof ligneUpdated.unite === 'object') {
                         ligneUpdated.unite = { ...ligneUpdated.unite, idUnite: valeur };
                         ligneUpdated.uniteEnrichie = { ...ligneUpdated.unite };
                     }
-                    console.log('✅ UniteId mis à jour et objet synchronisé:', valeur);
+                    console.log('✅ idUnite mis à jour et objet synchronisé:', valeur);
                 }
 
                 // Recalcul du totalLigne si quantité ou prix changé
@@ -356,13 +356,13 @@ export function useFactureLignes(
                 nouvelleLignes[index] = ligneUpdated;
                 
                 // ✅ DEBUG: Log de la ligne finale pour vérification
-                if (champ === 'unite' || champ === 'uniteCode' || champ === 'uniteId') {
+                if (champ === 'unite' || champ === 'uniteCode' || champ === 'idUnite') {
                     console.log('🔍 Ligne finale après modification:', {
                         champ,
                         valeur,
                         unite: nouvelleLignes[index].unite,
                         uniteCode: nouvelleLignes[index].uniteCode,
-                        uniteId: nouvelleLignes[index].uniteId
+                        idUnite: nouvelleLignes[index].idUnite
                     });
                 }
             }

@@ -127,7 +127,7 @@ function FactureDetailsForm({
     console.log('🔍 Props reçues dans FactureDetailsForm:', {
         lignesInitiales: lignesInitiales?.length || 0,
         lignesInitialesData: lignesInitiales,
-        clientId: client?.id,
+        idClient: client?.id,
         readOnly,
         isModification
     });

@@ -1,41 +1,47 @@
+// src/hooks/useTarifFilter.js
+// 🔧 CORRECTION COMPLÈTE du filtre statut pour tarifs-standards
+
 import { useState, useMemo, useCallback } from 'react';
 import { getEtatValidite } from '../../../utils/formatters';
 
-/**
- * Hook personnalisé pour gérer les filtres des listes de tarification
- * @param {Array} data - Données à filtrer
- * @param {string} filterType - Type de filtre ('services', 'unites', etc.)
- * @param {Object} initialFilters - Filtres initiaux
- */
 export const useTarifFilter = (data = [], filterType = '', initialFilters = {}) => {
   
-  // État des filtres
   const [filters, setFilters] = useState(initialFilters);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Gestionnaire de changement de filtre
   const handleFilterChange = useCallback((field, value) => {
+    console.log('🔄 Changement de filtre:', { field, value });
     setFilters(prev => ({
       ...prev,
       [field]: value
     }));
   }, []);
 
-  // Gestionnaire de reset des filtres
   const handleResetFilters = useCallback(() => {
     setFilters(initialFilters);
   }, [initialFilters]);
 
-  // Gestionnaire de basculement d'affichage des filtres
   const handleToggleFilters = useCallback(() => {
     setShowFilters(prev => !prev);
   }, []);
 
   // Fonction de filtrage générique
   const applyFilters = useCallback((items, filterConfig) => {
-    return items.filter(item => {
+    console.log('🔍 Application des filtres:', { 
+      filterType, 
+      filters, 
+      itemsCount: items.length 
+    });
+    
+    const filtered = items.filter(item => {
       return Object.entries(filters).every(([field, filterValue]) => {
         if (!filterValue || filterValue === '') return true;
+
+        console.log(`🔎 Test filtre ${field}:`, { 
+          filterValue, 
+          itemValue: item[field],
+          item 
+        });
 
         switch (field) {
           case 'code':
@@ -48,41 +54,55 @@ export const useTarifFilter = (data = [], filterType = '', initialFilters = {}) 
             return item.description === filterValue;
           
           case 'statut':
-            // Statut uniquement pour les services (pas pour les unités)
+            // Pour les services: statut = Actif/Inactif
             if (filterType === 'services') {
               const itemStatut = item.actif ? 'Actif' : 'Inactif';
+              console.log('📋 Filtre statut service:', { itemStatut, filterValue });
               return itemStatut === filterValue;
             }
-            // Pour les tarifs avec état valide/invalide basé sur les dates
+            
+            // ✅ CORRECTION CRITIQUE: Pour les tarifs, utiliser directement item.statut
+            // NE PAS recalculer l'état depuis les dates !
             if (filterType === 'tarifs-standards' || filterType === 'tarifs-speciaux') {
-              const dateDebut = item.dateDebut || item.date_debut;
-              const dateFin = item.dateFin || item.date_fin;
-              const etatCalcule = getEtatValidite(dateDebut, dateFin);
+              console.log('📋 Filtre statut tarif:', { 
+                itemStatut: item.statut,
+                filterValue,
+                match: item.statut === filterValue
+              });
               
-              if (filterValue === 'valide') {
-                return etatCalcule.etat === 'valide';
-              } else if (filterValue === 'invalide') {
-                return etatCalcule.etat === 'invalide';
-              }
+              // La propriété 'statut' a été définie lors de la normalisation
+              // dans TarifStandardGestion (statut = etat enrichi)
+              return item.statut === filterValue;
             }
+            
             return true;
           
           case 'service':
-            const serviceName = item.nom_service || item.nomService;
+            // ✅ Priorité : propriétés normalisées en premier
+            const serviceName = item.service || item.nomService || item.nom_service || '';
             return serviceName === filterValue;
           
           case 'unite':
-            const uniteName = item.nom_unite || item.nomUnite;
+            // ✅ Priorité : propriétés normalisées en premier
+            const uniteName = item.unite || item.nomUnite || item.nom_unite || '';
             return uniteName === filterValue;
           
           case 'typeTarif':
-            const typeTarifName = item.nom_type_tarif || item.nomTypeTarif;
+            // ✅ Priorité : propriétés normalisées en premier
+            const typeTarifName = item.typeTarif || item.nomTypeTarif || item.nom_type_tarif || '';
             return typeTarifName === filterValue;
           
           case 'client':
-            const clientName = item.client_nom || item.clientNom || 
-                              (item.client_prenom && item.client_nom ? 
-                               `${item.client_prenom} ${item.client_nom}` : '');
+            // ✅ CORRECTION: Utiliser les propriétés qui contiennent le nom COMPLET
+            const clientName = item.client || item.clientNom || item.client_nom || '';
+            console.log('👤 Filtre client:', { 
+              filterValue, 
+              clientName,
+              item_client: item.client,
+              item_clientNom: item.clientNom,
+              item_client_nom: item.client_nom,
+              match: clientName === filterValue 
+            });
             return clientName === filterValue;
           
           default:
@@ -90,38 +110,38 @@ export const useTarifFilter = (data = [], filterType = '', initialFilters = {}) 
         }
       });
     });
+    
+    console.log('✅ Résultat filtrage:', { 
+      avant: items.length, 
+      après: filtered.length 
+    });
+    
+    return filtered;
   }, [filters, filterType]);
 
   // Données filtrées selon le type
   const filteredData = useMemo(() => {
-    if (!data || data.length === 0) return [];
-    
-    // Configuration spécifique selon le type
-    const filterConfig = {};
-    
-    switch (filterType) {
-      case 'services':
-        return applyFilters(data, filterConfig);
-      
-      case 'unites':
-        return applyFilters(data, filterConfig);
-      
-      case 'types-tarifs':
-        return applyFilters(data, filterConfig);
-      
-      case 'tarifs-standards':
-        console.log('Applying filters for types-tarifs with config:', filterConfig);
-        console.log('Current filters:', filters);
-        console.log('Data before filtering:', data);
-        return applyFilters(data, filterConfig);
-      
-      case 'tarifs-speciaux':
-        return applyFilters(data, filterConfig);
-      
-      default:
-        return data;
+    if (!data || data.length === 0) {
+      console.log('⚠️ Pas de données à filtrer');
+      return [];
     }
-  }, [data, applyFilters, filterType]);
+    
+    console.log('📊 Filtrage des données:', { 
+      filterType, 
+      dataLength: data.length,
+      filters 
+    });
+    
+    const filterConfig = {};
+    const result = applyFilters(data, filterConfig);
+    
+    console.log('📈 Résultat final du filtrage:', {
+      entrée: data.length,
+      sortie: result.length
+    });
+    
+    return result;
+  }, [data, applyFilters, filterType, filters]);
 
   // Vérifier s'il y a des filtres actifs
   const hasActiveFilters = useMemo(() => {
@@ -139,21 +159,14 @@ export const useTarifFilter = (data = [], filterType = '', initialFilters = {}) 
   }, [data.length, filteredData.length, hasActiveFilters]);
 
   return {
-    // État des filtres
     filters,
     showFilters,
     hasActiveFilters,
-    
-    // Données filtrées
     filteredData,
     filterStats,
-    
-    // Gestionnaires
     handleFilterChange,
     handleResetFilters,
     handleToggleFilters,
-    
-    // Utilities
     setFilters,
     setShowFilters
   };
@@ -161,29 +174,64 @@ export const useTarifFilter = (data = [], filterType = '', initialFilters = {}) 
 
 /**
  * Fonction utilitaire pour enrichir les données de tarifs avec leur état
- * @param {Array} tarifs - Tableau de tarifs
- * @param {string} currentDate - Date actuelle
- * @returns {Array} Tarifs enrichis avec la propriété 'etat'
  */
 export const enrichTarifsWithEtat = (tarifs, currentDate = null) => {
   if (!Array.isArray(tarifs)) return [];
   
-  return tarifs.map(tarif => {
-    const dateDebut = tarif.dateDebut || tarif.date_debut;
-    const dateFin = tarif.dateFin || tarif.date_fin;
+  console.log('🔧 Enrichissement de', tarifs.length, 'tarifs avec état');
+  
+  const enriched = tarifs.map(tarif => {
+    // ✅ CORRECTION: Chercher toutes les variantes possibles de noms de propriétés
+    // Pour tarifs standards ET tarifs spéciaux
+    const dateDebut = tarif.dateDebutTarifStandard || 
+                      tarif.dateDebutTarifSpecial ||
+                      tarif.dateDebut || 
+                      tarif.date_debut;
+                      
+    const dateFin = tarif.dateFinTarifStandard || 
+                    tarif.dateFinTarifSpecial ||
+                    tarif.dateFin || 
+                    tarif.date_fin;
+    
     const etatCalcule = getEtatValidite(dateDebut, dateFin, currentDate);
+    
+    console.log('📅 Tarif enrichi:', {
+      id: tarif.id || tarif.idTarifStandard || tarif.idTarifSpecial,
+      type: tarif.idTarifStandard ? 'standard' : 'spécial',
+      dateDebut,
+      dateFin,
+      etatCalcule: etatCalcule.etat,
+      // Debug: montrer les propriétés trouvées
+      source: {
+        dateDebutTarifStandard: tarif.dateDebutTarifStandard,
+        dateFinTarifStandard: tarif.dateFinTarifStandard,
+        dateDebutTarifSpecial: tarif.dateDebutTarifSpecial,
+        dateFinTarifSpecial: tarif.dateFinTarifSpecial
+      }
+    });
     
     return {
       ...tarif,
-      etat: etatCalcule.etat // 'valide' ou 'invalide'
+      etat: etatCalcule.etat, // ✅ 'valide' ou 'invalide' en minuscules
+      // Normaliser aussi les dates pour un accès uniforme
+      dateDebut: dateDebut || null,
+      dateFin: dateFin || null
     };
   });
+  
+  const stats = {
+    total: enriched.length,
+    valides: enriched.filter(t => t.etat === 'valide').length,
+    invalides: enriched.filter(t => t.etat === 'invalide').length
+  };
+  
+  console.log('📊 Stats enrichissement:', stats);
+  
+  return enriched;
 };
 
 /**
  * Fonction utilitaire pour créer les filtres initiaux selon le type
- * @param {string} filterType - Type de filtre
- * @returns {Object} Filtres initiaux
  */
 export const createInitialFilters = (filterType) => {
   const baseFilters = {};
@@ -198,7 +246,6 @@ export const createInitialFilters = (filterType) => {
       };
     
     case 'unites':
-      // PAS DE STATUT POUR LES UNITÉS
       return {
         code: '',
         nom: '',

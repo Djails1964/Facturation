@@ -28,7 +28,7 @@ import '../../styles/components/clients/ClientForm.css';
  */
 function ClientForm({ 
   mode = FORM_MODES.VIEW, 
-  clientId = null, 
+  idClient = null, 
   onRetourListe, 
   onClientCreated,
   clientService = null,
@@ -40,7 +40,7 @@ function ClientForm({
   // ================================
   
   // ✅ Hook principal avec système unifié de détection des modifications
-  const clientFormState = useClientForm(mode, clientId, clientService);
+  const clientFormState = useClientForm(mode, idClient, clientService);
   
   // Hook de validation spécialisé
   const validation = useClientValidation(clientFormState.client);

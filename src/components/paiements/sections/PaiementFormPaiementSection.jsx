@@ -1,82 +1,171 @@
-import React from 'react';
-import { FiCalendar } from 'react-icons/fi';
-import { SECTION_TITLES, LABELS } from '../../../constants/paiementConstants';
+// src/components/paiements/sections/PaiementFormPaiementSection.jsx
+// ✅ VERSION UNIFIÉE utilisant DateInputField comme LigneFactureFields
+
+import React, { useEffect } from 'react';
+import PaiementService from '../../../services/PaiementService';
+import DateInputField from '../../shared/DateInputField';
 import DateService from '../../../utils/DateService';
+import { formatMontant, formatDate } from '../../../utils/formatters';
+import { SECTION_TITLES, LABELS } from '../../../constants/paiementConstants';
 
 const PaiementFormPaiementSection = ({ 
     paiement, 
     onInputChange, 
-    onOpenDateModal,
     isReadOnly, 
-    isPaiementAnnule,
-    paiementService 
+    isPaiementAnnule, 
+    factureSelectionnee,
+    isCreate = false
 }) => {
-    
-    const formatDateForDisplay = (dateString) => {
-        console.log('📅 Format date pour affichage:', dateString);
-        const result = DateService.formatSingleDate(dateString, 'date');
-        console.log('📅 Résultat formatage:', result);
-        return result;
+    const paiementService = new PaiementService();
+
+    // Initialiser le montant payé avec le montant restant
+    useEffect(() => {
+        console.log('🔍 useEffect montant - conditions:', { 
+            isCreate, 
+            hasFacture: !!factureSelectionnee,
+            factureId: factureSelectionnee?.idFacture 
+        });
+        
+        if (isCreate && factureSelectionnee) {
+            const montantRestant = factureSelectionnee.montantRestant || 
+                (factureSelectionnee.totalAvecRistourne ? 
+                    factureSelectionnee.totalAvecRistourne - (factureSelectionnee.montantPayeTotal || 0) :
+                    factureSelectionnee.montantTotal - (factureSelectionnee.montantPayeTotal || 0)
+                );
+            
+            console.log('💰 Montant restant calculé:', montantRestant);
+            
+            if (montantRestant > 0) {
+                console.log('✅ Initialisation automatique du montant payé:', montantRestant.toFixed(2));
+                onInputChange('montantPaye', montantRestant.toFixed(2));
+            }
+        }
+    }, [factureSelectionnee?.idFacture, isCreate]);
+
+    /**
+     * ✅ Gestionnaire pour le champ date - compatible avec DateInputField
+     * Convertit entre le format d'affichage (DD.MM.YYYY) et le format de stockage (YYYY-MM-DD)
+     */
+    const handleDateChange = (valueOrEvent) => {
+        let dateValue = '';
+        
+        // Gérer les deux types de retour possibles
+        if (typeof valueOrEvent === 'string') {
+            dateValue = valueOrEvent;
+        } else if (valueOrEvent && valueOrEvent.target) {
+            dateValue = valueOrEvent.target.value;
+        }
+        
+        console.log('📅 PaiementFormPaiementSection - handleDateChange:', dateValue);
+        
+        // Convertir le format d'affichage (DD.MM.YYYY) vers le format de stockage (YYYY-MM-DD)
+        if (dateValue && dateValue.includes('.')) {
+            const parts = dateValue.split('.');
+            if (parts.length === 3) {
+                const [day, month, year] = parts;
+                if (day.length <= 2 && month.length <= 2 && year.length === 4) {
+                    dateValue = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                }
+            }
+        }
+        
+        onInputChange('datePaiement', dateValue);
+    };
+
+    /**
+     * ✅ Formater la date pour l'affichage (YYYY-MM-DD -> DD.MM.YYYY)
+     */
+    const formatDateForDisplay = (dateStr) => {
+        if (!dateStr) return '';
+        
+        // Si format YYYY-MM-DD, convertir en DD.MM.YYYY
+        if (dateStr.includes('-') && dateStr.length === 10) {
+            const [year, month, day] = dateStr.split('-');
+            return `${day}.${month}.${year}`;
+        }
+        
+        return dateStr;
     };
 
     return (
         <div className="form-section">
             <h3>{SECTION_TITLES.PAIEMENT}</h3>
             
+            {/* ✅ Date de paiement - Utilisation de DateInputField unifié */}
             <div className="form-row">
-                {/* Champ date avec icône FiCalendar */}
-                <div className="input-group date-input-wrapper">
-                    <input
-                        type="text"
+                {/* Date de paiement - 50% */}
+                <div className="input-group">
+                    <DateInputField
                         id="datePaiement"
+                        label={LABELS.DATE_PAIEMENT}
                         value={formatDateForDisplay(paiement.datePaiement)}
-                        readOnly
-                        required
-                        placeholder=" "
-                        onClick={onOpenDateModal}
-                        className={(isReadOnly || isPaiementAnnule) ? 'readonly' : 'clickable'}
+                        onChange={handleDateChange}
+                        readOnly={isReadOnly || isPaiementAnnule}
+                        required={true}
+                        multiSelect={false}
+                        maxLength={10}
+                        showCharCount={false}
+                        className="required"
                     />
-                    <label htmlFor="datePaiement" className="required">
-                        {LABELS.DATE_PAIEMENT}
-                    </label>
-                    
-                    {!isReadOnly && !isPaiementAnnule && (
-                        <FiCalendar 
-                            className="calendar-icon"
-                            onClick={onOpenDateModal}
-                            title={LABELS.OPEN_DATE_CALENDAR}
-                            size={16}
-                        />
-                    )}
                 </div>
                 
+                {/* Montant payé - 50% */}
                 <div className="input-group">
-                    <input
-                        type="number"
-                        id="montantPaye"
-                        value={paiement.montantPaye}
-                        onChange={(e) => onInputChange('montantPaye', e.target.value)}
-                        step="0.01"
-                        min="0"
-                        required
-                        readOnly={isReadOnly || isPaiementAnnule}
-                        placeholder=" "
-                    />
-                    <label htmlFor="montantPaye" className="required">{LABELS.MONTANT_PAYE}</label>
+                    {isReadOnly || isPaiementAnnule ? (
+                        <>
+                            <input
+                                type="text"
+                                id="montantPaye"
+                                value={paiement.montantPaye ? `${formatMontant(paiement.montantPaye)} CHF` : ''}
+                                readOnly
+                                placeholder=" "
+                            />
+                            <label htmlFor="montantPaye" className="required">
+                                {LABELS.MONTANT_PAYE}
+                            </label>
+                        </>
+                    ) : (
+                        <>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                id="montantPaye"
+                                value={paiement.montantPaye || ''}
+                                onChange={(e) => onInputChange('montantPaye', e.target.value)}
+                                onBlur={(e) => {
+                                    // Formater avec 2 décimales quand on quitte le champ
+                                    if (e.target.value) {
+                                        const formatted = parseFloat(e.target.value).toFixed(2);
+                                        onInputChange('montantPaye', formatted);
+                                    }
+                                }}
+                                required
+                                placeholder=" "
+                            />
+                            <label htmlFor="montantPaye" className="required">
+                                {LABELS.MONTANT_PAYE}
+                            </label>
+                        </>
+                    )}
                 </div>
             </div>
-            
+                        
+            {/* Méthode de paiement */}
             <div className="form-row">
                 <div className="input-group">
                     {isReadOnly || isPaiementAnnule ? (
                         <>
                             <input
                                 type="text"
+                                id="methodePaiement"
                                 value={paiementService.formatMethodePaiement(paiement.methodePaiement)}
                                 readOnly
                                 placeholder=" "
                             />
-                            <label>{LABELS.METHODE_PAIEMENT}</label>
+                            <label htmlFor="methodePaiement" className="required">
+                                {LABELS.METHODE_PAIEMENT}
+                            </label>
                         </>
                     ) : (
                         <>
@@ -86,32 +175,94 @@ const PaiementFormPaiementSection = ({
                                 onChange={(e) => onInputChange('methodePaiement', e.target.value)}
                                 required
                             >
-                                <option value="">Sélectionner une méthode</option>
+                                <option value="">-- Sélectionner --</option>
                                 {paiementService.getMethodesPaiement().map(methode => (
                                     <option key={methode.value} value={methode.value}>
                                         {methode.label}
                                     </option>
                                 ))}
                             </select>
-                            <label htmlFor="methodePaiement" className="required">{LABELS.METHODE_PAIEMENT}</label>
+                            <label htmlFor="methodePaiement" className="required">
+                                {LABELS.METHODE_PAIEMENT}
+                            </label>
                         </>
                     )}
                 </div>
             </div>
             
+            {/* Commentaire */}
             <div className="form-row">
-                <div className="input-group full-width">
+                <div className="input-group">
                     <textarea
                         id="commentaire"
                         value={paiement.commentaire}
                         onChange={(e) => onInputChange('commentaire', e.target.value)}
-                        rows={3}
                         readOnly={isReadOnly || isPaiementAnnule}
                         placeholder=" "
+                        rows="3"
                     />
-                    <label htmlFor="commentaire">{LABELS.COMMENTAIRE}</label>
+                    <label htmlFor="commentaire">
+                        {LABELS.COMMENTAIRE}
+                    </label>
                 </div>
             </div>
+            
+            {/* Détails de la facture sélectionnée */}
+            {factureSelectionnee && (
+                <div className="facture-details">
+                    <h4>Détails de la facture</h4>
+                    
+                    <div className="details-row">
+                        <span>N° Facture:</span>
+                        <span>{factureSelectionnee.numeroFacture}</span>
+                    </div>
+                    
+                    <div className="details-row">
+                        <span>Client:</span>
+                        <span>
+                            {factureSelectionnee.client ? 
+                                `${factureSelectionnee.client.prenom} ${factureSelectionnee.client.nom}` : 
+                                'N/A'
+                            }
+                        </span>
+                    </div>
+                    
+                    <div className="details-row">
+                        <span>Date facture:</span>
+                        <span>{formatDate(factureSelectionnee.dateFacture)}</span>
+                    </div>
+                    
+                    <div className="details-row">
+                        <span>Montant total:</span>
+                        <span>
+                            {formatMontant(
+                                factureSelectionnee.totalAvecRistourne || 
+                                factureSelectionnee.montantTotal
+                            )} CHF
+                        </span>
+                    </div>
+                    
+                    {(factureSelectionnee.montantPayeTotal > 0) && (
+                        <div className="details-row">
+                            <span>Déjà payé:</span>
+                            <span>{formatMontant(factureSelectionnee.montantPayeTotal)} CHF</span>
+                        </div>
+                    )}
+                    
+                    <div className="details-row">
+                        <span>Reste à payer:</span>
+                        <span className="montant-restant">
+                            {formatMontant(
+                                factureSelectionnee.montantRestant || 
+                                (factureSelectionnee.totalAvecRistourne ? 
+                                    factureSelectionnee.totalAvecRistourne - (factureSelectionnee.montantPayeTotal || 0) :
+                                    factureSelectionnee.montantTotal - (factureSelectionnee.montantPayeTotal || 0)
+                                )
+                            )} CHF
+                        </span>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

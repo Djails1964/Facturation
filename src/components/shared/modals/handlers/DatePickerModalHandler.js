@@ -605,8 +605,8 @@ export class DatePickerModalHandler {
                 TITLE: "Sélectionner les dates", 
                 CONFIRM_TEXT: "Confirmer la sélection",
                 description: "Sélectionnez la date de facturation",
-                help: "Vous pouvez sélectionner des dates futures pour la facturation.",
-                ALLOW_FUTURE: true, // ✅ EXPLICITE
+                help: "Les dates futures ne sont pas autorisées pour la facturation.",
+                ALLOW_FUTURE: false, // ✅ EXPLICITE
                 context: 'invoice'
             },
             default: {

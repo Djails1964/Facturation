@@ -29,7 +29,7 @@ class PaiementService {
       if (options.annee) params.annee = options.annee;
       if (options.mois) params.mois = options.mois;
       if (options.methode) params.methode = options.methode;
-      if (options.clientId) params.client_id = options.clientId;
+      if (options.idClient) params.idClient = options.idClient;
       if (options.idFacture) params.IdFacture = options.idFacture;
       if (options.page) params.page = options.page;
       if (options.limit) params.limit = options.limit;
@@ -149,7 +149,7 @@ class PaiementService {
           idPaiement: paiement.idPaiement,
           idFacture: paiement.idFacture,
           numeroFacture: paiement.numeroFacture,
-          clientId: paiement.id_client,
+          idClient: paiement.id_client,
           nomClient: paiement.nom_client,
           datePaiement: paiement.datePaiement,
           montantPaye: parseFloat(paiement.montantPaye),
@@ -365,14 +365,14 @@ class PaiementService {
 
   /**
    * ✅ NOUVELLE : Récupère les paiements d'un client spécifique
-   * @param {number} clientId ID du client
+   * @param {number} idClient ID du client
    * @param {Object} options Options de filtrage
    * @returns {Object} {paiements: Array, pagination: Object}
    */
-  async getPaiementsParClient(clientId, options = {}) {
+  async getPaiementsParClient(idClient, options = {}) {
     return await this.chargerPaiements({
       ...options,
-      clientId: clientId
+      idClient: idClient
     });
   }
 
@@ -419,7 +419,7 @@ class PaiementService {
     
     // Appliquer les filtres supportés
     Object.keys(criteres).forEach(cle => {
-      if (['annee', 'mois', 'methode', 'statut', 'clientId', 'idFacture', 'page', 'limit'].includes(cle)) {
+      if (['annee', 'mois', 'methode', 'statut', 'idClient', 'idFacture', 'page', 'limit'].includes(cle)) {
         options[cle] = criteres[cle];
       }
     });

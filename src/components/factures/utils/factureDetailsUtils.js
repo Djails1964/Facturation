@@ -135,7 +135,7 @@ export const checkDataConsistency = (lignes, services, unites) => {
                 s.code === ligne.serviceType && 
                 unites.some(u => 
                     u.code === ligne.unite && 
-                    (u.service_code === s.code || u.service_id === s.id)
+                    (u.service_code === s.code || u.id === s.id)
                 )
             );
 
@@ -178,8 +178,8 @@ export const formatterLignesFacture = (lignes, services, unites) => {
             quantite: parseFloat(ligne.quantite) || 0,
             prixUnitaire: parseFloat(ligne.prixUnitaire) || 0,
             total: parseFloat(ligne.total) || 0,
-            serviceId: serviceObj ? serviceObj.id : null,
-            uniteId: uniteObj ? uniteObj.id : null,
+            idService: serviceObj ? serviceObj.id : null,
+            idUnite: uniteObj ? uniteObj.id : null,
             noOrdre: ligne.noOrdre || index + 1
         };
     });

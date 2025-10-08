@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import ParametresContent from './admin/ParametresContent';
 import ClientGestion from './components/clients/ClientGestion';
 import FactureGestion from './components/factures/FactureGestion';
-import PaiementGestion from './components/paiements/PaiementGestion'; // ✅ NOUVEAU
+import PaiementGestion from './components/paiements/PaiementGestion';
 import TarifGestion from './components/tarifs/TarifGestion';
 import DashboardWrapper from './DashboardWrapper';
 import GestionUtilisateurs from './admin/GestionUtilisateurs';
 import AdminDashboard from './components/AdminDashboard';
-import { useNavigationGuard } from './App'; // Import du contexte global
+import { useNavigationGuard } from './App';
 import { APP_VERSION } from './version';
 import './FacturationPage.css';
 
@@ -15,13 +15,16 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
   const [activeSection, setActiveSection] = useState(initialSection);
   const [clientCreatedId, setClientCreatedId] = useState(null);
   const [factureCreatedId, setFactureCreatedId] = useState(null);
-  const [paiementCreatedId, setPaiementCreatedId] = useState(null); // ✅ NOUVEAU
+  const [paiementCreatedId, setPaiementCreatedId] = useState(null);
   const [tarifIntegration, setTarifIntegration] = useState({
     selectedService: null,
     selectedTarif: null,
     lastAction: null,
     contextualData: {}
   });
+
+  // Clé pour forcer le remontage de TarifGestion
+  const [tarifKey, setTarifKey] = useState(0);
 
   // Utiliser le guard global
   const { interceptNavigation } = useNavigationGuard();
@@ -36,8 +39,8 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
   const isGestionnaire = userContext?.user?.role === 'gestionnaire';
   const canAccessParams = isAdmin || isGestionnaire;
 
-  const handleClientCreated = (clientId) => {
-    setClientCreatedId(clientId);
+  const handleClientCreated = (idClient) => {
+    setClientCreatedId(idClient);
     setActiveSection('clients');
   };
 
@@ -46,7 +49,6 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
     setActiveSection('factures');
   };
 
-  // ✅ NOUVEAU: Handler pour les paiements créés
   const handlePaiementCreated = (idPaiement) => {
     setPaiementCreatedId(idPaiement);
     setActiveSection('paiements');
@@ -57,6 +59,13 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
     interceptNavigation(
       () => {
         console.log('🔄 Changement de section:', activeSection, '->', newSection);
+        
+        // Si on quitte les tarifs, incrémenter la clé pour forcer le remontage au retour
+        if (activeSection === 'tarifs' && newSection !== 'tarifs') {
+          setTarifKey(prev => prev + 1);
+          console.log('🔑 Clé tarifs incrémentée pour réinitialisation future');
+        }
+        
         setActiveSection(newSection);
         
         // Reset des IDs quand on change de section
@@ -66,7 +75,7 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
         if (newSection !== 'factures') {
           setFactureCreatedId(null);
         }
-        if (newSection !== 'paiements') { // ✅ NOUVEAU
+        if (newSection !== 'paiements') {
           setPaiementCreatedId(null);
         }
       },
@@ -94,18 +103,18 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
         break;
       default:
         break;
-  }
-}, []);
+    }
+  }, []);
 
   // Fonction utilitaire pour obtenir le nom lisible d'une section
   const getSectionName = (section) => {
     const sectionNames = {
       'factures': 'Factures',
       'clients': 'Clients',
-      'paiements': 'Paiements', // ✅ NOUVEAU
+      'paiements': 'Paiements',
       'nouvelle': 'Nouvelle facture',
       'nouveau-client': 'Nouveau client',
-      'nouveau-paiement': 'Nouveau paiement', // ✅ NOUVEAU
+      'nouveau-paiement': 'Nouveau paiement',
       'tarifs': 'Tarifs',
       'parametres': 'Paramètres',
       'utilisateurs': 'Utilisateurs',
@@ -133,7 +142,6 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
           onSectionChange={() => setFactureCreatedId(null)}
         />;
       
-      // ✅ NOUVEAU: Gestion des paiements
       case 'nouveau-paiement':
         return <PaiementGestion
           section="nouveau"
@@ -150,7 +158,7 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
       case 'clients':
         return <ClientGestion
           section="liste"
-          clientId={clientCreatedId}
+          idClient={clientCreatedId}
           onSectionChange={() => setClientCreatedId(null)}
         />;
       
@@ -159,24 +167,6 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
           section="nouveau"
           onClientCreated={handleClientCreated}
         />;
-      
-      case 'tarifs':
-        return canAccessParams ? (
-          <TarifGestion 
-            initialSection={tarifIntegration.activeTab || 'services'}
-            userContext={userContext}
-            // Callbacks d'intégration
-            onTarifAction={handleTarifIntegrationAction}
-            onNavigateToFacture={(idService, tarifId) => {
-              handleTarifIntegrationAction('create-facture-from-tarif', {
-                selectedService: idService,
-                selectedTarif: tarifId
-              });
-            }}
-            // Données contextuelles
-            preselectedData={tarifIntegration.contextualData}
-          />
-        ) : <div className="content-placeholder">Accès non autorisé</div>;
       
       case 'dashboard':
         return <DashboardWrapper />;
@@ -192,23 +182,6 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
     }
   };
 
-  // Détermine quel titre afficher en fonction de la section active
-  // const getPageTitle = () => {
-  //   switch(activeSection) {
-  //     case 'utilisateurs':
-  //       return 'Gestion des utilisateurs';
-  //     case 'parametres':
-  //       return 'Paramètres';
-  //     case 'tarifs':
-  //       return 'Gestion des tarifs';
-  //     case 'paiements': // ✅ NOUVEAU
-  //       return 'Gestion des paiements';
-  //     case 'admin_dashboard':
-  //       return 'Tableau de bord d\'administration';
-  //     default:
-  //       return 'Facturation';
-  //   }
-  // };
   const getPageTitle = () => {
     return 'Facturation';
   };
@@ -228,7 +201,6 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
               <span className="menu-label">Factures</span>
             </li>
             
-            {/* ✅ NOUVEAU: Menu Paiements */}
             <li
               className={activeSection === 'paiements' ? 'active' : ''}
               onClick={() => handleSectionChange('paiements')}
@@ -249,10 +221,8 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
               <span className="menu-label">Dashboard</span>
             </li>
             
-            {/* Séparateur visuel pour les menus privilégiés */}
             {canAccessParams && (
               <>
-                {/* Ligne de séparation */}
                 <li style={{
                   height: '1px',
                   backgroundColor: '#ddd',
@@ -261,7 +231,6 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
                   padding: 0
                 }}></li>
                 
-                {/* Menu Tarifs - Visible pour Admin et Gestionnaire */}
                 <li
                   className={`menu-privileged ${activeSection === 'tarifs' ? 'active' : ''}`}
                   onClick={() => handleSectionChange('tarifs')}
@@ -273,7 +242,6 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
                   </span>
                 </li>
                 
-                {/* Menu Paramètres - Visible pour Admin et Gestionnaire */}
                 <li
                   className={`menu-privileged ${activeSection === 'parametres' ? 'active' : ''}`}
                   onClick={() => handleSectionChange('parametres')}
@@ -285,7 +253,6 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
                   </span>
                 </li>
                 
-                {/* Menu Utilisateurs - Visible pour Admin et Gestionnaire */}
                 <li
                   className={`menu-privileged ${activeSection === 'utilisateurs' ? 'active' : ''}`}
                   onClick={() => handleSectionChange('utilisateurs')}
@@ -301,7 +268,27 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
           </ul>
         </div>
         <div className="facturation-content">
-          {renderContent()}
+          {/* TarifGestion toujours monté, caché avec display */}
+          {canAccessParams && (
+            <div className={activeSection === 'tarifs' ? 'tarif-container-visible' : 'tarif-container-hidden'}>
+              <TarifGestion 
+                key={tarifKey}
+                initialSection={tarifIntegration.activeTab || 'services'}
+                userContext={userContext}
+                onTarifAction={handleTarifIntegrationAction}
+                onNavigateToFacture={(idService, tarifId) => {
+                  handleTarifIntegrationAction('create-facture-from-tarif', {
+                    selectedService: idService,
+                    selectedTarif: tarifId
+                  });
+                }}
+                preselectedData={tarifIntegration.contextualData}
+              />
+            </div>
+          )}
+          
+          {/* Autres sections */}
+          {activeSection !== 'tarifs' && renderContent()}
         </div>
       </div>
     </div>

@@ -1,8 +1,11 @@
+// src/components/tarifs/modules/TarifSpecialGestion.jsx
+// ✅ VERSION MIGRÉE vers UnifiedFilter avec normalisation des données
+
 import React, { useState, useEffect, useMemo } from 'react';
 import TarifSpecialTableSection from '../sections/TarifSpecialTableSection';
 import TarifFormHeader from '../sections/TarifFormHeader';
 import { AddButton } from '../../../components/ui/buttons';
-import TarifFilter from '../components/TarifFilter';
+import UnifiedFilter from '../../../components/shared/filters/UnifiedFilter';
 import { useTarifFilter, createInitialFilters, enrichTarifsWithEtat } from '../hooks/useTarifFilter';
 
 const TarifSpecialGestion = ({ 
@@ -25,65 +28,96 @@ const TarifSpecialGestion = ({
   onNew,
   onCreateFacture,
   onBulkAction,
-  // Nouveaux handlers du système unifié
   onCreateTarifSpecial,
   onEditTarifSpecial,
   onDeleteTarifSpecial
 }) => {
   const [selectedTarifsSpeciaux, setSelectedTarifsSpeciaux] = useState([]);
-  const [allTarifsSpeciaux, setAllTarifsSpeciaux] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    const fetchAllTarifsSpeciaux = async () => {
-      console.log('fetchAllTarifsSpeciaux - Chargement de tous les tarifs spéciaux...');
-      try {
-        const result = await tarificationService.getAllTarifsSpeciaux({});
-        setAllTarifsSpeciaux(result);
-      } catch (error) {
-        console.error('Erreur lors du chargement de tous les tarifs spéciaux:', error);
-        setMessage('Erreur lors du chargement des tarifs spéciaux: ' + error.message);
-        setMessageType('error');
-      }
-    };
-    
-    fetchAllTarifsSpeciaux();
-    console.log('fetchAllTarifsSpeciaux - Chargement terminé');
-  }, [tarificationService, setMessage, setMessageType]);
-
-  const reloadAllTarifsSpeciaux = async () => {
-    try {
-      const result = await tarificationService.getAllTarifsSpeciaux({});
-      setAllTarifsSpeciaux(result);
-    } catch (error) {
-      console.error('Erreur lors du rechargement:', error);
-    }
-  };
-
-  // ===== INTÉGRATION DU NOUVEAU FILTRE CENTRALISÉ =====
+  // ===== ENRICHISSEMENT ET NORMALISATION DES DONNÉES =====
   
-  // Enrichir les tarifs spéciaux avec leur état calculé et les noms des entités liées
+  // 1. Enrichir les tarifs spéciaux avec leur état (valide/invalide)
   const enrichedTarifsSpeciaux = useMemo(() => {
-    const tarifsWithEtat = enrichTarifsWithEtat(allTarifsSpeciaux);
+    // Les tarifs arrivent via props depuis useTarifGestionState
+    if (!tarifsSpeciaux || tarifsSpeciaux.length === 0) {
+      console.log('⚠️ Aucun tarif spécial à enrichir');
+      return [];
+    }
     
-    // Enrichir avec les noms des entités liées pour le filtrage
-    return tarifsWithEtat.map(tarif => {
-      const client = clients.find(c => c.id == (tarif.client_id || tarif.clientId));
-      const service = services.find(s => s.id == (tarif.idService));
-      const unite = unites.find(u => u.id == (tarif.idUnite));
+    // Debug: Afficher les tarifs BRUTS avant enrichissement
+    if (tarifsSpeciaux.length > 0) {
+      console.log('🔍 TARIF SPÉCIAL BRUT (premier élément):', tarifsSpeciaux[0]);
+      console.log('🔍 Propriétés du tarif spécial brut:', Object.keys(tarifsSpeciaux[0]));
+    }
+    
+    return enrichTarifsWithEtat(tarifsSpeciaux);
+  }, [tarifsSpeciaux]);
+
+  // 2. Normaliser les tarifs spéciaux pour le filtrage
+  const normalizedTarifsSpeciaux = useMemo(() => {
+    console.log('🔧 Normalisation des tarifs spéciaux pour filtrage...');
+    console.log('📊 Tarifs spéciaux enrichis:', enrichedTarifsSpeciaux.length);
+    
+    const normalized = enrichedTarifsSpeciaux.map(tarif => {
+      // Trouver les entités liées
+      const client = clients.find(c => 
+        c.id == (tarif.idClient)
+      );
+      const service = services.find(s => 
+        (s.id || s.idService) === tarif.idService
+      );
+      const unite = unites.find(u => 
+        (u.id || u.idUnite) === tarif.idUnite
+      );
+
+      // ✅ S'assurer que statut a la bonne valeur
+      const tarifStatut = tarif.etat || 'invalide';
       
+      const clientNom = client ? `${client.prenom} ${client.nom}` : '';
+
+      console.log('📝 Tarif spécial normalisé:', {
+        id: tarif.id || tarif.idTarifSpecial,
+        etat: tarif.etat,
+        statut: tarifStatut,
+        client: clientNom,
+        clientOriginal: {
+          prenom: client?.prenom,
+          nom: client?.nom,
+          idClient: tarif.idClient
+        },
+        service: service?.nomService,
+        dates: {
+          debut: tarif.dateDebutTarifSpecial,
+          fin: tarif.dateFinTarifSpecial
+        }
+      });
+
       return {
         ...tarif,
-        client_nom: client ? `${client.prenom} ${client.nom}` : '',
-        clientNom: client ? `${client.prenom} ${client.nom}` : '',
+        // Propriétés normalisées pour le filtrage
+        client: clientNom,
+        service: service?.nomService || '',
+        unite: unite?.nomUnite || '',
+        statut: tarifStatut, // ✅ 'valide' ou 'invalide'
+        
+        // Conserver aussi les noms pour l'affichage
+        clientNom: clientNom,
         nomService: service?.nomService || '',
-        uniteNom: unite?.nomUnite || '',
-        statut: tarif.etat // Mapper etat vers statut pour le filtre
+        nomUnite: unite?.nomUnite || ''
       };
     });
-  }, [allTarifsSpeciaux, clients, services, unites]);
+    
+    console.log('✅ Tarifs spéciaux normalisés:', normalized.length);
+    console.log('📊 Répartition des statuts:', {
+      valides: normalized.filter(t => t.statut === 'valide').length,
+      invalides: normalized.filter(t => t.statut === 'invalide').length
+    });
+    
+    return normalized;
+  }, [enrichedTarifsSpeciaux, clients, services, unites]);
 
-  // Utiliser le hook de filtrage centralisé
+  // ===== FILTRAGE =====
   const {
     filters,
     showFilters,
@@ -92,204 +126,88 @@ const TarifSpecialGestion = ({
     handleFilterChange,
     handleResetFilters,
     handleToggleFilters
-  } = useTarifFilter(enrichedTarifsSpeciaux, 'tarifs-speciaux', createInitialFilters('tarifs-speciaux'));
+  } = useTarifFilter(normalizedTarifsSpeciaux, 'tarifs-speciaux', createInitialFilters('tarifs-speciaux'));
 
-  // ===== HANDLERS POUR LE SYSTÈME UNIFIÉ =====
-  
+  // ===== OPTIONS DE FILTRAGE =====
+  const filterOptions = useMemo(() => {
+    console.log('🔍 Préparation filterOptions pour tarifs spéciaux');
+    
+    // ✅ CORRECTION: Extraire uniquement les clients/services/unités UTILISÉS dans les tarifs spéciaux
+    const uniqueClients = [...new Set(
+      normalizedTarifsSpeciaux.map(t => t.client).filter(Boolean)
+    )].sort();
+    
+    const uniqueServices = [...new Set(
+      normalizedTarifsSpeciaux.map(t => t.service).filter(Boolean)
+    )].sort();
+    
+    const uniqueUnites = [...new Set(
+      normalizedTarifsSpeciaux.map(t => t.unite).filter(Boolean)
+    )].sort();
+    
+    console.log('📊 Clients utilisés dans les tarifs spéciaux:', uniqueClients);
+    console.log('📊 Services utilisés dans les tarifs spéciaux:', uniqueServices);
+    console.log('📊 Unités utilisées dans les tarifs spéciaux:', uniqueUnites);
+    
+    const options = {
+      client: uniqueClients,
+      service: uniqueServices,
+      unite: uniqueUnites,
+      statut: ['valide', 'invalide']
+    };
+    
+    console.log('📋 Options de filtrage configurées:', options);
+    
+    return options;
+  }, [normalizedTarifsSpeciaux]);
+
+  // ===== HANDLERS =====
   const handleCreateClick = (event) => {
     if (onCreateTarifSpecial) {
       onCreateTarifSpecial(event);
     } else {
-      console.warn('⚠️ onCreateTarifSpecial non fourni, utilisation du système legacy');
-      handleLegacyCreate();
+      console.warn('⚠️ onCreateTarifSpecial non fourni');
     }
   };
   
   const handleEditClick = (tarifSpecial, event) => {
+    const tarifId = tarifSpecial.id || tarifSpecial.idTarifSpecial;
     if (onEditTarifSpecial) {
-      onEditTarifSpecial(tarifSpecial.id || tarifSpecial.idTarifSpecial, event);
+      onEditTarifSpecial(tarifId, event);
     } else {
-      console.warn('⚠️ onEditTarifSpecial non fourni, utilisation du système legacy');
-      handleLegacyEdit(tarifSpecial);
+      console.warn('⚠️ onEditTarifSpecial non fourni');
     }
   };
   
   const handleDeleteClick = (tarifSpecial, event) => {
+    const tarifId = tarifSpecial.id || tarifSpecial.idTarifSpecial;
+    const tarifName = `${tarifSpecial.clientNom} - ${tarifSpecial.nomService}`;
     if (onDeleteTarifSpecial) {
-      onDeleteTarifSpecial(
-        tarifSpecial.id || tarifSpecial.idTarifSpecial, 
-        getTarifSpecialDisplayName(tarifSpecial), 
-        event
-      );
+      onDeleteTarifSpecial(tarifId, tarifName, event);
     } else {
-      console.warn('⚠️ onDeleteTarifSpecial non fourni, utilisation du système legacy');
-      handleSupprimerTarifSpecial(tarifSpecial);
+      console.warn('⚠️ onDeleteTarifSpecial non fourni');
     }
   };
 
-  // ===== ANCIEN SYSTÈME (DEPRECATED - À SUPPRIMER) =====
-
-  const handleLegacyCreate = async () => {
-    console.log('🚨 Système legacy de création de tarif spécial utilisé - À MIGRER');
-  };
-
-  const handleLegacyEdit = async (tarifSpecial) => {
-    console.log('🚨 Système legacy d\'édition de tarif spécial utilisé - À MIGRER');
-  };
-
-  // Utilitaire pour obtenir le nom d'affichage d'un tarif spécial
-  const getTarifSpecialDisplayName = (tarifSpecial) => {
-    const client = clients.find(c => c.id == (tarifSpecial.client_id || tarifSpecial.clientId));
-    const service = services.find(s => s.id == (tarifSpecial.idService));
-    
-    const clientName = client ? `${client.prenom} ${client.nom}` : 'Client introuvable';
-    const serviceName = service?.nomService || 'Service introuvable';
-    
-    return `${clientName} - ${serviceName}`;
-  };
-
-  // Actions legacy (à supprimer progressivement)
-  const handleSupprimerTarifSpecial = (tarifSpecial) => {
-    const displayData = getTarifSpecialDisplayName(tarifSpecial);
-    setConfirmModal({
-      isOpen: true,
-      title: 'Confirmer la suppression',
-      message: `Êtes-vous sûr de vouloir supprimer le tarif spécial pour "${displayData}" ?`,
-      type: 'danger',
-      confirmText: 'Supprimer',
-      onConfirm: () => confirmerSuppression(tarifSpecial.id),
-      entityType: 'tarifSpecial'
-    });
-  };
-
-  const confirmerSuppression = async (tarifSpecialId) => {
-    try {
-      const result = await tarificationService.supprimerTarifSpecial(tarifSpecialId);
-      
-      if (result.success) {
-        setMessage('Tarif spécial supprimé avec succès');
-        setMessageType('success');
-        reloadAllTarifsSpeciaux();
-      } else {
-        throw new Error(result.message || 'Erreur lors de la suppression');
-      }
-    } catch (error) {
-      console.error('Erreur suppression tarif spécial:', error);
-      setMessage('Erreur lors de la suppression: ' + error.message);
-      setMessageType('error');
-    }
-  };
-
-  // Gestion de la sélection multiple
-  const handleSelectTarifSpecial = (tarifSpecialId, isSelected) => {
-    if (isSelected) {
-      setSelectedTarifsSpeciaux(prev => [...prev, tarifSpecialId]);
-    } else {
-      setSelectedTarifsSpeciaux(prev => prev.filter(id => id !== tarifSpecialId));
-    }
-  };
-
-  const handleSelectAll = (isSelected) => {
-    if (isSelected) {
-      setSelectedTarifsSpeciaux(tarifsSpeciauxFiltered.map(t => t.id));
-    } else {
-      setSelectedTarifsSpeciaux([]);
-    }
-  };
-
-  // Actions groupées
-  const handleBulkDelete = () => {
-    if (selectedTarifsSpeciaux.length === 0) return;
-    
-    setConfirmModal({
-      isOpen: true,
-      title: 'Confirmer la suppression groupée',
-      message: `Êtes-vous sûr de vouloir supprimer ${selectedTarifsSpeciaux.length} tarif(s) spéciaux ?`,
-      type: 'danger',
-      confirmText: 'Supprimer tout',
-      onConfirm: () => confirmerSuppressionGroupee(),
-      entityType: 'tarifsSpeciaux'
-    });
-  };
-
-  const confirmerSuppressionGroupee = async () => {
-    try {
-      const result = await tarificationService.supprimerTarifsSpeciauxGroupes(selectedTarifsSpeciaux);
-      
-      if (result.success) {
-        setMessage(`${selectedTarifsSpeciaux.length} tarif(s) spéciaux supprimé(s) avec succès`);
-        setMessageType('success');
-        setSelectedTarifsSpeciaux([]);
-        reloadAllTarifsSpeciaux();
-      } else {
-        throw new Error(result.message || 'Erreur lors de la suppression groupée');
-      }
-    } catch (error) {
-      console.error('Erreur suppression groupée:', error);
-      setMessage('Erreur lors de la suppression groupée: ' + error.message);
-      setMessageType('error');
-    }
-  };
-
-  const handleBulkExport = () => {
-    if (onBulkAction) {
-      const tarifsToExport = tarifsSpeciauxFiltered.filter(t => 
-        selectedTarifsSpeciaux.includes(t.id)
-      );
-      onBulkAction('export', tarifsToExport);
-    }
-  };
-
-  // Rendu des actions de liste
-  const renderListActions = () => (
-    <div className="list-actions">
-      <div className="bulk-controls">
-        {selectedTarifsSpeciaux.length > 0 && (
-          <>
-            <span className="selection-count">
-              {selectedTarifsSpeciaux.length} sélectionné(s)
-            </span>
-            <button 
-              className="btn btn-outline-danger"
-              onClick={handleBulkDelete}
-            >
-              🗑️ Supprimer
-            </button>
-            <button 
-              className="btn btn-outline-primary"
-              onClick={handleBulkExport}
-            >
-              📊 Exporter
-            </button>
-          </>
-        )}
-      </div>
-    </div>
-  );
-
+  // ===== RENDU PRINCIPAL =====
+  
   return (
     <div className="tarif-special-gestion">
-      {/* EN-TÊTE UNIFIÉ AVEC BOUTON D'ACTION */}
+      
+      {/* Header avec bouton de création */}
       <TarifFormHeader
-        titre="Tarifs spéciaux"
-        description="Tarifs personnalisés pour des clients ou des conditions spécifiques"
+        titre="Gestion des tarifs spéciaux"
+        description="Gérez les tarifs personnalisés pour vos clients"
       >
         <AddButton onClick={handleCreateClick}>
           Nouveau tarif spécial
         </AddButton>
       </TarifFormHeader>
 
-      <div className="gestion-header">
-        {renderListActions()}
-      </div>
-
-      {/* ===== NOUVEAU FILTRE CENTRALISÉ ===== */}
-      <TarifFilter
+      {/* Filtres unifiés */}
+      <UnifiedFilter
         filterType="tarifs-speciaux"
-        data={enrichedTarifsSpeciaux}
-        services={services}
-        unites={unites}
-        clients={clients}
+        filterOptions={filterOptions}
         filters={filters}
         onFilterChange={handleFilterChange}
         onResetFilters={handleResetFilters}
@@ -300,6 +218,7 @@ const TarifSpecialGestion = ({
         className="filter-tarifs-speciaux"
       />
 
+      {/* Gestion des états vides */}
       {tarifsSpeciaux.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">⭐</div>
@@ -321,21 +240,19 @@ const TarifSpecialGestion = ({
           )}
         </div>
       ) : (
-        <>
-          <TarifSpecialTableSection
-            tarifsSpeciaux={tarifsSpeciauxFiltered}
-            services={services}
-            unites={unites}
-            clients={clients}
-            onEdit={handleEditClick}
-            onDelete={handleDeleteClick}
-            highlightedId={highlightedId}
-            isSubmitting={false}
-          />
-        </>
+        <TarifSpecialTableSection
+          tarifsSpeciaux={tarifsSpeciauxFiltered}
+          services={services}
+          unites={unites}
+          clients={clients}
+          onEdit={handleEditClick}
+          onDelete={handleDeleteClick}
+          highlightedId={highlightedId}
+          isSubmitting={isSubmitting}
+        />
       )}
       
-      {/* Informations de debug en mode développement */}
+      {/* Informations de debug */}
       {process.env.NODE_ENV === 'development' && (
         <div className="debug-info" style={{
           marginTop: '20px',
@@ -346,13 +263,17 @@ const TarifSpecialGestion = ({
           fontSize: '12px'
         }}>
           <strong>🔧 Debug TarifSpecialGestion :</strong><br/>
-          - Tarifs spéciaux chargés : {allTarifsSpeciaux.length}<br/>
-          - Tarifs spéciaux filtrés : {tarifsSpeciauxFiltered.length}<br/>
+          - Tarifs spéciaux chargés : {tarifsSpeciaux.length}<br/>
+          - Tarifs enrichis : {enrichedTarifsSpeciaux.length}<br/>
+          - Tarifs normalisés : {normalizedTarifsSpeciaux.length}<br/>
+          - Tarifs filtrés : {tarifsSpeciauxFiltered.length}<br/>
           - Filtres actifs : {filterStats.hasActiveFilters ? 'Oui' : 'Non'}<br/>
+          - Filtres actuels : {JSON.stringify(filters)}<br/>
+          - Clients : {clients.length}<br/>
+          - Services : {services.length}<br/>
+          - Unités : {unites.length}<br/>
           - Highlighted ID : {highlightedId || 'aucun'}<br/>
-          - Système unifié : {onCreateTarifSpecial ? '✅ Actif' : '❌ Non connecté'}<br/>
-          - Is submitting : {isSubmitting ? 'Oui' : 'Non'}<br/>
-          - Filtres actuels : {JSON.stringify(filters)}
+          - ✅ MIGRATION UNIFIEDFILTER COMPLÈTE
         </div>
       )}
     </div>

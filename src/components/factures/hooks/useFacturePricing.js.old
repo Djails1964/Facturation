@@ -25,13 +25,13 @@ export function useFacturePricing(
      * ✅ FONCTION PRINCIPALE CORRIGÉE: Calcul du prix pour un client
      */
     const calculerPrixPourClient = useCallback(async (params) => {
-        const { clientId, idService, idUnite, forceRecalcul = false } = params;
+        const { idClient, idService, idUnite, forceRecalcul = false } = params;
 
-        console.log('🔍 calculerPrixPourClient appelé avec:', { clientId, idService, idUnite, forceRecalcul });
+        console.log('🔍 calculerPrixPourClient appelé avec:', { idClient, idService, idUnite, forceRecalcul });
         
         // Validation stricte des paramètres
-        if (!clientId || !idService || !idUnite) {
-            console.warn('❌ Paramètres manquants pour calculerPrixPourClient:', { clientId, idService, idUnite });
+        if (!idClient || !idService || !idUnite) {
+            console.warn('❌ Paramètres manquants pour calculerPrixPourClient:', { idClient, idService, idUnite });
             return 0;
         }
 
@@ -41,7 +41,7 @@ export function useFacturePricing(
         }
 
         // Clé de cache
-        const cacheKey = `${clientId}-${idService}-${idUnite}`;
+        const cacheKey = `${idClient}-${idService}-${idUnite}`;
 
         // ✅ CORRECTION PRINCIPALE: Force recalcul ou vérification cache
         if (!forceRecalcul) {
@@ -76,7 +76,7 @@ export function useFacturePricing(
         const calculationPromise = (async () => {
             try {
                 console.log('💰 Calcul du prix initial pour:', {
-                    clientId,
+                    idClient,
                     idService,
                     idUnite,
                     clientNom: client?.nom,
@@ -84,7 +84,7 @@ export function useFacturePricing(
                 });
 
                 const prix = await tarificationService.calculerPrix({
-                    clientId,
+                    idClient,
                     idService, // ✅ CORRECTION: utiliser serviceId au lieu d'idService
                     idUnite,    // ✅ CORRECTION: utiliser uniteId au lieu d'idUnite
                     date: new Date().toISOString().split('T')[0]
@@ -98,7 +98,7 @@ export function useFacturePricing(
                     timestamp: Date.now()
                 });
 
-                console.log(`📊 Prix calculé: ${finalPrix} CHF pour client ${client?.nom} (ID: ${clientId})`);
+                console.log(`📊 Prix calculé: ${finalPrix} CHF pour client ${client?.nom} (ID: ${idClient})`);
                 return finalPrix;
             } catch (error) {
                 console.error('❌ Erreur dans calculerPrixPourClient:', error);
@@ -200,7 +200,7 @@ export function useFacturePricing(
 
                 try {
                     const prix = await calculerPrixPourClient({
-                        clientId: client.id,
+                        idClient: client.id,
                         idService,
                         idUnite,
                         forceRecalcul: true // ✅ Force le recalcul
@@ -238,7 +238,7 @@ export function useFacturePricing(
         }
 
         return await calculerPrixPourClient({
-            clientId: client.id,
+            idClient: client.id,
             idService: service.idService,
             idUnite: unite.idUnite
         });
@@ -313,14 +313,14 @@ export function useFacturePricing(
      * Nettoyage lors du changement de client
      */
     useEffect(() => {
-        if (client?.id !== lastCalculation.clientId) {
+        if (client?.id !== lastCalculation.idClient) {
             clearCache();
             setLastCalculation({ 
-                clientId: client?.id, 
+                idClient: client?.id, 
                 timestamp: Date.now() 
             });
         }
-    }, [client?.id, lastCalculation.clientId, clearCache]);
+    }, [client?.id, lastCalculation.idClient, clearCache]);
 
     /**
      * Nettoyage lors du démontage

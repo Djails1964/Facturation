@@ -1,3 +1,6 @@
+// src/components/shared/DateInputField.jsx
+// ✅ VERSION COMPLÈTE avec support multiselect (factures) ET single date (paiements)
+
 import React, { useCallback } from 'react';
 import { FiCalendar } from 'react-icons/fi';
 import modalSystem from '../../utils/modalSystem';
@@ -7,15 +10,16 @@ import { DATE_LABELS } from '../../constants/dateConstants';
 
 /**
  * Composant de champ de date avec modal picker unifié
- * ✅ MISE À JOUR: Format spécifique [09/16/23/30.01, 06/13/20/27.02, etc.]
- * Remplace l'ancien système par le DatePickerModalHandler
+ * ✅ Supporte:
+ * - Multi-sélection avec format compact [09/16/23/30.01, ...] pour factures
+ * - Single date avec format DD.MM.YYYY pour paiements
  */
 const DateInputField = ({
     id,
     label,
     value = '',
     onChange,
-    updateQuantity = null, // Callback pour mettre à jour la quantité automatiquement
+    updateQuantity = null, // Callback pour mettre à jour la quantité automatiquement (factures)
     readOnly = false,
     maxLength = 100,
     showCharCount = false,
@@ -37,7 +41,7 @@ const DateInputField = ({
     const handleOpenDateModal = useCallback(async (event) => {
         if (readOnly) return;
 
-        console.log('📅 Ouverture modal de sélection de dates pour facture - Format spécifique');
+        console.log('📅 Ouverture modal de sélection de dates - Mode:', multiSelect ? 'Multi' : 'Single');
 
         try {
             // Créer une référence d'ancrage
@@ -46,14 +50,34 @@ const DateInputField = ({
                 anchorRef.current = event.currentTarget;
             }
 
-            // ✅ CHANGEMENT: Parser les dates depuis le format spécifique
+            // ✅ Parser les dates depuis le format approprié
             let initialDates = [];
             if (value && value.trim()) {
                 try {
-                    // Utiliser la nouvelle méthode pour le format spécifique
-                    initialDates = DateService.parseDatesFromCompact(value);
-                    console.log('📅 Dates initiales parsées (format spécifique):', initialDates.length, 
-                        initialDates.map(d => d.toLocaleDateString('fr-CH')));
+                    if (multiSelect) {
+                        // Mode FACTURE: format compact [09/16/23/30.01, ...]
+                        initialDates = DateService.parseDatesFromCompact(value);
+                        console.log('📅 Dates initiales parsées (format compact):', initialDates.length, 
+                            initialDates.map(d => d.toLocaleDateString('fr-CH')));
+                    } else {
+                        // Mode PAIEMENT: format DD.MM.YYYY ou YYYY-MM-DD
+                        let dateStr = value.trim();
+                        
+                        // Convertir DD.MM.YYYY en YYYY-MM-DD si nécessaire
+                        if (dateStr.includes('.')) {
+                            const parts = dateStr.split('.');
+                            if (parts.length === 3) {
+                                const [day, month, year] = parts;
+                                dateStr = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                            }
+                        }
+                        
+                        const dateObj = DateService.fromInputFormat(dateStr);
+                        if (dateObj) {
+                            initialDates = [dateObj];
+                            console.log('📅 Date initiale parsée (single):', dateObj.toLocaleDateString('fr-CH'));
+                        }
+                    }
                 } catch (error) {
                     console.warn('⚠️ Erreur lors du parsing des dates existantes:', error);
                     initialDates = [];
@@ -64,11 +88,11 @@ const DateInputField = ({
             const config = {
                 initialDates: initialDates,
                 multiSelect: multiSelect,
-                minDate: null, // Aucune restriction de date minimale pour les factures
-                maxDate: null, // Aucune restriction de date maximale pour les factures
+                minDate: multiSelect ? null : null,  // Factures: pas de restriction
+                maxDate: multiSelect ? null : DateService.getToday(), // Paiements: pas de dates futures
                 title: multiSelect ? 'Sélectionner les dates' : 'Sélectionner une date',
                 confirmText: 'Confirmer la sélection',
-                context: 'invoice', // Contexte facture (permet dates futures)
+                context: multiSelect ? 'invoice' : 'payment',
                 anchorRef: anchorRef
             };
 
@@ -79,25 +103,43 @@ const DateInputField = ({
 
             // Traitement du résultat
             if (result.action === 'confirm' && result.dates.length > 0) {
-                // ✅ CHANGEMENT: Formater les dates sélectionnées au format spécifique
-                const formattedDates = DateService.formatDatesCompact(result.dates);
                 
-                console.log('📅 Dates formatées (format spécifique):', formattedDates);
-                console.log('📅 Exemple de format attendu: [09/16/23/30.01, 06/13/20/27.02]');
+                if (multiSelect) {
+                    // ✅ Mode FACTURE: Formater au format compact
+                    const formattedDates = DateService.formatDatesCompact(result.dates);
+                    
+                    console.log('📅 Dates formatées (format compact):', formattedDates);
+                    console.log('📅 Exemple de format: [09/16/23/30.01, 06/13/20/27.02]');
 
-                // Mettre à jour le champ
-                if (onChange) {
-                    if (typeof onChange === 'function') {
+                    // Mettre à jour le champ
+                    if (onChange && typeof onChange === 'function') {
                         onChange(formattedDates); // Passage direct de la chaîne formatée
                     }
-                }
 
-                // Mettre à jour la quantité si callback fourni
-                if (updateQuantity && typeof updateQuantity === 'function') {
-                    updateQuantity(formattedDates, result.dates.length);
-                }
+                    // ✅ Mettre à jour la quantité si callback fourni (IMPORTANT pour factures)
+                    if (updateQuantity && typeof updateQuantity === 'function') {
+                        updateQuantity(formattedDates, result.dates.length);
+                    }
 
-                console.log('✅ Champ de dates mis à jour avec:', formattedDates, '(', result.dates.length, 'dates)');
+                    console.log('✅ Champ de dates mis à jour avec:', formattedDates, '(', result.dates.length, 'dates)');
+                    
+                } else {
+                    // ✅ Mode PAIEMENT: Format DD.MM.YYYY
+                    const singleDate = result.dates[0];
+                    const day = String(singleDate.getDate()).padStart(2, '0');
+                    const month = String(singleDate.getMonth() + 1).padStart(2, '0');
+                    const year = singleDate.getFullYear();
+                    const formattedDate = `${day}.${month}.${year}`;
+                    
+                    console.log('📅 Date formatée (single):', formattedDate);
+
+                    // Mettre à jour le champ
+                    if (onChange && typeof onChange === 'function') {
+                        onChange(formattedDate);
+                    }
+
+                    console.log('✅ Champ de date mis à jour avec:', formattedDate);
+                }
             } else {
                 console.log('❌ Sélection annulée ou aucune date sélectionnée');
             }
@@ -116,37 +158,35 @@ const DateInputField = ({
         
         const newValue = maxLength ? e.target.value.slice(0, maxLength) : e.target.value;
         
-        if (onChange) {
-            // Pour les changements manuels, on passe l'event
-            if (typeof onChange === 'function') {
-                // Créer un event-like object pour maintenir la compatibilité
-                onChange({ target: { value: newValue } });
-            }
+        if (onChange && typeof onChange === 'function') {
+            // Pour les changements manuels, créer un event-like object pour maintenir la compatibilité
+            onChange({ target: { value: newValue } });
         }
     }, [readOnly, maxLength, onChange]);
 
     /**
-     * ✅ NOUVEAU: Fonction pour valider le format spécifique
+     * ✅ Fonction pour valider le format spécifique (pour factures multiselect)
      */
     const validateSpecificFormat = useCallback((inputValue) => {
         if (!inputValue || inputValue.trim() === '') return true;
+        if (!multiSelect) return true; // Pas de validation stricte pour single date
         
         const validation = DateService.validateDatesString(inputValue);
         return validation.isValid;
-    }, []);
+    }, [multiSelect]);
 
     /**
-     * ✅ NOUVEAU: Afficher un aperçu lisible des dates
+     * ✅ Afficher un aperçu lisible des dates (pour factures multiselect)
      */
     const getReadablePreview = useCallback(() => {
-        if (!value || value.trim() === '') return '';
+        if (!value || value.trim() === '' || !multiSelect) return '';
         
         try {
             return DateService.formatCompactToDisplay(value, 'count');
         } catch (error) {
             return '';
         }
-    }, [value]);
+    }, [value, multiSelect]);
 
     // Calculer les caractères restants
     const charactersUsed = (value || '').length;
@@ -155,7 +195,7 @@ const DateInputField = ({
     // Déterminer si le champ a une valeur
     const hasValue = value !== undefined && value !== '';
     
-    // Vérifier si le format est valide
+    // Vérifier si le format est valide (seulement pour multiselect)
     const isValidFormat = validateSpecificFormat(value);
 
     return (
@@ -181,48 +221,31 @@ const DateInputField = ({
                 {label}
             </label>
             
-            {/* Icône de calendrier - seulement si pas en lecture seule */}
             {!readOnly && (
-                <FiCalendar 
-                    className="calendar-icon"
+                <FiCalendar
+                    className="date-input-icon"
                     onClick={handleOpenDateModal}
-                    title={DATE_LABELS.OPEN_CALENDAR}
-                    size={14}
+                    style={{
+                        position: 'absolute',
+                        right: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        cursor: 'pointer',
+                        fontSize: '18px',
+                        color: '#800020',
+                        zIndex: 2
+                    }}
                 />
             )}
             
-            {/* ✅ NOUVEAU: Aperçu lisible des dates sélectionnées */}
-            {hasValue && isValidFormat && (
-                <div 
-                    className="dates-preview" 
-                    style={{
-                        position: 'absolute',
-                        right: readOnly ? '10px' : '35px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        fontSize: '0.75rem',
-                        color: '#666',
-                        background: 'rgba(255, 255, 255, 0.9)',
-                        padding: '2px 6px',
-                        borderRadius: '3px',
-                        border: '1px solid #e0e0e0',
-                        pointerEvents: 'none',
-                        zIndex: 0
-                    }}
-                    title={value}
-                >
-                    {getReadablePreview()}
-                </div>
-            )}
-            
-            {/* Compteur de caractères */}
+            {/* ✅ Compteur de caractères (pour factures multiselect) */}
             {showCharCount && maxLength && (
                 <div 
-                    className="char-count-info" 
+                    className="char-count"
                     style={{
                         position: 'absolute',
                         right: '0',
-                        bottom: '-18px',
+                        bottom: multiSelect && !isValidFormat ? '-40px' : '-20px',
                         fontSize: '0.75rem',
                         color: charactersRemaining < 20 ? '#d32f2f' : '#666'
                     }}
@@ -231,8 +254,8 @@ const DateInputField = ({
                 </div>
             )}
             
-            {/* ✅ NOUVEAU: Message d'erreur de format */}
-            {hasValue && !isValidFormat && (
+            {/* ✅ Message d'erreur de format (pour factures multiselect) */}
+            {multiSelect && hasValue && !isValidFormat && (
                 <div 
                     className="format-error-message"
                     style={{
@@ -248,8 +271,8 @@ const DateInputField = ({
                 </div>
             )}
             
-            {/* ✅ NOUVEAU: Aide au format */}
-            {!readOnly && !hasValue && (
+            {/* ✅ Aide au format (pour factures multiselect) */}
+            {multiSelect && !readOnly && !hasValue && (
                 <div 
                     className="format-help"
                     style={{

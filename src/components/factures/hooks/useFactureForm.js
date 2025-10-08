@@ -10,7 +10,7 @@ export const useFactureForm = (mode, idFacture) => {
     idFacture: '',
     numeroFacture: '',
     dateFacture: '',
-    clientId: null,
+    idClient: null,
     montantTotal: 0,
     ristourne: 0,
     totalAvecRistourne: 0,
@@ -37,7 +37,7 @@ export const useFactureForm = (mode, idFacture) => {
   const isReadOnly = mode === FORM_MODES.VIEW;
   const isFormValid = mode === FORM_MODES.VIEW ||
     (facture.numeroFacture &&
-      facture.clientId &&
+      facture.idClient &&
       facture.lignes &&
       facture.lignes.length > 0 &&
       isLignesValid);
@@ -47,7 +47,7 @@ export const useFactureForm = (mode, idFacture) => {
     return {
       numeroFacture: facture.numeroFacture,
       dateFacture: facture.dateFacture,
-      clientId: facture.clientId,
+      idClient: facture.idClient,
       lignes: facture.lignes,
       ristourne: facture.ristourne,
       montantTotal: facture.montantTotal,

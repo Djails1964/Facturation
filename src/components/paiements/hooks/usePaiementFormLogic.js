@@ -1,8 +1,16 @@
 import { useEffect } from 'react';
 import DateService from '../../../utils/DateService';
-import { VALIDATION_MESSAGES, NOTIFICATIONS, LOG_ACTIONS } from '../../../constants/paiementConstants';
+import { 
+    VALIDATION_MESSAGES, 
+    NOTIFICATIONS, 
+    LOG_ACTIONS,
+    METHODES_PAIEMENT_LABELS,  // ✅ AJOUT
+    LABELS,
+    DEFAULT_VALUES     // ✅ AJOUT
+} from '../../../constants/paiementConstants';
 import activityLogsService from '../../../services/activityLogsService';
 import authService from '../../../services/authService';
+import PaiementService from '../../../services/PaiementService';
 
 // ✅ CACHE GLOBAL pour les utilisateurs
 const usersCache = new Map();
@@ -85,7 +93,8 @@ export const usePaiementFormLogic = (formState) => {
                     idFacture: '',
                     datePaiement: DateService.getTodayInputFormat(),
                     montantPaye: '',
-                    methodePaiement: '',
+                    // ✅ AJOUT : Initialisation par défaut avec virement bancaire
+                    methodePaiement: DEFAULT_VALUES.METHODE_PAIEMENT,
                     commentaire: ''
                 }));
             }
@@ -194,41 +203,59 @@ export const usePaiementFormLogic = (formState) => {
         setFacturesLoading(true);
         
         try {
-            const facturesData = await factureService.chargerFactures();
-            const facturesPayables = facturesData.filter(facture => {
-                const etatsPayables = ['Envoyée', 'Partiellement payée', 'Retard'];
-                return etatsPayables.includes(facture.etat);
-            });
+            console.log('🔄 Chargement des factures payables...');
             
+            // ✅ CORRECTION: Utiliser getFacturesPayables au lieu de chargerFactures + filtrage manuel
+            const facturesPayables = await factureService.getFacturesPayables();
+            
+            console.log('📋 Factures payables reçues:', facturesPayables);
+            console.log('📊 Nombre de factures:', facturesPayables?.length || 0);
+            
+            if (!facturesPayables || facturesPayables.length === 0) {
+                console.warn('⚠️ Aucune facture payable trouvée');
+                setFactures([]);
+                return;
+            }
+            
+            // Enrichir chaque facture avec les détails complets
             const facturesEnrichies = await Promise.all(
                 facturesPayables.map(async (facture) => {
                     try {
-                        const factureComplete = await factureService.getFacture(facture.id);
+                        const factureComplete = await factureService.getFacture(facture.id || facture.idFacture);
                         if (factureComplete) {
                             return {
                                 ...facture,
+                                id: facture.id || facture.idFacture, // S'assurer qu'on a un ID
+                                idFacture: facture.id || facture.idFacture, // Compatibilité
                                 montantRestant: factureComplete.montantRestant || 
                                     (factureComplete.totalAvecRistourne - (factureComplete.montantPayeTotal || 0)),
                                 totalAvecRistourne: factureComplete.totalAvecRistourne,
-                                montantPayeTotal: factureComplete.montantPayeTotal || 0
+                                montantPayeTotal: factureComplete.montantPayeTotal || 0,
+                                client: factureComplete.client // S'assurer d'avoir les infos client
                             };
                         }
                         return facture;
                     } catch (error) {
-                        console.error(`Erreur lors de l'enrichissement de la facture ${facture.id}:`, error);
+                        console.error(`Erreur lors de l'enrichissement de la facture ${facture.id || facture.idFacture}:`, error);
                         return facture;
                     }
                 })
             );
             
+            // Filtrer les factures avec un montant restant > 0
             const facturesAvecMontantRestant = facturesEnrichies.filter(facture => {
-                const montantRestant = facture.montantRestant || (facture.montantTotal - (facture.montantPayeTotal || 0));
+                const montantRestant = facture.montantRestant || 
+                    (facture.montantTotal - (facture.montantPayeTotal || 0));
                 return montantRestant > 0;
             });
             
+            console.log('✅ Factures enrichies et filtrées:', facturesAvecMontantRestant);
             setFactures(facturesAvecMontantRestant);
+            
         } catch (error) {
-            console.error('Erreur lors du chargement des factures:', error);
+            console.error('❌ Erreur lors du chargement des factures:', error);
+            setError('Impossible de charger les factures: ' + error.message);
+            setFactures([]);
         } finally {
             setFacturesLoading(false);
         }
@@ -245,6 +272,7 @@ export const usePaiementFormLogic = (formState) => {
                 entity_id: idPaiement,
                 action_type: `${LOG_ACTIONS.PAIEMENT_CREATE},${LOG_ACTIONS.PAIEMENT_UPDATE},${LOG_ACTIONS.PAIEMENT_CANCEL}`
             });
+            console.log('chargerLogsUtilisateur - getLogs - logsResponse:', logsResponse);
             
             if (logsResponse.success && logsResponse.logs) {
                 const logs = logsResponse.logs;
@@ -342,15 +370,15 @@ export const usePaiementFormLogic = (formState) => {
     // ✅ FONCTION pour traduire les noms de champs
     const translateFieldName = (field) => {
         const translations = {
-            'date_paiement': 'Date de paiement',
-            'datePaiement': 'Date de paiement',
-            'montant_paye': 'Montant payé',
-            'montantPaye': 'Montant payé',
-            'methode_paiement': 'Méthode de paiement',
-            'methodePaiement': 'Méthode de paiement',
-            'commentaire': 'Commentaire',
-            'facture_id': 'Facture',
-            'idFacture': 'Facture'
+            'date_paiement': LABELS.DATE_PAIEMENT,
+            'datePaiement': LABELS.DATE_PAIEMENT,
+            'montant_paye': LABELS.MONTANT_PAYE,
+            'montantPaye': LABELS.MONTANT_PAYE,
+            'methode_paiement': LABELS.METHODE_PAIEMENT,
+            'methodePaiement': LABELS.METHODE_PAIEMENT,
+            'commentaire': LABELS.COMMENTAIRE,
+            'facture_id': LABELS.FACTURE,
+            'idFacture': LABELS.FACTURE
         };
         return translations[field] || field;
     };
@@ -381,16 +409,8 @@ export const usePaiementFormLogic = (formState) => {
 
     // ✅ FONCTION pour formater les méthodes de paiement
     const formatMethodePaiement = (methode) => {
-        const methodes = {
-            'virement': 'Virement bancaire',
-            'especes': 'Espèces',
-            'cheque': 'Chèque',
-            'carte': 'Carte bancaire',
-            'twint': 'TWINT',
-            'paypal': 'PayPal',
-            'autre': 'Autre'
-        };
-        return methodes[methode] || methode;
+        const paiementService = new PaiementService();
+        return paiementService.formatMethodePaiement(methode);
     };
     
     const extractUserName = (log) => {

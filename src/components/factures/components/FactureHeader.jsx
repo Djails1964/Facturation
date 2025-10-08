@@ -11,7 +11,7 @@ import '../../../styles/components/factures/FactureHeader.css';
 function FactureHeader({
   numeroFacture = '',
   dateFacture = '',
-  clientId = '',
+  idClient = '',
   clients = [],
   readOnly = false,
   clientsLoading = false,
@@ -27,13 +27,13 @@ function FactureHeader({
 }) {
     // ✅ AJOUT: Debug détaillé des props reçues
     console.log(`[HEADER] FactureHeader initialisé - mode: ${mode}, état: ${etat}, etatAffichage: ${etatAffichage}, idFacture: ${idFacture}`);
-    console.log(`[HEADER] FactureHeader initialisé - numeroFacture: ${numeroFacture}, dateFacture: ${dateFacture}, clientId: ${clientId}`);
+    console.log(`[HEADER] FactureHeader initialisé - numeroFacture: ${numeroFacture}, dateFacture: ${dateFacture}, idClient: ${idClient}`);
     
     if (process.env.NODE_ENV === 'development') {
       console.log('[HEADER] Props complètes:', {
         numeroFacture,
         dateFacture,
-        clientId,
+        idClient,
         clients: clients?.length,
         readOnly,
         mode,
@@ -64,11 +64,11 @@ function FactureHeader({
       console.log('[HEADER] Props mises à jour:', {
         numeroFacture,
         dateFacture,
-        clientId,
-        hasData: !!(numeroFacture || dateFacture || clientId)
+        idClient,
+        hasData: !!(numeroFacture || dateFacture || idClient)
       });
     }
-  }, [numeroFacture, dateFacture, clientId]);
+  }, [numeroFacture, dateFacture, idClient]);
 
   // Gestion des changements (existants)
   const handleNumeroFactureChange = (e) => {
@@ -98,7 +98,8 @@ function FactureHeader({
     const config = {
       title: 'Sélectionner la date de facture',
       multiSelect: false,
-      confirmText: 'Confirmer la date'
+      confirmText: 'Confirmer la date',
+      maxDate: new Date()  // ✅ AJOUT : bloquer les dates futures
     };
     
     const callback = (dates) => {
@@ -125,7 +126,7 @@ function FactureHeader({
   };
 
   const getClientInputClass = () => {
-    return `facture-header-input ${clientId || clientFocused ? 'focused' : ''}`;
+    return `facture-header-input ${idClient || clientFocused ? 'focused' : ''}`;
   };
 
   // ✅ AJOUT: Affichage conditionnel pour debug
@@ -186,6 +187,7 @@ function FactureHeader({
                   onBlur={() => setDateFactureFocused(false)}
                   required
                   placeholder=" "
+                  max={new Date().toISOString().split('T')[0]}
                 />
                 <FiCalendar 
                   className="facture-calendar-icon" 
@@ -218,16 +220,16 @@ function FactureHeader({
           <div className={getClientInputClass()}>
             {readOnly ? (
               <div className="facture-header-readonly-field">
-                {clientId ? (
-                  clients && clients.length > 0 && clients.find(c => String(c.id) === String(clientId))
-                    ? `${clients.find(c => String(c.id) === String(clientId)).nom} ${clients.find(c => String(c.id) === String(clientId)).prenom || ''}`
-                    : `Client ID: ${clientId}`
+                {idClient ? (
+                  clients && clients.length > 0 && clients.find(c => String(c.id) === String(idClient))
+                    ? `${clients.find(c => String(c.id) === String(idClient)).nom} ${clients.find(c => String(c.id) === String(idClient)).prenom || ''}`
+                    : `Client ID: ${idClient}`
                 ) : "Aucun client sélectionné"}
               </div>
             ) : (
               <select
                 id="clientSelect"
-                value={clientId || ''}
+                value={idClient || ''}
                 onChange={handleClientChange}
                 onFocus={() => setClientFocused(true)}
                 onBlur={() => setClientFocused(false)}

@@ -5,10 +5,10 @@ import api from '../../../services/api';
 
 export const useTarifGestionState = () => {
   // États de base
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('');
-  const [isAuthorized, setIsAuthorized] = useState(false);
+  const isAuthorized = true; // Toujours autorisé car déjà vérifié par le parent
   const [userInfo, setUserInfo] = useState(null);
   const [isInitialized, setIsInitialized] = useState(false);
   
@@ -39,65 +39,52 @@ export const useTarifGestionState = () => {
   const [defaultUnites, setDefaultUnites] = useState({});
   
   // Vérification d'autorisation - UNE SEULE FOIS
-  useEffect(() => {
-    if (initializationRef.current) return;
+  // useEffect(() => {
+  //   if (initializationRef.current) return;
     
-    const checkAuthorizationViaAPI = async () => {
-      try {
-        console.log('🔍 Vérification des droits via API...');
-        setIsLoading(true);
+  //   const initializeEverything = async () => {
+  //     try {
+  //       // 1. Vérifier l'autorisation
+  //       console.log('🔍 Vérification des droits via API...');
+  //       setIsLoading(true);
         
-        const response = await api.get('auth-api.php?check_session');
+  //       const response = await api.get('auth-api.php?check_session');
         
-        if (response.success && response.user) {
-          const user = response.user;
-          console.log('✅ Utilisateur authentifié:', user);
-          setUserInfo(user);
+  //       if (response.success && response.user) {
+  //         const user = response.user;
+  //         const rolesAutorises = ['admin', 'gestionnaire'];
+  //         const userRole = user.role?.toLowerCase();
           
-          const rolesAutorises = ['admin', 'gestionnaire'];
-          const userRole = user.role?.toLowerCase();
-          
-          if (!userRole) {
-            console.warn('⚠️ Aucun rôle trouvé pour l\'utilisateur');
-            setMessage('Erreur: Aucun rôle défini pour votre compte');
-            setMessageType('error');
-            setIsAuthorized(false);
-            return;
-          }
-          
-          if (!rolesAutorises.includes(userRole)) {
-            console.warn(`⚠️ Rôle non autorisé: ${userRole}`);
-            setMessage(`Accès refusé. Votre rôle (${user.role}) ne permet pas d'accéder à la gestion des tarifs.`);
-            setMessageType('error');
-            setIsAuthorized(false);
-            return;
-          }
-          
-          console.log(`✅ Accès autorisé pour le rôle: ${user.role}`);
-          setIsAuthorized(true);
-          setMessage('');
-          setMessageType('');
-          
-        } else {
-          console.warn('⚠️ Échec de vérification de session:', response);
-          setMessage('Session expirée ou invalide. Veuillez vous reconnecter.');
-          setMessageType('error');
-          setIsAuthorized(false);
-        }
-        
-      } catch (error) {
-        console.error('❌ Erreur lors de la vérification des droits:', error);
-        setMessage('Erreur de connexion au serveur. Veuillez réessayer.');
-        setMessageType('error');
-        setIsAuthorized(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  //         if (rolesAutorises.includes(userRole)) {
+  //           console.log(`✅ Accès autorisé pour le rôle: ${user.role}`);
+  //           setUserInfo(user);
+  //           setIsAuthorized(true);
+            
+  //           // 2. Initialiser le service DIRECTEMENT (pas dans un autre useEffect)
+  //           console.log('Initialisation du service de tarification...');
+  //           const service = new TarificationService();
+  //           await service.initialiser();
+  //           setTarificationService(service);
+  //           setIsInitialized(true);
+            
+  //           // 3. Charger les données
+  //           await loadAllData(service);
+  //         } else {
+  //           setIsAuthorized(false);
+  //           setMessage('Accès refusé');
+  //         }
+  //       }
+  //     } catch (error) {
+  //       console.error('Erreur:', error);
+  //       setIsAuthorized(false);
+  //     } finally {
+  //       setIsLoading(false);
+  //     }
+  //   };
     
-    initializationRef.current = true;
-    checkAuthorizationViaAPI();
-  }, []);
+  //   initializationRef.current = true;
+  //   initializeEverything();
+  // }, []);
   
   // Fonctions de chargement des données avec useCallback pour stabilité
   const loadServices = useCallback(async (service = tarificationService) => {
@@ -209,7 +196,7 @@ export const useTarifGestionState = () => {
       console.log('📡 Chargement des tarifs...');
       console.log('🔍 Service utilisé:', !!serviceToUse);
       
-      const tarifsData = await serviceToUse.getTarifs();
+      const tarifsData = await serviceToUse.getAllTarifs();
       console.log('✅ Tarifs chargés:', tarifsData?.length || 0);
       
       if (Array.isArray(tarifsData)) {
@@ -244,7 +231,7 @@ export const useTarifGestionState = () => {
     
     try {
       console.log('📡 Chargement des tarifs spéciaux...');
-      const tarifsSpeciauxData = await serviceToUse.getTarifsSpeciaux();
+      const tarifsSpeciauxData = await serviceToUse.getAllTarifsSpeciaux();
       console.log('✅ Tarifs spéciaux chargés:', tarifsSpeciauxData?.length || 0);
       setTarifsSpeciaux(Array.isArray(tarifsSpeciauxData) ? tarifsSpeciauxData : []);
     } catch (error) {
@@ -299,6 +286,10 @@ export const useTarifGestionState = () => {
       await loadClients();
       
       console.log('✅ Chargement de toutes les données terminé');
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 100);
+
     } catch (error) {
       console.error('❌ Erreur lors du chargement des données:', error);
       setMessage('Erreur lors du chargement des données: ' + error.message);
@@ -308,32 +299,31 @@ export const useTarifGestionState = () => {
     }
   }, [isAuthorized, loadServices, loadUnites, loadTypesTarifs, loadTarifs, loadTarifsSpeciaux, loadClients]);
   
-  // Initialisation du service de tarification - UNE SEULE FOIS
+
   useEffect(() => {
-    if (!isAuthorized || isInitialized || tarificationService) return;
+    if (isInitialized || tarificationService) return;
     
     const initTarificationService = async () => {
       try {
-        console.log('🔧 Initialisation du service de tarification...');
+        console.log('Initialisation du service de tarification...');
         const service = new TarificationService();
         await service.initialiser();
         setTarificationService(service);
         setIsInitialized(true);
-        console.log('✅ Service de tarification initialisé avec succès');
+        console.log('Service de tarification initialisé');
         
-        // ✅ Charger les données APRÈS l'initialisation avec le service
-        await loadAllData(service);
+        // ✅ Charger APRÈS l'initialisation, mais le composant est déjà rendu
+        loadAllData(service);
       } catch (error) {
-        console.error('❌ Erreur lors de l\'initialisation du service de tarification:', error);
-        setMessage('Erreur lors de l\'initialisation du service de tarification: ' + error.message);
+        console.error('Erreur:', error);
+        setMessage('Erreur: ' + error.message);
         setMessageType('error');
-        setIsLoading(false);
       }
     };
 
     initTarificationService();
-  }, [isAuthorized, isInitialized, tarificationService, loadAllData]);
-  
+  }, []);
+    
   // Gestion des messages
   const handleDismissMessage = useCallback(() => {
     setMessage('');

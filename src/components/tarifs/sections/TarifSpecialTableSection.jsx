@@ -30,12 +30,12 @@ const TarifSpecialTableSection = ({
 
     return tarifsSpeciaux.map((tarifSpecial, index) => {
       // IDs avec support camelCase et snake_case
-      const clientId = tarifSpecial.clientId || tarifSpecial.client_id;
+      const idClient = tarifSpecial.idClient;
       const idService = tarifSpecial.idService;
       const idUnite = tarifSpecial.idUnite;
 
       // Recherche des entités liées
-      const client = clients.find(c => c.id == clientId);
+      const client = clients.find(c => c.id == idClient);
       const service = services.find(s => s.idService == idService);
       const unite = unites.find(u => u.idUnite == idUnite);
 
@@ -49,7 +49,7 @@ const TarifSpecialTableSection = ({
         id: tarifSpecial.id || tarifSpecial.tarif_special_id || tarifSpecial.idTarifSpecial || index,
         
         // Noms enrichis
-        clientNom: client ? `${client.prenom} ${client.nom}` : `Client ${clientId || 'inconnu'}`,
+        clientNom: client ? `${client.prenom} ${client.nom}` : `Client ${idClient || 'inconnu'}`,
         nomService: service?.nomService || `Service ${idService || 'inconnu'}`,
         nomUnite: unite?.nomUnite || `Unité ${idUnite || 'inconnue'}`,
         
@@ -63,7 +63,7 @@ const TarifSpecialTableSection = ({
         etatSimple: status.etat, // Pour le filtrage : 'valide', 'futur' ou 'expire'
         
         // IDs normalisés
-        clientId: clientId,
+        idClient: idClient,
         idService: idService,
         idUnite: idUnite
       };

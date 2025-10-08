@@ -8,6 +8,7 @@ import { backendUrl } from '../utils/urlHelper';
 import { toBoolean, normalizeBooleanFields, normalizeBooleanFieldsArray } from '../utils/booleanHelper';
 import ParametreService from './ParametreService';
 import { formatMontant } from '../utils/formatters';
+import { handleApiError } from '../utils/apiErrorHandler';
 
 class FactureService {
   constructor() {
@@ -43,8 +44,7 @@ class FactureService {
 
       return this._delaiPaiementCache;
     } catch (error) {
-      console.error('Erreur lors de la récupération du délai de paiement:', error);
-      return 30;
+      handleApiError(error, `_getDelaiPaiement`);
     }
   }
 
@@ -77,15 +77,13 @@ class FactureService {
   async _determinerEtatAffichage(facture) {
     const etatBase = this._determinerEtatBase(facture);
     
-    console.log(`🔍 _determinerEtatAffichage - Facture ${facture.numeroFacture || facture.id}: état de base = ${etatBase}`);
+    // console.log(`🔍 _determinerEtatAffichage - Facture ${facture.numeroFacture || facture.id}: état de base = ${etatBase}`);
     
     // Si la facture est "Envoyée" et pas encore payée, vérifier le retard
     if (etatBase === 'Envoyée' && !facture.date_paiement && await this._estEnRetard(facture)) {
-      console.log(`🔴 État final: Retard pour facture ${facture.numeroFacture || facture.id}`);
       return 'Retard';
     }
     
-    console.log(`✅ État final: ${etatBase} pour facture ${facture.numeroFacture || facture.id}`);
     return etatBase;
   }
 
@@ -166,8 +164,7 @@ class FactureService {
       
       return facturesPayables;
     } catch (error) {
-      console.error('Erreur lors de la récupération des factures payables:', error);
-      return [];
+      handleApiError(error, `getFacturesPayables`);
     }
   }
 
@@ -283,8 +280,7 @@ class FactureService {
       }
       return [];
     } catch (error) {
-      console.error('Erreur lors du chargement des factures:', error);
-      return [];
+      handleApiError(error, `chargerFactures`);
     }
   }
 
@@ -312,7 +308,6 @@ class FactureService {
             idFacture: factureData.idFacture,
             numeroFacture: factureData.numeroFacture,
             dateFacture: factureData.dateFacture,
-            id_client: factureData.id_client,
             idClient: factureData.idClient,
             montant_total: factureData.montant_total,
             prenom: factureData.prenom,
@@ -347,7 +342,7 @@ class FactureService {
               idFacture: factureNormalisee.idFacture || factureNormalisee.id_facture || '',
               numeroFacture: factureNormalisee.numeroFacture || factureNormalisee.numero_facture || '',
               dateFacture: factureNormalisee.dateFacture || factureNormalisee.date_facture || '',
-              idClient: factureNormalisee.idClient || factureNormalisee.id_client,
+              idClient: factureNormalisee.idClient,
               montantTotal: parseFloat(factureNormalisee.montantTotal || 0),
               ristourne: parseFloat(factureNormalisee.ristourne || 0),
               totalAvecRistourne: parseFloat(factureNormalisee.montantTotal || 0) - parseFloat(factureNormalisee.ristourne || 0),
@@ -403,8 +398,7 @@ class FactureService {
       }
       return null;
     } catch (error) {
-      console.error(`Erreur lors de la récupération de la facture ${id}:`, error);
-      return null;
+      handleApiError(error, `getFacture(${id})`);
     }
   }
 
@@ -422,8 +416,7 @@ class FactureService {
       
       return `001.${annee}`;
     } catch (error) {
-      console.error("Erreur lors de la récupération du prochain numéro de facture:", error);
-      return `001.${annee}`;
+      handleApiError(error, `getProchainNumeroFacture(${annee})`);
     }
   }
 
@@ -431,6 +424,7 @@ class FactureService {
     console.log('FactureService - createFacture - Création de la facture avec les données:', factureData);
     try {
       const response = await api.post('facture-api.php', factureData);
+      console.log('FactureService - createFacture - response', response)
       
       if (response && response.success) {
         this._clearCache();
@@ -443,8 +437,7 @@ class FactureService {
         throw new Error(response?.message || 'Erreur lors de la création de la facture');
       }
     } catch (error) {
-      console.error('Erreur lors de la création de la facture:', error);
-      throw error;
+      handleApiError(error, `createFacture`);
     }
   }
 
@@ -464,8 +457,7 @@ class FactureService {
         throw new Error(response?.message || 'Erreur lors de la modification de la facture');
       }
     } catch (error) {
-      console.error(`Erreur lors de la mise à jour de la facture ${id}:`, error);
-      throw error;
+      handleApiError(error, `updateFacture(${id})`);
     }
   }
 
@@ -483,8 +475,7 @@ class FactureService {
         throw new Error(response?.message || 'Erreur lors de la suppression de la facture');
       }
     } catch (error) {
-      console.error(`Erreur lors de la suppression de la facture ${id}:`, error);
-      throw error;
+      handleApiError(error, `deleteFacture(${id})`);
     }
   }
 
@@ -515,8 +506,7 @@ class FactureService {
         throw new Error(response?.message || `Erreur lors du changement d'état de la facture à "${nouvelEtat}"`);
       }
     } catch (error) {
-      console.error(`Erreur lors du changement d'état de la facture ${id}:`, error);
-      throw error;
+      handleApiError(error, `changerEtatFacture(${id})`);
     }
   }
 
@@ -547,8 +537,7 @@ class FactureService {
             throw new Error(response?.message || 'Erreur lors de l\'envoi de la facture par email');
         }
     } catch (error) {
-        console.error(`Erreur lors de l'envoi par email de la facture ${idFacture}:`, error);
-        throw error;
+        handleApiError(error, `envoyerFactureParMail(${idFacture})`);
     }
   }
 
@@ -571,8 +560,7 @@ class FactureService {
               throw new Error(response?.message || 'Erreur lors de l\'enregistrement du paiement');
           }
       } catch (error) {
-          console.error(`Erreur lors de l'enregistrement du paiement pour la facture ${id}:`, error);
-          throw error;
+          handleApiError(error, `enregistrerPaiement(${id})`);
       }
   }
 
@@ -592,8 +580,7 @@ class FactureService {
               throw new Error(response?.message || 'Erreur lors de la récupération de l\'historique');
           }
       } catch (error) {
-          console.error(`Erreur lors de la récupération de l'historique des paiements pour la facture ${idFacture}:`, error);
-          throw error;
+          handleApiError(error, `getHistoriquePaiements(${idFacture})`);
       }
   }
 
@@ -618,8 +605,7 @@ class FactureService {
               throw new Error(response?.message || 'Erreur lors de la suppression du paiement');
           }
       } catch (error) {
-          console.error(`Erreur lors de la suppression du paiement ${idPaiement}:`, error);
-          throw error;
+          handleApiError(error, `supprimerPaiement(${idPaiement})`);
       }
   }
 
@@ -662,11 +648,7 @@ class FactureService {
             message: 'Aucun fichier PDF associé à cette facture'
         };
     } catch (error) {
-        console.error(`Erreur lors de la récupération de l'URL de la facture ${id}:`, error);
-        return {
-            success: false,
-            message: error.message || 'Erreur lors de la récupération de l\'URL de la facture'
-        };
+        handleApiError(error, `getFactureUrl(${id})`);
     }
   }
 
@@ -697,19 +679,8 @@ class FactureService {
         throw new Error(response?.message || 'Erreur lors de l\'impression de la facture');
       }
     } catch (error) {
-      console.error(`Erreur lors de l'impression de la facture ${id}:`, error);
-      throw error;
+      handleApiError(error, `imprimerFacture(${id})`);
     }
-  }
-
-  async mettreAJourRetards() {
-    // Cette méthode n'est plus nécessaire puisque les retards sont calculés dynamiquement
-    console.log('⚠️ mettreAJourRetards() est obsolète - les retards sont maintenant calculés dynamiquement');
-    return {
-      success: true,
-      facturesModifiees: 0,
-      message: 'Les retards sont calculés automatiquement, aucune mise à jour nécessaire'
-    };
   }
 
   async getStatistiques(annee = null) {
@@ -734,8 +705,7 @@ class FactureService {
         throw new Error(response?.message || 'Erreur lors de la récupération des statistiques');
       }
     } catch (error) {
-      console.error('Erreur lors de la récupération des statistiques:', error);
-      throw error;
+      handleApiError(error, `getStatistiques`);
     }
   }
 

@@ -15,6 +15,7 @@ export class FactureFormActions {
     
     try {
       const factureData = await this.factureService.getFacture(id);
+      
       if (!factureData) {
         throw new Error('Aucune donnée de facture trouvée');
       }
@@ -26,7 +27,6 @@ export class FactureFormActions {
         numeroFacture: factureData.numeroFacture, 
         dateFacture: factureData.dateFacture,
         idClient: factureData.idClient,
-        clientId: factureData.clientId,
         montantTotal: factureData.montantTotal,
         lignes: factureData.lignes?.length || 0,
         keys: Object.keys(factureData)
@@ -42,127 +42,140 @@ export class FactureFormActions {
         console.log('Enrichissement des lignes de facture...');
         
         try {
-          // Charger les services et unités séquentiellement
-          const services = await this.tarificationService.chargerServices();
-          const unites = await this.tarificationService.chargerUnites();
+          // Charger les services et unités
+          const [servicesData, unitesData] = await Promise.all([
+            this.tarificationService.chargerServices(),
+            this.tarificationService.chargerUnites()
+          ]);
+
+          const servicesResponse = await this.tarificationService.chargerServices();
+          const unitesResponse = await this.tarificationService.chargerUnites();
+
+
+          const services = servicesResponse?.services || servicesResponse || [];
+          const unites = unitesResponse?.unites || unitesResponse || [];
+
+                    // ✅ AJOUT DE LOGS DÉTAILLÉS
+          console.log('🔍 Unités chargées - Nombre:', unites.length);
+          console.log('🔍 Unités chargées - Première unité:', unites[0]);
+          console.log('🔍 Unités chargées - Structure complète:', unites);
+
+          // Vérifier spécifiquement l'unité ID 6 (Forfait)
+          const uniteForfait = unites.find(u => u.idUnite === 6 || u.id_unite === 6 || u.id === 6);
+          console.log('🔍 Recherche unité ID 6 (Forfait):', uniteForfait);
+
+          // Vérifier toutes les variations possibles de noms de propriétés
+          if (unites.length > 0) {
+            const premiereUnite = unites[0];
+            console.log('🔍 Propriétés de la première unité:', Object.keys(premiereUnite));
+            console.log('🔍 Variations possibles:', {
+              idUnite: premiereUnite.idUnite,
+              id_unite: premiereUnite.id_unite,
+              id: premiereUnite.id,
+              uniteId: premiereUnite.uniteId
+            });
+          }
 
           console.log('Services chargés:', services?.length || 0);
           console.log('Unités chargées:', unites?.length || 0);
 
-          lignesEnrichies = factureData.lignes.map((ligne) => {
-            console.log('Traitement ligne:', ligne);
-            
-            // Chercher le service correspondant
-            const service = services?.find(s => 
-              s.idService === ligne.idService
-            );
-            
-            // Chercher l'unité correspondante
-            const unite = unites?.find(u => 
-              u.idUnite === ligne.idUnite
-            );
+          lignesEnrichies = factureData.lignes.map(ligne => {
+            console.log('🔍 Enrichissement ligne:', ligne);
+            console.log('🔍 Recherche service ID:', ligne.idService);
+            console.log('🔍 Recherche unité ID:', ligne.idUnite);
+            const service = services.find(s => {
+              const match = s.idService === ligne.idService;
+              console.log(`  - Service ${s.nomService} (ID: ${s.idService}) match?`, match);
+              return match;
+            });
+            const unite = unites.find(u => {
+              const match = u.idUnite === ligne.idUnite;
+              console.log(`  - Unité ${u.nomUnite || u.nom} (ID: ${u.idUnite || u.id}) match?`, match);
+              return match;
+            });
 
-            console.log('Service trouvé:', service);
-            console.log('Unité trouvée:', unite);
+            console.log('🔍 Résultat enrichissement:', {
+              service: service ? service.nomService : 'NON TROUVÉ',
+              unite: unite ? (unite.nomUnite || unite.nom) : 'NON TROUVÉ'
+            });
 
-            // Retourner la ligne enrichie
             return {
               ...ligne,
-              service: service || {
-                idService: ligne.idService,
-                codeService: 'Service inconnu',
-                nomService: 'Service non trouvé'
-              },
-              unite: unite || {
-                idUnite: ligne.idUnite,
-                code: 'Unité inconnue',
-                nom: 'Unité non trouvée'
-              }
+              service: service || null,
+              unite: unite || null
             };
           });
-          
+
           console.log('Lignes enrichies:', lignesEnrichies);
-        } catch (error) {
-          console.error('Erreur lors de l\'enrichissement des lignes:', error);
-          // En cas d'erreur, utiliser les lignes originales sans enrichissement
+        } catch (enrichError) {
+          console.error('Erreur lors de l\'enrichissement des lignes:', enrichError);
           lignesEnrichies = factureData.lignes;
         }
       }
 
-      // Adapter la structure des données pour le formulaire
-      const factureFormattee = {
-        // Propriétés principales
-        idFacture: factureData.idFacture || factureData.id,
+      const factureFinale = {
+        idFacture: factureData.idFacture || id,
         numeroFacture: factureData.numeroFacture || '',
         dateFacture: factureData.dateFacture || '',
-        
-        // Utiliser clientId au lieu d'idClient
-        clientId: factureData.idClient || factureData.clientId || null,
-        
-        // Montants
-        montantTotal: totalBrut,
+        idClient: factureData.idClient || null,
+        montantTotal: factureData.montantTotal || totalBrut,
         ristourne: ristourne,
         totalAvecRistourne: totalNet,
-        
-        // Utiliser les lignes enrichies
         lignes: lignesEnrichies,
-        
-        // États et dates
         etat: factureData.etat || '',
         etatAffichage: factureData.etatAffichage || factureData.etat || '',
         documentPath: factureData.documentPath || null,
-        date_annulation: factureData.date_annulation || null,
-        date_paiement: factureData.date_paiement || null,
-        
-        // Propriétés booléennes
-        est_imprimee: factureData.est_imprimee || false,
-        est_envoyee: factureData.est_envoyee || false,
-        est_annulee: factureData.est_annulee || false,
-        est_payee: factureData.est_payee || false,
-        
-        // Données client (si disponibles)
+        date_annulation: factureData.dateAnnulation || null,
+        date_paiement: factureData.datePaiement || null,
+        est_imprimee: factureData.estImprimee || false,
+        est_envoyee: factureData.estEnvoyee || false,
+        est_annulee: factureData.estAnnulee || false,
+        est_payee: factureData.estPayee || false,
         client: factureData.client || null
       };
 
-      console.log('Facture formatée pour le formulaire:', factureFormattee);
+      setFacture(factureFinale);
+      setIsLignesValid(true);
 
-      setFacture(factureFormattee);
-
-      // Charger les détails du client si un ID client est présent
-      if (factureFormattee.clientId) {
-        await fetchClientDetails(factureFormattee.clientId);
+      if (factureData.idClient) {
+        const idClient = factureData.idClient;
+        await fetchClientDetails(idClient);
       }
 
-      setIsLignesValid(true);
+      // ✅ AJOUT : Retourner les données
+      console.log('📦 Retour des données facture:', factureFinale);
+      return factureFinale;
+
     } catch (error) {
       console.error('Erreur lors du chargement de la facture:', error);
       setError(error.message || 'Erreur lors du chargement de la facture');
+      return null;
     } finally {
       setIsLoading(false);
     }
   }
 
-  async fetchClientDetails(clientId, setters) {
+  async fetchClientDetails(idClient, setters) {
     const { setClientLoading, setClientData } = setters;
     
-    if (!clientId) {
+    if (!idClient) {
       setClientData(null);
       return null;
     }
 
     setClientLoading(true);
     try {
-      const client = await this.clientService.getClient(clientId);
+      const client = await this.clientService.getClient(idClient);
       console.log('Détails du client chargés:', client);
       setClientData(client || {
-        id: clientId,
+        id: idClient,
         nom: 'Client non trouvé',
         prenom: ''
       });
       return client;
     } catch (error) {
       setClientData({
-        id: clientId,
+        id: idClient,
         nom: 'Erreur de chargement',
         prenom: ''
       });

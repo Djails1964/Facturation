@@ -12,7 +12,7 @@ export const useTarifSpecialFormValidation = (formState) => {
         
         try {
             switch (fieldName) {
-                case 'clientId':
+                case 'idClient':
                     if (!value) {
                         errors[fieldName] = 'Le client est obligatoire';
                     }
@@ -74,7 +74,7 @@ export const useTarifSpecialFormValidation = (formState) => {
         
         try {
             // Validation synchrone
-            if (!tarifSpecial.clientId) errors.clientId = 'Le client est obligatoire';
+            if (!tarifSpecial.idClient) errors.idClient = 'Le client est obligatoire';
             if (!tarifSpecial.idService) errors.idService = 'Le service est obligatoire';
             if (!tarifSpecial.idUnite) errors.idUnite = 'L\'unité est obligatoire';
             if (!tarifSpecial.prix || isNaN(parseFloat(tarifSpecial.prix)) || parseFloat(tarifSpecial.prix) <= 0) {
@@ -96,10 +96,10 @@ export const useTarifSpecialFormValidation = (formState) => {
             }
             
             // Validation métier (conflits de tarifs spéciaux)
-            if (tarifSpecial.clientId && tarifSpecial.idService && tarifSpecial.idUnite && tarifSpecial.date_debut) {
+            if (tarifSpecial.idClient && tarifSpecial.idService && tarifSpecial.idUnite && tarifSpecial.date_debut) {
                 try {
                     const conflictCheck = await tarificationService.checkTarifSpecialConflict({
-                        clientId: tarifSpecial.clientId,
+                        idClient: tarifSpecial.idClient,
                         idService: tarifSpecial.idService,
                         idUnite: tarifSpecial.idUnite,
                         date_debut: tarifSpecial.date_debut,
