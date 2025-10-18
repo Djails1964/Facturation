@@ -10,7 +10,8 @@ function FactureGestion({
     onFactureCreated = null, 
     onSectionChange = null,
     initialFilter = {}, 
-    onRetour = null 
+    onRetour = null,
+    navigationSource = 'liste'  // ✅ NOUVEAU - Track d'où on vient
 }) {
     // États pour gérer la navigation entre les différentes vues
     const [activeView, setActiveView] = useState(section);
@@ -32,10 +33,14 @@ function FactureGestion({
 
     // Effet pour mettre à jour l'ID de la facture sélectionnée
     useEffect(() => {
-        if (idFacture !== null) {
+        if (idFacture !== null && idFacture !== undefined) {
+            console.log('📌 FactureGestion - idFacture reçue de parent:', idFacture);
             setSelectedFactureId(idFacture);
+            // Basculer vers le mode afficher quand on reçoit un ID de la prop
+            // Cela se déclenche quand le parent (DashboardWrapper) passe un ID
+            setActiveView('afficher');
         }
-    }, [idFacture]);
+}, [idFacture]);
 
     // Effet pour notifier le parent du changement de section
     useEffect(() => {
@@ -75,7 +80,15 @@ function FactureGestion({
             setNotification({ message, type: type || 'success' });
         }
         
-        setActiveView('liste');
+        // ✅ Si on vient du dashboard, appeler onRetour pour revenir au dashboard
+        if (navigationSource === 'dashboard' && onRetour) {
+            console.log('📍 Retour au dashboard');
+            onRetour(idFacture, modified, message, type);
+        } else {
+            // Sinon retourner à la liste
+            console.log('📍 Retour à la liste des factures');
+            setActiveView('liste');
+        }
     };
 
     // Gestion de la création de facture

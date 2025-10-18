@@ -1,0 +1,101 @@
+/* 
+ * GestionUtilisateurs.css - STYLES SPÉCIFIQUES UNIQUEMENT
+ * 
+ * Ce fichier contient UNIQUEMENT les styles de mise en page générale 
+ * et de navigation pour la gestion des utilisateurs.
+ * 
+ * Les styles du tableau UserListTable sont maintenant dans UserListTable.css
+ * Les styles du formulaire UserForm sont dans UserForm.css
+ * 
+ * STYLES GLOBAUX UTILISÉS (ne pas redéfinir) :
+ * - index.css : imports des styles communs
+ * - main.css : variables principales (--primary-color, --text-color, etc.)
+ * - variables.css : variables CSS supplémentaires
+ * - buttons.css : .bouton-action, .btn-primary, .btn-secondary, etc.
+ * - actionButtons.css : icônes et styles d'action
+ * - forms.css : .input-group, labels flottants, etc.
+ * - layout.css : .content-section-container, .content-section-title, .etat-badge
+ * - modals.css : styles des modales
+ */
+
+/* ========== EN-TÊTE ET NAVIGATION ========== */
+
+.users-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 15px;
+}
+
+.users-header h2 {
+  margin: 0;
+  color: var(--primary-color, #A51C30);
+  font-size: 1.5rem;
+  border-bottom: 2px solid var(--primary-color, #A51C30);
+  padding-bottom: 10px;
+  flex: 1;
+}
+
+.users-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ========== CONTENEUR PRINCIPAL ========== */
+
+.gestion-utilisateurs-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+/* ========== SECTIONS DE CONTENU ========== */
+
+.users-list-section {
+  width: 100%;
+}
+
+.users-form-section {
+  width: 100%;
+}
+
+/* ========== RESPONSIVE ========== */
+
+@media (max-width: 968px) {
+  .users-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .users-header h2 {
+    border-bottom: 2px solid var(--primary-color, #A51C30);
+    padding-bottom: 10px;
+  }
+
+  .users-header-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .users-header-actions button {
+    flex: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .users-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .users-header-actions {
+    gap: 8px;
+  }
+
+  .gestion-utilisateurs-container {
+    gap: 15px;
+  }
+}

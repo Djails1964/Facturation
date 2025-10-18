@@ -276,7 +276,7 @@ function ParametresContent() {
         nomParametre: paramData.nomParametre,
         valeurParametre: valeurAEnregistrer,
         groupeParametre: paramData.groupe,
-        sGroupeParametre: paramData.sousGroupe !== 'Général' ? paramData.sousGroupe : null,
+        sousGroupeParametre: paramData.sousGroupe !== 'Général' ? paramData.sousGroupe : null,
         categorie: paramData.categorie !== 'Default' ? paramData.categorie : null
       };
       

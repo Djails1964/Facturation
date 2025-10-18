@@ -1,11 +1,18 @@
+// src/FacturationPage.jsx
+/**
+ * Page principale de facturation avec sections multiples
+ * ✅ Intégration du nouveau Dashboard
+ * ✅ Utilise DashboardWrapper depuis le nouveau répertoire
+ */
+
 import { useState, useEffect, useCallback } from 'react';
-import ParametresContent from './admin/ParametresContent';
 import ClientGestion from './components/clients/ClientGestion';
 import FactureGestion from './components/factures/FactureGestion';
 import PaiementGestion from './components/paiements/PaiementGestion';
 import TarifGestion from './components/tarifs/TarifGestion';
-import DashboardWrapper from './DashboardWrapper';
-import GestionUtilisateurs from './admin/GestionUtilisateurs';
+import DashboardWrapper from './components/dashboard/DashboardWrapper';
+import GestionUtilisateurs from './components/users/GestionUtilisateurs';
+import { GestionParametres } from './components/parametres';
 import AdminDashboard from './components/AdminDashboard';
 import { useNavigationGuard } from './App';
 import { APP_VERSION } from './version';
@@ -58,7 +65,7 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
   const handleSectionChange = (newSection) => {
     interceptNavigation(
       () => {
-        console.log('🔄 Changement de section:', activeSection, '->', newSection);
+        console.log('📄 Changement de section:', activeSection, '->', newSection);
         
         // Si on quitte les tarifs, incrémenter la clé pour forcer le remontage au retour
         if (activeSection === 'tarifs' && newSection !== 'tarifs') {
@@ -84,7 +91,7 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
   };
 
   const handleTarifIntegrationAction = useCallback((action, data) => {
-    console.log('🔄 Action tarif:', action, data);
+    console.log('📄 Action tarif:', action, data);
     
     setTarifIntegration(prev => ({
       ...prev,
@@ -127,7 +134,7 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
   const renderContent = () => {
     switch (activeSection) {
       case 'parametres':
-        return canAccessParams ? <ParametresContent /> : <div className="content-placeholder">Accès non autorisé</div>;
+        return canAccessParams ? <GestionParametres /> : <div className="content-placeholder">Accès non autorisé</div>;
       
       case 'nouvelle':
         return <FactureGestion
@@ -197,28 +204,46 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
             <li
               className={activeSection === 'factures' ? 'active' : ''}
               onClick={() => handleSectionChange('factures')}
+              title="Gestion des factures"
             >
-              <span className="menu-label">Factures</span>
+              <span className="menu-label">
+                <span className="menu-icon">📄</span>
+                <span>Factures</span>
+              </span>
             </li>
             
             <li
               className={activeSection === 'paiements' ? 'active' : ''}
               onClick={() => handleSectionChange('paiements')}
+              title="Enregistrement des paiements"
             >
-              <span className="menu-label">Paiements</span>
+              <span className="menu-label">
+                <span className="menu-icon">💳</span>
+                <span>Paiements</span>
+              </span>
             </li>
             
             <li
               className={activeSection === 'clients' ? 'active' : ''}
               onClick={() => handleSectionChange('clients')}
+              title="Gestion des clients"
             >
-              <span className="menu-label">Clients</span>
+              <span className="menu-label">
+                <span className="menu-icon">👥</span>
+                <span>Clients</span>
+              </span>
             </li>
+
+            {/* ✅ NOUVEAU: Dashboard dans le menu */}
             <li
               className={activeSection === 'dashboard' ? 'active' : ''}
               onClick={() => handleSectionChange('dashboard')}
+              title="Vue d'ensemble des statistiques"
             >
-              <span className="menu-label">Dashboard</span>
+              <span className="menu-label">
+                <span className="menu-icon">📊</span>
+                <span>Dashboard</span>
+              </span>
             </li>
             
             {canAccessParams && (

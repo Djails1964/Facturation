@@ -1,0 +1,217 @@
+/* 
+ * src/styles/components/parametres/GestionParametres.css
+ * STYLES SPÉCIFIQUES UNIQUEMENT - Réutilise au maximum les styles globaux
+ */
+
+/* ========== CONTENEUR PRINCIPAL ========== */
+.parametres-body {
+  max-width: 1200px; /* ✅ Aligné sur content-section-container */
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.parametres-form {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+/* ========== GROUPES DE PARAMÈTRES ========== */
+.parametre-groupe {
+  background: var(--color-background, white);
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: var(--border-radius, 8px);
+  padding: 20px;
+  box-shadow: var(--box-shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.1));
+}
+
+.groupe-titre {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--primary-color, #800000);
+  margin: 0 0 20px 0;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--primary-color, #800000);
+}
+
+/* ========== SOUS-GROUPES ========== */
+.parametre-sous-groupe {
+  margin-bottom: 25px;
+}
+
+.parametre-sous-groupe:last-child {
+  margin-bottom: 0;
+}
+
+.sous-groupe-titre {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-color, #333);
+  margin: 0 0 15px 0;
+  padding-left: 10px;
+  border-left: 3px solid var(--primary-color, #800000);
+}
+
+/* ========== CATÉGORIES ========== */
+.parametre-categorie {
+  margin-bottom: 20px;
+}
+
+.categorie-titre {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--secondary-text, #666);
+  margin: 0 0 12px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ========== LISTE DES PARAMÈTRES ========== */
+.parametres-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ========== CHAMP DE PARAMÈTRE ========== */
+.parametre-field {
+  display: flex;
+  gap: 15px;
+  align-items: flex-end; /* ✅ MODIFIÉ : flex-end pour aligner les bases des champs */
+  padding: 15px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.parametre-field:last-child {
+  border-bottom: none;
+}
+
+/* ✅ LAYOUT PAR DÉFAUT : Champs SANS année occupent 100% */
+.parametre-field-main {
+  flex: 1 1 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+/* ✅ Champ année : caché par défaut */
+.parametre-field-year {
+  display: none;
+  flex-shrink: 0;
+  align-self: flex-end; /* ✅ Aligné sur la base */
+  padding-bottom: 0; /* ✅ Pas de padding en bas */
+}
+
+/* ✅ LAYOUT 80/20 : Uniquement pour les champs AVEC année */
+.parametre-field:has(.parametre-field-year) .parametre-field-main {
+  flex: 0 0 80%;
+  max-width: 80%; /* ✅ Empêche le débordement */
+}
+
+.parametre-field:has(.parametre-field-year) .parametre-field-year {
+  display: block;
+  flex: 0 0 calc(20% - 15px); /* ✅ 20% moins le gap */
+  max-width: calc(20% - 15px); /* ✅ Empêche le débordement */
+}
+
+/* Select dans le champ année */
+.parametre-field-year select {
+  width: 100%;
+  box-sizing: border-box; /* ✅ Inclut padding et border dans la largeur */
+}
+
+/* S'assurer que le input-group ne déborde pas */
+.parametre-field-year .input-group {
+  width: 100%;
+  margin-bottom: 0; /* ✅ Neutralise le margin-bottom de forms.css */
+  box-sizing: border-box; /* ✅ Inclut padding et border dans la largeur */
+}
+
+/* Input-group dans main aussi */
+.parametre-field-main .input-group {
+  width: 100%;
+  margin-bottom: 0; /* ✅ AJOUT : Neutralise aussi pour le champ principal */
+  box-sizing: border-box; /* ✅ Inclut padding et border dans la largeur */
+}
+
+/* Description du paramètre */
+.parametre-description {
+  font-size: 0.85rem;
+  color: var(--secondary-text, #666);
+  font-style: italic;
+  margin-top: -8px;
+  padding-left: 0;
+}
+
+/* ========== ÉTATS DE CHARGEMENT ========== */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+  color: var(--secondary-text, #666);
+}
+
+/* ========== RESPONSIVITÉ ========== */
+@media (max-width: 768px) {
+  .parametres-body {
+    padding: 15px;
+  }
+
+  /* Sur mobile, tous les champs passent en colonne */
+  .parametre-field {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* Champs sans année : restent à 100% */
+  .parametre-field-main {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+
+  /* Champs avec année : passent à 100% aussi */
+  .parametre-field:has(.parametre-field-year) .parametre-field-main {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+
+  .parametre-field:has(.parametre-field-year) .parametre-field-year {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+
+  .groupe-titre {
+    font-size: 1.2rem;
+  }
+
+  .sous-groupe-titre {
+    font-size: 1rem;
+  }
+
+  .parametre-groupe {
+    padding: 15px;
+  }
+}
+
+/* ========== ANIMATIONS ========== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.parametre-groupe {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.parametre-groupe:nth-child(1) { animation-delay: 0s; }
+.parametre-groupe:nth-child(2) { animation-delay: 0.1s; }
+.parametre-groupe:nth-child(3) { animation-delay: 0.2s; }
+.parametre-groupe:nth-child(4) { animation-delay: 0.3s; }

@@ -1,0 +1,98 @@
+/* src/styles/components/dashboard/DashboardCharts.css */
+.dashboard-charts {
+  margin-top: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.chart-container {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.chart-container h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: var(--primary-color, #800000);
+  font-size: 1.2rem;
+  text-align: center;
+}
+
+.chart-placeholder {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-light, #666);
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.chart-tooltip {
+  background-color: rgba(255, 255, 255, 0.95);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 8px 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.chart-tooltip .label {
+  margin: 0;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.chart-tooltip p {
+  margin: 2px 0;
+  font-size: 0.9rem;
+}
+
+.chart-row {
+  display: flex;
+  gap: 30px;
+  margin-bottom: 0;
+  flex-wrap: wrap;
+}
+
+.half-width {
+  flex: 1;
+  min-width: 300px;
+}
+
+.payment-rate-details {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.detail-label {
+  font-size: 0.85rem;
+  color: var(--text-light, #666);
+  text-transform: uppercase;
+}
+
+.detail-value {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--primary-color, #800000);
+}
+
+@media (max-width: 768px) {
+  .chart-row {
+    flex-direction: column;
+  }
+
+  .half-width {
+    width: 100%;
+  }
+}

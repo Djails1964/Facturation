@@ -35,7 +35,7 @@ class FactureService {
       );
 
       if (result.success && result.parametre) {
-        this._delaiPaiementCache = parseInt(result.parametre.Valeur_parametre) || 30;
+        this._delaiPaiementCache = parseInt(result.parametre.valeurParametre) || 30;
         console.log('✅ Délai de paiement récupéré:', this._delaiPaiementCache, 'jours');
       } else {
         console.warn('⚠️ Paramètre "Delai Paiement" non trouvé, utilisation de la valeur par défaut (30 jours)');
@@ -325,7 +325,7 @@ class FactureService {
                   
                   let outputDir = 'storage/factures';
                   if (outputDirResponse && outputDirResponse.success) {
-                      outputDir = outputDirResponse.parametre?.Valeur_parametre || outputDir;
+                      outputDir = outputDirResponse.parametre?.valeurParametre || outputDir;
                   }
                   
                   documentPath = backendUrl(`${outputDir}/${factureNormalisee.factfilename}`);
@@ -407,8 +407,8 @@ class FactureService {
       const response = await api.get(`facture-api.php?prochainNumeroFacture=${annee}`);
       
       if (response && response.success && response.parametre) {
-        const numero = response.parametre.Valeur_parametre 
-          ? `${response.parametre.Valeur_parametre.toString().padStart(3, '0')}.${annee}`
+        const numero = response.parametre.valeurParametre 
+          ? `${response.parametre.valeurParametre.toString().padStart(3, '0')}.${annee}`
           : `001.${annee}`;
         
         return numero;

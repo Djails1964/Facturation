@@ -1,0 +1,330 @@
+/* 
+ * UserListTable.css - STYLES DU TABLEAU DES UTILISATEURS
+ * 
+ * Ce fichier contient UNIQUEMENT les styles du composant UserListTable.
+ * 
+ * ✅ STYLES GLOBAUX RÉUTILISÉS (ne pas redéfinir) :
+ * - main.css : variables principales 
+ *   --primary-color, --primary-dark, --text-color, --text-light, 
+ *   --border-color, --secondary-color, --success-color, --warning-color,
+ *   --danger-color, --border-radius, --transition-speed
+ * - variables.css : couleurs additionnelles (--color-success-bg, etc.)
+ * - buttons.css : .bouton-action, .btn-primary, etc.
+ * - actionButtons.css : icônes et styles d'action
+ * - layout.css : variables d'espacement et classes utilitaires
+ */
+
+/* ========== STRUCTURE DU TABLEAU ========== */
+
+.users-table {
+  width: 100%;
+  background-color: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+}
+
+/* En-tête du tableau */
+.users-table-header {
+  display: grid;
+  grid-template-columns: 
+    minmax(150px, 1.5fr)  /* Username */
+    minmax(150px, 2fr)    /* Nom complet */
+    minmax(180px, 2fr)    /* Email */
+    minmax(120px, 1fr)    /* Rôle */
+    minmax(100px, 1fr)    /* Statut */
+    minmax(120px, 120px); /* Actions */
+  gap: 10px;
+  padding: 15px;
+  background-color: var(--secondary-color);
+  border-bottom: 2px solid var(--primary-color);
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.users-header-cell {
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Corps du tableau */
+.users-table-body {
+  max-height: calc(100vh - 250px);
+  overflow-y: auto;
+}
+
+/* Lignes du tableau */
+.users-table-row {
+  display: grid;
+  grid-template-columns: 
+    minmax(150px, 1.5fr)
+    minmax(150px, 2fr)
+    minmax(180px, 2fr)
+    minmax(120px, 1fr)
+    minmax(100px, 1fr)
+    minmax(120px, 120px);
+  gap: 10px;
+  padding: 15px;
+  border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+  align-items: center;
+}
+
+.users-table-row:hover {
+  background-color: rgba(165, 28, 48, 0.05);
+}
+
+.users-table-row.users-selected {
+  background-color: rgba(165, 28, 48, 0.1);
+  border-left: 3px solid var(--primary-color);
+}
+
+.users-table-row.users-inactive {
+  opacity: 0.6;
+}
+
+.users-table-row.users-inactive:hover {
+  opacity: 0.8;
+}
+
+/* ========== CELLULES ========== */
+
+.users-table-cell {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.95rem;
+}
+
+/* Username */
+.users-username-cell {
+  font-weight: 500;
+  color: var(--primary-color);
+}
+
+/* Nom complet */
+.users-name-cell {
+  color: var(--text-color);
+}
+
+/* Email */
+.users-email-cell {
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+/* Rôle avec badge */
+.users-role-cell {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.users-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background-color: rgba(165, 28, 48, 0.1);
+  color: var(--primary-color);
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Statut avec badge */
+.users-status-cell {
+  display: flex;
+  align-items: center;
+}
+
+.users-status-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Badges d'état - utilise les couleurs de variables.css */
+.users-status-badge.status-active {
+  background-color: var(--color-success-bg, #d4edda);
+  color: var(--color-success-text, #155724);
+}
+
+.users-status-badge.status-inactive {
+  background-color: var(--color-error-bg, #f8d7da);
+  color: var(--color-error-text, #721c24);
+}
+
+.users-status-badge.status-pending {
+  background-color: var(--color-warning-bg, #fff3cd);
+  color: var(--color-warning-text, #856404);
+}
+
+/* ========== ACTIONS ========== */
+
+.users-actions-cell {
+  display: flex;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.users-action-buttons {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+/* Les boutons utilisent .bouton-action de buttons.css */
+/* Ajustement des dimensions pour cohérence */
+.users-table-row .bouton-action {
+  width: 30px;
+  height: 30px;
+}
+
+/* Ajustement des icônes (réutilise les styles d'actionButtons.css) */
+.users-table-row .bouton-action svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ========== MESSAGES D'ÉTAT ========== */
+
+.users-loading-message,
+.users-error-message,
+.users-empty-message {
+  padding: 40px 20px;
+  text-align: center;
+  font-size: 1rem;
+  color: var(--text-light);
+}
+
+.users-error-message {
+  color: var(--danger-color);
+  background-color: rgba(220, 53, 69, 0.1);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--danger-color);
+}
+
+/* ========== RESPONSIVE ========== */
+
+@media (max-width: 1200px) {
+  .users-table-header,
+  .users-table-row {
+    grid-template-columns: 
+      minmax(120px, 1.5fr)
+      minmax(120px, 1.5fr)
+      minmax(150px, 2fr)
+      minmax(100px, 1fr)
+      minmax(80px, 0.8fr)
+      minmax(100px, 100px);
+  }
+}
+
+@media (max-width: 968px) {
+  .users-table-header {
+    display: none;
+  }
+
+  .users-table-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "username"
+      "name"
+      "email"
+      "role"
+      "status"
+      "actions";
+    gap: 5px;
+    padding: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    margin-bottom: 10px;
+  }
+
+  .users-table-cell {
+    justify-content: space-between;
+  }
+
+  .users-table-cell::before {
+    content: attr(data-label);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    color: var(--text-light);
+    letter-spacing: 0.5px;
+  }
+
+  .users-username-cell { grid-area: username; }
+  .users-name-cell { grid-area: name; }
+  .users-email-cell { grid-area: email; }
+  .users-role-cell { grid-area: role; }
+  .users-status-cell { grid-area: status; }
+  .users-actions-cell {
+    grid-area: actions;
+    justify-content: center;
+    border-top: 1px solid var(--border-color);
+    padding-top: 10px;
+    margin-top: 10px;
+  }
+
+  .users-table-cell::before {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .users-table-row {
+    padding: 12px;
+    margin-bottom: 8px;
+  }
+
+  .users-status-badge,
+  .users-role-badge {
+    font-size: 0.8rem;
+    padding: 3px 10px;
+  }
+}
+
+/* ========== SCROLLBAR PERSONNALISÉE ========== */
+
+.users-table-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.users-table-body::-webkit-scrollbar-track {
+  background: var(--secondary-color);
+  border-radius: var(--border-radius);
+}
+
+.users-table-body::-webkit-scrollbar-thumb {
+  background: var(--text-light);
+  border-radius: var(--border-radius);
+}
+
+.users-table-body::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-color);
+}
+
+/* ========== ACCESSIBILITÉ ========== */
+
+.users-table-row:focus-within {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .users-table-row,
+  .users-table-row:hover {
+    transition: none;
+    transform: none;
+  }
+}

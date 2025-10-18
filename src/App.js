@@ -1,4 +1,10 @@
-// src/App.js - Version avec initialisation des fieldMappings
+// src/App.jsx - VERSION CORRIGÉE
+/**
+ * Application principale avec routage
+ * ✅ Utilise checkAuth() et isAuthenticated() au lieu de verifyToken()
+ * ✅ Récupère les paramètres correctement de la LoginPage
+ */
+
 import React, { useState, useEffect } from 'react';
 import { createHashRouter, RouterProvider, Navigate, Outlet } from 'react-router-dom';
 import { NotificationProvider } from './services/NotificationService';
@@ -13,7 +19,7 @@ import SessionAlert from './components/SessionAlert';
 import Header from './components/Header';
 import GlobalDatePicker from './context/GlobalDatePicker';
 import { useGlobalNavigationGuard } from './hooks/useGlobalNavigationGuard';
-import './styles/GestionUtilisateurs.css';
+import './styles/components/users/GestionUtilisateurs.css';
 import {
   configureUrlHelperForEnvironment,
   setUrlLogging
@@ -38,148 +44,106 @@ const NavigationGuardProvider = ({ children }) => {
   );
 };
 
-// Hook pour utiliser le guard global
+// Hook pour accéder au guard global
 export const useNavigationGuard = () => {
   const context = React.useContext(NavigationGuardContext);
   if (!context) {
-    throw new Error('useNavigationGuard must be used within NavigationGuardProvider');
+    throw new Error('useNavigationGuard doit être utilisé dans NavigationGuardProvider');
   }
   return context;
 };
 
 function App() {
-  const [user, setUser] = useState(null);
-  const appConfig = {
-    appName: process.env.REACT_APP_APP_NAME || 'Centre La Grange - Facturation',
-    appVersion: process.env.REACT_APP_VERSION || '5.0.0',
-    sessionTimeout: parseInt(process.env.REACT_APP_SESSION_TIMEOUT) || 1800
-  };
-
-  const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
 
-  // ✅ NOUVELLE CONFIGURATION INITIALE avec fieldMappings
+  // ✅ INITIALISATION des field mappings au démarrage
   useEffect(() => {
-    console.log('🔧 Configuration initiale de l\'application...');
-    
-    // Configuration UrlHelper (existant)
-    console.log('🔧 Configuration UrlHelper...');
-    configureUrlHelperForEnvironment();
-    if (process.env.REACT_APP_DEBUG === 'true') {
-      setUrlLogging(true);
-      console.log('🔍 Mode debug activé');
-    }
-
-    // ✅ INITIALISATION des field mappings
     try {
-      console.log('🔧 Initialisation des field mappings...');
       initializeFieldMappings();
-      console.log('✅ Field mappings initialisés avec succès');
+      console.log('✅ Field mappings initialisés');
     } catch (error) {
-      console.error('❌ Erreur lors de l\'initialisation des field mappings:', error);
-      // Ne pas bloquer l'application, juste logger l'erreur
+      console.error('❌ Erreur initialisation field mappings:', error);
     }
-
-    console.log('✅ Configuration initiale terminée');
   }, []);
 
-  // Vérification d'authentification au démarrage (code existant identique)
-useEffect(() => {
-  const checkAuthentication = async () => {
-    console.log('🔍 Vérification de l\'authentification...');
+  // Configuration de l'URL Helper selon l'environnement
+  useEffect(() => {
     try {
-      if (authService.isAuthenticated()) {
-        const currentUser = authService.getCurrentUser();
-        if (authService.checkAuth) {
-          const authData = await authService.checkAuth();
-          if (authData && authData.user) {
-            console.log('✅ Session valide:', authData.user);
-            setUser(authData.user);
+      configureUrlHelperForEnvironment();
+      
+      // Activer le logging des URLs en développement
+      if (process.env.NODE_ENV === 'development' && process.env.REACT_APP_DEBUG_URLS) {
+        setUrlLogging(true, ['backendUrl', 'apiUrl']);
+      }
+    } catch (error) {
+      console.error('❌ Erreur configuration URL Helper:', error);
+    }
+  }, []);
+
+  // ✅ VÉRIFICATION DE L'AUTHENTIFICATION AU DÉMARRAGE
+  useEffect(() => {
+    const checkAuthentication = async () => {
+      try {
+        console.log('🔐 Vérification de l\'authentification...');
+        
+        // ✅ Vérifier si utilisateur existe en localStorage
+        if (authService.isAuthenticated()) {
+          console.log('✅ Utilisateur trouvé en localStorage');
+          const currentUser = authService.getCurrentUser();
+          
+          // ✅ Vérifier la session côté serveur (checkAuth)
+          try {
+            const authData = await authService.checkAuth();
+            if (authData && authData.success) {
+              console.log('✅ Session valide côté serveur:', authData.user);
+              setUser(authData.user);
+              setAuthenticated(true);
+            } else {
+              console.log('❌ Session invalide côté serveur');
+              setAuthenticated(false);
+              setUser(null);
+              authService.logout();
+            }
+          } catch (checkError) {
+            console.error('❌ Erreur vérification session:', checkError);
+            // Gardez l'utilisateur du localStorage si erreur serveur
+            setUser(currentUser);
             setAuthenticated(true);
-          } else {
-            console.log('❌ Session invalide');
-            setAuthenticated(false);
           }
         } else {
-          console.log('✅ Utilisateur trouvé en localStorage:', currentUser);
-          setUser(currentUser);
-          setAuthenticated(true);
+          console.log('❌ Aucun utilisateur trouvé');
+          setAuthenticated(false);
+          setUser(null);
         }
-      } else {
-        console.log('❌ Aucun utilisateur trouvé');
+      } catch (error) {
+        console.error('❌ Erreur d\'authentification:', error);
         setAuthenticated(false);
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('❌ Erreur d\'authentification:', error);
-      setAuthenticated(false);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  checkAuthentication();
+    checkAuthentication();
 
-  // ✅ Gestionnaire d'événement auth-expired
-  const handleAuthExpired = () => {
-    console.log('🚨 Session expirée détectée - Déconnexion');
-    setAuthenticated(false);
-    setUser(null);
-    localStorage.removeItem('user');
-    // Optionnel : afficher un message
-    alert('Votre session a expiré. Veuillez vous reconnecter.');
-  };
-
-  window.addEventListener('auth-expired', handleAuthExpired);
-  
-  return () => {
-    window.removeEventListener('auth-expired', handleAuthExpired);
-  };
-}, []);
-
-  useEffect(() => {
-    console.log('🔄 useEffect authentification - authenticated:', authenticated, 'user:', user);
-    if (authenticated && user) {
-      console.log('✅ Utilisateur authentifié détecté, forçage de la navigation...');
-      setTimeout(() => {
-        console.log('🚀 Tentative de navigation vers dashboard');
-        if (window.location.hash.includes('login')) {
-          window.location.hash = '#/';
-        }
-      }, 200);
-    }
-  }, [authenticated, user]);
-
-  // Gestion de la connexion (code existant identique)
-  const handleLogin = async (username, password) => {
-    try {
-      console.log('🔍 Début handleLogin pour:', username);
-      setLoading(true);
-      const loginData = await authService.login(username, password);
-      console.log('📊 Réponse login complète:', loginData);
-      
-      if (loginData.success && loginData.user) {
-        console.log('✅ Login success détecté, mise à jour des états...');
-        setUser(loginData.user);
-        setAuthenticated(true);
-        console.log('🎯 États mis à jour - User:', loginData.user);
-        
-        await new Promise(resolve => setTimeout(resolve, 100));
-        console.log('✅ Connexion terminée avec succès');
-      } else {
-        console.error('❌ Login failed - données:', loginData);
-        throw new Error(loginData.message || 'Erreur de connexion');
-      }
-    } catch (error) {
-      console.error('❌ Erreur de connexion dans handleLogin:', error);
+    // ✅ Gestionnaire d'événement auth-expired
+    const handleAuthExpired = () => {
+      console.log('🚨 Session expirée détectée - Déconnexion');
       setAuthenticated(false);
       setUser(null);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
+      localStorage.removeItem('user');
+    };
 
-  // Composant Header protégé (code existant identique)
+    window.addEventListener('auth-expired', handleAuthExpired);
+    
+    return () => {
+      window.removeEventListener('auth-expired', handleAuthExpired);
+    };
+  }, []);
+
+  // Composant Header protégé
   const ProtectedHeader = () => {
     const { interceptNavigation } = useNavigationGuard();
 
@@ -204,15 +168,15 @@ useEffect(() => {
 
     return (
       <Header
-        appName={appConfig.appName}
-        appVersion={appConfig.appVersion}
+        appName="Facturation"
+        appVersion="1.0.0"
         user={user}
         onLogout={handleLogout}
       />
     );
   };
 
-  // Rafraîchissement de session (code existant identique)
+  // Rafraîchissement de session
   const refreshSession = async (newSessionExpiry) => {
     if (newSessionExpiry && user) {
       setUser(prev => ({
@@ -222,20 +186,60 @@ useEffect(() => {
     }
   };
 
-  // Affichage de chargement (code existant identique)
+  // ✅ GESTION DE LA CONNEXION CORRIGÉE
+  const handleLogin = async (username, password) => {
+    try {
+      console.log('🔐 Début handleLogin');
+      setLoading(true);
+      
+      // ✅ Reçoit directement username et password (comme avant)
+      const result = await authService.login(username, password);
+      console.log('📊 Réponse login complète:', result);
+      
+      if (result && result.success && result.user) {
+        console.log('✅ Login success détecté, mise à jour des états...');
+        setUser(result.user);
+        setAuthenticated(true);
+        console.log('🎯 États mis à jour - User:', result.user);
+        
+        // Attendre un peu pour que le state se mette à jour
+        await new Promise(resolve => setTimeout(resolve, 100));
+        console.log('✅ Connexion terminée avec succès');
+        
+        // ✅ REDIRECTION MANUELLE VERS LA PAGE PRINCIPALE
+        window.location.hash = '#/';
+        
+      } else {
+        console.error('❌ Login failed - réponse:', result);
+        throw new Error(result?.message || 'Erreur de connexion');
+      }
+    } catch (error) {
+      console.error('❌ Erreur de connexion dans handleLogin:', error);
+      setAuthenticated(false);
+      setUser(null);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Affichage de chargement
   if (loading) {
     return <LoadingSpinner message="Chargement de l'application..." />;
   }
 
-  // Contexte utilisateur (code existant identique)
+  // Contexte utilisateur
   const userContext = {
     user,
     setUser,
     refreshSession,
-    appConfig
+    appConfig: {
+      appName: 'Facturation',
+      appVersion: '1.0.0'
+    }
   };
 
-  // Layout principal pour les pages authentifiées avec protection globale (code existant identique)
+  // Layout principal pour les pages authentifiées avec protection globale
   const AuthenticatedLayout = () => (
     <NavigationGuardProvider>
       <SessionAlert
@@ -248,7 +252,7 @@ useEffect(() => {
       </main>
       <GlobalDatePicker />
       
-      {/* ✅ INDICATEUR mis à jour avec info field mappings */}
+      {/* ✅ INDICATEUR de configuration */}
       {process.env.NODE_ENV === 'development' && (
         <div style={{
           position: 'fixed',
@@ -267,7 +271,7 @@ useEffect(() => {
     </NavigationGuardProvider>
   );
 
-  // Layout simple pour les pages non authentifiées (code existant identique)
+  // Layout simple pour les pages non authentifiées
   const PublicLayout = () => (
     <>
       <Outlet />
@@ -289,7 +293,7 @@ useEffect(() => {
     </>
   );
 
-  // Configuration du routeur (code existant identique)
+  // Configuration du routeur
   const router = createHashRouter([
     // Routes publiques (non authentifiées)
     {
@@ -310,6 +314,7 @@ useEffect(() => {
         }
       ]
     },
+    
     // Routes authentifiées
     {
       path: "/",
@@ -319,20 +324,33 @@ useEffect(() => {
           index: true,
           element: <FacturationPage userContext={userContext} initialSection="factures" />
         },
+        
+        // ✅ ROUTE: Dashboard
+        {
+          path: "dashboard",
+          element: <FacturationPage userContext={userContext} initialSection="dashboard" />
+        },
+        
+        // ✅ ROUTE ADMIN: Dashboard admin
         {
           path: "admin/dashboard",
           element: <FacturationPage userContext={userContext} initialSection="admin_dashboard" />
         },
+        
+        // Route pour les utilisateurs (admin/gestionnaire)
         {
           path: "admin/utilisateurs",
           element: <FacturationPage userContext={userContext} initialSection="utilisateurs" />
         },
+        
+        // Route pour les paramètres (admin/gestionnaire)
         {
           path: "parametres",
           element: <FacturationPage userContext={userContext} initialSection="parametres" />
         }
       ]
     },
+    
     // Redirections
     {
       path: "/login",
@@ -346,6 +364,8 @@ useEffect(() => {
       path: "/reset-password",
       element: <Navigate to="/public/reset-password" replace />
     },
+    
+    // Catch-all
     {
       path: "*",
       element: authenticated ? <Navigate to="/" replace /> : <Navigate to="/public/login" replace />

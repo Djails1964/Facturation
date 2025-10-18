@@ -1,0 +1,382 @@
+/**
+ * src/styles/components/shared/LoggerControls.css
+ * Styles pour le panneau de contrôle des logs
+ * Réutilise au maximum les variables et styles globaux
+ */
+
+/* ========== OVERLAY ========== */
+.logger-controls-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ========== PANNEAU PRINCIPAL ========== */
+.logger-controls-panel {
+  background: var(--color-background, white);
+  border: 1px solid var(--color-border, #ddd);
+  border-radius: var(--border-radius-lg, 15px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ========== EN-TÊTE ========== */
+.logger-controls-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-lg, 20px);
+  border-bottom: 1px solid var(--color-border, #ddd);
+  background-color: var(--color-secondary, #f0f0f0);
+  border-radius: var(--border-radius-lg, 15px) var(--border-radius-lg, 15px) 0 0;
+}
+
+.logger-controls-header h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--color-text, #333);
+}
+
+.close-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text, #333);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition-speed, 0.2s) var(--transition-ease, ease);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--border-radius-sm, 4px);
+}
+
+.close-button:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: var(--color-primary, #800000);
+}
+
+/* ========== CONTENU ========== */
+.logger-controls-content {
+  padding: var(--spacing-lg, 20px);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg, 20px);
+}
+
+/* ========== GROUPES DE CONTRÔLE ========== */
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md, 15px);
+}
+
+.control-group > label {
+  font-weight: 600;
+  color: var(--color-text, #333);
+  font-size: 0.95rem;
+}
+
+/* ========== TOGGLE ACTIVÉ/DÉSACTIVÉ ========== */
+.toggle-container {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md, 15px);
+}
+
+.toggle-button {
+  padding: var(--spacing-md, 15px) var(--spacing-lg, 20px);
+  border: 1px solid var(--color-border, #ddd);
+  border-radius: var(--border-radius-md, 5px);
+  background-color: #f1f1f1;
+  color: var(--color-text, #333);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-speed, 0.2s) var(--transition-ease, ease);
+  font-size: 0.95rem;
+  min-width: 120px;
+}
+
+.toggle-button:hover {
+  background-color: #e0e0e0;
+  border-color: var(--color-primary, #800000);
+}
+
+.toggle-button.active {
+  background-color: #28a745;
+  color: white;
+  border-color: #28a745;
+}
+
+.toggle-button.active:hover {
+  background-color: #218838;
+}
+
+.status-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--border-radius-circle, 50%);
+  display: inline-block;
+}
+
+/* ========== BOUTONS DE NIVEAU ========== */
+.level-buttons {
+  display: flex;
+  gap: var(--spacing-sm, 8px);
+  flex-wrap: wrap;
+}
+
+.level-button {
+  flex: 1;
+  min-width: 80px;
+  padding: var(--spacing-md, 15px) var(--spacing-sm, 8px);
+  border: 1px solid var(--color-border, #ddd);
+  border-radius: var(--border-radius-md, 5px);
+  background-color: #f1f1f1;
+  color: var(--color-text, #333);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-speed, 0.2s) var(--transition-ease, ease);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.level-button:hover {
+  background-color: #e0e0e0;
+  border-color: var(--color-primary, #800000);
+}
+
+.level-button.active {
+  background-color: var(--color-primary, #800000);
+  color: white;
+  border-color: var(--color-primary, #800000);
+}
+
+/* ========== DESCRIPTION DU NIVEAU ========== */
+.level-description {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-light, #757575);
+  font-style: italic;
+  padding: var(--spacing-sm, 8px) var(--spacing-md, 15px);
+  background-color: var(--color-secondary, #f0f0f0);
+  border-radius: var(--border-radius-sm, 4px);
+}
+
+/* ========== LÉGENDE DES NIVEAUX ========== */
+.control-group.info {
+  border-top: 1px solid var(--color-border, #ddd);
+  padding-top: var(--spacing-lg, 20px);
+}
+
+.control-group.info h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text, #333);
+}
+
+.control-group.info ul {
+  margin: 0;
+  padding-left: var(--spacing-lg, 20px);
+  list-style: none;
+}
+
+.control-group.info li {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm, 8px);
+  font-size: 0.85rem;
+  color: var(--color-text, #333);
+  margin-bottom: var(--spacing-sm, 8px);
+}
+
+.control-group.info li:last-child {
+  margin-bottom: 0;
+}
+
+/* ========== BADGES DE NIVEAUX ========== */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--border-radius-sm, 4px);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 50px;
+  text-align: center;
+}
+
+.badge.debug {
+  background-color: #e0e0e0;
+  color: #666;
+}
+
+.badge.info {
+  background-color: #cce5ff;
+  color: #004085;
+}
+
+.badge.warn {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.badge.error {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+/* ========== ACTIONS ========== */
+.control-group.actions {
+  display: flex;
+  gap: var(--spacing-md, 15px);
+}
+
+.action-button {
+  flex: 1;
+  padding: var(--spacing-md, 15px);
+  border: 1px solid var(--color-border, #ddd);
+  border-radius: var(--border-radius-md, 5px);
+  background-color: #f1f1f1;
+  color: var(--color-text, #333);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-speed, 0.2s) var(--transition-ease, ease);
+  font-size: 0.9rem;
+}
+
+.action-button:hover {
+  background-color: #e0e0e0;
+  border-color: var(--color-primary, #800000);
+}
+
+.action-button.clear:hover {
+  background-color: #f8d7da;
+  border-color: #721c24;
+}
+
+.action-button.reset:hover {
+  background-color: #d4edda;
+  border-color: #155724;
+}
+
+/* ========== PIED ========== */
+.logger-controls-footer {
+  padding: var(--spacing-md, 15px) var(--spacing-lg, 20px);
+  border-top: 1px solid var(--color-border, #ddd);
+  background-color: var(--color-secondary, #f0f0f0);
+  border-radius: 0 0 var(--border-radius-lg, 15px) var(--border-radius-lg, 15px);
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-light, #757575);
+  font-style: italic;
+}
+
+.hint code {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 2px 6px;
+  border-radius: var(--border-radius-sm, 4px);
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 0.75rem;
+  color: var(--color-primary, #800000);
+}
+
+/* ========== SCROLL BAR PERSONNALISÉE ========== */
+.logger-controls-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.logger-controls-panel::-webkit-scrollbar-track {
+  background: var(--color-secondary, #f0f0f0);
+}
+
+.logger-controls-panel::-webkit-scrollbar-thumb {
+  background: var(--color-border, #ddd);
+  border-radius: 4px;
+}
+
+.logger-controls-panel::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary, #800000);
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+  .logger-controls-panel {
+    max-width: 95%;
+    max-height: 95vh;
+  }
+
+  .logger-controls-header {
+    padding: var(--spacing-md, 15px);
+  }
+
+  .logger-controls-header h3 {
+    font-size: 1.1rem;
+  }
+
+  .logger-controls-content {
+    padding: var(--spacing-md, 15px);
+    gap: var(--spacing-md, 15px);
+  }
+
+  .level-buttons {
+    gap: var(--spacing-xs, 5px);
+  }
+
+  .level-button {
+    min-width: 60px;
+    padding: var(--spacing-sm, 8px) 5px;
+    font-size: 0.75rem;
+  }
+
+  .control-group.actions {
+    flex-direction: column;
+  }
+
+  .action-button {
+    width: 100%;
+  }
+}

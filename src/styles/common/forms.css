@@ -204,6 +204,16 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 */
 
+/* STYLES POUR LA DESCRIPTION DES PARAMÈTRES */
+.input-group .field-description {
+  display: block;
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 4px;
+  font-weight: normal;
+  line-height: 1.4;
+}
+
 /* ✅ Assurer que l'input date a assez d'espace en haut */
 .input-group.date-input input[type="date"] {
   width: 100%;

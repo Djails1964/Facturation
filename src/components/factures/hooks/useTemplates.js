@@ -38,12 +38,12 @@ export const useTemplates = () => {
             const vousResult = await parametreService.getParametre('Corps', 'Email', 'Corps', 'vous');
             
             // Récupérer les valeurs des templates ou utiliser les valeurs par défaut
-            const tuTemplate = tuResult?.success && tuResult?.parametre?.Valeur_parametre 
-                ? tuResult.parametre.Valeur_parametre 
+            const tuTemplate = tuResult?.success && tuResult?.parametre?.valeurParametre 
+                ? tuResult.parametre.valeurParametre 
                 : defaultTemplates.tu;
             
-            const vousTemplate = vousResult?.success && vousResult?.parametre?.Valeur_parametre 
-                ? vousResult.parametre.Valeur_parametre 
+            const vousTemplate = vousResult?.success && vousResult?.parametre?.valeurParametre 
+                ? vousResult.parametre.valeurParametre 
                 : defaultTemplates.vous;
             
             // Créer l'objet templates

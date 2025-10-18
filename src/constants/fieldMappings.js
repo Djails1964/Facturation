@@ -215,6 +215,22 @@ const USER_MAPPINGS = {
 };
 
 // ================================
+// MAPPINGS PARAMÈTRES
+// ================================
+
+const PARAMETRES_MAPPINGS = {
+  // Colonnes de la table parametres
+  nomParametre: 'nom_parametre',
+  libelleParametre: 'libelle_parametre',
+  descriptionParametre: 'description_parametre',
+  valeurParametre: 'valeur_parametre',
+  anneeParametre: 'annee_parametre',
+  groupeParametre: 'groupe_parametre',
+  sousGroupeParametre: 'sous_groupe_parametre',
+  categorie: 'categorie'
+};
+
+// ================================
 // GESTION SPÉCIALE DES DATES VIDES
 // ================================
 
@@ -323,7 +339,8 @@ const ALL_MAPPINGS = {
   ...TARIFICATION_MAPPINGS,
   ...PAIEMENT_MAPPINGS,
   ...CLIENT_MAPPINGS,
-  ...USER_MAPPINGS
+  ...USER_MAPPINGS,
+  ...PARAMETRES_MAPPINGS
 };
 
 /**
@@ -363,7 +380,22 @@ const CONTEXT_MAPPINGS = {
   admin: {
     ...USER_MAPPINGS,
     ...GENERIC_MAPPINGS
-  }
+  },
+
+  // Contexte utilisateur
+  user: {
+    ...GENERIC_MAPPINGS,
+    ...USER_MAPPINGS
+  },
+  
+  // Contexte paramètres
+  parametres: {
+    ...GENERIC_MAPPINGS,
+    ...PARAMETRES_MAPPINGS
+  },
+
+  // Contexte par défaut - tous les mappings
+  default: ALL_MAPPINGS
 };
 
 /**
@@ -478,7 +510,8 @@ const API_ENDPOINTS_MAPPING = {
     'client-api.php', 
     'facture-api.php',
     'paiement-api.php',
-    'user-api.php'
+    'user-api.php',
+    'parametre-api.php'
   ],
   
   skipConversion: [
@@ -492,7 +525,8 @@ const API_ENDPOINTS_MAPPING = {
     'client-api.php': 'client',
     'facture-api.php': 'facturation',
     'paiement-api.php': 'paiement',
-    'user-api.php': 'admin'
+    'user-api.php': 'admin',
+    'parametre-api.php': 'parametres'
   },
   
   // ✅ NOUVEAUTÉ : Configuration pour utiliser la gestion spéciale des dates

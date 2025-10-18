@@ -1,14 +1,16 @@
 /**
- * Service de gestion des paramètres - VERSION MISE À JOUR avec gestion des booléens
+ * Service de gestion des paramètres - VERSION CORRIGÉE
+ * ✅ Reprend la dernière version du repository
+ * ✅ Utilise correctement le booleanHelper pour normaliser seulement les champs booléens
  * @class ParametreService
  * @description Gère l'accès aux données des paramètres via l'API
  */
 import api from './api';
-import { toBoolean, toBooleanString, isValidBoolean } from '../utils/booleanHelper'; // ✅ IMPORT du helper
+import { toBoolean, toBooleanString, normalizeBooleanFields } from '../utils/booleanHelper';
 
 class ParametreService {
   constructor() {
-    // Bind des méthodes pour s'assurer que 'this' est correctement défini
+    // Bind des méthodes
     this.getAllParametres = this.getAllParametres.bind(this);
     this.getParametre = this.getParametre.bind(this);
     this.updateParametre = this.updateParametre.bind(this);
@@ -19,6 +21,11 @@ class ParametreService {
 
   /**
    * ✅ NORMALISE LA VALEUR D'UN PARAMÈTRE SELON SON TYPE
+   * Respecte le type du paramètre déclaré :
+   * - boolean : convertit en booléen via toBoolean()
+   * - number/int/float : convertit en nombre
+   * - string/text (défaut) : conserve comme chaîne SANS conversion automatique
+   * 
    * @param {any} value - Valeur à normaliser
    * @param {string} type - Type du paramètre ('boolean', 'string', 'number', etc.)
    * @returns {any} - Valeur normalisée
@@ -31,6 +38,7 @@ class ParametreService {
     switch (type?.toLowerCase()) {
       case 'boolean':
       case 'bool':
+        // ✅ Convertir explicitement en booléen seulement si le type est boolean
         return toBoolean(value);
       
       case 'number':
@@ -45,20 +53,16 @@ class ParametreService {
       case 'string':
       case 'text':
       default:
-        // Si la valeur ressemble à un booléen, la convertir
-        if (isValidBoolean(value)) {
-          // Pour les chaînes qui sont clairement des booléens
-          const stringValue = String(value).toLowerCase().trim();
-          if (['true', 'false', '1', '0', 'yes', 'no', 'oui', 'non', 'on', 'off'].includes(stringValue)) {
-            return toBoolean(value);
-          }
-        }
+        // ✅ CORRECTION: Conserver la valeur comme chaîne SANS conversion automatique
+        // Les valeurs "0" et "1" restent des chaînes, pas des booléens
         return String(value);
     }
   }
 
   /**
    * ✅ NORMALISE UN GROUPE DE PARAMÈTRES - VERSION CORRIGÉE
+   * Utilise le booleanHelper pour normaliser sélectivement les propriétés booléennes
+   * 
    * @param {Object} parametresGroup - Groupe de paramètres à normaliser
    * @returns {Object} - Groupe avec valeurs normalisées
    */
@@ -67,70 +71,67 @@ class ParametreService {
       return parametresGroup;
     }
 
-    // 🔧 CORRECTION: Ne pas traiter les tableaux comme des objets à normaliser
+    // Traiter les tableaux de paramètres
     if (Array.isArray(parametresGroup)) {
-      console.log('⚠️ normalizeParametresGroup reçoit un tableau, traitement des éléments individuellement');
+      console.log('✅ normalizeParametresGroup - Traitement tableau:', parametresGroup.length, 'éléments');
+      
       return parametresGroup.map(param => {
         if (param && typeof param === 'object') {
-          return {
+          // ✅ Normaliser la valeur selon son type déclaré
+          const normalized = {
             ...param,
-            Valeur_parametre: this.normalizeParametreValue(
-              param.Valeur_parametre, 
-              param.Type_parametre || param.type
-            ),
-            Actif: param.Actif !== undefined ? toBoolean(param.Actif) : undefined,
-            Obligatoire: param.Obligatoire !== undefined ? toBoolean(param.Obligatoire) : undefined,
-            Visible: param.Visible !== undefined ? toBoolean(param.Visible) : undefined,
+            valeurParametre: this.normalizeParametreValue(
+              param.valeurParametre, 
+              param.typeParametre || param.type
+            )
           };
+
+          // ✅ Utiliser normalizeBooleanFields pour les propriétés métadonnées
+          // Ces champs sont TOUJOURS des booléens
+          return normalizeBooleanFields(normalized, ['Actif', 'Obligatoire', 'Visible']);
         }
         return param;
       });
     }
 
+    // Traiter les objets imbriqués récursivement
     const normalized = {};
     
     for (const [key, parametre] of Object.entries(parametresGroup)) {
-      // 🔧 CORRECTION: Vérifier si c'est un tableau avant de le traiter
       if (Array.isArray(parametre)) {
         console.log(`✅ Traitement tableau pour ${key}:`, parametre.length, 'éléments');
-        // Si c'est un tableau, traiter chaque élément individuellement
+        
         normalized[key] = parametre.map(param => {
           if (param && typeof param === 'object') {
-            return {
+            const result = {
               ...param,
-              Valeur_parametre: this.normalizeParametreValue(
-                param.Valeur_parametre, 
-                param.Type_parametre || param.type
-              ),
-              Actif: param.Actif !== undefined ? toBoolean(param.Actif) : undefined,
-              Obligatoire: param.Obligatoire !== undefined ? toBoolean(param.Obligatoire) : undefined,
-              Visible: param.Visible !== undefined ? toBoolean(param.Visible) : undefined,
+              valeurParametre: this.normalizeParametreValue(
+                param.valeurParametre, 
+                param.typeParametre || param.type
+              )
             };
+            return normalizeBooleanFields(result, ['Actif', 'Obligatoire', 'Visible']);
           }
           return param;
         });
-      }
-      // Si c'est un objet avec des propriétés de paramètre
+      } 
+      else if (parametre && typeof parametre === 'object' && parametre.nomParametre) {
+        // Paramètre direct (pas imbriqué)
+        normalized[key] = {
+          ...parametre,
+          valeurParametre: this.normalizeParametreValue(
+            parametre.valeurParametre, 
+            parametre.typeParametre || parametre.type
+          )
+        };
+        normalized[key] = normalizeBooleanFields(normalized[key], ['Actif', 'Obligatoire', 'Visible']);
+      } 
       else if (parametre && typeof parametre === 'object') {
-        // Vérifier si c'est un paramètre direct (a Nom_parametre) ou un conteneur
-        if (parametre.Nom_parametre) {
-          // C'est un paramètre direct
-          normalized[key] = {
-            ...parametre,
-            Valeur_parametre: this.normalizeParametreValue(
-              parametre.Valeur_parametre, 
-              parametre.Type_parametre || parametre.type
-            ),
-            Actif: parametre.Actif !== undefined ? toBoolean(parametre.Actif) : undefined,
-            Obligatoire: parametre.Obligatoire !== undefined ? toBoolean(parametre.Obligatoire) : undefined,
-            Visible: parametre.Visible !== undefined ? toBoolean(parametre.Visible) : undefined,
-          };
-        } else {
-          // C'est un conteneur, traiter récursivement
-          normalized[key] = this.normalizeParametresGroup(parametre);
-        }
-      } else {
-        // Pour tous les autres types, garder tel quel
+        // Conteneur - traiter récursivement
+        normalized[key] = this.normalizeParametresGroup(parametre);
+      } 
+      else {
+        // Autres types - garder tel quel
         normalized[key] = parametre;
       }
     }
@@ -138,32 +139,35 @@ class ParametreService {
     return normalized;
   }
 
-
   /**
    * ✅ PRÉPARE UN PARAMÈTRE POUR L'ENVOI À L'API
+   * Convertit les booléens en chaînes pour transmission
+   * 
    * @param {Object} parametreData - Données du paramètre
    * @returns {Object} - Données préparées pour l'API
    */
   prepareParametreForApi(parametreData) {
-    const prepared = { ...parametreData };
+    // ✅ CORRECTION: Utiliser let au lieu de const pour pouvoir réassigner
+    let prepared = { ...parametreData };
 
     // Convertir les booléens en chaînes pour l'API si nécessaire
-    if (typeof prepared.Valeur_parametre === 'boolean') {
-      prepared.Valeur_parametre = toBooleanString(prepared.Valeur_parametre);
+    if (typeof prepared.valeurParametre === 'boolean') {
+      prepared.valeurParametre = toBooleanString(prepared.valeurParametre);
       console.log('✅ Conversion booléen → chaîne pour API:', 
-        parametreData.Valeur_parametre, '→', prepared.Valeur_parametre);
+        parametreData.valeurParametre, '→', prepared.valeurParametre);
     }
 
-    // Normaliser d'autres propriétés booléennes
-    if (prepared.Actif !== undefined) {
+    // ✅ Normaliser les propriétés booléennes métadonnées
+    prepared = normalizeBooleanFields(prepared, ['Actif', 'Obligatoire', 'Visible']);
+    
+    // Convertir les propriétés booléennes en chaînes pour l'API
+    if (prepared.Actif !== undefined && typeof prepared.Actif === 'boolean') {
       prepared.Actif = toBooleanString(prepared.Actif);
     }
-    
-    if (prepared.Obligatoire !== undefined) {
+    if (prepared.Obligatoire !== undefined && typeof prepared.Obligatoire === 'boolean') {
       prepared.Obligatoire = toBooleanString(prepared.Obligatoire);
     }
-    
-    if (prepared.Visible !== undefined) {
+    if (prepared.Visible !== undefined && typeof prepared.Visible === 'boolean') {
       prepared.Visible = toBooleanString(prepared.Visible);
     }
 
@@ -181,14 +185,13 @@ class ParametreService {
       if (response && response.success) {
         const parametres = response.parametres || {};
         
-        // ✅ NORMALISATION DE TOUS LES GROUPES DE PARAMÈTRES - VERSION SIMPLIFIÉE
+        // ✅ NORMALISATION DE TOUS LES GROUPES DE PARAMÈTRES
         const parametresNormalises = {};
         
         for (const [groupeName, groupeData] of Object.entries(parametres)) {
           console.log(`✅ Normalisation du groupe: ${groupeName}`);
           
           if (groupeData && typeof groupeData === 'object') {
-            // 🔧 CORRECTION: Traitement plus intelligent de la structure
             parametresNormalises[groupeName] = this.normalizeParametresGroup(groupeData);
           } else {
             parametresNormalises[groupeName] = groupeData;
@@ -248,22 +251,21 @@ class ParametreService {
         // ✅ NORMALISATION DU PARAMÈTRE INDIVIDUEL
         const parametreNormalise = {
           ...parametre,
-          Valeur_parametre: this.normalizeParametreValue(
-            parametre.Valeur_parametre,
-            parametre.Type_parametre || parametre.type
-          ),
-          // Normaliser d'autres propriétés booléennes
-          Actif: parametre.Actif !== undefined ? toBoolean(parametre.Actif) : undefined,
-          Obligatoire: parametre.Obligatoire !== undefined ? toBoolean(parametre.Obligatoire) : undefined,
-          Visible: parametre.Visible !== undefined ? toBoolean(parametre.Visible) : undefined,
+          valeurParametre: this.normalizeParametreValue(
+            parametre.valeurParametre,
+            parametre.typeParametre || parametre.type
+          )
         };
         
+        // ✅ Normaliser les propriétés booléennes métadonnées
+        const result = normalizeBooleanFields(parametreNormalise, ['Actif', 'Obligatoire', 'Visible']);
+        
         console.log('✅ Paramètre avant normalisation:', parametre);
-        console.log('✅ Paramètre après normalisation:', parametreNormalise);
+        console.log('✅ Paramètre après normalisation:', result);
         
         return {
           success: true,
-          parametre: parametreNormalise
+          parametre: result
         };
       }
       
@@ -291,18 +293,6 @@ class ParametreService {
       
       // ✅ PRÉPARATION DES DONNÉES AVEC GESTION DES BOOLÉENS
       let dataToSend = this.prepareParametreForApi(parametreData);
-      
-      // Normaliser les noms de propriétés pour l'API
-      // Correction des noms de propriétés pour l'API si nécessaire
-      if (dataToSend.sGroupe_parametre !== undefined) {
-        dataToSend.sGroupeParametre = dataToSend.sGroupe_parametre;
-        delete dataToSend.sGroupe_parametre;
-      }
-      
-      if (dataToSend.Categorie !== undefined) {
-        dataToSend.categorie = dataToSend.Categorie;
-        delete dataToSend.Categorie;
-      }
       
       console.log('✅ Données préparées pour l\'API:', dataToSend);
       const response = await api.post('parametre-api.php', dataToSend);
@@ -336,7 +326,7 @@ class ParametreService {
       const result = await this.getParametre(nomParametre, groupe, sGroupe);
       
       if (result.success && result.parametre) {
-        return toBoolean(result.parametre.Valeur_parametre);
+        return toBoolean(result.parametre.valeurParametre);
       }
       
       return false;
@@ -357,10 +347,10 @@ class ParametreService {
   async toggleParametreBoolean(nomParametre, groupe, sGroupe, activer) {
     try {
       const parametreData = {
-        Nom_parametre: nomParametre,
-        Groupe_parametre: groupe,
-        sGroupe_parametre: sGroupe,
-        Valeur_parametre: activer, // Sera converti en chaîne par prepareParametreForApi
+        nomParametre: nomParametre,
+        groupeParametre: groupe,
+        sousGroupeParametre: sGroupe,
+        valeurParametre: activer
       };
       
       return await this.updateParametre(parametreData);

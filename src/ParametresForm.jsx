@@ -275,7 +275,7 @@ const ParametresForm = () => {
         valeurParametre: valueToStore,
         nomParametre,
         groupeParametre: groupe,
-        sGroupe_parametre: sousGroupe !== 'Général' ? sousGroupe : null,
+        sousGroupeParametre: sousGroupe !== 'Général' ? sousGroupe : null,
         Categorie: categorie !== 'Default' ? categorie : null
       }
     }));
@@ -289,7 +289,7 @@ const ParametresForm = () => {
       const existingEntry = prev[parametreId] || {
         nomParametre, 
         groupeParametre: groupe,
-        sGroupe_parametre: sousGroupe !== 'Général' ? sousGroupe : null,
+        sousGroupeParametre: sousGroupe !== 'Général' ? sousGroupe : null,
         Categorie: categorie !== 'Default' ? categorie : null
       };
       

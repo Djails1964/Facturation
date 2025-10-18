@@ -1,0 +1,87 @@
+/* src/styles/components/dashboard/DashboardStatCards.css */
+.dashboard-cards {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.dashboard-cards.loading,
+.dashboard-cards.empty {
+  justify-content: center;
+  min-height: 150px;
+  align-items: center;
+}
+
+.stat-card {
+  flex: 1;
+  min-width: 200px;
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.stat-card:hover:not(.placeholder) {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card.placeholder {
+  background-color: #f8f9fa;
+}
+
+.stat-icon {
+  font-size: 2rem;
+  opacity: 0.8;
+}
+
+.stat-value {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: var(--primary-color, #800000);
+  margin-bottom: 10px;
+}
+
+.stat-title {
+  font-size: 0.95rem;
+  color: var(--text-light, #666);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-card.success .stat-value {
+  color: var(--success-color, #28a745);
+}
+
+.stat-card.warning .stat-value {
+  color: var(--warning-color, #ffc107);
+}
+
+.shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (max-width: 1024px) {
+  .dashboard-cards {
+    flex-direction: column;
+  }
+
+  .stat-card {
+    min-width: 100%;
+  }
+}

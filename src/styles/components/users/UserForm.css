@@ -1,0 +1,73 @@
+/* src/styles/components/users/UserForm.css */
+/* ✅ Styles MINIMAUX - Réutilise forms.css, buttons.css, etc. */
+
+/* Container du formulaire - Layout uniquement */
+.user-form-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Champ mot de passe avec bouton toggle */
+.user-form-container .password-field {
+  position: relative;
+}
+
+.user-form-container .password-field input {
+  padding-right: 45px;
+}
+
+.user-form-container .password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-form-container .password-toggle:hover {
+  color: #333;
+}
+
+/* Actions du formulaire */
+.user-form-container .form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 20px 0;
+  border-top: 1px solid var(--border-color, #dee2e6);
+  margin-top: 20px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .user-form-container {
+    padding: 10px;
+  }
+
+  .user-form-container .form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .user-form-container .form-actions button {
+    width: 100%;
+  }
+}
+
+/* 
+  ✅ RÉUTILISATION DES STYLES GÉNÉRIQUES :
+  - .input-group → forms.css
+  - .checkbox-group → forms.css
+  - .error-message → forms.css
+  - .form-error-message → forms.css
+  - .btn-primary, .btn-secondary → buttons.css
+  - .content-section-container → styles globaux
+  - .content-section-title → styles globaux
+*/

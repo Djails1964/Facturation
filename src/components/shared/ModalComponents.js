@@ -415,6 +415,33 @@ export const createEmailInput = (id, label, value = '', required = true, disable
 };
 
 /**
+ * Champ de mot de passe avec label flottant
+ * @param {string} id - ID du champ
+ * @param {string} label - Label du champ
+ * @param {string} value - Valeur par défaut
+ * @param {boolean} required - Si le champ est requis
+ * @param {boolean} disabled - Si le champ est désactivé
+ * @returns {string} HTML du champ password
+ */
+export const createPasswordInput = (id, label, value = '', required = true, disabled = false) => {
+    return `
+        <div class="input-group">
+            <input 
+                type="password" 
+                name="${id}" 
+                id="${id}"
+                value="${value}"
+                ${required ? 'required' : ''}
+                placeholder=" "
+                ${disabled ? 'disabled style="opacity: 0.6;"' : ''}
+                autocomplete="new-password"
+            />
+            <label for="${id}" ${required ? 'class="required"' : ''}>${label}</label>
+        </div>
+    `;
+};
+
+/**
  * Champ de texte générique
  */
 export const createTextInput = (id, label, value = '', type = 'text', required = true, disabled = false, attributes = '') => {
@@ -804,13 +831,14 @@ export default {
     createLoadingContent,
     createWarningSection,
     createEmailInput,
+    createPasswordInput,        // ✅ AJOUT ICI
     createTextInput,
     createTextarea,
     createSelect,
     createDevBypassSection,
     createModalButtons,
     createSimpleModalConfig,
-    // ✅ Nouvelles fonctions pour les dates
+    // Fonctions pour les dates
     createDateInputWithModal,
     createSelectedDatesInfo,
     createDatePickerContainer,

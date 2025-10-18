@@ -1,13 +1,56 @@
-import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
-import { 
-  CheckCircle, 
-  XCircle, 
-  AlertCircle, 
-  Info as InfoIcon 
-} from 'react-feather';
-import { toBoolean, normalizeBooleanFields } from '../utils/booleanHelper'; // ✅ IMPORT du helper
+// src/services/NotificationService.jsx
+/**
+ * =============================================================================
+ * SERVICE DE NOTIFICATIONS REACT
+ * =============================================================================
+ * 
+ * Ce service fournit un système complet de notifications toast pour React.
+ * Il utilise React Context pour être accessible partout dans l'application.
+ * 
+ * ARCHITECTURE:
+ * ------------
+ * 1. NotificationContext: Contexte React pour partager l'état global
+ * 2. NotificationProvider: Provider qui enveloppe l'application
+ * 3. Notification: Composant individuel de notification
+ * 4. useNotifications: Hook pour utiliser le service dans les composants
+ * 
+ * FONCTIONNALITÉS:
+ * ---------------
+ * - 4 types de notifications: success, error, warning, info
+ * - Gestion automatique de la fermeture (avec durée configurable)
+ * - Notifications persistantes (ne se ferment pas automatiquement)
+ * - Barre de progression visuelle
+ * - Bouton de fermeture manuel
+ * - Actions personnalisées sur les notifications
+ * - Prévention des doublons
+ * - Gestion du hover (pause de la fermeture automatique)
+ * - Configuration globale avec normalisation des booléens
+ * - Statistiques des notifications actives
+ * 
+ * UTILISATION:
+ * -----------
+ * 1. Envelopper l'app avec NotificationProvider dans App.js
+ * 2. Utiliser le hook useNotifications() dans les composants
+ * 3. Appeler showSuccess(), showError(), showWarning(), showInfo()
+ * 
+ * EXEMPLE:
+ * -------
+ * const { showSuccess, showError } = useNotifications();
+ * showSuccess('Opération réussie !');
+ * showError('Une erreur est survenue', { duration: 0 });
+ * 
+ * =============================================================================
+ */
 
-// Types de notifications
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { FiCheckCircle, FiXCircle, FiAlertTriangle, FiInfo } from 'react-icons/fi';
+import { toBoolean, normalizeBooleanFields } from '../utils/booleanHelper';
+import '../styles/NotificationService.css';
+
+// =============================================================================
+// CONSTANTES
+// =============================================================================
+
 export const NOTIFICATION_TYPES = {
   SUCCESS: 'success',
   ERROR: 'error',
@@ -15,164 +58,97 @@ export const NOTIFICATION_TYPES = {
   INFO: 'info'
 };
 
-// ✅ CONFIGURATION PAR DÉFAUT AVEC BOOLÉENS NORMALISÉS
 const DEFAULT_CONFIG = {
-  autoClose: true,
-  showIcons: true,
-  showCloseButton: true,
-  showProgressBar: true,
-  allowDuplicates: false,
-  stackFromTop: true,
-  pauseOnHover: true,
-  dismissOnClick: false,
-  respectAccessibility: true,
-  enableSounds: false,
-  persistCritical: true
+  autoClose: true,              // Fermeture automatique activée par défaut
+  showIcons: true,              // Afficher les icônes
+  showCloseButton: true,        // Afficher le bouton de fermeture
+  showProgressBar: true,        // Afficher la barre de progression
+  allowDuplicates: false,       // Empêcher les notifications identiques
+  persistCritical: true,        // Les erreurs sont persistantes par défaut
+  stackFromTop: false           // Empiler depuis le bas
 };
 
-// Création du contexte
-const NotificationContext = createContext();
+// =============================================================================
+// CONTEXTE
+// =============================================================================
 
-// Hook personnalisé pour utiliser les notifications
+const NotificationContext = createContext(null);
+
+/**
+ * Hook pour accéder au service de notifications
+ * @returns {Object} Méthodes et état du service de notifications
+ */
 export const useNotifications = () => {
   const context = useContext(NotificationContext);
   if (!context) {
-    throw new Error('useNotifications must be used within a NotificationProvider');
+    throw new Error('useNotifications doit être utilisé dans un NotificationProvider');
   }
   return context;
 };
 
-// ✅ COMPOSANT DE NOTIFICATION INDIVIDUELLE AMÉLIORÉ
+// =============================================================================
+// COMPOSANT NOTIFICATION INDIVIDUELLE
+// =============================================================================
+
 const Notification = ({ 
   id, 
   type, 
   message, 
-  duration, 
-  onClose, 
+  duration = 5000, 
   action, 
-  config,
-  isPersistent,
-  isDismissible,
-  showIcon,
-  showCloseButton,
-  showProgressBar
+  onClose,
+  config = {},
+  ...props 
 }) => {
   const [isPaused, setIsPaused] = useState(false);
-  const [remainingTime, setRemainingTime] = useState(duration);
+  const timerRef = useRef(null);
 
-  // ✅ NORMALISATION DES PROPRIÉTÉS BOOLÉENNES
-  const normalizedProps = React.useMemo(() => {
-    const props = {
-      isPersistent: toBoolean(isPersistent),
-      isDismissible: toBoolean(isDismissible),
-      showIcon: toBoolean(showIcon),
-      showCloseButton: toBoolean(showCloseButton),
-      showProgressBar: toBoolean(showProgressBar),
-      pauseOnHover: toBoolean(config?.pauseOnHover),
-      dismissOnClick: toBoolean(config?.dismissOnClick),
-      enableSounds: toBoolean(config?.enableSounds)
-    };
-    
-    console.log('✅ Notification props normalisées:', props);
-    return props;
-  }, [isPersistent, isDismissible, showIcon, showCloseButton, showProgressBar, config]);
+  // Normalisation des propriétés booléennes
+  const normalizedProps = normalizeBooleanFields(props, [
+    'isPersistent', 'isDismissible', 'showIcon', 
+    'showCloseButton', 'showProgressBar', 'isImportant'
+  ]);
 
+  // Icônes par type
+  const icons = {
+    [NOTIFICATION_TYPES.SUCCESS]: <FiCheckCircle size={20} />,
+    [NOTIFICATION_TYPES.ERROR]: <FiXCircle size={20} />,
+    [NOTIFICATION_TYPES.WARNING]: <FiAlertTriangle size={20} />,
+    [NOTIFICATION_TYPES.INFO]: <FiInfo size={20} />
+  };
+
+  const renderIcon = () => {
+    if (!toBoolean(normalizedProps.showIcon)) return null;
+    return <div className="notification-icon">{icons[type]}</div>;
+  };
+
+  // Gestion de la fermeture automatique
   useEffect(() => {
-    // ✅ GESTION DE L'AUTO-FERMETURE AVEC BOOLÉENS NORMALISÉS
-    if (normalizedProps.isPersistent || duration <= 0) return;
-    
-    let timer;
-    if (!isPaused) {
-      timer = setTimeout(() => {
+    if (duration > 0 && !normalizedProps.isPersistent && !isPaused) {
+      timerRef.current = setTimeout(() => {
         onClose(id);
-      }, remainingTime);
-    }
-    
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [id, duration, onClose, isPaused, remainingTime, normalizedProps.isPersistent]);
+      }, duration);
 
-  // ✅ GESTION DU SURVOL AVEC NORMALISATION
-  const handleMouseEnter = () => {
-    if (normalizedProps.pauseOnHover) {
-      setIsPaused(true);
+      return () => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+      };
     }
-  };
+  }, [duration, id, isPaused, normalizedProps.isPersistent, onClose]);
 
-  const handleMouseLeave = () => {
-    if (normalizedProps.pauseOnHover) {
-      setIsPaused(false);
-    }
-  };
+  // Gestion du hover
+  const handleMouseEnter = () => setIsPaused(true);
+  const handleMouseLeave = () => setIsPaused(false);
 
-  // ✅ GESTION DU CLIC AVEC NORMALISATION
+  // Gestion du clic sur la notification
   const handleNotificationClick = () => {
-    if (normalizedProps.dismissOnClick) {
+    if (normalizedProps.isDismissible && !action) {
       onClose(id);
     }
   };
 
-  // ✅ EFFET SONORE SI ACTIVÉ
-  useEffect(() => {
-    if (normalizedProps.enableSounds) {
-      playNotificationSound(type);
-    }
-  }, [type, normalizedProps.enableSounds]);
-  
-  // Icône en fonction du type de notification
-  const renderIcon = () => {
-    if (!normalizedProps.showIcon) return null;
-    
-    switch (type) {
-      case NOTIFICATION_TYPES.SUCCESS:
-        return <CheckCircle className="notification-icon success" />;
-      case NOTIFICATION_TYPES.ERROR:
-        return <XCircle className="notification-icon error" />;
-      case NOTIFICATION_TYPES.WARNING:
-        return <AlertCircle className="notification-icon warning" />;
-      case NOTIFICATION_TYPES.INFO:
-        return <InfoIcon className="notification-icon info" />;
-      default:
-        return null;
-    }
-  };
-
-  // ✅ FONCTION POUR JOUER UN SON
-  const playNotificationSound = (notificationType) => {
-    try {
-      // Créer un contexte audio simple
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      // Fréquences différentes selon le type
-      const frequencies = {
-        success: 523, // Do
-        error: 349,   // Fa
-        warning: 440, // La
-        info: 392     // Sol
-      };
-      
-      oscillator.frequency.setValueAtTime(frequencies[notificationType] || 440, audioContext.currentTime);
-      oscillator.type = 'sine';
-      
-      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.2);
-    } catch (error) {
-      console.warn('Impossible de jouer le son de notification:', error);
-    }
-  };
-  
   return (
     <div 
-      className={`notification ${type} ${isPaused ? 'paused' : ''} ${normalizedProps.isPersistent ? 'persistent' : ''}`}
+      className={`notification notification-${type} ${isPaused ? 'paused' : ''} ${normalizedProps.isPersistent ? 'persistent' : ''}`}
       onClick={handleNotificationClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -183,11 +159,11 @@ const Notification = ({
       {renderIcon()}
       <div className="notification-content">{message}</div>
       
-      {/* Afficher le bouton d'action s'il est fourni */}
+      {/* Bouton d'action optionnel */}
       {action && (
         <button 
           onClick={(e) => {
-            e.stopPropagation(); // Empêcher la propagation vers le clic de notification
+            e.stopPropagation();
             if (action.onAction) action.onAction();
             if (!toBoolean(action.keepOpen)) onClose(id);
           }} 
@@ -198,7 +174,7 @@ const Notification = ({
         </button>
       )}
       
-      {/* ✅ BOUTON DE FERMETURE CONDITIONNEL */}
+      {/* Bouton de fermeture */}
       {normalizedProps.showCloseButton && normalizedProps.isDismissible && (
         <button 
           onClick={(e) => {
@@ -212,7 +188,7 @@ const Notification = ({
         </button>
       )}
       
-      {/* ✅ BARRE DE PROGRESSION CONDITIONNELLE */}
+      {/* Barre de progression */}
       {normalizedProps.showProgressBar && duration > 0 && !normalizedProps.isPersistent && (
         <div 
           className={`notification-progress ${isPaused ? 'paused' : ''}`}
@@ -226,11 +202,13 @@ const Notification = ({
   );
 };
 
-// ✅ FOURNISSEUR DU CONTEXTE DE NOTIFICATIONS AMÉLIORÉ
+// =============================================================================
+// PROVIDER
+// =============================================================================
+
 export const NotificationProvider = ({ children, initialConfig = {} }) => {
   const [notifications, setNotifications] = useState([]);
   const [config, setConfig] = useState(() => {
-    // ✅ NORMALISATION DE LA CONFIGURATION INITIALE
     const normalizedConfig = normalizeBooleanFields(
       { ...DEFAULT_CONFIG, ...initialConfig },
       Object.keys(DEFAULT_CONFIG)
@@ -239,7 +217,7 @@ export const NotificationProvider = ({ children, initialConfig = {} }) => {
     return normalizedConfig;
   });
 
-  // ✅ MÉTHODE POUR METTRE À JOUR LA CONFIGURATION
+  // Mise à jour de la configuration
   const updateConfig = useCallback((newConfig) => {
     setConfig(prevConfig => {
       const updatedConfig = normalizeBooleanFields(
@@ -251,7 +229,7 @@ export const NotificationProvider = ({ children, initialConfig = {} }) => {
     });
   }, []);
 
-  // ✅ MÉTHODE DE NORMALISATION DES NOTIFICATIONS
+  // Normalisation d'une notification
   const normalizeNotification = useCallback((notification) => {
     const booleanFields = [
       'isPersistent', 'isDismissible', 'showIcon', 'showCloseButton', 
@@ -269,7 +247,7 @@ export const NotificationProvider = ({ children, initialConfig = {} }) => {
     return normalized;
   }, [config]);
 
-  // ✅ VÉRIFICATION DES DOUBLONS
+  // Vérification des doublons
   const isDuplicateNotification = useCallback((message, type) => {
     if (toBoolean(config.allowDuplicates)) return false;
     
@@ -278,17 +256,17 @@ export const NotificationProvider = ({ children, initialConfig = {} }) => {
     );
   }, [notifications, config.allowDuplicates]);
 
-  // ✅ AJOUTER UNE NOTIFICATION AVEC NORMALISATION
+  // Ajouter une notification
   const addNotification = useCallback((type, message, options = {}) => {
     // Vérifier les doublons
     if (isDuplicateNotification(message, type)) {
-      console.log('✅ Notification dupliquée ignorée:', { type, message });
+      console.log('ℹ️ Notification dupliquée ignorée:', { type, message });
       return null;
     }
 
     const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
     
-    // ✅ NORMALISATION DES OPTIONS
+    // Normalisation des options
     const normalizedOptions = normalizeNotification({
       duration: 5000,
       action: null,
@@ -298,7 +276,7 @@ export const NotificationProvider = ({ children, initialConfig = {} }) => {
       ...options
     });
 
-    // ✅ GESTION DES NOTIFICATIONS CRITIQUES
+    // Gestion des notifications critiques
     if (toBoolean(config.persistCritical) && type === NOTIFICATION_TYPES.ERROR) {
       normalizedOptions.isPersistent = true;
       normalizedOptions.duration = 0;
@@ -313,8 +291,6 @@ export const NotificationProvider = ({ children, initialConfig = {} }) => {
       config
     };
 
-    console.log('✅ Notification normalisée ajoutée:', notification);
-
     setNotifications(prevNotifications => {
       const newNotifications = toBoolean(config.stackFromTop) 
         ? [notification, ...prevNotifications]
@@ -326,7 +302,7 @@ export const NotificationProvider = ({ children, initialConfig = {} }) => {
     return id;
   }, [config, isDuplicateNotification, normalizeNotification]);
   
-  // ✅ MÉTHODES D'AJOUT PAR TYPE AVEC GESTION DES BOOLÉENS
+  // Méthodes d'ajout par type
   const showSuccess = useCallback((message, options = {}) => 
     addNotification(NOTIFICATION_TYPES.SUCCESS, message, {
       duration: 3000,
@@ -335,7 +311,7 @@ export const NotificationProvider = ({ children, initialConfig = {} }) => {
     
   const showError = useCallback((message, options = {}) => 
     addNotification(NOTIFICATION_TYPES.ERROR, message, {
-      duration: 0, // Les erreurs ne se ferment pas automatiquement par défaut
+      duration: 0,
       isPersistent: true,
       isImportant: true,
       ...options
@@ -354,7 +330,7 @@ export const NotificationProvider = ({ children, initialConfig = {} }) => {
       ...options
     }), [addNotification]);
 
-  // ✅ MÉTHODES UTILITAIRES AVANCÉES
+  // Méthodes utilitaires avancées
   const showPersistent = useCallback((type, message, options = {}) => 
     addNotification(type, message, {
       ...options,
@@ -369,33 +345,30 @@ export const NotificationProvider = ({ children, initialConfig = {} }) => {
       duration
     }), [addNotification]);
   
-  // Fermer une notification
+  // Fermeture des notifications
   const closeNotification = useCallback((id) => {
     setNotifications(prevNotifications => 
       prevNotifications.filter(notification => notification.id !== id)
     );
   }, []);
 
-  // ✅ FERMER PAR TYPE
   const closeByType = useCallback((type) => {
     setNotifications(prevNotifications => 
       prevNotifications.filter(notification => notification.type !== type)
     );
   }, []);
 
-  // ✅ FERMER LES NOTIFICATIONS NON PERSISTANTES
   const closeNonPersistent = useCallback(() => {
     setNotifications(prevNotifications => 
       prevNotifications.filter(notification => toBoolean(notification.isPersistent))
     );
   }, []);
   
-  // Fermer toutes les notifications
   const clearAll = useCallback(() => {
     setNotifications([]);
   }, []);
 
-  // ✅ STATISTIQUES DES NOTIFICATIONS
+  // Statistiques
   const getStats = useCallback(() => {
     const stats = {
       total: notifications.length,
@@ -406,10 +379,7 @@ export const NotificationProvider = ({ children, initialConfig = {} }) => {
     };
 
     notifications.forEach(notification => {
-      // Compter par type
       stats.byType[notification.type] = (stats.byType[notification.type] || 0) + 1;
-      
-      // Compter les propriétés booléennes
       if (toBoolean(notification.isPersistent)) stats.persistent++;
       if (toBoolean(notification.isDismissible)) stats.dismissible++;
       if (toBoolean(notification.isImportant)) stats.important++;
@@ -418,7 +388,7 @@ export const NotificationProvider = ({ children, initialConfig = {} }) => {
     return stats;
   }, [notifications]);
   
-  // ✅ VALEURS FOURNIES PAR LE CONTEXTE
+  // Valeur du contexte
   const contextValue = {
     notifications,
     config,
@@ -434,7 +404,6 @@ export const NotificationProvider = ({ children, initialConfig = {} }) => {
     clearAll,
     updateConfig,
     getStats,
-    // Méthodes de vérification
     isConfigEnabled: (key) => toBoolean(config[key]),
     hasNotifications: () => notifications.length > 0,
     hasImportantNotifications: () => notifications.some(n => toBoolean(n.isImportant)),
@@ -457,7 +426,10 @@ export const NotificationProvider = ({ children, initialConfig = {} }) => {
   );
 };
 
-// ✅ COMPOSANT WRAPPER POUR NOTIFICATIONS RAPIDES
+// =============================================================================
+// COMPOSANT HELPER POUR CONTRÔLES RAPIDES
+// =============================================================================
+
 export const QuickNotifications = () => {
   const { 
     hasNotifications, 

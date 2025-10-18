@@ -1,0 +1,189 @@
+/* src/styles/components/dashboard/DashboardRecentInvoices.css */
+.recent-invoices {
+  margin-bottom: 30px;
+}
+
+.invoices-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0;
+}
+
+.invoices-count {
+  font-size: 0.9rem;
+  color: var(--text-light, #666);
+  font-weight: normal;
+}
+
+.invoices-table-container {
+  overflow-x: auto;
+}
+
+.invoices-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.invoices-table th,
+.invoices-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.invoices-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: var(--text-color, #333);
+  font-size: 0.9rem;
+}
+
+.invoices-table tbody tr:hover {
+  background-color: #f9f9f9;
+}
+
+.invoices-table .numero-col {
+  font-weight: 500;
+  width: 15%;
+}
+
+.invoices-table .date-col {
+  width: 15%;
+}
+
+.invoices-table .client-col {
+  width: 25%;
+}
+
+.invoices-table .montant-col {
+  width: 15%;
+  text-align: right;
+  font-weight: 500;
+}
+
+.invoices-table .etat-col {
+  width: 20%;
+}
+
+.invoices-table .action-col {
+  width: 10%;
+  text-align: center;
+}
+
+.etat-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.etat-payee {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.etat-partiellement-payee {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.etat-en-attente {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.etat-retard {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.etat-editee {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+.etat-envoyee {
+  background-color: #cce5ff;
+  color: #004085;
+}
+
+.etat-annulee {
+  background-color: #e2e3e5;
+  color: #383d41;
+}
+
+.btn-view-facture {
+  padding: 5px 12px;
+  background-color: var(--primary-color, #800000);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color 0.2s;
+}
+
+.btn-view-facture:hover {
+  background-color: var(--primary-dark, #600000);
+}
+
+.no-data {
+  text-align: center;
+  color: var(--text-light, #666);
+  padding: 30px;
+  font-style: italic;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.text-muted {
+  color: var(--text-light, #666);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.invoices-footer {
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-top: 1px solid #eee;
+  text-align: right;
+}
+
+.loading-row {
+  animation: pulse 1.5s infinite;
+}
+
+.skeleton-loader {
+  height: 20px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@media (max-width: 768px) {
+  .invoices-table th:nth-child(2),
+  .invoices-table td:nth-child(2) {
+    display: none;
+  }
+
+  .invoices-table .client-col {
+    width: 30%;
+  }
+
+  .invoices-table .montant-col,
+  .invoices-table .date-col {
+    font-size: 0.85rem;
+    padding: 8px 10px;
+  }
+}

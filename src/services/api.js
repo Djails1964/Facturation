@@ -535,6 +535,8 @@ function convertApiResponse(data, context = null) {
 
   const factureProperties = ['facture', 'factures'];
 
+  const parametreProperties = ['parametres', 'parametre'];
+
   // ✅ AJOUT: Propriété spécifique aux lignes de facture
   const lignesProperties = ['lignes'];
 
@@ -544,7 +546,8 @@ function convertApiResponse(data, context = null) {
     'clients', 'users', 'items', 'data', 'result',
     ...paiementProperties,
     ...factureProperties,
-    ...lignesProperties  // ← AJOUT IMPORTANT
+    ...lignesProperties,
+    ...parametreProperties
   ];
   
   // Convertir les propriétés qui contiennent des données métier
