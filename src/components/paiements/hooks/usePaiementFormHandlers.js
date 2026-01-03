@@ -1,10 +1,10 @@
 // src/hooks/paiement/usePaiementFormHandlers.js
-// 🔧 CORRECTION: Ajout de la fonction handleCancel manquante
 
 import React, { useCallback } from 'react';
 import modalSystem from '../../../utils/modalSystem';
 import DatePickerModalHandler from '../../shared/modals/handlers/DatePickerModalHandler';
 import DateService from '../../../utils/DateService';
+import { createLogger } from '../../../utils/createLogger';
 import { 
     FORM_MODES, 
     VALIDATION_MESSAGES, 
@@ -16,11 +16,13 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
     const {
         paiement, setPaiement, setError, isSubmitting, setIsSubmitting,
         isReadOnly, isPaiementAnnule, isCreate, mode, idPaiement,
-        onRetourListe, onPaiementCreated, paiementService, factureService,
+        onRetourListe, onPaiementCreated, paiementActions, factureActions,
         markAsSaved, resetChanges, getFormData, setInitialFormData,
         unregisterGuard, guardId, setShowGlobalModal, setGlobalNavigationCallback,
         hasUnsavedChanges, canDetectChanges, requestNavigation
     } = formState;
+
+    const log = createLogger('usePaiementFormHandlers');
 
     // DatePicker handler
     const datePickerHandler = new DatePickerModalHandler({
@@ -34,34 +36,43 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
      */
     const chargerDetailFacture = useCallback(async (idFacture) => {
         try {
-            console.log('🔍 usePaiementFormHandlers - chargerDetailFacture - idFacture:', idFacture);
+            log.debug('🔍 usePaiementFormHandlers - chargerDetailFacture - idFacture:', idFacture);
             
-            const factureData = await factureService.getFacture(idFacture);
-            console.log('✅ usePaiementFormHandlers - factureData reçue:', factureData);
+            const factureData = await factureActions.chargerFacture(idFacture);
+            log.debug('✅ usePaiementFormHandlers - factureData reçue:', factureData);
             
             // Mettre à jour factureSelectionnee dans le state
             formState.setFactureSelectionnee(factureData);
             
-            // En mode création, initialiser automatiquement le montant
+            // En mode création, initialiser automatiquement le montant SEULEMENT si vide
             if (factureData && isCreate) {
                 const montantRestant = factureData.montantRestant || 
                     (factureData.totalAvecRistourne - (factureData.montantPayeTotal || 0));
                 
-                console.log('💰 Montant restant calculé:', montantRestant);
+                log.debug('💰 Montant restant calculé:', montantRestant);
                 
-                if (montantRestant > 0) {
-                    console.log('✅ Mise à jour du montant payé:', montantRestant.toFixed(2));
-                    setPaiement(prev => ({
-                        ...prev,
-                        montantPaye: montantRestant.toFixed(2)
-                    }));
-                }
+                // Ne pas écraser si l'utilisateur a déjà saisi un montant
+                setPaiement(prev => {
+                    const montantActuel = prev.montantPaye;
+                    const montantEstVide = !montantActuel || montantActuel === '' || montantActuel === '0' || montantActuel === '0.00';
+                    
+                    if (montantEstVide && montantRestant > 0) {
+                        log.debug('✅ Initialisation automatique du montant payé:', montantRestant.toFixed(2));
+                        return {
+                            ...prev,
+                            montantPaye: montantRestant.toFixed(2)
+                        };
+                    } else {
+                        log.debug('ℹ️ Montant déjà saisi, pas d\'écrasement:', montantActuel);
+                        return prev;
+                    }
+                });
             }
         } catch (error) {
-            console.error('❌ Erreur lors du chargement de la facture:', error);
+            log.error('❌ Erreur lors du chargement de la facture:', error);
             setError('Impossible de charger les détails de la facture');
         }
-    }, [factureService, formState, isCreate, setPaiement, setError]);
+    }, [factureActions, formState, isCreate, setPaiement, setError]);
 
     /**
      * Gestionnaire de changement des champs
@@ -69,14 +80,14 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
     const handleInputChange = useCallback((field, value) => {
         if (isReadOnly || isPaiementAnnule) return;
         
-        console.log('📝 PaiementForm handleInputChange:', { field, value, mode });
+        log.debug('📝 PaiementForm handleInputChange:', { field, value, mode });
         
         setPaiement(prev => ({
             ...prev,
             [field]: value
         }));
         
-        // ✅ Charger les détails de la facture quand elle est sélectionnée
+        // Charger les détails de la facture quand elle est sélectionnée
         if (field === 'idFacture' && value) {
             chargerDetailFacture(value);
         }
@@ -88,7 +99,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
     const handleOpenDateModal = useCallback(async (event) => {
         if (isReadOnly || isPaiementAnnule) return;
         
-        console.log('📅 Ouverture modal de sélection de date pour paiement');
+        log.debug('📅 Ouverture modal de sélection de date pour paiement');
         
         try {
             const anchorRef = React.createRef();
@@ -133,7 +144,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
             }
             
         } catch (error) {
-            console.error('❌ Erreur lors de la sélection de date:', error);
+            log.error('❌ Erreur lors de la sélection de date:', error);
             await modalSystem.error(`Erreur lors de la sélection de date : ${error.message}`);
         }
     }, [isReadOnly, isPaiementAnnule, paiement.datePaiement, datePickerHandler, handleInputChange]);
@@ -142,7 +153,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
      * Fonction pour gérer une sauvegarde réussie
      */
     const handleSuccessfulSave = useCallback((idPaiement, message) => {
-        console.log('✅ Sauvegarde réussie PaiementForm - nettoyage des modifications');
+        log.debug('✅ Sauvegarde réussie PaiementForm - nettoyage des modifications');
         
         markAsSaved();
         resetChanges();
@@ -157,10 +168,10 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
         setGlobalNavigationCallback(null);
 
         if (mode === FORM_MODES.CREATE && onPaiementCreated) {
-            console.log('📤 Mode CREATE - Appel onPaiementCreated');
+            log.debug('📤 Mode CREATE - Appel onPaiementCreated');
             onPaiementCreated(idPaiement, message);
         } else if (mode === FORM_MODES.EDIT && onRetourListe) {
-            console.log('📝 Mode EDIT - Retour à la liste avec message de succès');
+            log.debug('🔙 Mode EDIT - Retour à la liste avec message de succès');
             onRetourListe(idPaiement, true, message, 'success');
         }
     }, [mode, onPaiementCreated, onRetourListe, markAsSaved, resetChanges, getFormData, 
@@ -175,7 +186,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
         
         if (isReadOnly || isPaiementAnnule || isSubmitting) return;
         
-        console.log('📋 Soumission formulaire paiement:', { mode, paiement });
+        log.debug('📋 Soumission formulaire paiement:', { mode, paiement });
         setError(null);
         
         // Validation
@@ -211,16 +222,16 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
                 commentaire: paiement.commentaire || ''
             };
             
-            console.log('🚀 Envoi des données:', paiementData);
+            log.debug('🚀 Envoi des données:', paiementData);
             
             let result;
             if (mode === FORM_MODES.CREATE) {
-                result = await paiementService.createPaiement(paiementData);
+                result = await paiementActions.creerPaiement(paiementData);
                 if (result.success) {
                     handleSuccessfulSave(result.idPaiement, NOTIFICATIONS.CREATE_SUCCESS);
                 }
             } else if (mode === FORM_MODES.EDIT) {
-                result = await paiementService.updatePaiement(idPaiement, paiementData);
+                result = await paiementActions.modifierPaiement(idPaiement, paiementData);
                 if (result.success) {
                     handleSuccessfulSave(idPaiement, NOTIFICATIONS.UPDATE_SUCCESS);
                 }
@@ -231,7 +242,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
             }
             
         } catch (err) {
-            console.error('❌ Erreur sauvegarde paiement:', err);
+            log.error('❌ Erreur sauvegarde paiement:', err);
             const errorMessage = err.message || 'Une erreur est survenue';
             setError(errorMessage);
             modalSystem.error(errorMessage);
@@ -239,7 +250,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
             setIsSubmitting(false);
         }
     }, [paiement, mode, idPaiement, isReadOnly, isPaiementAnnule, isSubmitting,
-        formValidation, paiementService, setError, setIsSubmitting, handleSuccessfulSave]);
+        formValidation, paiementActions, setError, setIsSubmitting, handleSuccessfulSave]);
 
     /**
      * Gestionnaire d'annulation de paiement
@@ -256,7 +267,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
         
         try {
             setIsSubmitting(true);
-            const result = await paiementService.annulerPaiement(idPaiement);
+            const result = await paiementActions.annulerPaiement(idPaiement);
             
             if (result.success) {
                 modalSystem.success(NOTIFICATIONS.CANCEL_SUCCESS);
@@ -267,28 +278,28 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
                 throw new Error(result.message || 'Erreur lors de l\'annulation');
             }
         } catch (err) {
-            console.error('❌ Erreur annulation paiement:', err);
+            log.error('❌ Erreur annulation paiement:', err);
             modalSystem.error(err.message || 'Une erreur est survenue');
         } finally {
             setIsSubmitting(false);
         }
-    }, [idPaiement, isPaiementAnnule, paiementService, onRetourListe, setIsSubmitting]);
+    }, [idPaiement, isPaiementAnnule, paiementActions, onRetourListe, setIsSubmitting]);
 
     /**
-     * 🔧 NOUVEAU: Gestionnaire du bouton Cancel/Retour
+     * Gestionnaire du bouton Cancel/Retour
      * Cette fonction est utilisée par PaiementFormActions
      */
     const handleCancel = useCallback(() => {
-        console.log('🔙 PaiementForm.handleCancel appelé:', { 
+        log.debug('🔙 PaiementForm.handleCancel appelé:', { 
             mode, 
             isPaiementAnnule,
             hasUnsavedChanges,
             guardId
         });
         
-        // ✅ MODE VIEW: Navigation directe sans vérification
+        // MODE VIEW: Navigation directe sans vérification
         if (mode === FORM_MODES.VIEW) {
-            console.log('✅ Mode VIEW - Retour direct à la liste');
+            log.debug('✅ Mode VIEW - Retour direct à la liste');
             if (onRetourListe) {
                 onRetourListe();
             }
@@ -297,7 +308,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
 
         // Paiement annulé: navigation directe
         if (isPaiementAnnule) {
-            console.log('✅ Paiement annulé - navigation directe');
+            log.debug('✅ Paiement annulé - navigation directe');
             if (guardId) {
                 unregisterGuard(guardId);
             }
@@ -309,7 +320,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
 
         // Pas de modifications: navigation directe
         if (!hasUnsavedChanges || !canDetectChanges()) {
-            console.log('✅ Pas de modifications - navigation directe');
+            log.debug('✅ Pas de modifications - navigation directe');
             if (guardId) {
                 unregisterGuard(guardId);
             }
@@ -320,7 +331,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
         }
 
         // Modifications détectées: demander confirmation
-        console.log('⚠️ Modifications détectées - demande de confirmation');
+        log.debug('⚠️ Modifications détectées - demande de confirmation');
         const canNavigate = requestNavigation(() => {
             if (guardId) {
                 unregisterGuard(guardId);
@@ -331,7 +342,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
         });
 
         if (!canNavigate) {
-            console.log('🔒 Navigation bloquée - Modal de confirmation affichée');
+            log.debug('🔒 Navigation bloquée - Modal de confirmation affichée');
         }
     }, [mode, isPaiementAnnule, hasUnsavedChanges, canDetectChanges, requestNavigation, unregisterGuard, guardId, onRetourListe]);
 
@@ -356,7 +367,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
      * Gérer la confirmation de navigation externe
      */
     const handleConfirmGlobalNavigation = useCallback(() => {
-        console.log('✅ PAIEMENT - Navigation globale confirmée');
+        log.debug('✅ PAIEMENT - Navigation globale confirmée');
         
         // Fermer la modal
         setShowGlobalModal(false);
@@ -371,15 +382,15 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
         
         // Exécuter le callback de navigation stocké
         if (formState.globalNavigationCallback) {
-            console.log('🚀 PAIEMENT - Exécution du callback de navigation globale');
+            log.debug('🚀 PAIEMENT - Exécution du callback de navigation globale');
             try {
                 formState.globalNavigationCallback();
                 setGlobalNavigationCallback(null);
             } catch (error) {
-                console.error('❌ PAIEMENT - Erreur lors de l\'exécution du callback:', error);
+                log.error('❌ PAIEMENT - Erreur lors de l\'exécution du callback:', error);
             }
         } else {
-            console.warn('⚠️ PAIEMENT - Aucun callback de navigation stocké');
+            log.warn('⚠️ PAIEMENT - Aucun callback de navigation stocké');
         }
     }, [
         setShowGlobalModal, 
@@ -394,7 +405,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
      * Gérer l'annulation de navigation externe
      */
     const handleCancelGlobalNavigation = useCallback(() => {
-        console.log('❌ PAIEMENT - Navigation globale annulée');
+        log.debug('❌ PAIEMENT - Navigation globale annulée');
         setShowGlobalModal(false);
         setGlobalNavigationCallback(null);
     }, [setShowGlobalModal, setGlobalNavigationCallback]);
@@ -408,7 +419,6 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
         handleAnnuler,
         handleRetourListe,
         handleSuccessfulSave,
-        // ✅ AJOUTER CES DEUX LIGNES
         handleConfirmGlobalNavigation,
         handleCancelGlobalNavigation
     };

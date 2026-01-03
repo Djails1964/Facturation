@@ -2,6 +2,10 @@ import { useCallback } from 'react';
 import { useDateContext } from '../../../context/DateContext';
 import { formatDateToYYYYMMDD } from '../../../utils/formatters';
 
+/**
+ * Hook pour gérer les handlers du formulaire de tarif spécial
+ * ✅ REFACTORISÉ: Utilise tarifActions au lieu de tarificationService
+ */
 export const useTarifSpecialFormHandlers = (formState, formLogic, formValidation) => {
     const {
         tarifSpecial,
@@ -10,7 +14,7 @@ export const useTarifSpecialFormHandlers = (formState, formLogic, formValidation
         setIsSubmitting,
         hasUnsavedChanges,
         setShowUnsavedModal,
-        tarificationService,
+        tarifActions, // ✅ NOUVEAU: Utilise tarifActions au lieu de tarificationService
         isCreate,
         setHasUnsavedChanges
     } = formState;
@@ -41,12 +45,12 @@ export const useTarifSpecialFormHandlers = (formState, formLogic, formValidation
                 note: tarifSpecial.note.trim()
             };
             
-            // Sauvegarde
+            // ✅ REFACTORISÉ: Utilisation de tarifActions (qui gère déjà executeApi en interne)
             let result;
             if (isCreate) {
-                result = await tarificationService.createTarifSpecial(tarifSpecialData);
+                result = await tarifActions.create('tarifSpecial', tarifSpecialData);
             } else {
-                result = await tarificationService.updateTarifSpecial(tarifSpecial.id, tarifSpecialData);
+                result = await tarifActions.update('tarifSpecial', tarifSpecial.id, tarifSpecialData);
             }
             
             if (result.success) {
@@ -67,7 +71,7 @@ export const useTarifSpecialFormHandlers = (formState, formLogic, formValidation
         } finally {
             setIsSubmitting(false);
         }
-    }, [tarifSpecial, isSubmitting, isCreate, validateForm, tarificationService, setError, setIsSubmitting, setHasUnsavedChanges]);
+    }, [tarifSpecial, isSubmitting, isCreate, validateForm, tarifActions, setError, setIsSubmitting, setHasUnsavedChanges, formState]);
     
     const handleCancel = useCallback(() => {
         if (hasUnsavedChanges) {

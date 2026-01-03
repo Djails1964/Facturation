@@ -22,7 +22,7 @@ export const usePaiementFormValidation = (formState) => {
         if (DateService.isStrictlyFuture(dateObj)) {
             return { 
                 isValid: false, 
-                error: 'Les dates futures ne sont pas autorisées pour les paiements' 
+                error: 'Les dates futures ne sont pas autorisÃ©es pour les paiements' 
             };
         }
         
@@ -34,7 +34,7 @@ export const usePaiementFormValidation = (formState) => {
         if (daysAgo > 365) {
             return { 
                 isValid: false, 
-                error: 'La date de paiement ne peut pas être antérieure à un an' 
+                error: 'La date de paiement ne peut pas Ãªtre antÃ©rieure Ã  un an' 
             };
         }
         
@@ -50,7 +50,7 @@ export const usePaiementFormValidation = (formState) => {
             return { isValid: false, error: VALIDATION_MESSAGES.MONTANT_REQUIRED };
         }
 
-        // Vérifier que le montant ne dépasse pas ce qui reste à payer
+        // VÃ©rifier que le montant ne dÃ©passe pas ce qui reste Ã  payer
         if (factureSelectionnee && isCreate) {
             const montantRestant = factureSelectionnee.montantRestant || 
                 (factureSelectionnee.totalAvecRistourne - (factureSelectionnee.montantPayeTotal || 0));
@@ -64,14 +64,14 @@ export const usePaiementFormValidation = (formState) => {
     }, [factureSelectionnee, isCreate]);
 
     /**
-     * ✅ AJOUT: Valider la méthode de paiement
+     * âœ… AJOUT: Valider la mÃ©thode de paiement
      */
     const validateMethodePaiement = useCallback((methodePaiement) => {
         if (!methodePaiement || methodePaiement.trim() === '') {
             return { isValid: false, error: VALIDATION_MESSAGES.METHODE_REQUIRED };
         }
 
-        // Liste des méthodes valides
+        // Liste des mÃ©thodes valides
         const methodesValides = [
             'virement',
             'especes',
@@ -83,7 +83,7 @@ export const usePaiementFormValidation = (formState) => {
         ];
 
         if (!methodesValides.includes(methodePaiement)) {
-            return { isValid: false, error: 'Méthode de paiement non valide' };
+            return { isValid: false, error: 'MÃ©thode de paiement non valide' };
         }
 
         return { isValid: true };
@@ -119,10 +119,24 @@ export const usePaiementFormValidation = (formState) => {
         return { isValid: true };
     }, [paiement, validateDatePaiement, validateMontant, validateMethodePaiement]);
 
+    /**
+     * Vérifier si le formulaire est valide (booléen simple pour désactiver le bouton)
+     */
+    const isFormValid = useCallback(() => {
+        // Vérification rapide des champs obligatoires
+        if (!paiement.idFacture) return false;
+        if (!paiement.datePaiement) return false;
+        if (!paiement.montantPaye || parseFloat(paiement.montantPaye) <= 0) return false;
+        if (!paiement.methodePaiement || paiement.methodePaiement.trim() === '') return false;
+        
+        return true;
+    }, [paiement]);
+
     return {
         validateDatePaiement,
         validateMontant,
-        validateMethodePaiement,  // ✅ AJOUT dans le return
-        validateForm
+        validateMethodePaiement,
+        validateForm,
+        isFormValid
     };
 };

@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import TableSection from './TableSection';
 import { TarifSpecialActions } from './TarifListActions';
 import { getEtatValidite } from '../../../utils/formatters';
+import { createLogger } from '../../../utils/createLogger';
 
 const TarifSpecialTableSection = ({ 
   tarifsSpeciaux = [], 
@@ -14,13 +15,15 @@ const TarifSpecialTableSection = ({
   isSubmitting 
 }) => {
   
+  const log = createLogger('TarifSpecialTableSection');
+  
   // 🔧 ENRICHISSEMENT des tarifs spéciaux avec les vraies données
   const enrichedTarifsSpeciaux = useMemo(() => {
     if (!Array.isArray(tarifsSpeciaux) || tarifsSpeciaux.length === 0) {
       return [];
     }
 
-    console.log('🔍 Enrichissement tarifs spéciaux:', {
+    log.debug('🔍 Enrichissement tarifs spéciaux:', {
       tarifsSpeciaux: tarifsSpeciaux.length,
       services: services.length,
       unites: unites.length,
@@ -29,8 +32,11 @@ const TarifSpecialTableSection = ({
     });
 
     return tarifsSpeciaux.map((tarifSpecial, index) => {
+
+      log.debug("enrichedTarifsSpeciaux - tarifSpecial :" , tarifSpecial);
+      log.debug("enrichedTarifsSpeciaux - clients :" , clients);
       // IDs avec support camelCase et snake_case
-      const idClient = tarifSpecial.idClient;
+      const idClient = tarifSpecial.clientId;
       const idService = tarifSpecial.idService;
       const idUnite = tarifSpecial.idUnite;
 
@@ -148,7 +154,7 @@ const TarifSpecialTableSection = ({
     }
   ], [onEdit, onDelete, isSubmitting]);
 
-  console.log('✅ TarifSpecialTableSection - Rendu avec', enrichedTarifsSpeciaux.length, 'tarifs spéciaux enrichis');
+  log.debug('✅ TarifSpecialTableSection - Rendu avec', enrichedTarifsSpeciaux.length, 'tarifs spéciaux enrichis');
 
   return (
     <div>

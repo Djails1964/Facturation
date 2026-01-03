@@ -1,9 +1,15 @@
 // services/TarifValidationService.js - Service centralisé pour la validation
 
 import { FORM_TYPES } from '../../../constants/tarifConstants';
+import { createLogger } from '../../../utils/createLogger';
+import DateService from '../../../utils/DateService';
+
+const log = createLogger("TarifValidationService");
 
 export class TarifValidationService {
   
+  
+
   // ===== VALIDATION PRINCIPALE =====
   
   /**
@@ -17,14 +23,14 @@ export class TarifValidationService {
   static validateFormData(formType, formData, existingItems = [], itemId = null) {
     const requiredFields = this.getRequiredFields(formType);
     const fieldLabels = this.getFieldLabels(formType);
-    console.log('🔍 Validation des données:', {
+    log.debug('🔍 Validation des données:', {
       formType,
       formData,
       existingItems,
       itemId
     });
-    console.log('🔍 Validation des données - Champs obligatoires:', requiredFields);
-    console.log('🔍 Validation des données - Labels des champs:', fieldLabels);
+    log.debug('🔍 Validation des données - Champs obligatoires:', requiredFields);
+    log.debug('🔍 Validation des données - Labels des champs:', fieldLabels);
 
     const errors = {};
     const warnings = [];
@@ -62,15 +68,15 @@ export class TarifValidationService {
   static getRequiredFields(formType) {
     switch (formType) {
       case FORM_TYPES.SERVICE:
-        return ['code', 'nomService'];
+        return ['codeService', 'nomService'];
       case FORM_TYPES.UNITE:
-        return ['code', 'nomUnite'];
+        return ['codeUnite', 'nomUnite'];
       case FORM_TYPES.TYPE_TARIF:
-        return ['code', 'nomTypeTarif'];
+        return ['codeTypeTarif', 'nomTypeTarif'];
       case FORM_TYPES.TARIF:
-        return ['idService', 'idUnite', 'typeTarifId', 'prix', 'dateDebut'];
+        return ['idService', 'idUnite', 'idTypeTarif', 'prixTarifStandard', 'dateDebutTarifStandard'];
       case FORM_TYPES.TARIF_SPECIAL:
-        return ['idClient', 'idService', 'idUnite', 'prix', 'note'];
+        return ['clientId', 'idService', 'idUnite', 'prixTarifSpecial', 'dateDebutTarifSpecial', 'note'];
       default:
         return [];
     }
@@ -85,7 +91,7 @@ export class TarifValidationService {
       description: 'Description',
       idService: 'Service',
       idUnite: 'Unité',
-      typeTarifId: 'Type de tarif',
+      idTypeTarif: 'Type de tarif',
       idClient: 'Client',
       prix: 'Prix',
       dateDebut: 'Date de début',
@@ -127,8 +133,8 @@ export class TarifValidationService {
     const warnings = [];
     
     // Validation du code
-    if (formData.code) {
-      const code = formData.code.trim().toUpperCase();
+    if (formData.codeService) {
+      const code = formData.codeService.trim().toUpperCase();
       
       // Longueur
       if (code.length > 10) {
@@ -142,9 +148,9 @@ export class TarifValidationService {
       
       // Unicité
       const codeExists = existingItems.some(item => 
-        item.code && 
-        item.code.toUpperCase() === code && 
-        item.id !== itemId
+        item.codeService && 
+        item.codeService.toUpperCase() === code && 
+        item.idService !== itemId
       );
       
       if (codeExists) {
@@ -154,22 +160,22 @@ export class TarifValidationService {
     
     // Validation du nom
     if (formData.nomService) {
-      const nomService = formData.nomService.trim();
+      const nom = formData.nomService.trim();
       
       // Longueur
-      if (nomService.length > 100) {
-        errors.nomService = 'Le nom ne peut pas dépasser 100 caractères';
+      if (nom.length > 100) {
+        errors.nom = 'Le nom ne peut pas dépasser 100 caractères';
       }
       
       // Unicité
       const nomExists = existingItems.some(item => 
         item.nomService && 
-        item.nomService.toLowerCase() === nomService.toLowerCase() && 
-        item.id !== itemId
+        item.nomService.toLowerCase() === nom.toLowerCase() && 
+        item.idService !== itemId
       );
       
       if (nomExists) {
-        errors.nomService = `Le nom "${nomService}" existe déjà`;
+        errors.nom = `Le nom "${nom}" existe déjà`;
       }
     }
     
@@ -188,8 +194,8 @@ export class TarifValidationService {
     const warnings = [];
     
     // ✅ VALIDATION DU CODE AVEC UNICITÉ
-    if (formData.code) {
-        const code = formData.code.trim().toUpperCase();
+    if (formData.codeUnite) {
+        const code = formData.codeUnite.trim().toUpperCase();
         
         // Longueur
         if (code.length > 10) {
@@ -203,9 +209,9 @@ export class TarifValidationService {
         
         // ✅ UNICITÉ - Vérifier qu'aucune autre unité n'a le même code
         const codeExists = existingItems.some(item => 
-        item.code && 
-        item.code.toUpperCase() === code && 
-        item.id !== itemId
+        item.codeUnite && 
+        item.codeUnite.toUpperCase() === code && 
+        item.idUnite !== itemId
         );
         
         if (codeExists) {
@@ -215,22 +221,22 @@ export class TarifValidationService {
     
     // ✅ VALIDATION DU NOM AVEC UNICITÉ
     if (formData.nomUnite) {
-        const nomUnite = formData.nomUnite.trim();
+        const nom = formData.nomUnite.trim();
         
         // Longueur
-        if (nomUnite.length > 50) {
-        errors.nomUnite = 'Le nom ne peut pas dépasser 50 caractères';
+        if (nom.length > 50) {
+        errors.nom = 'Le nom ne peut pas dépasser 50 caractères';
         }
         
         // ✅ UNICITÉ - Vérifier qu'aucune autre unité n'a le même nom
         const nomExists = existingItems.some(item => 
         item.nomUnite && 
-        item.nomUnite.toLowerCase() === nomUnite.toLowerCase() && 
-        item.id !== itemId
+        item.nomUnite.toLowerCase() === nom.toLowerCase() && 
+        item.idUnite !== itemId
         );
         
         if (nomExists) {
-        errors.nomUnite = `Le nom "${nomUnite}" existe déjà`;
+        errors.nom = `Le nom "${nom}" existe déjà`;
         }
     }
     
@@ -250,7 +256,7 @@ export class TarifValidationService {
     
     // ✅ AJOUT : Validation du code (comme pour services et unités)
     if (formData.code) {
-      const code = formData.code.trim().toUpperCase();
+      const code = formData.codeTypeTarif.trim().toUpperCase();
       
       // Longueur
       if (code.length > 20) {
@@ -264,9 +270,9 @@ export class TarifValidationService {
       
       // ✅ UNICITÉ - Vérifier qu'aucun autre type de tarif n'a le même code
       const codeExists = existingItems.some(item => 
-        item.code && 
-        item.code.toUpperCase() === code && 
-        item.id !== itemId
+        item.codeTypeTarif && 
+        item.codeTypeTarif.toUpperCase() === code && 
+        item.idTypeTarif !== itemId
       );
       
       if (codeExists) {
@@ -276,7 +282,7 @@ export class TarifValidationService {
     
     // Validation du nom (existante)
     if (formData.nom) {
-      const nom = formData.nom.trim();
+      const nom = formData.nomTypeTarif.trim();
       
       // Longueur
       if (nom.length > 100) {
@@ -285,9 +291,9 @@ export class TarifValidationService {
       
       // Unicité
       const nomExists = existingItems.some(item => 
-        item.nom && 
-        item.nom.toLowerCase() === nom.toLowerCase() && 
-        item.id !== itemId
+        item.nomTypeTarif && 
+        item.nomTypeTarif.toLowerCase() === nom.toLowerCase() && 
+        item.idTypeTarif !== itemId
       );
       
       if (nomExists) {
@@ -308,10 +314,12 @@ export class TarifValidationService {
   static validateTarifFields(formData, existingItems, itemId) {
     const errors = {};
     const warnings = [];
+
+    log.debug("validateTarifFields - formData : ", formData);
     
     // Validation du prix
-    if (formData.prix !== undefined) {
-      const prix = parseFloat(formData.prix);
+    if (formData.prixTarifStandard !== undefined) {
+      const prix = parseFloat(formData.prixTarifStandard);
       
       if (isNaN(prix)) {
         errors.prix = 'Le prix doit être un nombre valide';
@@ -328,22 +336,27 @@ export class TarifValidationService {
     }
     
     // Validation des dates
-    if (formData.date_debut) {
-      const dateDebut = new Date(formData.date_debut);
-      const aujourd = new Date();
-      aujourd.setHours(0, 0, 0, 0);
-      
-      if (dateDebut > aujourd) {
-        warnings.push('La date de début est dans le futur');
+    if (formData.dateDebutTarifStandard) {
+      const dateDebut = DateService.fromDisplayFormat(formData.dateDebutTarifStandard) || 
+                    DateService.fromInputFormat(formData.dateDebutTarifStandard);
+      if (dateDebut) {
+        const aujourd = new Date();
+        aujourd.setHours(0, 0, 0, 0);
+        
+        if (dateDebut > aujourd) {
+          warnings.push('La date de début est dans le futur');
+        }
       }
     }
     
-    if (formData.date_fin && formData.date_debut) {
-      const dateDebut = new Date(formData.date_debut);
-      const dateFin = new Date(formData.date_fin);
+    if (formData.dateFinTarifStandard && formData.dateDebutTarifStandard) {
+      const dateDebut = DateService.fromDisplayFormat(formData.dateDebutTarifStandard) || 
+                        DateService.fromInputFormat(formData.dateDebutTarifStandard);
+      const dateFin = DateService.fromDisplayFormat(formData.dateFinTarifStandard) || 
+                      DateService.fromInputFormat(formData.dateFinTarifStandard);
       
-      if (dateFin <= dateDebut) {
-        errors.date_fin = 'La date de fin doit être postérieure à la date de début';
+      if (dateDebut && dateFin && dateFin <= dateDebut) {
+        errors.dateFin = 'La date de fin doit être postérieure à la date de début';
       }
     }
     
@@ -356,10 +369,43 @@ export class TarifValidationService {
     const errors = {};
     const warnings = [];
     
-    // Validation du prix (même logique que tarifs standards)
-    const tarifValidation = this.validateTarifFields(formData, existingItems, itemId);
-    Object.assign(errors, tarifValidation.errors);
-    warnings.push(...tarifValidation.warnings);
+    // Validation du prix
+    if (formData.prixTarifSpecial !== undefined) {
+      const prix = parseFloat(formData.prixTarifSpecial);
+      
+      if (isNaN(prix)) {
+        errors.prix = 'Le prix doit être un nombre valide';
+      } else if (prix <= 0) {
+        errors.prix = 'Le prix doit être positif';
+      } else if (prix > 999999.99) {
+        errors.prix = 'Le prix ne peut pas dépasser 999\'999.99';
+      }
+      
+      // Avertissement pour prix très élevé
+      if (prix > 10000) {
+        warnings.push(`Prix élevé détecté: ${prix.toFixed(2)} CHF`);
+      }
+    }
+    
+    // Validation des dates
+    if (formData.dateDebutTarifSpecial) {
+      const dateDebut = new Date(formData.dateDebutTarifSpeciald);
+      const aujourd = new Date();
+      aujourd.setHours(0, 0, 0, 0);
+      
+      if (dateDebut > aujourd) {
+        warnings.push('La date de début est dans le futur');
+      }
+    }
+    
+    if (formData.dateFinTarifSpecial && formData.dateDebutTarifSpecial) {
+      const dateDebut = new Date(formData.dateDebutTarifSpecial);
+      const dateFin = new Date(formData.dateFinTarifSpecial);
+      
+      if (dateFin <= dateDebut) {
+        errors.dateFin = 'La date de fin doit être postérieure à la date de début';
+      }
+    }
     
     // Validation de la note (obligatoire pour tarifs spéciaux)
     if (!formData.note || formData.note.trim() === '') {
@@ -396,11 +442,11 @@ export class TarifValidationService {
     // Règle métier: Un seul service par défaut
     if (formData.isDefault === true) {
       const autreServiceDefaut = existingItems.find(item => 
-        item.isDefault === true && item.id !== itemId
+        item.isDefault === true && item.idService !== itemId
       );
       
       if (autreServiceDefaut) {
-        warnings.push(`Le service "${autreServiceDefaut.nom}" sera automatiquement désactivé comme service par défaut`);
+        warnings.push(`Le service "${autreServiceDefaut.nomService}" sera automatiquement désactivé comme service par défaut`);
       }
     }
     
@@ -417,21 +463,21 @@ export class TarifValidationService {
     const warnings = [];
     
     // Règle métier: Pas de chevauchement de dates pour même service/unité/type
-    if (formData.idService && formData.idUnite && formData.typeTarifId) {
+    if (formData.idService && formData.idUnite && formData.idTypeTarif) {
       const chevauchement = existingItems.find(tarif => {
-        if (tarif.id === itemId) return false;
+        if (tarif.idTarifStandard === itemId) return false;
         
         return tarif.idService === formData.idService &&
                tarif.idUnite === formData.idUnite &&
-               tarif.type_tarif_id === formData.typeTarifId &&
+               tarif.idTypeTarif === formData.idTypeTarif &&
                this.datesOverlap(
-                 formData.date_debut, formData.date_fin,
-                 tarif.date_debut, tarif.date_fin
+                 formData.dateDebutTarifStandard, formData.dateFinTarifStandard,
+                 tarif.dateDebutTarifStandard, tarif.dateFinTarifStandard
                );
       });
       
       if (chevauchement) {
-        errors.date_debut = 'Un tarif existe déjà pour cette période';
+        errors.dateDebut = 'Un tarif existe déjà pour cette période';
       }
     }
     
@@ -443,21 +489,21 @@ export class TarifValidationService {
     const warnings = [];
     
     // Règle métier: Pas de chevauchement pour même client/service/unité
-    if (formData.idClient && formData.idService && formData.idUnite) {
+    if (formData.clientId && formData.idService && formData.idUnite) {
       const chevauchement = existingItems.find(tarif => {
-        if (tarif.id === itemId) return false;
+        if (tarif.idTarifSpecial === itemId) return false;
         
-        return tarif.id === formData.idClient &&
+        return tarif.clientId === formData.clientId &&
                tarif.idService === formData.idService &&
                tarif.idUnite === formData.idUnite &&
                this.datesOverlap(
-                 formData.date_debut, formData.date_fin,
-                 tarif.date_debut, tarif.date_fin
+                 formData.dateDebutTarifSpecial, formData.dateFinTarifSpecial,
+                 tarif.dateDebutTarifSpecial, tarif.dateFinTarifSpecial
                );
       });
       
       if (chevauchement) {
-        errors.date_debut = 'Un tarif spécial existe déjà pour ce client et cette période';
+        errors.dateDebut = 'Un tarif spécial existe déjà pour ce client et cette période';
       }
     }
     
@@ -483,47 +529,53 @@ export class TarifValidationService {
   /**
    * Configure la validation en temps réel sur un formulaire
    */
-    static setupFormValidation(container, formType, itemId = null, existingItems = []) {
-        const form = container.querySelector('.modal-form');
-        const statusDiv = container.querySelector('#validation-status');
-        const submitButton = container.querySelector('[data-action="submit"]');
+  static setupFormValidation(container, formType, itemId = null, existingItems = []) {
+      const form = container.querySelector('.modal-form');
+      const statusDiv = container.querySelector('#validation-status');
+      const submitButton = container.querySelector('[data-action="submit"]');
 
-        if (!form) return;
+      if (!form) return;
 
-        // Désactiver la validation HTML5 native
-        form.setAttribute('novalidate', 'true');
+      // Désactiver la validation HTML5 native
+      form.setAttribute('novalidate', 'true');
 
-        let validationErrors = {};
+      let validationErrors = {};
 
-        console.log(`🔧 Validation configurée pour ${formType} avec ${existingItems.length} éléments existants`);
+      log.debug(`🔧 Validation configurée pour ${formType} avec ${existingItems.length} éléments existants`);
 
-        const updateValidationStatus = () => {
-            const errorCount = Object.keys(validationErrors).length;
+      // const updateValidationStatus = () => {
+      //     const errorCount = Object.keys(validationErrors).length;
+          
+      //     const requiredFields = this.getRequiredFields(formType);
+      //     const missingFields = requiredFields.filter(fieldName => {
+      //         const input = form.querySelector(`[name="${fieldName}"]`);
+      //         return input && (!input.value || input.value.trim() === '');
+      //     });
+
+      //     if (errorCount === 0) {
+      //       if (statusDiv) statusDiv.style.display = 'none';
+      //       if (submitButton) {
+      //           submitButton.disabled = missingFields.length > 0;
+      //           submitButton.textContent = itemId ? 'Modifier' : 'Créer';
+      //       }
+      //     } else {
+      //       if (statusDiv) {
+      //           statusDiv.style.display = 'block';
+      //           statusDiv.style.backgroundColor = '#f8d7da';
+      //           statusDiv.style.color = '#721c24';
+      //           statusDiv.style.border = '1px solid #f5c6cb';
+      //           statusDiv.innerHTML = `
+      //           <strong>⚠️ Erreurs de validation (${errorCount}) :</strong><br>
+      //           ${Object.values(validationErrors).map(error => `• ${error}`).join('<br>')}
+      //           `;
+      //       }
             
-            if (errorCount === 0) {
-            if (statusDiv) statusDiv.style.display = 'none';
-            if (submitButton) {
-                submitButton.disabled = false;
-                submitButton.textContent = itemId ? 'Modifier' : 'Créer';
-            }
-            } else {
-            if (statusDiv) {
-                statusDiv.style.display = 'block';
-                statusDiv.style.backgroundColor = '#f8d7da';
-                statusDiv.style.color = '#721c24';
-                statusDiv.style.border = '1px solid #f5c6cb';
-                statusDiv.innerHTML = `
-                <strong>⚠️ Erreurs de validation (${errorCount}) :</strong><br>
-                ${Object.values(validationErrors).map(error => `• ${error}`).join('<br>')}
-                `;
-            }
-            
-            if (submitButton) {
-                submitButton.disabled = true;
-                submitButton.textContent = 'Corriger les erreurs';
-            }
-        }
-    };
+      //       if (submitButton) {
+      //           submitButton.disabled = true;
+      //           submitButton.textContent = 'Corriger les erreurs';
+      //       }
+      // }
+  // };
 
     // ✅ VALIDATION AVEC DONNÉES EXISTANTES (passées en paramètre)
     const validateFieldWithExistingData = (input) => {
@@ -534,59 +586,205 @@ export class TarifValidationService {
         delete validationErrors[fieldName];
         this.clearFieldValidationError(input);
         
-        if (!fieldValue) {
-        updateValidationStatus();
-        return;
-        }
-        
         // Créer un objet formData partiel pour la validation
         const partialFormData = { [fieldName]: fieldValue };
         
-        console.log(`🔍 Validation ${fieldName} = "${fieldValue}" avec ${existingItems.length} éléments`);
+        log.debug(`🔍 Validation ${fieldName} = "${fieldValue}" avec ${existingItems.length} éléments`);
         
-        // Validation spécifique par champ AVEC les données existantes passées en paramètre
-        const fieldValidation = this.validateSpecificFields(formType, partialFormData, existingItems, itemId);
-        
-        if (fieldValidation.errors[fieldName]) {
-        console.log(`❌ Erreur de validation: ${fieldValidation.errors[fieldName]}`);
-        validationErrors[fieldName] = fieldValidation.errors[fieldName];
-        this.displayFieldValidationError(input, fieldValidation.errors[fieldName]);
-        } else {
-        console.log(`✅ Validation OK pour ${fieldName}`);
+        // Validation spécifique par champ AVEC les données existantes
+        if (fieldValue) {
+            const fieldValidation = this.validateSpecificFields(formType, partialFormData, existingItems, itemId);
+            
+            if (fieldValidation.errors[fieldName]) {
+                log.debug(`❌ Erreur de validation: ${fieldValidation.errors[fieldName]}`);
+                validationErrors[fieldName] = fieldValidation.errors[fieldName];
+                this.displayFieldValidationError(input, fieldValidation.errors[fieldName]);
+            } else {
+                log.debug(`✅ Validation OK pour ${fieldName}`);
+            }
         }
         
-        updateValidationStatus();
+        // ✅ VÉRIFIER LES CHAMPS OBLIGATOIRES
+        const requiredFields = this.getRequiredFields(formType);
+        const missingFields = [];
+        
+        requiredFields.forEach(reqFieldName => {
+            const reqInput = form.querySelector(`[name="${reqFieldName}"]`);
+            if (reqInput && (!reqInput.value || reqInput.value.trim() === '')) {
+                missingFields.push(reqFieldName);
+            }
+        });
+        
+        // ✅ LOGS DE DÉBOGAGE
+        log.debug('🔍 Champs obligatoires:', requiredFields);
+        log.debug('❌ Champs manquants:', missingFields);
+        log.debug('⚠️ Erreurs validation:', validationErrors);
+        log.debug('🔘 Bouton devrait être:', missingFields.length > 0 ? 'DÉSACTIVÉ' : 'ACTIVÉ');
+
+        log.debug('🔘 submitButton existe?', submitButton);
+        log.debug('🔘 submitButton.disabled avant:', submitButton?.disabled);
+
+        // Mettre à jour le statut du bouton
+        if (missingFields.length > 0 && submitButton) {
+            submitButton.disabled = true;
+            submitButton.textContent = 'Créer';
+            log.debug('✅ Bouton DÉSACTIVÉ, disabled après:', submitButton.disabled);
+        } else if (Object.keys(validationErrors).length === 0 && submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = itemId ? 'Modifier' : 'Créer';
+            log.debug('✅ Bouton ACTIVÉ, disabled après:', submitButton.disabled);
+        }
+        
+        // updateValidationStatus();
     };
 
     // Validation en temps réel
     const inputs = form.querySelectorAll('input[data-validation], select[data-validation], textarea[data-validation], input[name], select[name], textarea[name]');
+    
     inputs.forEach(input => {
         // Validation lors du blur
         input.addEventListener('blur', () => validateFieldWithExistingData(input));
         
         // Effacer les erreurs lors de la saisie
         input.addEventListener('input', () => {
-        this.clearFieldValidationError(input);
-        // Re-valider après un délai pour les codes et noms
-        if (input.name === 'code' || input.name === 'nom') {
-            clearTimeout(input.validationTimeout);
-            input.validationTimeout = setTimeout(() => validateFieldWithExistingData(input), 800);
-        }
+            this.clearFieldValidationError(input);
+            // Re-valider après un délai pour les codes et noms
+            if (input.name === 'code' || input.name === 'nom') {
+                clearTimeout(input.validationTimeout);
+                input.validationTimeout = setTimeout(() => validateFieldWithExistingData(input), 800);
+            }
+            validateFieldWithExistingData(input);  // ✅ Remplacez checkRequiredFields()
+        });
+
+        input.addEventListener('change', () => {
+            validateFieldWithExistingData(input);  // ✅ Remplacez checkRequiredFields()
         });
     });
 
-    // Validation initiale si édition
-    if (itemId) {
-        setTimeout(() => {
-        inputs.forEach(input => {
-            if (input.value.trim()) {
-            validateFieldWithExistingData(input);
+    // ✅ GESTION DYNAMIQUE DES UNITÉS SELON LE SERVICE (pour TARIF uniquement)
+    if (formType === FORM_TYPES.TARIF) {
+        const serviceSelect = form.querySelector('[name="idService"]');
+        const uniteSelect = form.querySelector('[name="idUnite"]');
+        
+        if (serviceSelect && uniteSelect) {
+            // Fonction pour mettre à jour les unités
+            const updateUniteOptions = (serviceId) => {
+                // Réinitialiser la sélection d'unité
+                const currentUniteValue = uniteSelect.value;
+                
+                if (!serviceId) {
+                    uniteSelect.disabled = true;
+                    uniteSelect.innerHTML = '<option value="">Sélectionner d\'abord un service</option>';
+                    validateFieldWithExistingData(uniteSelect);
+                    return;
+                }
+                
+                // Activer et remplir les unités
+                uniteSelect.disabled = false;
+                uniteSelect.innerHTML = '<option value="">Sélectionner...</option>';
+                
+                // Récupérer les unités depuis les données passées
+                log.debug('🔍 updateUniteOptions appelé avec serviceId:', serviceId);
+                log.debug('🔍 container.dataset.unites:', container.dataset.unites);
+                const unitesData = JSON.parse(container.dataset.unites || '[]');
+                log.debug('🔍 unitesData parsed:', unitesData.length, 'unités');
+                // ✅ CORRECTION : Filtrer par servicesIds (many-to-many)
+                const unitesFiltered = unitesData.filter(u => {
+                    // Support ancien format (idService) et nouveau format (servicesIds)
+                    if (u.servicesIds && Array.isArray(u.servicesIds)) {
+                        return u.servicesIds.includes(parseInt(serviceId));
+                    }
+                    // Fallback sur l'ancien format
+                    return u.idService == serviceId;
+                });
+                log.debug('🔍 Nombre d\'unités filtrées:', unitesFiltered.length);
+                log.debug('🔍 Exemple unité:', unitesFiltered[0]);
+                log.debug('🔍 Unités filtrées pour service', serviceId, ':', unitesFiltered.length, 'unités');
+                
+                unitesFiltered.forEach(u => {
+                    const option = document.createElement('option');
+                    option.value = u.id || u.idUnite;
+                    option.textContent = u.nomUnite;
+                    // Restaurer la sélection si c'était la même unité
+                    if (itemId && (u.id == currentUniteValue || u.idUnite == currentUniteValue)) {
+                        option.selected = true;
+                    }
+                    uniteSelect.appendChild(option);
+                });
+                
+                // Si pas en mode édition ou si l'unité n'est plus valide, réinitialiser
+                if (!itemId || !unitesFiltered.find(u => (u.id == currentUniteValue || u.idUnite == currentUniteValue))) {
+                    uniteSelect.value = '';
+                }
+                
+                validateFieldWithExistingData(uniteSelect);
+            };
+            
+            // Initialisation au chargement
+            const initialServiceId = serviceSelect.value;
+            if (initialServiceId) {
+                updateUniteOptions(initialServiceId);
+            } else {
+                uniteSelect.disabled = true;
+                uniteSelect.innerHTML = '<option value="">Sélectionner d\'abord un service</option>';
             }
-        });
-        }, 100);
+            
+            // Événement sur changement de service
+            serviceSelect.addEventListener('change', (e) => {
+                updateUniteOptions(e.target.value);
+            });
+        }
     }
 
-    console.log(`✅ Validation activée pour ${formType} avec contrôle d'unicité`);
+    // ✅ NOUVELLE FONCTION: Vérifier que tous les champs obligatoires sont remplis
+    // const checkRequiredFields = () => {
+    //     const requiredFields = this.getRequiredFields(formType);
+    //     const missingFields = [];
+        
+    //     requiredFields.forEach(fieldName => {
+    //         const input = form.querySelector(`[name="${fieldName}"]`);
+    //         if (input && (!input.value || input.value.trim() === '')) {
+    //             missingFields.push(fieldName);
+    //         }
+    //     });
+        
+    //     // Si des champs obligatoires sont vides, désactiver le bouton
+    //     if (missingFields.length > 0 && submitButton) {
+    //         submitButton.disabled = true;
+    //         submitButton.textContent = itemId ? 'Modifier' : 'Créer';
+    //     } else if (Object.keys(validationErrors).length === 0 && submitButton) {
+    //         // Tous les champs sont remplis et pas d'erreurs
+    //         submitButton.disabled = false;
+    //         submitButton.textContent = itemId ? 'Modifier' : 'Créer';
+    //     }
+    // };
+
+    // // ✅ Ajouter vérification des champs obligatoires aux événements
+    // inputs.forEach(input => {
+    //     input.addEventListener('input', () => {
+    //         checkRequiredFields();
+    //     });
+        
+    //     input.addEventListener('change', () => {
+    //         checkRequiredFields();
+    //     });
+    // });
+
+    // ✅ DÉSACTIVATION IMMÉDIATE du bouton en mode création
+    // if (!itemId && submitButton) {
+    //     submitButton.disabled = true;
+    //     submitButton.textContent = 'Créer';
+    // }
+
+    // ✅ VALIDATION INITIALE: Vérifier les champs obligatoires au chargement
+    setTimeout(() => {
+        // Valider tous les champs au chargement
+        inputs.forEach(input => {
+            validateFieldWithExistingData(input);
+        });
+    }, 100);
+
+    log.debug(`✅ Validation activée pour ${formType} avec contrôle d'unicité`);
     }
 
     // ✅ MÉTHODE UTILITAIRE pour obtenir le nom du tableau de données

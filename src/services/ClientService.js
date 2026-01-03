@@ -2,9 +2,13 @@
  * Service de gestion des clients - VERSION MISE À JOUR avec gestion des booléens
  * @class ClientService
  * @description Gère l'accès aux données des clients via l'API
+ * 
+ * ⚠️ NOTE: Les méthodes de validation (isValidEmail, detectPhoneType) sont DÉPRÉCIÉES
+ *    Utiliser à la place: clientValidators.js ou useClientValidation.js
  */
 import api from './api';
 import { toBoolean, toBooleanInt, normalizeBooleanFields, normalizeBooleanFieldsArray } from '../utils/booleanHelper';
+import { createLogger } from '../utils/createLogger';
 
 class ClientService {
   constructor() {
@@ -18,13 +22,17 @@ class ClientService {
     this.updateClient = this.updateClient.bind(this);
     this.deleteClient = this.deleteClient.bind(this);
     this.checkClientDeletable = this.checkClientDeletable.bind(this);
-    this.isValidEmail = this.isValidEmail.bind(this);
-    this.detectPhoneType = this.detectPhoneType.bind(this);
-    this._cleanPhoneNumber = this._cleanPhoneNumber.bind(this);
     this._clearCache = this._clearCache.bind(this);
     this.estTherapeute = this.estTherapeute.bind(this);
     this.normalizeClient = this.normalizeClient.bind(this);
     this.normalizeClients = this.normalizeClients.bind(this);
+    
+    // ⚠️ DÉPRÉCIÉES - conservées pour rétrocompatibilité
+    this.isValidEmail = this.isValidEmail.bind(this);
+    this.detectPhoneType = this.detectPhoneType.bind(this);
+    this._cleanPhoneNumber = this._cleanPhoneNumber.bind(this);
+
+    this.log = createLogger('ClientService');
   }
 
   /**
@@ -43,7 +51,7 @@ class ClientService {
   /**
    * Normalise les propriétés booléennes d'un tableau de clients
    * @param {Array} clients - Tableau de clients à normaliser
-   * @returns {Array} - Clients avec propriétés booléennes normalisées
+   * @returns {Array} - Tableau de clients avec propriétés booléennes normalisées
    */
   normalizeClients(clients) {
     if (!Array.isArray(clients)) {
@@ -54,145 +62,120 @@ class ClientService {
   }
 
   /**
-   * Charge tous les clients disponibles
-   * @returns {Promise<Array>} Liste des clients avec booléens normalisés
+   * Charge tous les clients
+   * @returns {Promise<Array>} - Liste des clients
    */
   async chargerClients() {
     try {
       const response = await api.get('client-api.php');
       
-      if (response && response.success && response.clients) {
-        // ✅ NORMALISATION DES BOOLÉENS AVEC LE HELPER
-        const normalizedClients = this.normalizeClients(response.clients);
-        
-        console.log('Clients avant normalisation:', response.clients.slice(0, 2));
-        console.log('Clients après normalisation:', normalizedClients.slice(0, 2));
-        
-        // Mise à jour de la liste interne
-        this.clients = normalizedClients;
-        return normalizedClients;
+      if (Array.isArray(response)) {
+        this.clients = this.normalizeClients(response);
+        return this.clients;
+      } else if (response && response.clients) {
+        this.clients = this.normalizeClients(response.clients);
+        return this.clients;
       }
+      
+      this.log.warn('Format de réponse inattendu pour chargerClients');
       return [];
     } catch (error) {
-      console.error('Erreur lors du chargement des clients:', error);
-      return [];
+      this.log.error('Erreur lors du chargement des clients:', error);
+      throw error;
     }
   }
 
   /**
-   * Récupère les détails d'un client spécifique
-   * @param {string|number} id ID du client
-   * @returns {Promise<Object|null>} Données du client ou null si non trouvé
+   * Récupère un client par son ID
+   * @param {string|number} id ID du client à récupérer
+   * @returns {Promise<Object|null>} Client récupéré ou null si non trouvé
    */
   async getClient(id) {
     try {
-      // Vérifier si le client est déjà dans le cache
+      // Vérifier le cache
       if (this._cacheClient[id]) {
+        this.log.debug(`Client ${id} trouvé dans le cache`);
         return this._cacheClient[id];
       }
-      
+
       const response = await api.get(`client-api.php?id=${id}`);
       
       if (response && response.success && response.client) {
-        // ✅ NORMALISATION DU CLIENT AVEC LE HELPER
+        // ✅ Normalisation du client
         const normalizedClient = this.normalizeClient(response.client);
         
-        console.log('Client avant normalisation:', response.client);
-        console.log('Client après normalisation:', normalizedClient);
+        this.log.debug('Client avant normalisation:', response.client);
+        this.log.debug('Client après normalisation:', normalizedClient);
         
-        // Mettre à jour le cache
+        // Mettre en cache
         this._cacheClient[id] = normalizedClient;
+        
+        // ✅ Retourner directement le client (pas d'objet wrappé)
         return normalizedClient;
       }
+      
       return null;
     } catch (error) {
-      console.error(`Erreur lors de la récupération du client ${id}:`, error);
-      return null;
+      this.log.error(`Erreur lors de la récupération du client ${id}:`, error);
+      throw error;
     }
   }
 
   /**
    * Crée un nouveau client
-   * @param {Object} clientData Données du client
+   * @param {Object} clientData Données du client à créer
    * @returns {Promise<Object>} Résultat de la création
    */
   async createClient(clientData) {
     try {
-      // ✅ PRÉPARATION DES DONNÉES AVEC NORMALISATION BOOLÉENNE
-      const preparedData = {
+      this.log.debug('Création du client:', clientData);
+      
+      // Normaliser les booléens avant envoi
+      const dataToSend = {
         ...clientData,
-        // Conversion sécurisée du booléen estTherapeute pour l'API
         estTherapeute: toBooleanInt(clientData.estTherapeute)
       };
       
-      console.log('Création client - données d\'entrée:', clientData);
-      console.log('Création client - données normalisées:', preparedData);
-      
-      // Si le téléphone est fourni, s'assurer qu'il est au format propre
-      if (preparedData.telephone) {
-        preparedData.telephone = this._cleanPhoneNumber(preparedData.telephone);
-      }
-      
-      const response = await api.post('client-api.php', preparedData);
+      const response = await api.post('client-api.php', dataToSend);
       
       if (response && response.success) {
-        // Invalider le cache après création
+        // Invalider le cache
         this._clearCache();
-        return {
-          success: true,
-          id: response.id,
-          message: response.message || 'Client créé avec succès'
-        };
-      } else {
-        throw new Error(response?.message || 'Erreur lors de la création du client');
       }
+      
+      return response;
     } catch (error) {
-      console.error('Erreur lors de la création du client:', error);
+      this.log.error('Erreur lors de la création du client:', error);
       throw error;
     }
   }
 
   /**
    * Met à jour un client existant
-   * @param {string|number} id ID du client
-   * @param {Object} clientData Données mises à jour
+   * @param {string|number} id ID du client à mettre à jour
+   * @param {Object} clientData Nouvelles données du client
    * @returns {Promise<Object>} Résultat de la mise à jour
    */
   async updateClient(id, clientData) {
     try {
-      console.log('✏️ DEBUG - updateClient appelé pour:', id);
-      console.log('✏️ DEBUG - Session cookies:', document.cookie);
-      console.log('✏️ DEBUG - Session stockée:', window.currentSessionId);
+      this.log.debug(`Mise à jour du client ${id}:`, clientData);
       
-      // ✅ PRÉPARATION DES DONNÉES AVEC NORMALISATION BOOLÉENNE
-      const preparedData = {
+      // Normaliser les booléens avant envoi
+      const dataToSend = {
         ...clientData,
-        // Conversion sécurisée du booléen estTherapeute pour l'API
         estTherapeute: toBooleanInt(clientData.estTherapeute)
       };
       
-      console.log('Mise à jour client - données d\'entrée:', clientData);
-      console.log('Mise à jour client - données normalisées:', preparedData);
-      
-      // Si le téléphone est fourni, s'assurer qu'il est au format propre
-      if (preparedData.telephone) {
-        preparedData.telephone = this._cleanPhoneNumber(preparedData.telephone);
-      }
-      
-      const response = await api.put(`client-api.php?id=${id}`, preparedData);
+      const response = await api.put(`client-api.php?id=${id}`, dataToSend);
       
       if (response && response.success) {
-        // Invalider le cache après mise à jour
+        // Invalider le cache pour ce client
         delete this._cacheClient[id];
-        return {
-          success: true,
-          message: response.message || 'Client modifié avec succès'
-        };
-      } else {
-        throw new Error(response?.message || 'Erreur lors de la modification du client');
       }
+      
+      return response;
     } catch (error) {
-      console.error(`Erreur lors de la mise à jour du client ${id}:`, error);
+      this.log.error(`Erreur lors de la mise à jour du client ${id}:`, error);
       throw error;
     }
   }
@@ -204,11 +187,14 @@ class ClientService {
    */
   async deleteClient(id) {
     try {
+      this.log.debug(`Suppression du client ${id}`);
+      
       const response = await api.delete(`client-api.php?id=${id}`);
       
-      if (response && response.success) {
-        // Invalider le cache après suppression
+      if (response && (response.success || response.status === 'success')) {
+        // Invalider le cache
         delete this._cacheClient[id];
+        
         return {
           success: true,
           message: response.message || 'Client supprimé avec succès'
@@ -217,7 +203,7 @@ class ClientService {
         throw new Error(response?.message || 'Erreur lors de la suppression du client');
       }
     } catch (error) {
-      console.error(`Erreur lors de la suppression du client ${id}:`, error);
+      this.log.error(`Erreur lors de la suppression du client ${id}:`, error);
       throw error;
     }
   }
@@ -229,9 +215,7 @@ class ClientService {
    */
   async checkClientDeletable(id) {
     try {
-      console.log('🔍 DEBUG - checkClientDeletable appelé pour:', id);
-      console.log('🔍 DEBUG - Session cookies:', document.cookie);
-      console.log('🔍 DEBUG - Session stockée:', window.currentSessionId);
+      this.log.debug('DEBUG - checkClientDeletable appelé pour:', id);
       const response = await api.get(`client-api.php?id=${id}&checkFactures=true`);
       
       return {
@@ -241,17 +225,59 @@ class ClientService {
         message: response.message
       };
     } catch (error) {
-      console.error(`Erreur lors de la vérification des factures du client ${id}:`, error);
+      this.log.error(`Erreur lors de la vérification des factures du client ${id}:`, error);
       throw error;
     }
   }
 
   /**
+   * Vérifie si un client est thérapeute
+   * @param {Object|number} clientOrId - Client ou ID du client
+   * @returns {Promise<boolean>|boolean} True si le client est thérapeute
+   */
+  async estTherapeute(clientOrId) {
+    // Si c'est déjà un objet client
+    if (clientOrId && typeof clientOrId === 'object' && 'estTherapeute' in clientOrId) {
+      return toBoolean(clientOrId.estTherapeute);
+    }
+
+    // Si c'est un ID, charger le client
+    if (clientOrId) {
+      try {
+        const result = await this.getClient(clientOrId);
+        if (result && result.success && result.client) {
+          return toBoolean(result.client.estTherapeute);
+        }
+      } catch (error) {
+        this.log.error('Erreur lors de la vérification du statut thérapeute:', error);
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Nettoie le cache des clients
+   */
+  _clearCache() {
+    this._cacheClient = {};
+    this.log.debug('Cache des clients nettoyé');
+  }
+
+  // ========================================
+  // ⚠️ MÉTHODES DÉPRÉCIÉES
+  // Utiliser clientValidators.js ou useClientValidation.js à la place
+  // ========================================
+
+  /**
+   * @deprecated Utiliser validateEmail de clientValidators.js à la place
    * Vérifie si une adresse email est valide
    * @param {string} email Adresse email à valider
    * @returns {boolean} True si l'email est valide
    */
   isValidEmail(email) {
+    console.warn('⚠️ ClientService.isValidEmail est DÉPRÉCIÉ. Utiliser validateEmail de clientValidators.js');
+    
     // Si le champ est vide, on le considère comme valide (non obligatoire)
     if (!email) {
       return true;
@@ -269,22 +295,21 @@ class ClientService {
   }
 
   /**
+   * @deprecated Utiliser validatePhone de clientValidators.js à la place
    * Détecte le type de numéro de téléphone (suisse ou étranger)
    * @param {string} phone Numéro à analyser
-   * @returns {Object} Informations sur le numéro
+   * @returns {string|null} Type de téléphone ('swiss', 'foreign', null)
    */
   detectPhoneType(phone) {
-    // Si le champ est vide, retourner un objet vide
+    console.warn('⚠️ ClientService.detectPhoneType est DÉPRÉCIÉ. Utiliser validatePhone de clientValidators.js');
+    
+    // Si le champ est vide, retourner null
     if (!phone) {
-      return {
-        isValid: true,
-        type: null,
-        formattedNumber: ''
-      };
+      return null;
     }
     
     // Nettoyer le numéro pour l'analyse (garder uniquement les chiffres et le +)
-    const cleanedPhone = phone.replace(/[^\d+]/g, '');
+    const cleanedPhone = this._cleanPhoneNumber(phone);
     
     // Vérifier si c'est un numéro suisse
     // Format international suisse: +41 suivi de 9 chiffres
@@ -292,114 +317,30 @@ class ClientService {
     // Format national suisse: 0 suivi de 9 chiffres
     const swissNationalRegex = /^0\d{9}$/;
     
+    if (swissInternationalRegex.test(cleanedPhone) || swissNationalRegex.test(cleanedPhone)) {
+      return 'swiss';
+    }
+    
     // Vérifier si c'est un autre numéro international (commence par + mais pas +41)
-    const otherInternationalRegex = /^\+(?!41)\d{1,3}\d{4,14}$/;
+    const otherInternationalRegex = /^\+(?!41)\d{7,15}$/;
     
-    let result = {
-      isValid: false,
-      type: null,
-      formattedNumber: phone
-    };
-    
-    // Déterminer le type et formater le numéro
-    if (swissInternationalRegex.test(cleanedPhone)) {
-      // Numéro suisse au format international
-      result.isValid = true;
-      result.type = 'swiss';
-      
-      // Formater: +41 xx xxx xx xx
-      const groups = cleanedPhone.match(/^\+41(\d{2})(\d{3})(\d{2})(\d{2})$/);
-      if (groups) {
-        result.formattedNumber = `+41 ${groups[1]} ${groups[2]} ${groups[3]} ${groups[4]}`;
-      }
-    } 
-    else if (swissNationalRegex.test(cleanedPhone)) {
-      // Numéro suisse au format national (convertir en international)
-      result.isValid = true;
-      result.type = 'swiss';
-      
-      // Convertir en format international et formater
-      const internationalNumber = '+41' + cleanedPhone.substring(1);
-      const groups = internationalNumber.match(/^\+41(\d{2})(\d{3})(\d{2})(\d{2})$/);
-      if (groups) {
-        result.formattedNumber = `+41 ${groups[1]} ${groups[2]} ${groups[3]} ${groups[4]}`;
-      }
-    } 
-    else if (otherInternationalRegex.test(cleanedPhone)) {
-      // Autre numéro international
-      result.isValid = true;
-      result.type = 'foreign';
-      
-      // Garder le format tel quel pour les numéros étrangers
-      result.formattedNumber = cleanedPhone;
-    } 
-    else if (cleanedPhone.length >= 8) {
-      // Si le numéro a au moins 8 chiffres mais ne correspond pas aux formats reconnus
-      result.isValid = true;
-      result.type = 'foreign';
-      result.formattedNumber = cleanedPhone;
+    if (otherInternationalRegex.test(cleanedPhone)) {
+      return 'foreign';
     }
     
-    return result;
+    // Si aucun format reconnu
+    return null;
   }
 
   /**
-   * Prépare un numéro de téléphone pour le stockage
-   * @param {string} phone Numéro de téléphone
-   * @param {string} type Type de numéro ('swiss' ou 'foreign')
-   * @returns {string} Numéro formaté pour le stockage
-   * @private
+   * @deprecated Méthode interne dépréciée
+   * Nettoie un numéro de téléphone
+   * @param {string} phone Numéro à nettoyer
+   * @returns {string} Numéro nettoyé
    */
-  _cleanPhoneNumber(phone, type = null) {
-    if (!phone) {
-      return '';
-    }
-    
-    // Si le type n'est pas fourni, le détecter
-    if (!type) {
-      const phoneInfo = this.detectPhoneType(phone);
-      type = phoneInfo.type;
-    }
-    
-    // Nettoyer le numéro (garder les chiffres et le +)
-    const cleanedPhone = phone.replace(/[^\d+]/g, '');
-    
-    // Si c'est un numéro suisse au format national, le convertir en international
-    if (type === 'swiss' && cleanedPhone.startsWith('0')) {
-      return '+41' + cleanedPhone.substring(1);
-    }
-    
-    return cleanedPhone;
-  }
-
-  /**
-   * Vide le cache des clients
-   * @private
-   */
-  _clearCache() {
-    this._cacheClient = {};
-  }
-
-  /**
-   * Vérifie si un client est thérapeute
-   * @param {string|number} id ID du client
-   * @returns {Promise<boolean>} True si le client est thérapeute
-   */
-  async estTherapeute(id) {
-    try {
-      // Vérifier si le client est dans le cache
-      if (this._cacheClient[id]) {
-        // ✅ UTILISATION DE LA NORMALISATION BOOLÉENNE
-        return toBoolean(this._cacheClient[id].estTherapeute);
-      }
-      
-      const client = await this.getClient(id);
-      // ✅ UTILISATION DE LA NORMALISATION BOOLÉENNE
-      return client ? toBoolean(client.estTherapeute) : false;
-    } catch (error) {
-      console.error(`Erreur lors de la vérification du statut thérapeute du client ${id}:`, error);
-      return false;
-    }
+  _cleanPhoneNumber(phone) {
+    if (!phone) return '';
+    return phone.replace(/[^\d+]/g, '');
   }
 }
 

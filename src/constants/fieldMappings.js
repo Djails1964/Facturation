@@ -4,6 +4,10 @@
 import { MdNotificationAdd } from 'react-icons/md';
 import FieldConverter from '../utils/FieldConverter';
 
+import { createLogger } from '../utils/createLogger';
+
+const log = createLogger('FieldMappings');
+
 /**
  * Configuration des mappings pour l'application de facturation
  * ✅ Cohérent avec votre organisation existante dans src/constants
@@ -32,13 +36,16 @@ const GENERIC_MAPPINGS = {
   isDefault: 'is_default',
   isArchived: 'is_archived',
   isDeleted: 'is_deleted',
+  actif: 'actif',
+
   
   // Métadonnées
   createdAt: 'created_at',
   updatedAt: 'updated_at',
   deletedAt: 'deleted_at',
   createdBy: 'created_by',
-  updatedBy: 'updated_by'
+  updatedBy: 'updated_by',
+  timestamp: 'timestamp'
 };
 
 // ================================
@@ -60,6 +67,7 @@ const FACTURATION_MAPPINGS = {
   montantTotal: 'montant_total',
   montantPayeTotal: 'montant_paye_total',
   montantRestant: 'montant_restant',
+  montantBrut: 'montant_brut',
   nbPaiements: 'nb_paiements',
   statutFacture: 'statut_facture',
   modeReglement: 'mode_reglement',
@@ -121,7 +129,20 @@ const TARIFICATION_MAPPINGS = {
   prixTarifSpecial: 'prix_tarif_special',
   dateDebutTarifSpecial: 'date_debut_tarif_special',
   dateFinTarifSpecial: 'date_fin_tarif_special',
-  noteTarifSpecial: 'note_tarif_special'
+  noteTarifSpecial: 'note_tarif_special',
+
+  // ✅ NOUVEAU : Données enrichies pour getDonneesInitiales
+  // Services avec unités liées
+  unitesLiees: 'unites_liees',
+  uniteDefaut: 'unite_defaut',
+  idUniteDefaut: 'id_unite_defaut',
+  nombreUnites: 'nombre_unites',
+  
+  // Unités dans les relations
+  isDefaultPourService: 'is_default_pour_service',
+  
+  // Types tarifs
+  typesTarifs: 'types_tarifs'
 };
 
 // ================================
@@ -292,7 +313,7 @@ function cleanDataForApi(data) {
     
     // Si c'est un champ de date et que la valeur est une chaîne vide ou undefined
     if (DATE_FIELDS.includes(key) && (value === '' || value === undefined)) {
-      console.log(`🔄 Conversion date vide pour ${key}: "${value}" → null`);
+      log.debug(`🔄 Conversion date vide pour ${key}: "${value}" → null`);
       cleanedData[key] = null;
     }
   });
@@ -316,7 +337,7 @@ function toApiFormatWithDateHandling(data, options = {}) {
   // Étape 3: Double vérification des dates en snake_case APRÈS conversion
   const finalCleanedData = cleanDataForApi(convertedData);
   
-  console.log('🔄 Conversion complète avec gestion dates:', {
+  log.debug('🔄 Conversion complète avec gestion dates:', {
     original: data,
     cleaned: cleanedData,
     converted: convertedData,
@@ -403,18 +424,18 @@ const CONTEXT_MAPPINGS = {
  * Initialise FieldConverter avec tous les mappings
  */
 function initializeFieldMappings() {
-  console.log('🔧 Initialisation des mappings de champs...');
+  log.debug('🔧 Initialisation des mappings de champs...');
   
   // Ajouter tous les mappings au FieldConverter
   FieldConverter.addMappings(ALL_MAPPINGS);
   
-  console.log(`✅ ${Object.keys(ALL_MAPPINGS).length} mappings configurés`);
-  console.log(`📅 ${DATE_FIELDS.length} champs de date surveillés`);
+  log.debug(`✅ ${Object.keys(ALL_MAPPINGS).length} mappings configurés`);
+  log.debug(`📅 ${DATE_FIELDS.length} champs de date surveillés`);
   
   // Debug si en mode développement
   if (process.env.NODE_ENV === 'development') {
-    console.log('📋 Mappings par contexte:', Object.keys(CONTEXT_MAPPINGS));
-    console.log('📅 Champs de date surveillés:', DATE_FIELDS);
+    log.debug('📋 Mappings par contexte:', Object.keys(CONTEXT_MAPPINGS));
+    log.debug('📅 Champs de date surveillés:', DATE_FIELDS);
     FieldConverter.debugMappings();
   }
 }
@@ -426,13 +447,13 @@ function initializeFieldMappings() {
  */
 function getMappingsForContext(context) {
   if (!context) {
-    console.warn('⚠️ Aucun contexte spécifié, utilisation de ALL_MAPPINGS');
+    log.warn('⚠️ Aucun contexte spécifié, utilisation de ALL_MAPPINGS');
     return ALL_MAPPINGS;
   }
   
   const mappings = CONTEXT_MAPPINGS[context];
   if (!mappings) {
-    console.warn(`⚠️ Contexte "${context}" non trouvé, utilisation de ALL_MAPPINGS`);
+    log.warn(`⚠️ Contexte "${context}" non trouvé, utilisation de ALL_MAPPINGS`);
     return ALL_MAPPINGS;
   }
   
@@ -485,7 +506,7 @@ function validateMappings(data, context = null) {
  */
 function addCustomMappings(newMappings) {
   if (!newMappings || typeof newMappings !== 'object') {
-    console.warn('⚠️ Mappings invalides fournis à addCustomMappings');
+    log.warn('⚠️ Mappings invalides fournis à addCustomMappings');
     return;
   }
   
@@ -494,7 +515,7 @@ function addCustomMappings(newMappings) {
   // Réinitialiser FieldConverter avec les nouveaux mappings
   FieldConverter.addMappings(newMappings);
   
-  console.log('✅ Nouveaux mappings ajoutés:', Object.keys(newMappings));
+  log.debug('✅ Nouveaux mappings ajoutés:', Object.keys(newMappings));
 }
 
 // ================================
@@ -541,14 +562,14 @@ const API_ENDPOINTS_MAPPING = {
  * Affiche des informations de debug sur les mappings
  */
 function debugFieldMappings() {
-  console.group('🔍 FieldMappings - Debug Info');
-  console.log('📋 Total mappings:', Object.keys(ALL_MAPPINGS).length);
-  console.log('📅 Champs de date:', DATE_FIELDS.length);
-  console.log('🏷️ Contextes disponibles:', Object.keys(CONTEXT_MAPPINGS));
-  console.log('🔗 Endpoints auto-convert:', API_ENDPOINTS_MAPPING.autoConvert);
-  console.log('❌ Endpoints exclus:', API_ENDPOINTS_MAPPING.skipConversion);
-  console.log('📅 Gestion des dates activée:', API_ENDPOINTS_MAPPING.useDateHandling);
-  console.groupEnd();
+  log.group('🔍 FieldMappings - Debug Info');
+  log.debug('📋 Total mappings:', Object.keys(ALL_MAPPINGS).length);
+  log.debug('📅 Champs de date:', DATE_FIELDS.length);
+  log.debug('🏷️ Contextes disponibles:', Object.keys(CONTEXT_MAPPINGS));
+  log.debug('🔗 Endpoints auto-convert:', API_ENDPOINTS_MAPPING.autoConvert);
+  log.debug('❌ Endpoints exclus:', API_ENDPOINTS_MAPPING.skipConversion);
+  log.debug('📅 Gestion des dates activée:', API_ENDPOINTS_MAPPING.useDateHandling);
+  log.groupEnd();
 }
 
 /**
@@ -566,16 +587,16 @@ function testFieldConversion(testData = null) {
   
   const data = testData || defaultTestData;
   
-  console.group('🧪 Test de conversion');
-  console.log('Données originales:', data);
+  log.group('🧪 Test de conversion');
+  log.debug('Données originales:', data);
   
   const cleaned = cleanDataForApi(data);
-  console.log('Après nettoyage dates:', cleaned);
+  log.debug('Après nettoyage dates:', cleaned);
   
   const converted = toApiFormatWithDateHandling(data);
-  console.log('Après conversion complète:', converted);
+  log.debug('Après conversion complète:', converted);
   
-  console.groupEnd();
+  log.groupEnd();
 }
 
 // ================================

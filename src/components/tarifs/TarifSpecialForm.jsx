@@ -11,10 +11,30 @@ import { useTarifSpecialFormHandlers } from './hooks/useTarifSpecialFormHandlers
 import { FORM_MODES, FORM_TITLES, LOADING_MESSAGES } from '../../constants/tarifConstants';
 // import '../../styles/components/tarifs/TarifForm.css';
 
-function TarifSpecialForm({ mode = FORM_MODES.VIEW, tarifSpecialId = null, onRetourListe, onTarifSpecialCreated }) {
+function TarifSpecialForm({ 
+    mode = FORM_MODES.VIEW, 
+    tarifSpecialId = null, 
+    onRetourListe, 
+    onTarifSpecialCreated,
+    clients = [],
+    services = [],
+    unites = [],
+    tarificationService,
+    loadUnitesByService  
+}) {
     
     // Hooks personnalisés pour la logique métier
-    const formState = useTarifSpecialForm({ mode, tarifSpecialId, onRetourListe, onTarifSpecialCreated });
+    const formState = useTarifSpecialForm({ 
+        mode, 
+        tarifSpecialId, 
+        onRetourListe, 
+        onTarifSpecialCreated,
+        clients,
+        services,
+        unites,
+        tarificationService,
+        loadUnitesByService 
+    });
     const formLogic = useTarifSpecialFormLogic(formState);
     const formValidation = useTarifSpecialFormValidation(formState);
     const formHandlers = useTarifSpecialFormHandlers(formState, formLogic, formValidation);

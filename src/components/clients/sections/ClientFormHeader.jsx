@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { LOADING_MESSAGES } from '../../../constants/clientConstants';
+import { createLogger } from '../../../utils/createLogger';
 
 /**
  * En-tête du formulaire client avec titre et indicateurs de statut
@@ -17,6 +18,9 @@ function ClientFormHeader({
   children 
 }) {
   
+  // ✅ Initialisation du logger
+  const logger = createLogger('ClientFormHeader');
+
   const getHeaderClasses = () => {
     const classes = ['content-section-title'];
     if (className) classes.push(className);

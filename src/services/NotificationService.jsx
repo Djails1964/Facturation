@@ -45,11 +45,14 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { FiCheckCircle, FiXCircle, FiAlertTriangle, FiInfo } from 'react-icons/fi';
 import { toBoolean, normalizeBooleanFields } from '../utils/booleanHelper';
+import { createLogger } from '../utils/createLogger';
 import '../styles/NotificationService.css';
 
 // =============================================================================
 // CONSTANTES
 // =============================================================================
+
+const log = createLogger('NotificationService');
 
 export const NOTIFICATION_TYPES = {
   SUCCESS: 'success',
@@ -213,7 +216,7 @@ export const NotificationProvider = ({ children, initialConfig = {} }) => {
       { ...DEFAULT_CONFIG, ...initialConfig },
       Object.keys(DEFAULT_CONFIG)
     );
-    console.log('✅ Configuration notifications normalisée:', normalizedConfig);
+    log.debug('✅ Configuration notifications normalisée:', normalizedConfig);
     return normalizedConfig;
   });
 
@@ -224,7 +227,7 @@ export const NotificationProvider = ({ children, initialConfig = {} }) => {
         { ...prevConfig, ...newConfig },
         Object.keys(DEFAULT_CONFIG)
       );
-      console.log('✅ Configuration notifications mise à jour:', updatedConfig);
+      log.debug('✅ Configuration notifications mise à jour:', updatedConfig);
       return updatedConfig;
     });
   }, []);
@@ -260,7 +263,7 @@ export const NotificationProvider = ({ children, initialConfig = {} }) => {
   const addNotification = useCallback((type, message, options = {}) => {
     // Vérifier les doublons
     if (isDuplicateNotification(message, type)) {
-      console.log('ℹ️ Notification dupliquée ignorée:', { type, message });
+      log.debug('ℹ️ Notification dupliquée ignorée:', { type, message });
       return null;
     }
 

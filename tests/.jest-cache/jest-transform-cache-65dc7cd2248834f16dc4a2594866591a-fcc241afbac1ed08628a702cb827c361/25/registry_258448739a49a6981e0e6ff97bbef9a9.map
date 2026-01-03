@@ -1,0 +1,1 @@
+{"version":3,"names":["behavior","exports"],"sources":["registry.js"],"sourcesContent":["'use strict';\n\nconst behavior = {};\n\nexports.behavior = behavior;\n"],"mappings":"AAAA,YAAY;;AAEZ,MAAMA,QAAQ,GAAG,CAAC,CAAC;AAEnBC,OAAO,CAACD,QAAQ,GAAGA,QAAQ","ignoreList":[]}

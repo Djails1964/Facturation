@@ -1,13 +1,27 @@
+// src/components/clients/ClientGestion.jsx
+// ✅ REFACTORISÉ: Utilisation de useClientActions au lieu de ClientService direct
+
 import React, { useState, useEffect } from 'react';
 import ClientsListe from './ClientsListe';
 import { ClientForm, FORM_MODES } from './ClientForm';
-import ClientService from '../../services/ClientService';
-import { toBoolean } from '../../utils/booleanHelper'; // ✅ IMPORT du helper
-
-// Créer une instance unique du service de clients
-const clientService = new ClientService();
+// ✅ MODIFICATION: Import de useClientActions au lieu de ClientService
+import { useClientActions } from './hooks/useClientActions';
+import { toBoolean } from '../../utils/booleanHelper';
+// ✅ Import de createLogger (déjà présent selon l'utilisateur)
+import { createLogger } from '../../utils/createLogger';
 
 function ClientGestion({ section = 'liste', idClient = null, onClientCreated = null, onSectionChange = null }) {
+    // ✅ Initialisation du logger
+    const logger = createLogger('ClientGestion');
+
+    // ✅ Utilisation de useClientActions pour les opérations API
+    const {
+        estTherapeute,
+        checkClientDeletable,
+        isLoading: actionIsLoading,
+        error: actionError
+    } = useClientActions();
+
     const [activeView, setActiveView] = useState(section);
     const [selectedClientId, setSelectedClientId] = useState(idClient);
     const [notification, setNotification] = useState({ message: '', type: '' });
@@ -33,40 +47,39 @@ function ClientGestion({ section = 'liste', idClient = null, onClientCreated = n
 
     // Fonction pour gérer le retour à la liste des clients
     const handleRetourListe = async (idClient = null, success = false, message = '', type = '') => {
-        console.log('🔄 handleRetourListe appelé avec:', { idClient, success, message, type });
+        logger.info('🔄 handleRetourListe appelé avec:', { idClient, success, message, type });
         
         if (idClient) {
             setSelectedClientId(idClient);
         }
         
-        // ✅ CORRECTION : Gérer correctement les paramètres dans l'ordre
+        // ✅ Gérer correctement les paramètres dans l'ordre
         if (message && message.trim() !== '') {
             const notificationType = type || (success ? 'success' : 'error');
-            console.log('📢 Notification définie:', { message, type: notificationType });
+            logger.debug('📢 Notification définie:', { message, type: notificationType });
             setNotification({ message, type: notificationType });
         }
         
         setActiveView('liste');
-        };
+    };
 
     // Fonction pour gérer la création réussie d'un client
     const handleClientCreated = async (idClient, message = 'Client créé avec succès') => {
         setSelectedClientId(idClient);
         setNotification({ message, type: 'success' });
         
-        // ✅ VÉRIFICATION SÉCURISÉE DU STATUT THÉRAPEUTE AVEC LE HELPER
+        // ✅ VÉRIFICATION SÉCURISÉE DU STATUT THÉRAPEUTE AVEC useClientActions
         try {
-            const estTherapeute = await clientService.estTherapeute(idClient);
-            const statutTherapeute = toBoolean(estTherapeute);
+            const statutTherapeute = await estTherapeute(idClient);
             
-            console.log(`Le client ${idClient} est${statutTherapeute ? '' : ' pas'} thérapeute`);
+            logger.info(`Le client ${idClient} est${statutTherapeute ? '' : ' pas'} thérapeute`);
             
             // Possibilité d'ajouter une logique spécifique selon le statut
             if (statutTherapeute) {
-                console.log('💚 Client thérapeute créé - actions spéciales possibles');
+                logger.debug('💚 Client thérapeute créé - actions spéciales possibles');
             }
         } catch (error) {
-            console.error('Erreur lors de la vérification du statut thérapeute', error);
+            logger.error('Erreur lors de la vérification du statut thérapeute', error);
         }
         
         // Si un gestionnaire externe a été fourni, l'appeler et laisser le parent gérer la navigation
@@ -80,18 +93,21 @@ function ClientGestion({ section = 'liste', idClient = null, onClientCreated = n
 
     // Fonction pour gérer la modification d'un client
     const handleModifierClient = (idClient) => {
+        logger.debug('✏️ Modification du client:', idClient);
         setSelectedClientId(idClient);
         setActiveView('modifier');
     };
 
     // Fonction pour gérer l'affichage d'un client
     const handleAfficherClient = (idClient) => {
+        logger.debug('👁️ Affichage du client:', idClient);
         setSelectedClientId(idClient);
         setActiveView('afficher');
     };
 
     // Fonction pour passer à la vue de création d'un nouveau client
     const handleNouveauClient = () => {
+        logger.debug('➕ Création d\'un nouveau client');
         setActiveView('nouveau');
     };
 
@@ -100,15 +116,15 @@ function ClientGestion({ section = 'liste', idClient = null, onClientCreated = n
         setNotification({ message, type: 'success' });
     };
 
-    // ✅ GESTIONNAIRE AMÉLIORÉ avec utilisation du helper booléen
+    // ✅ GESTIONNAIRE AMÉLIORÉ avec useClientActions
     const handleVerifierSuppressionClient = async (idClient) => {
         try {
-            const result = await clientService.checkClientDeletable(idClient);
+            const result = await checkClientDeletable(idClient);
             
             // ✅ UTILISATION SÉCURISÉE DU HELPER BOOLÉEN
             const aUneFacture = toBoolean(result.aUneFacture);
             
-            console.log('✅ DEBUG - Vérification suppression client:', {
+            logger.debug('✅ Vérification suppression client:', {
                 idClient,
                 aUneFacture,
                 resultBrut: result.aUneFacture,
@@ -125,7 +141,7 @@ function ClientGestion({ section = 'liste', idClient = null, onClientCreated = n
             
             return true;
         } catch (error) {
-            console.error('Erreur lors de la vérification de suppression:', error);
+            logger.error('Erreur lors de la vérification de suppression:', error);
             setNotification({
                 message: 'Erreur lors de la vérification de suppression du client.',
                 type: 'error'
@@ -143,7 +159,7 @@ function ClientGestion({ section = 'liste', idClient = null, onClientCreated = n
                         mode={FORM_MODES.CREATE}
                         onRetourListe={handleRetourListe} 
                         onClientCreated={handleClientCreated}
-                        clientService={clientService} // Passer le service au formulaire
+                        // ❌ SUPPRIMÉ: clientService - useClientActions est utilisé dans useClientForm
                     />
                 );
             case 'modifier':
@@ -152,7 +168,7 @@ function ClientGestion({ section = 'liste', idClient = null, onClientCreated = n
                         mode={FORM_MODES.EDIT}
                         onRetourListe={handleRetourListe}
                         idClient={selectedClientId}
-                        clientService={clientService} // Passer le service au formulaire
+                        // ❌ SUPPRIMÉ: clientService - useClientActions est utilisé dans useClientForm
                     />
                 );
             case 'afficher':
@@ -161,7 +177,7 @@ function ClientGestion({ section = 'liste', idClient = null, onClientCreated = n
                         mode={FORM_MODES.VIEW}
                         idClient={selectedClientId}
                         onRetourListe={handleRetourListe}
-                        clientService={clientService} // Passer le service au formulaire
+                        // ❌ SUPPRIMÉ: clientService - useClientActions est utilisé dans useClientForm
                     />
                 );
             case 'liste':
@@ -175,7 +191,7 @@ function ClientGestion({ section = 'liste', idClient = null, onClientCreated = n
                         notification={notification}
                         onClearNotification={() => setNotification({ message: '', type: '' })}
                         onSetNotification={(message, type) => setNotification({ message, type })}
-                        clientService={clientService} // Passer le service à la liste
+                        // ❌ SUPPRIMÉ: clientService - useClientActions est utilisé dans ClientsListe
                         onVerifierSuppressionClient={handleVerifierSuppressionClient}
                     />
                 );

@@ -1,52 +1,41 @@
 /* 
- * Styles communs de mise en page
+ * src/styles/layout.css - Styles de mise en page génériques
+ * ✅ Inclut les badges d'état et statuts utilisateurs
  */
 
-.ligne-container {
-  margin-bottom: 15px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  position: relative;
-}
-
-.ligne-content {
-  padding: 15px;
-}
-
-.ordre-badge {
-  /* Styles pour le badge de numéro */
-}
+/* ========== CONTENEURS DE CONTENU ========== */
 
 .content-section-container {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  background-color: transparent; /* ✅ Pas de fond par défaut */
-  border: none; /* ✅ Pas de bordure par défaut */
-  box-shadow: none; /* ✅ Pas d'ombre par défaut */
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
 }
 
-/* ✅ NOUVEAU: Variante avec titre bordeaux simple (utilisée dans FacturationPage) */
+/* ========== TITRES DE SECTION ========== */
+
 .content-section-title {
-  background-color: transparent; /* ✅ Fond transparent par défaut */
-  padding: 0 0 25px 0; /* ✅ Padding uniquement en bas */
-  border-radius: 0; /* ✅ Pas d'arrondi par défaut */
-  text-align: left; /* ✅ Alignement à gauche par défaut */
+  background-color: transparent;
+  padding: 0 0 25px 0;
+  border-radius: 0;
+  text-align: left;
   border: none;
   margin: 0;
 }
 
 .content-section-title h2 {
-  color: var(--color-primary); /* ✅ Couleur bordeaux */
+  color: var(--color-primary);
   text-align: left;
-  border-bottom: 2px solid var(--color-primary); /* ✅ Soulignement bordeaux */
+  border-bottom: 2px solid var(--color-primary);
   padding-bottom: 10px;
   margin: 0;
   font-size: 1.5rem;
-  width: 100%; /* ✅ Largeur complète pour le soulignement */
+  width: 100%;
 }
 
-/* ✅ NOUVEAU: Variante avec fond bordeaux (pour modales, sections spéciales) */
+/* Variante avec fond bordeaux */
 .content-section-title.with-background {
   background-color: var(--color-primary);
   padding: 15px;
@@ -56,22 +45,23 @@
 
 .content-section-title.with-background h2 {
   color: white;
-  border-bottom: none; /* ✅ Pas de soulignement sur fond bordeaux */
+  border-bottom: none;
   padding-bottom: 0;
 }
 
-/* ✅ VARIANTE: Titre centré */
+/* Variante centrée */
 .content-section-title.centered h2 {
   text-align: center;
 }
 
-/* ✅ VARIANTE: Titre sans soulignement */
+/* Variante sans soulignement */
 .content-section-title.no-underline h2 {
   border-bottom: none;
   padding-bottom: 0;
 }
 
-/* Notification */
+/* ========== NOTIFICATIONS ========== */
+
 .notification {
   padding: 12px 15px;
   margin: 0 0 15px 0;
@@ -93,6 +83,12 @@
   border: 1px solid #f5c6cb;
 }
 
+.notification.warning {
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  border: 1px solid #ffeaa7;
+}
+
 .notification.info {
   background-color: var(--color-info-bg);
   color: var(--color-info-text);
@@ -112,9 +108,9 @@
   opacity: 0.7;
 }
 
-/* ========== ✅ BADGES D'ÉTAT UNIVERSELS ========== */
+/* ========== BADGES D'ÉTAT UNIVERSELS ========== */
+/* Utilisés pour : factures, paiements, utilisateurs, etc. */
 
-/* Badge de base - utilisé partout dans l'application */
 .etat-badge {
   display: inline-block;
   padding: var(--badge-padding);
@@ -131,7 +127,8 @@
   cursor: default;
 }
 
-/* ✅ États spécifiques des badges */
+/* ========== ÉTATS DE FACTURES ========== */
+
 .etat-badge.etat-payee {
   background-color: var(--badge-payee-bg);
   color: var(--badge-payee-text);
@@ -203,6 +200,18 @@
   background-color: var(--badge-envoyee-hover-bg);
 }
 
+/* ========== ÉTATS DE PAIEMENTS ========== */
+
+.etat-badge.etat-valide {
+  background-color: var(--badge-payee-bg);
+  color: var(--badge-payee-text);
+  border-color: var(--badge-payee-border);
+}
+
+.etat-badge.etat-valide:hover {
+  background-color: var(--badge-payee-hover-bg);
+}
+
 .etat-badge.etat-confirme {
   background-color: var(--badge-confirme-bg);
   color: var(--badge-confirme-text);
@@ -212,6 +221,31 @@
 .etat-badge.etat-confirme:hover {
   background-color: var(--badge-confirme-hover-bg);
 }
+
+/* ========== STATUTS UTILISATEURS ========== */
+/* ✅ NOUVEAU : Statuts Actif/Inactif */
+
+.etat-badge.etat-actif {
+  background-color: var(--badge-payee-bg);
+  color: var(--badge-payee-text);
+  border-color: var(--badge-payee-border);
+}
+
+.etat-badge.etat-actif:hover {
+  background-color: var(--badge-payee-hover-bg);
+}
+
+.etat-badge.etat-inactif {
+  background-color: var(--badge-retard-bg);
+  color: var(--badge-retard-text);
+  border-color: var(--badge-retard-border);
+}
+
+.etat-badge.etat-inactif:hover {
+  background-color: var(--badge-retard-hover-bg);
+}
+
+/* ========== BADGE PAR DÉFAUT ========== */
 
 .etat-badge.etat-default {
   background-color: var(--badge-default-bg);
@@ -223,7 +257,8 @@
   background-color: var(--badge-default-hover-bg);
 }
 
-/* ✅ VARIANTES DE TAILLE */
+/* ========== VARIANTES DE TAILLE ========== */
+
 .etat-badge.badge-small {
   padding: var(--badge-padding-mobile);
   font-size: var(--badge-font-size-mobile);
@@ -236,12 +271,17 @@
   min-width: 100px;
 }
 
-/* ✅ RESPONSIVE */
+/* ========== RESPONSIVE ========== */
+
 @media (max-width: 768px) {
   .etat-badge {
     padding: var(--badge-padding-mobile);
     font-size: var(--badge-font-size-mobile);
     min-width: 60px;
+  }
+
+  .content-section-title h2 {
+    font-size: 1.25rem;
   }
 }
 
@@ -251,9 +291,14 @@
     font-size: 10px;
     min-width: 50px;
   }
+
+  .content-section-title h2 {
+    font-size: 1rem;
+  }
 }
 
-/* ✅ ACCESSIBILITÉ */
+/* ========== ACCESSIBILITÉ ========== */
+
 @media (prefers-reduced-motion: reduce) {
   .etat-badge {
     transition: none;
@@ -267,7 +312,8 @@
   }
 }
 
-/* ✅ PRINT */
+/* ========== IMPRESSION ========== */
+
 @media print {
   .etat-badge {
     background: white !important;

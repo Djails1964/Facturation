@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { FiDollarSign, FiCreditCard, FiClock } from 'react-icons/fi';
-import PaiementService from '../../../services/PaiementService';
+import { FiDollarSign, FiCreditCard } from 'react-icons/fi';
 // ✅ AJOUT: Import des formatters centralisés
 import { formatMontant, formatDate } from '../../../utils/formatters';
+import { createLogger } from '../../../utils/createLogger';
 import '../../../styles/components/factures/FactureHistoriquePaiements.css';
+import { usePaiementActions } from '../../paiements/hooks/usePaiementActions';
 
 /**
  * Composant pour afficher l'historique des paiements d'une facture
@@ -15,24 +16,26 @@ function FactureHistoriquePaiements({
   // ✅ SUPPRESSION: formatMontant et formatDate ne sont plus des props
 }) {
 
-    console.log('🔍 Chargement de l\'historique des paiements pour la facture:', idFacture);
+  const logger = createLogger('FactureHistoriquePaiements');
+
+  logger.debug('🔍 Chargement de l\'historique des paiements pour la facture:', idFacture);
   const [historiquePaiements, setHistoriquePaiements] = useState([]);
   const [loadingHistorique, setLoadingHistorique] = useState(false);
   const [hasData, setHasData] = useState(false);
   
-  const paiementService = React.useMemo(() => new PaiementService(), []);
+  const paiementActions = usePaiementActions();
 
   // Charger l'historique des paiements
   const chargerHistoriquePaiements = async () => {
     if (!idFacture || loadingHistorique) return;
 
-    console.log('🚀 Début du chargement de l\'historique des paiements...');
+    logger.debug('🚀 Début du chargement de l\'historique des paiements...');
 
     setLoadingHistorique(true);
     try {
-      console.log('🔍 Chargement historique pour facture:', idFacture);
-      const response = await paiementService.getPaiementsParFacture(idFacture);
-      console.log('📊 Historique des paiements reçu:', response);
+      logger.debug('🔍 Chargement historique pour facture:', idFacture);
+      const response = await paiementActions.getPaiementsParFacture(idFacture);
+      logger.debug('📊 Historique des paiements reçu:', response);
       
       // ✅ CORRECTION : getPaiementsParFacture retourne directement un tableau ou une réponse avec success
       let paiements = [];
@@ -40,15 +43,15 @@ function FactureHistoriquePaiements({
       if (Array.isArray(response)) {
         // Si c'est directement un tableau
         paiements = response;
-        console.log('✅ Réponse directe en tableau:', paiements);
+        logger.debug('✅ Réponse directe en tableau:', paiements);
       } else if (response && response.success && response.paiements) {
         // Si c'est une réponse avec success
         paiements = response.paiements;
-        console.log('✅ Réponse avec success:', paiements);
+        logger.debug('✅ Réponse avec success:', paiements);
       } else if (response && Array.isArray(response.paiements)) {
         // Si c'est une réponse sans success mais avec paiements
         paiements = response.paiements;
-        console.log('✅ Réponse avec paiements:', paiements);
+        logger.debug('✅ Réponse avec paiements:', paiements);
       }
       
       if (paiements && paiements.length > 0) {
@@ -72,14 +75,14 @@ function FactureHistoriquePaiements({
         
         setHistoriquePaiements(paiementsAdaptes);
         setHasData(true);
-        console.log('✅ Historique chargé et adapté:', paiementsAdaptes);
+        logger.debug('✅ Historique chargé et adapté:', paiementsAdaptes);
       } else {
-        console.log('ℹ️ Aucun paiement trouvé pour la facture:', idFacture);
+        logger.debug('ℹ️ Aucun paiement trouvé pour la facture:', idFacture);
         setHistoriquePaiements([]);
         setHasData(false);
       }
     } catch (error) {
-      console.error('❌ Erreur lors du chargement de l\'historique:', error);
+      logger.error('❌ Erreur lors du chargement de l\'historique:', error);
       setHistoriquePaiements([]);
       setHasData(false);
     } finally {

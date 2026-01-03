@@ -1,5 +1,6 @@
-// src/utils/modalSystem.js - VERSION AMÉLIORÉE
-// SYSTÈME MODAL UNIFIÉ AVEC POSITIONNEMENT INTELLIGENT ET CORRECTIONS
+import { createLogger } from './createLogger';
+
+const log = createLogger('ModalSystem');
 
 const MODAL_TYPES = {
   CONFIRMATION: 'confirmation',
@@ -64,7 +65,7 @@ class ModalSystem {
       setTimeout(() => this.handleResize(), 100);
     });
     
-    console.log('🎯 Système de positionnement intelligent initialisé');
+    log.info('🎯 Système de positionnement intelligent initialisé');
   }
 
   /**
@@ -125,11 +126,11 @@ class ModalSystem {
           };
         }
       } catch (error) {
-        console.warn('⚠️ Erreur calcul position intelligente, fallback centré:', error);
+        log.warn('⚠️ Erreur calcul position intelligente, fallback centré:', error);
       }
     }
     
-    console.log('📍 Position calculée:', {
+    log.debug('📍 Position calculée:', {
       strategy: position.strategy,
       top: position.top,
       left: position.left,
@@ -239,7 +240,7 @@ class ModalSystem {
       this.enableInternalScroll(container, position.maxHeight);
     }
     
-    console.log('🎨 Styles appliqués:', {
+    log.debug('🎨 Styles appliqués:', {
       strategy: position.strategy,
       overlayPadding: overlay.style.padding,
       containerPosition: container.style.position,
@@ -285,7 +286,7 @@ class ModalSystem {
       this.detectAndHandleScroll(modalForm, container);
     }, 100);
     
-    console.log('📏 Scroll interne activé:', {
+    log.debug('📏 Scroll interne activé:', {
       availableHeight,
       headerHeight,
       footerHeight,
@@ -308,7 +309,7 @@ class ModalSystem {
       this.addScrollIndicator(container);
     }
     
-    console.log('📊 Scroll détecté:', {
+    log.debug('📊 Scroll détecté:', {
       hasScroll,
       scrollHeight: modalForm.scrollHeight,
       clientHeight: modalForm.clientHeight
@@ -417,7 +418,7 @@ class ModalSystem {
       this.addRepositionIndicator(container);
     }
     
-    console.log('🔧 Ajustement post-rendu:', {
+    log.debug('🔧 Ajustement post-rendu:', {
       wasAdjusted,
       finalRect: container.getBoundingClientRect(),
       strategy: originalPosition.strategy
@@ -457,7 +458,7 @@ class ModalSystem {
       footer.style.justifyContent = 'center';
     }
     
-    console.log('📱 Corrections mobiles appliquées');
+    log.debug('📱 Corrections mobiles appliquées');
   }
 
   /**
@@ -466,7 +467,7 @@ class ModalSystem {
   handleResize() {
     clearTimeout(this.resizeTimeout);
     this.resizeTimeout = setTimeout(() => {
-      console.log('📐 Redimensionnement détecté, repositionnement des modales...');
+      log.info('📐 Redimensionnement détecté, repositionnement des modales...');
       
       this.activeModals.forEach((modal, modalId) => {
         const { container, config } = modal;
@@ -493,7 +494,7 @@ class ModalSystem {
   initializeDragAndDrop(container) {
     // ✅ Ne pas activer le drag sur mobile pour éviter les conflits
     if (window.innerWidth <= 768) {
-      console.log('📱 Drag & drop désactivé sur mobile');
+      log.info('📱 Drag & drop désactivé sur mobile');
       return;
     }
     
@@ -535,7 +536,7 @@ class ModalSystem {
     // ✅ Les événements mousemove et mouseup sont déjà attachés globalement dans le constructeur
     // Pas besoin de les réattacher ici
     
-    console.log('🖱️ Drag & drop initialisé pour la modal');
+    log.info('🖱️ Drag & drop initialisé pour la modal');
   }
 
   // ✅ Les méthodes de drag existantes restent inchangées
@@ -565,7 +566,7 @@ class ModalSystem {
     document.body.style.userSelect = 'none';
     container.classList.add('dragging');
     
-    console.log('🖱️ Début du drag détecté');
+    log.debug('🖱️ Début du drag détecté');
   }
 
   handleDragMove(e) {
@@ -617,7 +618,7 @@ class ModalSystem {
     
     // ✅ NOUVEAU: Si on a bougé, empêcher les clics pendant un court moment
     if (hasMoved && element) {
-      console.log('🚫 Drag terminé avec mouvement - désactivation temporaire des clics');
+      log.debug('🚫 Drag terminé avec mouvement - désactivation temporaire des clics');
       
       // Désactiver temporairement les événements de clic
       element.style.pointerEvents = 'none';
@@ -626,7 +627,7 @@ class ModalSystem {
       setTimeout(() => {
         if (element && element.isConnected) {
           element.style.pointerEvents = '';
-          console.log('✅ Clics réactivés après drag');
+          log.debug('✅ Clics réactivés après drag');
         }
       }, 100);
     }
@@ -642,7 +643,7 @@ class ModalSystem {
       hasMoved: false
     };
     
-    console.log('🏁 Drag terminé, hasMoved:', hasMoved);
+    log.debug('🏁 Drag terminé, hasMoved:', hasMoved);
   }
 
 
@@ -695,9 +696,14 @@ class ModalSystem {
    */
   // [Toutes les méthodes generateModalHTML, generateInputsHTML, etc. restent identiques]
   generateModalHTML(config) {
+
+    // ✅ MODIFICATION: Ajouter un indicateur 🎯 en développement uniquement
+    const isDev = process.env.NODE_ENV === 'development';
+    const unifiedBadge = isDev ? '🎯 ' : '';
+
     let html = `
       <div class="unified-modal-header">
-        <h3 class="unified-modal-title">${config.title || ''}</h3>
+        <h3 class="unified-modal-title">${unifiedBadge}${config.title || ''}</h3>
         <button class="unified-modal-close" data-action="close">×</button>
       </div>
       <div class="modal-form">
@@ -870,7 +876,7 @@ class ModalSystem {
     return new Promise((resolve) => {
       const modalId = `modal-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
-      console.log('🎭 Ouverture modal:', {
+      log.info('🎭 Ouverture modal:', {
         id: modalId,
         type: config.type,
         size: config.size,
@@ -946,7 +952,7 @@ class ModalSystem {
         }, 100);
       });
       
-      console.log('✅ Modal créée avec succès:', {
+      log.info('✅ Modal créée avec succès:', {
         id: modalId,
         position: position.strategy,
         size: estimatedSize,
@@ -974,13 +980,13 @@ class ModalSystem {
 
       // ✅ Vérifier si on vient de terminer un drag
       if (this.dragState.isDragging || container.style.pointerEvents === 'none') {
-        console.log('🚫 Clic ignoré - drag en cours ou récemment terminé');
+        log.debug('🚫 Clic ignoré - drag en cours ou récemment terminé');
         e.preventDefault();
         e.stopPropagation();
         return;
       }
 
-      console.log('🔘 Action modal:', action, 'sur modal:', modalId);
+      log.info('🔘 Action modal:', action, 'sur modal:', modalId);
 
       e.preventDefault();
       e.stopPropagation();
@@ -1026,7 +1032,7 @@ class ModalSystem {
     const handleOverlayClick = (e) => {
       // Ne pas fermer si on vient de draguer
       if (this.dragState.isDragging || container.style.pointerEvents === 'none') {
-        console.log('🚫 Clic overlay ignoré - drag en cours');
+        log.debug('🚫 Clic overlay ignoré - drag en cours');
         e.preventDefault();
         e.stopPropagation();
         return;
@@ -1059,7 +1065,7 @@ class ModalSystem {
         try {
           config.onMount(container);
         } catch (error) {
-          console.error('❌ Erreur dans onMount:', error);
+          log.error('❌ Erreur dans onMount:', error);
         }
       }, 150);
     }
@@ -1087,7 +1093,7 @@ class ModalSystem {
 
       const { overlay, container, resolve, eventHandlers } = modal;
 
-      console.log('🚪 Fermeture modal:', modalId, 'avec résultat:', result);
+      log.debug('🚪 Fermeture modal:', modalId, 'avec résultat:', result);
 
       // ✅ Supprimer les event listeners
       if (eventHandlers) {
@@ -1388,7 +1394,7 @@ class ModalSystem {
         ...this.positionConfig,
         ...newConfig
       };
-      console.log('⚙️ Configuration positionnement mise à jour:', this.positionConfig);
+      log.debug('⚙️ Configuration positionnement mise à jour:', this.positionConfig);
     }
 
     // ✅ MÉTHODE DE TEST pour vérifier le positionnement
@@ -1434,7 +1440,7 @@ class ModalSystem {
         }
       });
 
-      console.log('🧪 Test de positionnement:', info);
+      log.debug('🧪 Test de positionnement:', info);
       return info;
     }
   }

@@ -305,6 +305,41 @@ class DateService {
     }
 
     /**
+     * Convertit une string au format DD.MM.YYYY (format d'affichage européen) en objet Date
+     * @param {string} dateString - String au format DD.MM.YYYY
+     * @returns {Date|null} - Objet Date ou null si invalide
+     */
+    static fromDisplayFormat(dateString) {
+        if (!dateString || typeof dateString !== 'string') return null;
+        
+        try {
+            // Vérifier le format DD.MM.YYYY
+            if (!dateString.match(/^\d{2}\.\d{2}\.\d{4}$/)) return null;
+            
+            const parts = dateString.split('.');
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1; // Mois 0-indexé
+            const year = parseInt(parts[2], 10);
+            
+            // Créer la date en heure locale
+            const date = new Date(year, month, day);
+            
+            // Vérifier que la date est valide
+            if (date.getFullYear() !== year || 
+                date.getMonth() !== month || 
+                date.getDate() !== day) {
+                return null;
+            }
+            
+            return date;
+            
+        } catch (error) {
+            console.error(DATE_ERROR_MESSAGES.CONVERSION_ERROR, error);
+            return null;
+        }
+    }
+
+    /**
      * Convertit une date en string au format YYYY-MM-DD (pour inputs HTML)
      * @param {Date|string} date - Date à convertir
      * @returns {string} - Date au format YYYY-MM-DD
@@ -373,7 +408,9 @@ class DateService {
         if (!date) return '';
         
         try {
-            const dateObj = typeof date === 'string' ? (this.fromInputFormat(date) || new Date(date)) : date;
+            const dateObj = typeof date === 'string' ? 
+                (this.fromDisplayFormat(date) || this.fromInputFormat(date) || new Date(date)) : date;
+            
             if (isNaN(dateObj.getTime())) return '';
             
             switch (format) {

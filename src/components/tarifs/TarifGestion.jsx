@@ -13,10 +13,7 @@ import TarifTabs from './components/TarifTabs';
 import TarifContent from './components/TarifContent';
 import TarifNotifications from './components/TarifNotifications';
 import TarifAuthorization from './components/TarifAuthorization';
-
-// Services et utilitaires
-import { TarifFormService } from './services/TarifFormService';
-import { TarifValidationService } from './services/TarifValidationService';
+import { createLogger } from '../../utils/createLogger';
 
 import '../../styles/components/tarifs/TarifGestion.css';
 
@@ -28,13 +25,15 @@ const TarifGestion = ({
   preselectedData = {}
 }) => {
 
+  const log = createLogger('TarifGestion');
+
   // ✅ AJOUT: Logs pour tracker le cycle de vie
-  console.log('🎬 TarifGestion - RENDER');
+  log.debug('🎬 TarifGestion - RENDER');
   
   useEffect(() => {
-    console.log('✅ TarifGestion - MOUNTED');
+    log.debug('✅ TarifGestion - MOUNTED');
     return () => {
-      console.log('❌ TarifGestion - UNMOUNTED (démontage)');
+      log.debug('❌ TarifGestion - UNMOUNTED (démontage)');
     };
   }, []);
 
@@ -57,7 +56,8 @@ const TarifGestion = ({
   const { 
     handleCreateItem,
     handleEditItem, 
-    handleDeleteItem 
+    handleDeleteItem,
+    handleUnlinkServiceUnite 
   } = useTarifModals({
     gestionState,
     addNotification,
@@ -74,7 +74,7 @@ const TarifGestion = ({
   const handleTabChange = (newTab) => {
     interceptNavigation(
       () => {
-        console.log('🔄 Changement onglet tarifs:', activeTab, '->', newTab);
+        log.debug('🔄 Changement onglet tarifs:', activeTab, '->', newTab);
         setActiveTab(newTab);
         
         setCreatedIds(prev => ({
@@ -102,7 +102,7 @@ const TarifGestion = ({
   };
 
   const handleBulkTarifAction = (action, tarifs) => {
-    console.log(`🔄 Action groupée: ${action}`, tarifs);
+    log.debug(`🔄 Action groupée: ${action}`, tarifs);
     
     switch (action) {
       case 'export':
@@ -184,6 +184,7 @@ const TarifGestion = ({
               onCreateItem={handleCreateItem}
               onEditItem={handleEditItem}
               onDeleteItem={handleDeleteItem}
+              onUnlinkServiceUnite={handleUnlinkServiceUnite}
               
               // Actions avancées
               onCreateFacture={handleCreateFactureFromTarif}

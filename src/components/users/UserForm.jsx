@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+
+
+import React, { useState, useEffect, useRef } from 'react';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
-import { useLogger } from '../../hooks/useLogger';
+import { createLogger } from '../../utils/createLogger';
 import {
   USER_FORM_MODES,
   USER_ROLES,
@@ -18,6 +20,7 @@ import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import { useAutoNavigationGuard } from '../../hooks/useAutoNavigationGuard';
 import { useNavigationGuard } from '../../App';
 import { useUsers } from './hooks/useUsers';
+import { useNotifications } from '../../services/NotificationService';
 import { showConfirm } from '../../utils/modalSystem';
 import '../../styles/components/users/UserForm.css';
 
@@ -25,7 +28,6 @@ import '../../styles/components/users/UserForm.css';
  * Formulaire pour créer, modifier ou afficher un utilisateur
  * Gère trois modes : CREATE, EDIT, VIEW
  * Inclut la détection des modifications et la protection de navigation
- * Utilise le logging centralisé pour tracer toutes les actions
  *
  * @param {string} mode - Mode du formulaire (CREATE, EDIT, VIEW)
  * @param {number} idUser - ID de l'utilisateur (null pour création)
@@ -40,7 +42,7 @@ const UserForm = ({
   onRetourListe,
   onUserCreated
 }) => {
-  const { log } = useLogger('UserForm');
+  const log = createLogger('UserForm');
 
   // États du formulaire
   const [formData, setFormData] = useState({
@@ -66,65 +68,69 @@ const UserForm = ({
   // Hooks
   const { createUser, updateUser } = useUsers();
   const { unregisterGuard } = useNavigationGuard();
-  const { hasUnsavedChanges, markAsSaved, requestNavigation } = useUnsavedChanges(
+  const { showError, showSuccess } = useNotifications();
+
+  // ✅ Hook de détection des modifications
+  const {
+    hasUnsavedChanges,
+    markAsSaved,
+    requestNavigation,
+    resetChanges
+  } = useUnsavedChanges(
     userData || {},
     formData,
     isSubmitting,
     false
   );
 
-  // Protéger la navigation en cas de modifications non sauvegardées
-  useAutoNavigationGuard(hasUnsavedChanges, {
+  // ✅ Protection automatique navigation globale
+  const guardId = `user-form-${idUser || 'new'}`;
+  log.info('🛡️ Enregistrement du guard avec ID:', guardId);
+  const { guardId: registeredGuardId, isProtected } = useAutoNavigationGuard(hasUnsavedChanges, {
     isActive: !isViewMode && isInitialized,
-    guardId: `user-form-${idUser || 'new'}`,
-    debug: false
+    customGuardId: guardId,
+    debug: true
   });
+  log.info('✅ Guard enregistré:', { guardId, registeredGuardId, isProtected, hasUnsavedChanges, isViewMode, isInitialized });
 
   /**
    * Initialiser le formulaire avec les données
+   * ⚠️ IMPORTANT: Ne pas inclure `log` dans les dépendances pour éviter les réinitialisations
    */
   useEffect(() => {
-    log.info('Montage formulaire', { mode, idUser });
+    if (!isInitialized) {
+      log.info('Montage formulaire', { mode, idUser });
 
-    if (userData) {
-      log.debug('Initialisation avec données', { username: userData.username });
-      setFormData(userData);
+      if (userData) {
+        log.debug('Initialisation avec données', { username: userData.username });
+        setFormData(userData);
+      }
+
+      setIsInitialized(true);
     }
-
-    setIsInitialized(true);
 
     return () => {
       log.debug('Démontage formulaire');
-      unregisterGuard(`user-form-${idUser || 'new'}`);
+      unregisterGuard(guardId);
     };
-  }, [mode, idUser, userData, log, unregisterGuard]);
+  }, [mode, idUser, userData, unregisterGuard, guardId]); // ✅ log SUPPRIMÉ des dépendances
 
   /**
-   * Gère les changements dans les champs du formulaire
+   * Gérer le changement d'un champ input
    */
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    log.debug('Changement champ', { field: name });
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
-
-    // Effacer l'erreur pour ce champ
-    if (validationErrors[name]) {
-      setValidationErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
   };
 
   /**
-   * Gère le changement de checkbox pour compte_actif
+   * Gérer le changement du checkbox "compte actif"
    */
   const handleCheckboxChange = (e) => {
     const { name, checked } = e.target;
-    log.debug('Changement checkbox', { field: name, checked });
     setFormData(prev => ({
       ...prev,
       [name]: checked
@@ -132,42 +138,36 @@ const UserForm = ({
   };
 
   /**
-   * Toggle visibilité du mot de passe
-   */
-  const togglePasswordVisibility = () => {
-    log.debug('Toggle visibilité mot de passe');
-    setShowPassword(prev => !prev);
-  };
-
-  /**
-   * Valide les données du formulaire
-   * @returns {boolean} True si validation réussie
+   * Valider le formulaire
+   * ✅ RETOURNE les erreurs au lieu de seulement les mettre dans le state
    */
   const validateForm = () => {
-    log.debug('Validation du formulaire', { mode });
-    
-    const validation = validateUserData(formData, mode);
-
+    const validation = validateUserData(formData, isCreateMode);
     if (!validation.isValid) {
-      log.warn('Validation échouée', { errors: validation.errors });
       setValidationErrors(validation.errors);
-      return false;
+      log.warn('Validation échouée', { errors: validation.errors });
+      return validation; // ✅ Retourner l'objet validation complet
     }
-
-    log.debug('Validation réussie');
     setValidationErrors({});
-    return true;
+    return validation;
   };
 
   /**
-   * Soumet le formulaire (création ou modification)
+   * Soumettre le formulaire
    */
   const handleSubmit = async (e) => {
     e.preventDefault();
     log.info('Soumission formulaire', { mode });
 
-    if (!validateForm()) {
+    // ✅ Récupérer les erreurs directement depuis validateForm()
+    const validation = validateForm();
+    if (!validation.isValid) {
       log.debug('Soumission annulée : validation échouée');
+      // ✅ Utiliser les erreurs retournées par validateForm()
+      const firstError = Object.values(validation.errors).find(err => err);
+      if (firstError) {
+        showError(firstError);
+      }
       return;
     }
 
@@ -190,6 +190,7 @@ const UserForm = ({
       if (result?.success) {
         log.info('Opération réussie', { mode, userId: result.id_utilisateur });
         markAsSaved();
+        showSuccess(isCreateMode ? USER_SUCCESS_MESSAGES.CREATE : USER_SUCCESS_MESSAGES.UPDATE);
 
         if (isCreateMode && onUserCreated) {
           onUserCreated(result.id_utilisateur, USER_SUCCESS_MESSAGES.CREATE);
@@ -201,22 +202,97 @@ const UserForm = ({
       }
     } catch (error) {
       log.error('Erreur soumission formulaire', { error: error.message });
-      setValidationErrors({ general: error.message });
+      // ✅ Afficher l'erreur via les notifications
+      showError(error.message || USER_ERROR_MESSAGES.CREATE_FAILED);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  /**
-   * Gère le retour à la liste
-   */
-  const handleRetour = () => {
-    log.debug('Retour à la liste');
+  // ✅ Écouter l'événement navigation-blocked pour afficher la modale
+  useEffect(() => {
+    const handleNavigationBlocked = async (event) => {
+      log.info('🌐 USER - Événement navigation-blocked reçu:', event.detail);
+      
+      if (event.detail && event.detail.callback) {
+        try {
+          log.info('📋 USER - Affichage de la modale de confirmation');
+          const result = await showConfirm({
+            title: "Modifications non sauvegardées",
+            message: "Vous avez des modifications non sauvegardées. Souhaitez-vous vraiment quitter sans sauvegarder ?",
+            confirmText: "Quitter sans sauvegarder",
+            cancelText: "Continuer l'édition",
+            type: 'warning'
+          });
+          
+          if (result.action === 'confirm') {
+            log.info('✅ USER - Navigation confirmée, exécution du callback');
+            resetChanges();
+            unregisterGuard(guardId);
+            event.detail.callback();
+          } else {
+            log.info('❌ USER - Navigation annulée par l\'utilisateur');
+          }
+        } catch (error) {
+          log.error('❌ Erreur modal globale:', error);
+        }
+      }
+    };
 
-    if (hasUnsavedChanges && !isViewMode) {
-      requestNavigation(() => onRetourListe?.());
-    } else {
+    log.info('🔌 USER - Enregistrement event listener pour navigation-blocked');
+    window.addEventListener('navigation-blocked', handleNavigationBlocked);
+    
+    return () => {
+      window.removeEventListener('navigation-blocked', handleNavigationBlocked);
+    };
+  }, [resetChanges, guardId, unregisterGuard, log]);
+
+  /**
+   * Gérer le retour à la liste
+   * ✅ Utiliser requestNavigation qui gère la modale via le modal system
+   */
+  const handleRetour = async () => {
+    log.debug('Retour à la liste', { hasUnsavedChanges, isViewMode });
+
+    // Cas 1 : Mode VIEW → retour direct
+    if (isViewMode) {
+      log.debug('✅ Mode VIEW - Retour direct');
       onRetourListe?.();
+      return;
+    }
+
+    // Cas 2 : Pas de modifications → retour direct
+    if (!hasUnsavedChanges) {
+      log.debug('✅ Pas de modifications - Retour direct');
+      unregisterGuard(guardId);
+      onRetourListe?.();
+      return;
+    }
+
+    // Cas 3 : Modifications détectées
+    // ✅ Afficher directement showConfirm (pas requestNavigation)
+    log.debug('⚠️ Modifications détectées - showConfirm');
+    
+    try {
+      const result = await showConfirm({
+        title: "Modifications non sauvegardées",
+        message: "Vous avez des modifications non sauvegardées. Souhaitez-vous vraiment quitter sans sauvegarder ?",
+        confirmText: "Quitter sans sauvegarder",
+        cancelText: "Continuer l'édition",
+        type: 'warning'
+      });
+      
+      if (result.action === 'confirm') {
+        log.info('✅ Confirmation locale - Nettoyage et retour');
+        resetChanges();
+        unregisterGuard(guardId);
+        // ✅ Appeler directement onRetourListe sans await
+        onRetourListe?.();
+      } else {
+        log.info('❌ Annulation locale - Reste sur le formulaire');
+      }
+    } catch (error) {
+      log.error('❌ Erreur confirmation locale:', error);
     }
   };
 
@@ -229,12 +305,6 @@ const UserForm = ({
 
       {/* Formulaire */}
       <form className="user-form-container" onSubmit={handleSubmit}>
-        {/* Message d'erreur général */}
-        {validationErrors.general && (
-          <div className="form-error-message">
-            {validationErrors.general}
-          </div>
-        )}
 
         {/* Champ : Nom d'utilisateur */}
         <div className="input-group">
@@ -244,16 +314,12 @@ const UserForm = ({
             name="username"
             value={formData.username}
             onChange={handleInputChange}
-            disabled={isViewMode || isEditMode}
+            disabled={isViewMode}
             placeholder=" "
-            className={validationErrors.username ? 'input-error' : ''}
           />
-          <label htmlFor="username" className={validationErrors.username ? 'error' : ''}>
+          <label htmlFor="username">
             {USER_FIELD_LABELS.USERNAME}
           </label>
-          {validationErrors.username && (
-            <span className="error-message">{validationErrors.username}</span>
-          )}
         </div>
 
         {/* Champ : Mot de passe */}
@@ -270,12 +336,13 @@ const UserForm = ({
             />
             <label htmlFor="password" className={validationErrors.password ? 'error' : ''}>
               {USER_FIELD_LABELS.PASSWORD}
+              {isCreateMode && ' *'}
             </label>
             <button
               type="button"
               className="password-toggle"
-              onClick={togglePasswordVisibility}
-              tabIndex="-1"
+              onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
             >
               {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
             </button>
@@ -295,14 +362,10 @@ const UserForm = ({
             onChange={handleInputChange}
             disabled={isViewMode}
             placeholder=" "
-            className={validationErrors.nom ? 'input-error' : ''}
           />
-          <label htmlFor="nom" className={validationErrors.nom ? 'error' : ''}>
+          <label htmlFor="nom">
             {USER_FIELD_LABELS.NOM}
           </label>
-          {validationErrors.nom && (
-            <span className="error-message">{validationErrors.nom}</span>
-          )}
         </div>
 
         {/* Champ : Prénom */}
@@ -315,14 +378,10 @@ const UserForm = ({
             onChange={handleInputChange}
             disabled={isViewMode}
             placeholder=" "
-            className={validationErrors.prenom ? 'input-error' : ''}
           />
-          <label htmlFor="prenom" className={validationErrors.prenom ? 'error' : ''}>
+          <label htmlFor="prenom">
             {USER_FIELD_LABELS.PRENOM}
           </label>
-          {validationErrors.prenom && (
-            <span className="error-message">{validationErrors.prenom}</span>
-          )}
         </div>
 
         {/* Champ : Email */}
@@ -335,14 +394,10 @@ const UserForm = ({
             onChange={handleInputChange}
             disabled={isViewMode}
             placeholder=" "
-            className={validationErrors.email ? 'input-error' : ''}
           />
-          <label htmlFor="email" className={validationErrors.email ? 'error' : ''}>
+          <label htmlFor="email">
             {USER_FIELD_LABELS.EMAIL}
           </label>
-          {validationErrors.email && (
-            <span className="error-message">{validationErrors.email}</span>
-          )}
         </div>
 
         {/* Champ : Rôle */}
@@ -353,18 +408,15 @@ const UserForm = ({
             value={formData.role}
             onChange={handleInputChange}
             disabled={isViewMode}
-            className={validationErrors.role ? 'input-error' : ''}
           >
+            <option value="">-- Sélectionner un rôle --</option>
             {Object.entries(USER_ROLES).map(([key, value]) => (
               <option key={value} value={value}>
-                {USER_FIELD_LABELS.ROLE_OPTIONS[key] || value}
+                {USER_FIELD_LABELS.ROLE_OPTIONS?.[key] || value}
               </option>
             ))}
           </select>
           <label htmlFor="role">{USER_FIELD_LABELS.ROLE}</label>
-          {validationErrors.role && (
-            <span className="error-message">{validationErrors.role}</span>
-          )}
         </div>
 
         {/* Champ : Compte actif */}

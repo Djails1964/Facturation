@@ -1,5 +1,10 @@
+// src/components/users/UserListTable.jsx
+/**
+ * Tableau d'affichage de la liste des utilisateurs
+*/
+
 import React, { useState } from 'react';
-import { useLogger } from '../../hooks/useLogger';
+import { createLogger } from '../../utils/createLogger';
 import { FiUser, FiShield } from 'react-icons/fi';
 import {
   EditActionButton,
@@ -11,6 +16,10 @@ import {
   getUserRoleClass,
   getFullName
 } from './helpers/userHelpers';
+import { 
+  getBadgeClasses, 
+  formatEtatText 
+} from '../../utils/formatters';
 import { USER_STATE_MESSAGES } from '../../constants/userConstants';
 import '../../styles/components/users/UserListTable.css';
 
@@ -36,7 +45,7 @@ const UserListTable = ({
   onEdit,
   onDelete
 }) => {
-  const { log } = useLogger('UserListTable');
+  const log = createLogger('UserListTable');
   const [selectedUserId, setSelectedUserId] = useState(null);
 
   log.debug('Rendu tableau', { userCount: users.length, loading, hasError: !!error });
@@ -90,88 +99,86 @@ const UserListTable = ({
   };
 
   const handleDeleteClick = (userObj) => {
-    log.info('Demande de suppression', { userId: userObj.id_utilisateur, username: userObj.username });
+    log.info('Suppression utilisateur', { userId: userObj.id_utilisateur, username: userObj.username });
     onDelete?.(userObj);
+  };
+
+  // Déterminer le statut de l'utilisateur
+  const getUserStatus = (user) => {
+    return isCompteActif(user.compte_actif) ? 'Actif' : 'Inactif';
   };
 
   return (
     <div className="users-table">
       {/* En-tête du tableau */}
       <div className="users-table-header">
-        <div className="users-header-cell users-username-cell">Utilisateur</div>
-        <div className="users-header-cell users-name-cell">Nom complet</div>
-        <div className="users-header-cell users-email-cell">Email</div>
-        <div className="users-header-cell users-role-cell">Rôle</div>
-        <div className="users-header-cell users-status-cell">Statut</div>
-        <div className="users-header-cell users-actions-cell">Actions</div>
+        <div className="users-header-cell">Username</div>
+        <div className="users-header-cell">Nom complet</div>
+        <div className="users-header-cell">Email</div>
+        <div className="users-header-cell">Rôle</div>
+        <div className="users-header-cell">Statut</div>
+        <div className="users-header-cell">Actions</div>
       </div>
 
       {/* Corps du tableau */}
       <div className="users-table-body">
-        {users.map(user => {
-          const isActive = isCompteActif(user.compte_actif);
-          const isSelected = selectedUserId === user.id_utilisateur;
-          const fullName = getFullName(user);
-          const roleClass = getUserRoleClass(user.role);
-
-          // Vérifier si la suppression est autorisée (pas soi-même, et admin uniquement)
-          const canDelete = currentUser?.id_utilisateur !== user.id_utilisateur &&
-                           currentUser?.role === 'admin';
-
+        {users.map((user) => {
+          const userStatus = getUserStatus(user);
+          const isInactive = !isCompteActif(user);
+          
           return (
             <div
               key={user.id_utilisateur}
-              className={`users-table-row ${isSelected ? 'users-selected' : ''} ${!isActive ? 'users-inactive' : ''}`}
+              className={`users-table-row ${selectedUserId === user.id_utilisateur ? 'users-selected' : ''} ${
+                isInactive ? 'users-inactive' : ''
+              }`}
               onClick={() => handleRowClick(user.id_utilisateur)}
             >
-              {/* Colonne : Utilisateur */}
-              <div className="users-cell users-username-cell">
-                <div className="users-avatar">
-                  <FiUser size={16} />
+              {/* Username */}
+              <div className="users-table-cell users-username-cell">
+                <FiUser size={16} />
+                <span>{user.username}</span>
+              </div>
+
+              {/* Nom complet */}
+              <div className="users-table-cell users-name-cell">
+                {getFullName(user)}
+              </div>
+
+              {/* Email */}
+              <div className="users-table-cell users-email-cell">
+                {user.email}
+              </div>
+
+              {/* Rôle */}
+              <div className="users-table-cell users-role-cell">
+                <FiShield size={14} />
+                <span>{user.role || 'Non défini'}</span>
+              </div>
+
+              {/* ✅ Statut avec Badge - utilise getBadgeClasses() et formatEtatText() */}
+              <div className="users-table-cell users-status-cell">
+                <span className={getBadgeClasses(userStatus)}>
+                  {formatEtatText(userStatus)}
+                </span>
+              </div>
+
+              {/* Actions */}
+              <div className="users-table-cell users-actions-cell">
+                <div className="users-action-buttons">
+                  <ViewActionButton
+                    onClick={() => handleViewClick(user)}
+                    disabled={false}
+                  />
+                  <EditActionButton
+                    onClick={() => handleEditClick(user)}
+                    disabled={false}
+                  />
+                  <DeleteActionButton
+                    onClick={() => handleDeleteClick(user)}
+                    disabled={false}
+                  />
                 </div>
-                <span className="users-username">{user.username}</span>
-              </div>
-
-              {/* Colonne : Nom complet */}
-              <div className="users-cell users-name-cell">
-                {fullName}
-              </div>
-
-              {/* Colonne : Email */}
-              <div className="users-cell users-email-cell">
-                {user.email || '-'}
-              </div>
-
-              {/* Colonne : Rôle */}
-              <div className="users-cell users-role-cell">
-                <span className={`users-role-badge ${roleClass}`}>
-                  <FiShield size={14} />
-                  {user.role}
-                </span>
-              </div>
-
-              {/* Colonne : Statut */}
-              <div className="users-cell users-status-cell">
-                <span className={`users-status-badge ${isActive ? 'active' : 'inactive'}`}>
-                  {isActive ? 'Actif' : 'Inactif'}
-                </span>
-              </div>
-
-              {/* Colonne : Actions */}
-              <div className="users-cell users-actions-cell" onClick={e => e.stopPropagation()}>
-                <ViewActionButton
-                  onClick={() => handleViewClick(user)}
-                  title="Voir"
-                />
-                <EditActionButton
-                  onClick={() => handleEditClick(user)}
-                  title="Modifier"
-                />
-                <DeleteActionButton
-                  onClick={() => handleDeleteClick(user)}
-                  disabled={!canDelete}
-                  title={canDelete ? 'Supprimer' : 'Suppression non autorisée'}
-                />
               </div>
             </div>
           );

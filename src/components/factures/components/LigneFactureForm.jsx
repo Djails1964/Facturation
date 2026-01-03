@@ -1,5 +1,6 @@
 import React from 'react';
 import { FiMove } from 'react-icons/fi';
+import { createLogger } from '../../../utils/createLogger';
 
 // Composant existant (ne change pas)
 import LigneFactureResume from './LigneFactureResume';
@@ -12,6 +13,8 @@ import {
 
 // Composant des champs avec nouvelle approche
 import LigneFactureFields from './LigneFactureFields';
+
+const log = createLogger("LigneFactureForm");
 
 /**
  * Utilitaires pour l'extraction des données depuis les objets enrichis
@@ -35,8 +38,8 @@ const EnrichedDataExtractor = {
      * Extrait le nom d'affichage d'une unité depuis l'objet enrichi
      */
     getUniteDisplayName: (ligne) => {
-        console.log("Extraction de l'unité pour la ligne:", ligne);
-        console.log("Type de l'unité:", typeof ligne.unite, ligne.unite);
+         log.debug("Extraction de l'unité pour la ligne:", ligne);
+         log.debug("Type de l'unité:", typeof ligne.unite, ligne.unite);
         if (ligne.unite && typeof ligne.unite === 'object') {
             return ligne.unite.nomUnite || ligne.unite.codeUnite || 'Unité inconnue';
         }
@@ -111,7 +114,7 @@ function LigneFactureForm({
     const uniteNom = EnrichedDataExtractor.getUniteDisplayName(ligne);
 
     // Debug pour vérifier la cohérence des données
-    console.log(`Ligne ${index} - Service: ${serviceNom}, Unité: ${uniteNom}`, {
+     log.debug(`Ligne ${index} - Service: ${serviceNom}, Unité: ${uniteNom}`, {
         hasEnrichedData: EnrichedDataExtractor.hasEnrichedData(ligne),
         serviceType: typeof ligne.service,
         uniteType: typeof ligne.unite,

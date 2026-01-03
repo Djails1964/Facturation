@@ -8,6 +8,7 @@ import {
 } from 'react-icons/fi';
 
 import { Link, X, Heart } from 'react-feather';
+import { LuUnlink } from 'react-icons/lu';
 
 // Configuration centralisée des icônes pour l'application
 export const ICONS = {
@@ -36,6 +37,7 @@ export const ICONS = {
   LOCATION: FiMapPin,
   SLACK: FiSlack,
   LINK: Link,
+  UNLINK: LuUnlink,
 
   // Utilisateurs et permissions
   USER: FiUser,

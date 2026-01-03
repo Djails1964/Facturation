@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { PHONE_TYPES, HELP_TEXTS } from '../../../constants/clientConstants';
+import { createLogger } from '../../../utils/createLogger';
 
 /**
  * Section principale du formulaire avec les champs organisés en 4 lignes
@@ -17,6 +18,9 @@ function ClientFormMainSection({
   className = ''
 }) {
   
+  // ✅ Initialisation du logger
+  const logger = createLogger('ClientFormMainSection');
+
   const sectionClasses = ['form-main-section'];
   if (className) sectionClasses.push(className);
 

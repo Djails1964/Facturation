@@ -1,12 +1,15 @@
 import React, { useEffect, useRef } from 'react';
 import '../../styles/components/factures/FactureDetailsForm.css';
 import { useTraceUpdate } from '../../useTraceUpdate';
+import { createLogger } from '../../utils/createLogger';
 
 // Hook principal refactorisé
 import { useFactureDetailsForm } from './hooks/useFactureDetailsForm';
 
 // Composants des lignes
 import LigneFactureForm from './components/LigneFactureForm';
+
+const log = createLogger("FactureDetailsForm");
 
 // Composants simples intégrés
 function LoadingSpinner({ message = "Chargement..." }) {
@@ -55,65 +58,8 @@ function AddLineButton({ onAdd, disabled = false }) {
 }
 
 /**
- * Composant simple pour afficher une ligne - REMPLACÉ par LigneFactureForm
- */
-function LigneSimple({ ligne, index, readOnly, onToggle, onSupprimer, onCopier }) {
-    const isOpen = false; // Pour l'instant, gardons simple
-
-    return (
-        <div className={`fdf_line-container ${isOpen ? 'fdf_line-open' : ''}`}>
-            <div className="fdf_order-badge">{index + 1}</div>
-            
-            <div className="fdf_line-resume-container">
-                <div className="fdf_line-content">
-                    <div className="fdf_line-service">
-                        <strong>{ligne.serviceType || 'Service non défini'}</strong>
-                        {ligne.unite && <span className="fdf_unite">({ligne.unite})</span>}
-                    </div>
-                    
-                    <div className="fdf_line-description">
-                        {ligne.description || 'Description non définie'}
-                    </div>
-                    
-                    <div className="fdf_line-amounts">
-                        <span className="fdf_quantite">Qté: {ligne.quantite || 0}</span>
-                        <span className="fdf_prix">Prix: {ligne.prixUnitaire || 0} CHF</span>
-                        <span className="fdf_total"><strong>Total: {ligne.total || 0} CHF</strong></span>
-                    </div>
-                </div>
-                
-                {!readOnly && (
-                    <div className="fdf_line-actions">
-                        <button 
-                            className="fdf_btn-small fdf_btn-edit"
-                            onClick={() => onToggle && onToggle(index)}
-                            title="Modifier"
-                        >
-                            ✏️
-                        </button>
-                        <button 
-                            className="fdf_btn-small fdf_btn-copy"
-                            onClick={() => onCopier && onCopier(index)}
-                            title="Copier"
-                        >
-                            📋
-                        </button>
-                        <button 
-                            className="fdf_btn-small fdf_btn-delete"
-                            onClick={() => onSupprimer && onSupprimer(index)}
-                            title="Supprimer"
-                        >
-                            🗑️
-                        </button>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-}
-
-/**
- * VERSION CORRIGÉE pour éliminer la boucle infinie
+ * Composant de gestion des détails de facture
+ * ✅ REFACTORISÉ : Reçoit tarifData depuis FactureForm
  */
 function FactureDetailsForm({ 
     onLignesChange, 
@@ -121,18 +67,21 @@ function FactureDetailsForm({
     isModification = false, 
     client = null, 
     readOnly = false,
-    onResetRistourne = null
+    onResetRistourne = null,
+    tarifData = null  // ✅ NOUVEAU : Données de tarification depuis FactureGestion
 }) {
 
-    console.log('🔍 Props reçues dans FactureDetailsForm:', {
+    log.debug('🔍 Props reçues dans FactureDetailsForm:', {
         lignesInitiales: lignesInitiales?.length || 0,
         lignesInitialesData: lignesInitiales,
         idClient: client?.id,
         readOnly,
-        isModification
+        isModification,
+        hasTarifData: !!tarifData,
+        tarifDataLoaded: tarifData?.isLoaded
     });
 
-    useTraceUpdate({ onLignesChange, client, readOnly }, 'FactureDetailsForm');
+    useTraceUpdate({ onLignesChange, client, readOnly, tarifData }, 'FactureDetailsForm');
 
     const {
         // États principaux
@@ -177,15 +126,18 @@ function FactureDetailsForm({
         readOnly, 
         lignesInitiales, 
         onLignesChange, 
-        onResetRistourne
+        onResetRistourne,
+        tarifData  // ✅ NOUVEAU : Passer tarifData au hook
     );
 
-    console.log('🔍 État du hook:', {
+    log.debug('🔍 État du hook:', {
         lignesCount: lignes?.length || 0,
         lignesData: lignes,
         isLoading,
         isInitialized,
-        message
+        message,
+        servicesCount: services?.length || 0,
+        unitesCount: unites?.length || 0
     });
 
     // Gestion des états de chargement
@@ -197,7 +149,7 @@ function FactureDetailsForm({
         );
     }
 
-    if (message) {
+    if (message && messageType === 'error') {
         return (
             <div className="fdf_facture-details-form">
                 <ErrorMessage message={message} type={messageType} />
@@ -205,8 +157,8 @@ function FactureDetailsForm({
         );
     }
 
-    // ✅ CORRECTION : Debug des lignes avant rendu
-    console.log('🎯 Rendu avec lignes:', {
+    // ✅ DEBUG des lignes avant rendu
+    log.debug('🎯 Rendu avec lignes:', {
         count: lignes?.length || 0,
         lignes: lignes,
         isInitialized
@@ -221,7 +173,7 @@ function FactureDetailsForm({
             />
             
             <div className="fdf_table-flex">
-                {/* ✅ CORRECTION : Utiliser LigneFactureForm au lieu de LigneSimple */}
+                {/* ✅ Utiliser LigneFactureForm */}
                 {!lignes || lignes.length === 0 ? (
                     <div className="fdf_no-lines">
                         <p>

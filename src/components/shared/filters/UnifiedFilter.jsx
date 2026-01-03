@@ -3,6 +3,9 @@
 
 import React, { useMemo, useCallback, useEffect } from 'react';
 import '../../../styles/shared/UnifiedFilter.css';
+import { createLogger } from '../../../utils/createLogger';
+
+const log = createLogger('UnifiedFilter');
 
 /**
  * Composant de filtre unifiié réutilisable
@@ -30,6 +33,9 @@ const UnifiedFilter = ({
   filteredCount = 0
 }) => {
 
+  log.debug("totalCount : ", totalCount);
+  log.debug("filteredCount : ", filteredCount);
+
   // Configuration selon le type
   const filterConfig = useMemo(() => {
     switch (filterType) {
@@ -44,7 +50,7 @@ const UnifiedFilter = ({
           defaultLabels: {
             annee: 'Toutes les années',
             client: 'Tous les clients',
-            etat: 'Tous les états'
+            etat: null // ✅ Pas d'option par défaut pour état (géré par les options)
           }
         };
 
@@ -157,8 +163,14 @@ const UnifiedFilter = ({
 
   // Vérifier filtres actifs
   const hasActiveFilters = useMemo(() => {
-    return Object.values(filters).some(value => value && value !== '' && value !== 'Tous');
-  }, [filters]);
+    return Object.entries(filters).some(([key, value]) => {
+      // Pour l'état des factures, "Sans annulées" est la valeur par défaut, donc pas considéré comme filtre actif
+      if (filterType === 'factures' && key === 'etat' && value === 'Sans annulées') {
+        return false;
+      }
+      return value && value !== '' && value !== 'Tous';
+    });
+  }, [filters, filterType]);
 
   // Gestionnaire de changement
   const handleFilterChange = useCallback((field, value) => {
@@ -170,6 +182,7 @@ const UnifiedFilter = ({
   // Rendu d'un filtre
   const renderFilter = useCallback((field) => {
     const options = filterOptions[field] || [];
+    const defaultLabel = filterConfig.defaultLabels[field];
     
     return (
       <div key={`filter-${field}`} className="input-group">
@@ -177,7 +190,10 @@ const UnifiedFilter = ({
           value={filters[field] || ''}
           onChange={(e) => handleFilterChange(field, e.target.value)}
         >
-          <option value="">{filterConfig.defaultLabels[field]}</option>
+          {/* ✅ N'afficher l'option par défaut que si elle est définie */}
+          {defaultLabel && (
+            <option value="">{defaultLabel}</option>
+          )}
           {options.map((option, index) => {
             const value = option.value !== undefined ? option.value : option;
             const label = option.label || option;
@@ -208,9 +224,12 @@ const UnifiedFilter = ({
         Filtres
         
         {hasActiveFilters && (
+          <>
+          {log.debug('Badge debug:', { filteredCount, totalCount, display: `${filteredCount} sur ${totalCount}` })}
           <span className="filter-active-badge">
             {filteredCount} sur {totalCount}
           </span>
+          </>
         )}
       </button>
       

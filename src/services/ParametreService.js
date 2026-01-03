@@ -7,6 +7,7 @@
  */
 import api from './api';
 import { toBoolean, toBooleanString, normalizeBooleanFields } from '../utils/booleanHelper';
+import { createLogger } from '../utils/createLogger';
 
 class ParametreService {
   constructor() {
@@ -17,6 +18,9 @@ class ParametreService {
     this.normalizeParametreValue = this.normalizeParametreValue.bind(this);
     this.normalizeParametresGroup = this.normalizeParametresGroup.bind(this);
     this.prepareParametreForApi = this.prepareParametreForApi.bind(this);
+
+    this.log = createLogger('ParametreService');
+
   }
 
   /**
@@ -73,7 +77,7 @@ class ParametreService {
 
     // Traiter les tableaux de paramètres
     if (Array.isArray(parametresGroup)) {
-      console.log('✅ normalizeParametresGroup - Traitement tableau:', parametresGroup.length, 'éléments');
+      this.log.debug('✅ normalizeParametresGroup - Traitement tableau:', parametresGroup.length, 'éléments');
       
       return parametresGroup.map(param => {
         if (param && typeof param === 'object') {
@@ -99,7 +103,7 @@ class ParametreService {
     
     for (const [key, parametre] of Object.entries(parametresGroup)) {
       if (Array.isArray(parametre)) {
-        console.log(`✅ Traitement tableau pour ${key}:`, parametre.length, 'éléments');
+        this.log.debug(`✅ Traitement tableau pour ${key}:`, parametre.length, 'éléments');
         
         normalized[key] = parametre.map(param => {
           if (param && typeof param === 'object') {
@@ -153,7 +157,7 @@ class ParametreService {
     // Convertir les booléens en chaînes pour l'API si nécessaire
     if (typeof prepared.valeurParametre === 'boolean') {
       prepared.valeurParametre = toBooleanString(prepared.valeurParametre);
-      console.log('✅ Conversion booléen → chaîne pour API:', 
+      this.log.debug('✅ Conversion booléen → chaîne pour API:', 
         parametreData.valeurParametre, '→', prepared.valeurParametre);
     }
 
@@ -189,7 +193,7 @@ class ParametreService {
         const parametresNormalises = {};
         
         for (const [groupeName, groupeData] of Object.entries(parametres)) {
-          console.log(`✅ Normalisation du groupe: ${groupeName}`);
+          this.log.debug(`✅ Normalisation du groupe: ${groupeName}`);
           
           if (groupeData && typeof groupeData === 'object') {
             parametresNormalises[groupeName] = this.normalizeParametresGroup(groupeData);
@@ -198,8 +202,8 @@ class ParametreService {
           }
         }
         
-        console.log('✅ Paramètres avant normalisation:', parametres);
-        console.log('✅ Paramètres après normalisation:', parametresNormalises);
+        this.log.debug('✅ Paramètres avant normalisation:', parametres);
+        this.log.debug('✅ Paramètres après normalisation:', parametresNormalises);
         
         return {
           success: true,
@@ -212,7 +216,7 @@ class ParametreService {
         message: response?.message || 'Erreur lors de la récupération des paramètres'
       };
     } catch (error) {
-      console.error('Erreur lors du chargement des paramètres:', error);
+      this.log.error('Erreur lors du chargement des paramètres:', error);
       return {
         success: false,
         message: error.message || 'Erreur lors de la récupération des paramètres'
@@ -260,8 +264,8 @@ class ParametreService {
         // ✅ Normaliser les propriétés booléennes métadonnées
         const result = normalizeBooleanFields(parametreNormalise, ['Actif', 'Obligatoire', 'Visible']);
         
-        console.log('✅ Paramètre avant normalisation:', parametre);
-        console.log('✅ Paramètre après normalisation:', result);
+        this.log.debug('✅ Paramètre avant normalisation:', parametre);
+        this.log.debug('✅ Paramètre après normalisation:', result);
         
         return {
           success: true,
@@ -274,7 +278,7 @@ class ParametreService {
         message: response?.message || 'Paramètre non trouvé'
       };
     } catch (error) {
-      console.error(`Erreur lors de la récupération du paramètre ${nomParametre}:`, error);
+      this.log.error(`Erreur lors de la récupération du paramètre ${nomParametre}:`, error);
       return {
         success: false,
         message: error.message || 'Erreur lors de la récupération du paramètre'
@@ -289,12 +293,12 @@ class ParametreService {
    */
   async updateParametre(parametreData) {
     try {
-      console.log('✅ Données d\'entrée pour mise à jour:', parametreData);
+      this.log.debug('✅ Données d\'entrée pour mise à jour:', parametreData);
       
       // ✅ PRÉPARATION DES DONNÉES AVEC GESTION DES BOOLÉENS
       let dataToSend = this.prepareParametreForApi(parametreData);
       
-      console.log('✅ Données préparées pour l\'API:', dataToSend);
+      this.log.debug('✅ Données préparées pour l\'API:', dataToSend);
       const response = await api.post('parametre-api.php', dataToSend);
       
       return {
@@ -302,7 +306,7 @@ class ParametreService {
         message: response?.message || 'Mise à jour effectuée'
       };
     } catch (error) {
-      console.error('Erreur lors de la mise à jour du paramètre:', error);
+      this.log.error('Erreur lors de la mise à jour du paramètre:', error);
       return {
         success: false,
         message: error.message || 'Erreur lors de la mise à jour du paramètre'
@@ -331,7 +335,7 @@ class ParametreService {
       
       return false;
     } catch (error) {
-      console.error(`Erreur lors de la vérification du paramètre ${nomParametre}:`, error);
+      this.log.error(`Erreur lors de la vérification du paramètre ${nomParametre}:`, error);
       return false;
     }
   }
@@ -355,7 +359,7 @@ class ParametreService {
       
       return await this.updateParametre(parametreData);
     } catch (error) {
-      console.error(`Erreur lors du toggle du paramètre ${nomParametre}:`, error);
+      this.log.error(`Erreur lors du toggle du paramètre ${nomParametre}:`, error);
       return {
         success: false,
         message: error.message || 'Erreur lors de la mise à jour du paramètre'

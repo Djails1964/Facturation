@@ -30,7 +30,7 @@ const FactureActions = ({
     const canSendEmail = etat === 'Éditée';
     const canPay = ['Envoyée', 'Retard', 'Partiellement payée'].includes(etat);
     const canDelete = etat === 'En attente';
-    const canCancel = ['Envoyée', 'Éditée', 'Retard', 'Partiellement payée'].includes(etat);
+    const canCancel = ['Envoyée', 'Éditée', 'Retard'].includes(etat);
 
     // Gestion du tooltip collé au curseur
     const handleMouseEnter = (event, text) => {

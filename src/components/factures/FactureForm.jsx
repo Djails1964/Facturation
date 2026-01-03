@@ -1,11 +1,12 @@
 // src/components/factures/FactureForm.jsx
-// ✅ VERSION FINALE COMPLÈTE - Navigation 100% modalSystem
+// ✅ VERSION REFACTORISÉE - Reçoit tarifData depuis FactureGestion
+// ✅ Passe tarifData à FactureDetailsForm
 
 import React, { useState, useEffect } from 'react';
 import { useFactureForm } from './hooks/useFactureForm';
 import { useFactureInitialization } from './hooks/useFactureInitialization';
 import { useFactureNavigation } from './hooks/useFactureNavigation';
-import { FactureFormActions } from './services/factureFormActions';
+import { useFactureFormActions } from './hooks/useFactureFormActions';
 import { FactureStateBanners } from './components/FactureStateBanners';
 import { FactureFormButtons } from './components/FactureFormButtons';
 import { getTitreFormulaire, getFormContainerClass, getSubmitButtonText } from './utils/factureHelpers';
@@ -17,6 +18,7 @@ import FactureDetailsForm from './FactureDetailsForm';
 import FactureTotauxDisplay from './components/FactureTotauxDisplay';
 import FactureHistoriquePaiements from './components/FactureHistoriquePaiements';
 import '../../styles/components/factures/FactureForm.css';
+import { createLogger } from '../../utils/createLogger';
 
 function FactureForm({
   mode = FORM_MODES.VIEW,
@@ -25,18 +27,30 @@ function FactureForm({
   onFactureCreated,
   clients = [],
   clientsLoading = false,
-  onRechargerClients = null
+  onRechargerClients = null,
+  tarifData = null  // ✅ NOUVEAU : Données de tarification depuis FactureGestion
 }) {
 
-  console.log('📋 FactureForm - Props reçues:', { mode, idFacture, typeIdFacture: typeof idFacture });
+  const log = createLogger("FactureForm");
+
+  log.debug('📋 FactureForm - Props reçues:', { 
+    mode, 
+    idFacture, 
+    typeIdFacture: typeof idFacture,
+    hasTarifData: !!tarifData,
+    tarifDataLoaded: tarifData?.isLoaded
+  });
   
-  // Hook principal du formulaire
+  // ✅ Hook principal du formulaire (état uniquement, plus de services)
   const {
     facture, setFacture, isLoading, setIsLoading, isSubmitting, setIsSubmitting,
     error, setError, clientData, setClientData, clientLoading, setClientLoading,
-    isLignesValid, setIsLignesValid, factureService, clientService, tarificationService,
+    isLignesValid, setIsLignesValid,
     isReadOnly, isFormValid, getFormData
   } = useFactureForm(mode, idFacture);
+
+  // ✅ Hook des actions - autonome, ne reçoit plus de services
+  const formActions = useFactureFormActions();
 
   // État pour les modales d'erreur (non liées à la navigation)
   const [confirmModal, setConfirmModal] = useState({
@@ -46,20 +60,17 @@ function FactureForm({
     type: 'warning'
   });
 
-  // Actions métier
-  const factureActions = new FactureFormActions(factureService, clientService, tarificationService);
-
   // Hook d'initialisation
   const {
     isFullyInitialized, initialFormData, setInitialFormData
   } = useFactureInitialization(mode, idFacture, {
-    chargerFacture: (id) => factureActions.chargerFacture(id, {
+    chargerFacture: (id) => formActions.chargerFacture(id, {
       setIsLoading, setError, setFacture, setIsLignesValid,
-      fetchClientDetails: (idClient) => factureActions.fetchClientDetails(idClient, {
+      fetchClientDetails: (idClient) => formActions.fetchClientDetails(idClient, {
         setClientLoading, setClientData
       })
     }),
-    fetchProchainNumeroFacture: (annee) => factureActions.fetchProchainNumeroFacture(annee, setFacture),
+    fetchProchainNumeroFacture: (annee) => formActions.fetchProchainNumeroFacture(annee, { setFacture }),
     chargerClients: () => {},
     setFacture,
     setIsLoading,
@@ -69,51 +80,52 @@ function FactureForm({
   // ✅ Hook de navigation simplifié - 100% modalSystem
   const canDetectChanges = () => !isLoading && !isSubmitting && isFullyInitialized && mode !== FORM_MODES.VIEW;
 
-// 🔍 DEBUG 1 - Initialisation
-useEffect(() => {
-  console.log('=== INITIALISATION DEBUG ===');
-  console.log('initialFormData:', JSON.stringify(initialFormData));
-  console.log('facture actuelle:', JSON.stringify(facture));
-  console.log('isFullyInitialized:', isFullyInitialized);
-}, [initialFormData, facture, isFullyInitialized]);
+  // 🔍 DEBUG 1 - Initialisation
+  useEffect(() => {
+    log.debug('=== INITIALISATION DEBUG ===');
+    log.debug('initialFormData:', JSON.stringify(initialFormData));
+    log.debug('facture actuelle:', JSON.stringify(facture));
+    log.debug('isFullyInitialized:', isFullyInitialized);
+  }, [initialFormData, facture, isFullyInitialized]);
 
-// 🔍 DEBUG 2 - Comparaison détaillée
-useEffect(() => {
-  console.log('=== COMPARAISON DEBUG ===');
-  if (initialFormData && facture) {
-    const keys = Object.keys(initialFormData);
-    keys.forEach(key => {
-      const initial = initialFormData[key];
-      const current = facture[key];
+  // 🔍 DEBUG 2 - Comparaison détaillée
+  useEffect(() => {
+    log.debug('=== COMPARAISON DEBUG ===');
+    if (initialFormData && facture) {
+      const keys = Object.keys(initialFormData);
+      keys.forEach(key => {
+        const initial = initialFormData[key];
+        const current = facture[key];
+        
+        if (JSON.stringify(initial) !== JSON.stringify(current)) {
+          log.debug(`❌ Différence sur "${key}":`, {
+            initial: initial,
+            current: current,
+            typeInitial: typeof initial,
+            typeCurrent: typeof current
+          });
+        }
+      });
       
-      if (JSON.stringify(initial) !== JSON.stringify(current)) {
-        console.log(`❌ Différence sur "${key}":`, {
-          initial: initial,
-          current: current,
-          typeInitial: typeof initial,
-          typeCurrent: typeof current
+      // Vérification spéciale pour les lignes (array)
+      if (Array.isArray(initialFormData.lignes) && Array.isArray(facture.lignes)) {
+        log.debug('Comparaison lignes:', {
+          lengthInitial: initialFormData.lignes.length,
+          lengthCurrent: facture.lignes.length,
+          equal: JSON.stringify(initialFormData.lignes) === JSON.stringify(facture.lignes)
         });
       }
-    });
-    
-    // Vérification spéciale pour les lignes (array)
-    if (Array.isArray(initialFormData.lignes) && Array.isArray(facture.lignes)) {
-      console.log('Comparaison lignes:', {
-        lengthInitial: initialFormData.lignes.length,
-        lengthCurrent: facture.lignes.length,
-        equal: JSON.stringify(initialFormData.lignes) === JSON.stringify(facture.lignes)
-      });
     }
-  }
-}, [initialFormData, facture]);
-useEffect(() => {
-  const currentData = canDetectChanges() ? getFormData() : {};
-  console.log('🔍 currentData pour détection:', {
-    hasLignes: currentData.lignes !== undefined,
-    lignesCount: currentData.lignes?.length,
-    currentData: currentData
-  });
-}, [facture, canDetectChanges, getFormData]);
+  }, [initialFormData, facture]);
+
+  useEffect(() => {
+    const currentData = canDetectChanges() ? getFormData() : {};
+    log.debug('🔍 currentData pour détection:', {
+      hasLignes: currentData.lignes !== undefined,
+      lignesCount: currentData.lignes?.length,
+      currentData: currentData
+    });
+  }, [facture, canDetectChanges, getFormData]);
   
   const {
     hasUnsavedChanges,
@@ -137,15 +149,15 @@ useEffect(() => {
   const handleClientChange = (value) => {
     if (isReadOnly) return;
     setFacture(prev => ({ ...prev, idClient: value }));
-    factureActions.fetchClientDetails(value, { setClientLoading, setClientData });
+    formActions.fetchClientDetails(value, { setClientLoading, setClientData });
   };
 
   const handleLignesChange = (nouvLignes) => {
-    console.log('🔍 handleLignesChange appelé:', nouvLignes);
+    log.debug('🔍 handleLignesChange appelé:', nouvLignes);
     if (isReadOnly) return;
     
     const validationResult = validateFactureLines(nouvLignes);
-    console.log('✅ Validation:', validationResult);
+    log.debug('✅ Validation:', validationResult);
     
     setIsLignesValid(validationResult);
     
@@ -160,7 +172,7 @@ useEffect(() => {
         totalAvecRistourne: Math.max(0, total - (prev.ristourne || 0))  // Total net
       }));
       
-      console.log('✅ Facture mise à jour - Total brut:', total);
+      log.debug('✅ Facture mise à jour - Total brut:', total);
     }
   }
 
@@ -223,6 +235,7 @@ useEffect(() => {
 
       // ✅ Construction de l'objet factureData
       const factureData = {
+        idFacture: facture.idFacture,
         numeroFacture: facture.numeroFacture,
         dateFacture: facture.dateFacture || new Date().toISOString().split('T')[0],
         idClient: facture.idClient,
@@ -232,14 +245,18 @@ useEffect(() => {
         clientNom: clientNom
       };
 
-      console.log('📤 Données envoyées à submitFacture:', factureData);
-      console.log('📊 Détails financiers:', {
+      log.debug('📤 Données envoyées à sauvegarderFacture:', factureData);
+      log.debug('📊 Détails financiers:', {
         totalBrut: facture.totalFacture,
         ristourne: facture.ristourne,
         totalNet: facture.totalAvecRistourne
       });
 
-      const result = await factureActions.submitFacture(factureData, mode, idFacture);
+      const isModification = mode === FORM_MODES.EDIT;
+      const result = await formActions.sauvegarderFacture(factureData, isModification, {
+        setIsSubmitting,
+        setError
+      });
       
       if (result?.success) {
         const newFactureId = result.id || facture.id;
@@ -254,7 +271,7 @@ useEffect(() => {
         });
       }
     } catch (err) {
-      console.error('Erreur lors de la soumission:', err);
+      log.error('Erreur lors de la soumission:', err);
       setError(err.message || 'Une erreur est survenue');
     } finally {
       setIsSubmitting(false);
@@ -334,12 +351,13 @@ useEffect(() => {
               <div className="ff-facture-details-container">
                 <FactureDetailsForm
                   onLignesChange={handleLignesChange}
-                  lignesInitiales={facture.lignes}
+                  lignesInitiales={facture.lignes || []}
                   client={clientData}
                   readOnly={isReadOnly}
                   isModification={mode === FORM_MODES.EDIT}
                   preserveExistingLines={mode === FORM_MODES.EDIT}
                   onResetRistourne={resetRistourne}
+                  tarifData={tarifData}  // ✅ NOUVEAU : Passer tarifData
                 />
               </div>
               
@@ -349,6 +367,7 @@ useEffect(() => {
                   ristourneInitiale={facture.ristourne}
                   readOnly={isReadOnly}
                   onChange={handleRistourneChange}
+                  montantPayeTotal={facture.montantPayeTotal}
                 />
               </div>
             </>
@@ -376,7 +395,6 @@ useEffect(() => {
         </div>
       </form>
 
-      {/* ✅ Plus de FactureFormModals ! Tout géré par modalSystem dans les hooks */}
       {/* ✅ DEBUG : Affichage temporaire pour diagnostiquer */}
       {process.env.NODE_ENV === 'development' && (
         <div style={{
@@ -394,6 +412,7 @@ useEffect(() => {
           <div>hasUnsavedChanges: {hasUnsavedChanges ? 'Oui' : 'Non'}</div>
           <div>isFullyInitialized: {isFullyInitialized ? 'Oui' : 'Non'}</div>
           <div>canDetectChanges: {canDetectChanges() ? 'Oui' : 'Non'}</div>
+          <div>tarifData loaded: {tarifData?.isLoaded ? 'Oui' : 'Non'}</div>
         </div>
       )}
     </div>

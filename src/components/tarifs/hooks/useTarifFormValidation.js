@@ -1,10 +1,14 @@
 import { useState, useCallback } from 'react';
 
+/**
+ * Hook pour gérer la validation du formulaire de tarif
+ * ✅ REFACTORISÉ: Utilise tarifActions au lieu de tarificationService
+ */
 export const useTarifFormValidation = (formState) => {
     const [validationErrors, setValidationErrors] = useState({});
     const [isValidating, setIsValidating] = useState(false);
     
-    const { tarif, tarificationService } = formState;
+    const { tarif, tarifActions } = formState; // ✅ MODIFIÉ: tarifActions au lieu de tarificationService
     
     const validateField = useCallback(async (fieldName, value) => {
         setIsValidating(true);
@@ -54,7 +58,7 @@ export const useTarifFormValidation = (formState) => {
         }));
         
         return Object.keys(errors).length === 0;
-    }, [tarif, tarificationService]);
+    }, [tarif]);
     
     const validateForm = useCallback(async () => {
         setIsValidating(true);
@@ -80,10 +84,14 @@ export const useTarifFormValidation = (formState) => {
                 }
             }
             
-            // Validation métier (conflits de tarifs)
-            if (tarif.idService && tarif.idUnite && tarif.typeTarifId && tarif.date_debut) {
+            // ⚠️ TODO: Validation métier (conflits de tarifs)
+            // La méthode checkTarifConflict n'existe pas encore dans TarificationService
+            // Elle devrait être ajoutée et exposée via tarifActions
+            /*
+            if (tarif.idService && tarif.idUnite && tarif.typeTarifId && tarif.date_debut && tarifActions) {
                 try {
-                    const conflictCheck = await tarificationService.checkTarifConflict({
+                    // ✅ FUTUR: Utiliser tarifActions.checkTarifConflict une fois implémenté
+                    const conflictCheck = await tarifActions.checkTarifConflict({
                         idService: tarif.idService,
                         idUnite: tarif.idUnite,
                         typeTarifId: tarif.typeTarifId,
@@ -99,6 +107,7 @@ export const useTarifFormValidation = (formState) => {
                     console.warn('Erreur vérification conflit:', error);
                 }
             }
+            */
             
         } catch (error) {
             console.error('Erreur validation form:', error);
@@ -109,7 +118,7 @@ export const useTarifFormValidation = (formState) => {
         
         setValidationErrors(errors);
         return Object.keys(errors).length === 0;
-    }, [tarif, tarificationService]);
+    }, [tarif, tarifActions]);
     
     const clearValidationErrors = useCallback(() => {
         setValidationErrors({});

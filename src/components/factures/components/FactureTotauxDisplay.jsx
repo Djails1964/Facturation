@@ -3,16 +3,25 @@ import '../../../styles/components/factures/FactureTotauxDisplay.css';
 import { useTraceUpdate } from '../../../useTraceUpdate';
 // ✅ AJOUT: Import du formatter centralisé
 import { formatMontant } from '../../../utils/formatters';
+// ✅ AJOUT: Import du createLogger
+import { createLogger } from '../../../utils/createLogger';
 
 function FactureTotauxDisplay({
     lignes = [],
     ristourneInitiale = 0,
     readOnly = false,
-    onChange = null
+    onChange = null,
+    montantPayeTotal = 0  // ✅ AJOUT: nouveau prop pour le montant payé
 }) {
+    // ✅ AJOUT: Initialisation du logger
+    const logger = createLogger('FactureTotauxDisplay');
     
-    useTraceUpdate({ lignes, ristourneInitiale, readOnly, onChange }, 'FactureTotauxDisplay');
-    console.log('⭐ FactureTotauxDisplay rendu, ristourneInitiale=', ristourneInitiale);
+    useTraceUpdate({ lignes, ristourneInitiale, readOnly, onChange, montantPayeTotal }, 'FactureTotauxDisplay');
+    logger.debug('⭐ FactureTotauxDisplay rendu', { 
+        ristourneInitiale, 
+        montantPayeTotal,
+        readOnly 
+    });
     
     const isUpdatingFromProp = useRef(false);
     const [ristourne, setRistourne] = useState(parseFloat(ristourneInitiale) || 0);
@@ -21,21 +30,31 @@ function FactureTotauxDisplay({
     const debounceTimeout = useRef(null);
 
     // Calculer le total brut à partir des lignes
-    console.log('🔍 Calcul du total brut à partir des lignes:', lignes);
+    logger.debug('🔍 Calcul du total brut à partir des lignes:', lignes);
     const totalBrut = lignes.reduce((sum, ligne) => {
         const ligneTotal = parseFloat(ligne.totalLigne) || 0;
-        console.log(`Ligne total: ${ligne.description} = ${ligneTotal}`);
+        logger.debug(`Ligne total: ${ligne.description} = ${ligneTotal}`);
         return sum + ligneTotal;
     }, 0);
     
     // Calculer le total net (après ristourne)
     const totalNet = Math.max(0, totalBrut - ristourne);
     
-    // ✅ SUPPRESSION: formatMontant local (utilise maintenant le centralisé)
+    // ✅ AJOUT: Calculer le solde restant à payer
+    const montantPaye = parseFloat(montantPayeTotal) || 0;
+    const soldeRestant = Math.max(0, totalNet - montantPaye);
+    
+    logger.debug('💰 Calculs financiers:', {
+        totalBrut,
+        ristourne,
+        totalNet,
+        montantPaye,
+        soldeRestant
+    });
 
     // Mise à jour quand ristourneInitiale change
     useEffect(() => {
-        console.log('⭐ Effet de synchronisation ristourneInitiale:', ristourneInitiale);
+        logger.debug('⭐ Effet de synchronisation ristourneInitiale:', ristourneInitiale);
         isUpdatingFromProp.current = true;
         
         // ✅ CORRECTION: Gérer le cas où ristourneInitiale est un objet ou un nombre
@@ -49,7 +68,7 @@ function FactureTotauxDisplay({
             nouveauMontant = parseFloat(ristourneInitiale) || 0;
         }
         
-        console.log('🔍 nouveauMontant extrait:', nouveauMontant);
+        logger.debug('🔍 nouveauMontant extrait:', nouveauMontant);
         
         setRistourne(nouveauMontant);
         setRistourneDisplay(formatMontant(nouveauMontant));
@@ -66,7 +85,7 @@ function FactureTotauxDisplay({
         
         debounceTimeout.current = setTimeout(() => {
             if (onChange && !readOnly && !isUpdatingFromProp.current) {
-                console.log('⭐ Notifier le parent du changement de ristourne (avec délai):', nouvelleRistourne);
+                logger.debug('⭐ Notifier le parent du changement de ristourne (avec délai):', nouvelleRistourne);
                 onChange({
                     totalBrut,
                     ristourne: nouvelleRistourne,
@@ -93,23 +112,23 @@ function FactureTotauxDisplay({
 
     // Au blur : parser et formater
     const handleRistourneBlur = () => {
-        console.log('🔍 BLUR - ristourneDisplay:', ristourneDisplay);
+        logger.debug('🔍 BLUR - ristourneDisplay:', ristourneDisplay);
         
         // Nettoyer la valeur : accepter TOUS les séparateurs (virgule, point, apostrophe)
         const valeurNettoyee = ristourneDisplay
             .replace(/['\s]/g, '')  // Supprimer apostrophes et espaces
             .replace(',', '.');      // Remplacer virgule par point
         
-        console.log('🔍 BLUR - valeurNettoyee:', valeurNettoyee);
+        logger.debug('🔍 BLUR - valeurNettoyee:', valeurNettoyee);
         
         const nouvelleValeur = valeurNettoyee === '' ? 0 : parseFloat(valeurNettoyee) || 0;
         
-        console.log('🔍 BLUR - nouvelleValeur:', nouvelleValeur);
+        logger.debug('🔍 BLUR - nouvelleValeur:', nouvelleValeur);
         
         setRistourne(nouvelleValeur);
         setRistourneDisplay(formatMontant(nouvelleValeur));
         
-        console.log('🔍 BLUR - après formatage:', formatMontant(nouvelleValeur));
+        logger.debug('🔍 BLUR - après formatage:', formatMontant(nouvelleValeur));
         
         if (onChange && !readOnly) {
             onChange({
@@ -215,6 +234,31 @@ function FactureTotauxDisplay({
                         <span className="montant-suffix">CHF</span>
                     </div>
                 </div>
+                
+                {/* ✅ AJOUT: Montant payé et solde en mode visualisation */}
+                {readOnly && montantPaye > 0 && (
+                    <>
+                        {/* Montant payé */}
+                        <div className="facture-totaux-row montant-paye-row">
+                            <div className="facture-totaux-label">Montant payé:</div>
+                            <div className="facture-totaux-value">
+                                <span className="montant-valeur">{formatMontant(montantPaye)}</span>
+                                <span className="montant-suffix">CHF</span>
+                            </div>
+                        </div>
+                        
+                        {/* Solde restant */}
+                        <div className="facture-totaux-row solde-row">
+                            <div className="facture-totaux-label">Solde à payer:</div>
+                            <div className="facture-totaux-value">
+                                <span className={`montant-valeur ${soldeRestant === 0 ? 'solde-zero' : 'solde-restant'}`}>
+                                    {formatMontant(soldeRestant)}
+                                </span>
+                                <span className="montant-suffix">CHF</span>
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );

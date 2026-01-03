@@ -1,9 +1,19 @@
-import { useState, useCallback, useMemo } from 'react';
-import { FORM_MODES } from '../../../constants/factureConstants';
-import FactureService from '../../../services/FactureService';
-import ClientService from '../../../services/ClientService';
-import TarificationService from '../../../services/TarificationService';
+// src/components/factures/hooks/useFactureForm.js
+// ✅ VERSION REFACTORISÉE - Ne crée plus de services en interne
+// ✅ Les appels API passent par useFactureActions et useTarifActions
 
+import { useState, useCallback } from 'react';
+import { FORM_MODES } from '../../../constants/factureConstants';
+
+/**
+ * Hook principal pour la gestion de l'état du formulaire de facture
+ * ✅ REFACTORISÉ: Ne crée plus de services en interne
+ * ✅ Les composants utilisent useFactureFormActions pour les opérations API
+ * 
+ * @param {string} mode - Mode du formulaire (VIEW, CREATE, EDIT)
+ * @param {string|number} idFacture - ID de la facture (null pour création)
+ * @returns {Object} État et fonctions du formulaire
+ */
 export const useFactureForm = (mode, idFacture) => {
   // États principaux
   const [facture, setFacture] = useState({
@@ -27,11 +37,6 @@ export const useFactureForm = (mode, idFacture) => {
   const [clientData, setClientData] = useState(null);
   const [clientLoading, setClientLoading] = useState(false);
   const [isLignesValid, setIsLignesValid] = useState(false);
-
-  // Services avec mémorisation
-  const factureService = useMemo(() => new FactureService(), []);
-  const clientService = useMemo(() => new ClientService(), []);
-  const tarificationService = useMemo(() => new TarificationService(), []);
 
   // Utilitaires
   const isReadOnly = mode === FORM_MODES.VIEW;
@@ -72,10 +77,7 @@ export const useFactureForm = (mode, idFacture) => {
     isLignesValid,
     setIsLignesValid,
     
-    // Services
-    factureService,
-    clientService,
-    tarificationService,
+    // ✅ Plus de services retournés - utiliser useFactureFormActions
     
     // Utilitaires
     isReadOnly,
@@ -83,3 +85,5 @@ export const useFactureForm = (mode, idFacture) => {
     getFormData
   };
 };
+
+export default useFactureForm;

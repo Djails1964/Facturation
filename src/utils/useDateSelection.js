@@ -27,7 +27,7 @@ export const useDateSelection = (onChange, initialFormattedDates = '', updateQua
 
     // Analyser une chaîne formatée pour extraire les dates
     const parseDatesFromString = useCallback((formattedString) => {
-        return DateService.parseDatesFromFormattedString(formattedString);
+        return DateService.parseDatesFromCompact(formattedString);
     }, []);
 
     // Initialiser les dates sélectionnées à partir d'une chaîne formatée

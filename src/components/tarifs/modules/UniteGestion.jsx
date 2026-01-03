@@ -7,19 +7,18 @@ import { AddButton } from '../../../components/ui/buttons';
 import TarifFormHeader from '../sections/TarifFormHeader';
 import UnifiedFilter from '../../../components/shared/filters/UnifiedFilter';
 import { useTarifFilter, createInitialFilters } from '../hooks/useTarifFilter';
+import { createLogger } from '../../../utils/createLogger';
 
 const UniteGestion = ({ 
   unites = [],
-  loadUnites,
   highlightedId,
-  tarificationService,
-  setMessage,
-  setMessageType,
-  setConfirmModal,
   onCreateUnite,
   onEditUnite,
   onDeleteUnite
 }) => {
+
+  const log = createLogger('UniteGestion');
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // ===== NORMALISATION DES DONNÉES =====
@@ -48,7 +47,7 @@ const UniteGestion = ({
 
   // ===== OPTIONS DE FILTRAGE =====
   const filterOptions = useMemo(() => {
-    console.log('🔍 Préparation filterOptions pour unités:', unites.length);
+    log.debug('🔍 Préparation filterOptions pour unités:', unites.length);
     
     // Extraire les valeurs uniques pour chaque champ
     const uniqueCodes = [...new Set(
@@ -63,9 +62,9 @@ const UniteGestion = ({
       unites.map(u => u.descriptionUnite).filter(Boolean)
     )].sort();
     
-    console.log('📊 Codes uniques:', uniqueCodes);
-    console.log('📊 Noms uniques:', uniqueNoms);
-    console.log('📊 Descriptions uniques:', uniqueDescriptions);
+    log.debug('📊 Codes uniques:', uniqueCodes);
+    log.debug('📊 Noms uniques:', uniqueNoms);
+    log.debug('📊 Descriptions uniques:', uniqueDescriptions);
     
     return {
       code: uniqueCodes,
@@ -81,7 +80,7 @@ const UniteGestion = ({
     if (onCreateUnite) {
       onCreateUnite(event);
     } else {
-      console.warn('⚠️ onCreateUnite non fourni');
+      log.warn('⚠️ onCreateUnite non fourni');
     }
   };
   
@@ -90,7 +89,7 @@ const UniteGestion = ({
     if (onEditUnite) {
       onEditUnite(idUnite, event);
     } else {
-      console.warn('⚠️ onEditUnite non fourni');
+      log.warn('⚠️ onEditUnite non fourni');
     }
   };
   
@@ -100,7 +99,7 @@ const UniteGestion = ({
     if (onDeleteUnite) {
       onDeleteUnite(idUnite, uniteName, event);
     } else {
-      console.warn('⚠️ onDeleteUnite non fourni');
+      log.warn('⚠️ onDeleteUnite non fourni');
     }
   };
 

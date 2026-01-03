@@ -2,6 +2,7 @@
 
 import React from 'react';
 import ModalComponents from '../../../shared/ModalComponents';
+import { createLogger } from '../../../../utils/createLogger';
 
 /**
  * Gestionnaire pour l'impression de factures
@@ -9,13 +10,16 @@ import ModalComponents from '../../../shared/ModalComponents';
  */
 export class PrintModalHandler {
     constructor(dependencies) {
-        this.factureService = dependencies.factureService;
+        this.factureActions = dependencies.factureActions;
         this.showCustom = dependencies.showCustom;
         this.showLoading = dependencies.showLoading;
         this.onSetNotification = dependencies.onSetNotification;
         this.chargerFactures = dependencies.chargerFactures;
         this.impressionEnCours = dependencies.impressionEnCours || new Set();
         this.setImpressionEnCours = dependencies.setImpressionEnCours;
+
+
+        this.log = createLogger('PrintModalHandler');
     }
 
     /**
@@ -27,7 +31,7 @@ export class PrintModalHandler {
         }
         
         if (this.impressionEnCours.has(idFacture)) {
-            console.log('⚠️ Impression déjà en cours pour facture', idFacture);
+            this.log.info('⚠️ Impression déjà en cours pour facture', idFacture);
             return;
         }
         
@@ -39,7 +43,7 @@ export class PrintModalHandler {
         const anchorRef = this.createAnchorRef(event);
         
         try {
-            console.log('🎯 Début impression facture', idFacture);
+            this.log.info('🎯 Début impression facture', idFacture);
             
             // Utiliser showLoading pour l'impression
             const result = await this.showLoading(
@@ -50,10 +54,10 @@ export class PrintModalHandler {
                     size: 'small',
                     position: 'smart'
                 },
-                async () => await this.factureService.imprimerFacture(idFacture)
+                async () => await this.factureActions.imprimerFacture(idFacture)
             );
             
-            console.log('🎯 Résultat impression:', result);
+            this.log.debug('🎯 Résultat impression:', result);
             
             if (result.success) {
                 await this.showSuccessModal(result, idFacture, anchorRef);
@@ -64,7 +68,7 @@ export class PrintModalHandler {
             }
             
         } catch (error) {
-            console.error('❌ Erreur impression:', error);
+            this.log.error('❌ Erreur impression:', error);
             await this.showErrorWithRetry(error, idFacture, event, anchorRef);
         } finally {
             // Retirer de la liste des impressions en cours
@@ -75,7 +79,7 @@ export class PrintModalHandler {
                     return newSet;
                 });
             }
-            console.log('🎯 Impression terminée pour facture', idFacture);
+            this.log.info('🎯 Impression terminée pour facture', idFacture);
         }
     }
 
@@ -83,9 +87,9 @@ export class PrintModalHandler {
      * ✅ CORRECTION: Modal de succès avec gestion du téléchargement
      */
     async showSuccessModal(result, idFacture, anchorRef) {
-        console.log('📋 showSuccessModal - result:', result);
-        console.log('📋 showSuccessModal - idFacture:', idFacture);
-        console.log('📋 showSuccessModal - pdfUrl:', result.pdfUrl);
+        this.log.debug('📋 showSuccessModal - result:', result);
+        this.log.debug('📋 showSuccessModal - idFacture:', idFacture);
+        this.log.debug('📋 showSuccessModal - pdfUrl:', result.pdfUrl);
 
         const modalResult = await this.showCustom({
             title: "Impression de facture",
@@ -112,10 +116,10 @@ export class PrintModalHandler {
         });
 
         // ✅ CORRECTION: Gérer l'action après la fermeture de la modal
-        console.log('📋 Modal fermée avec action:', modalResult.action);
+        this.log.debug('📋 Modal fermée avec action:', modalResult.action);
 
         if (modalResult.action === 'download') {
-            console.log('📥 Action de téléchargement détectée');
+            this.log.debug('📥 Action de téléchargement détectée');
             await this.handlePdfDownload(result.pdfUrl, idFacture);
         }
 
@@ -128,35 +132,35 @@ export class PrintModalHandler {
     async handlePdfDownload(pdfUrl, idFacture) {
         try {
             let finalPdfUrl = pdfUrl;
-            console.log('📥 Début téléchargement PDF:', finalPdfUrl);
+            this.log.debug('📥 Début téléchargement PDF:', finalPdfUrl);
 
             // Vérification et récupération d'URL si nécessaire
             if (!finalPdfUrl) {
-                console.log('🔄 URL manquante, récupération via service...');
-                const urlResult = await this.factureService.getFactureUrl(idFacture);
-                console.log('🔄 Résultat getFactureUrl:', urlResult);
+                this.log.debug('🔄 URL manquante, récupération via service...');
+                const urlResult = await this.factureActions.getFactureUrl(idFacture);
+                this.log.debug('🔄 Résultat getFactureUrl:', urlResult);
                 
                 if (urlResult.success && urlResult.pdfUrl) {
                     finalPdfUrl = urlResult.pdfUrl;
-                    console.log('✅ URL récupérée via service:', finalPdfUrl);
+                    this.log.debug('✅ URL récupérée via service:', finalPdfUrl);
                 } else {
                     throw new Error('Impossible de récupérer l\'URL du PDF');
                 }
             }
 
-            console.log('📥 URL finale pour téléchargement:', finalPdfUrl);
+            this.log.debug('📥 URL finale pour téléchargement:', finalPdfUrl);
             
             // ✅ MÉTHODE PRINCIPALE: Ouverture dans un nouvel onglet (fonctionne mieux que le téléchargement forcé)
             const newWindow = window.open(finalPdfUrl, '_blank');
             
             if (newWindow) {
-                console.log('✅ PDF ouvert dans un nouvel onglet');
+                this.log.debug('✅ PDF ouvert dans un nouvel onglet');
                 this.onSetNotification('PDF ouvert dans un nouvel onglet', 'success');
             } else {
                 // Fallback: essayer le téléchargement direct
-                console.log('🔄 Pop-up bloqué, essai téléchargement direct...');
+                this.log.debug('🔄 Pop-up bloqué, essai téléchargement direct...');
                 if (this.tryDirectDownload(finalPdfUrl)) {
-                    console.log('✅ Téléchargement direct lancé');
+                    this.log.debug('✅ Téléchargement direct lancé');
                     this.onSetNotification('Téléchargement du PDF lancé', 'success');
                 } else {
                     throw new Error('Impossible d\'ouvrir ou de télécharger le PDF. Veuillez autoriser les pop-ups pour ce site.');
@@ -164,7 +168,7 @@ export class PrintModalHandler {
             }
 
         } catch (error) {
-            console.error('❌ Erreur lors du téléchargement:', error);
+            this.log.error('❌ Erreur lors du téléchargement:', error);
             this.onSetNotification(`Erreur lors du téléchargement: ${error.message}`, 'error');
         }
     }
@@ -187,7 +191,7 @@ export class PrintModalHandler {
             
             return true;
         } catch (error) {
-            console.warn('⚠️ Téléchargement direct échoué:', error);
+            this.log.warn('⚠️ Téléchargement direct échoué:', error);
             return false;
         }
     }

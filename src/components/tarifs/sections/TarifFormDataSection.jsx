@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarIcon } from '../../../components/ui/buttons';
+import SimpleDateInputField from '../../../context/SimpleDateInputField';
 
 const TarifFormDataSection = ({ 
     tarif,
@@ -57,7 +57,7 @@ const TarifFormDataSection = ({
                         </option>
                     ))}
                 </select>
-                <label htmlFor="tarif-unite" className="required">Unité</label>
+                <label htmlFor="tarif-unite" className="required">UnitÃ©</label>
                 {validationErrors.idUnite && (
                     <span className="error-message">{validationErrors.idUnite}</span>
                 )}
@@ -109,51 +109,26 @@ const TarifFormDataSection = ({
             </div>
 
             {/* Date début */}
-            <div className="input-group date-input">
-                <input
-                    type="date"
-                    id="tarif-date-debut"
-                    name="date_debut"
-                    value={tarif.dateDebutTarifStandard || ''}
-                    onChange={onInputChange}
-                    required
-                    disabled={isReadOnly}
-                    className={validationErrors.dateDebutTarifStandard ? 'error' : ''}
-                />
-                {!isReadOnly && (
-                    <CalendarIcon 
-                        onClick={() => onOpenDateModal('date_debut')}
-                        disabled={false}
-                    />
-                )}
-                <label htmlFor="tarif-date-debut" className="required">Date de début</label>
-                {validationErrors.dateDebutTarifStandard && (
-                    <span className="error-message">{validationErrors.dateDebutTarifStandard}</span>
-                )}
-            </div>
+            <SimpleDateInputField
+                id="tarif-date-debut"
+                label="Date de début"
+                value={tarif.dateDebutTarifStandard || ''}
+                onChange={(e) => onInputChange({ target: { name: 'date_debut', value: e.target.value } })}
+                required={true}
+                readOnly={isReadOnly}
+                errorMessage={validationErrors.dateDebutTarifStandard}
+            />
 
             {/* Date fin */}
-            <div className="input-group date-input">
-                <input
-                    type="date"
-                    id="tarif-date-fin"
-                    name="date_fin"
-                    value={tarif.dateFinTarifStandard || ''}
-                    onChange={onInputChange}
-                    disabled={isReadOnly}
-                    className={validationErrors.dateFinTarifStandard ? 'error' : ''}
-                />
-                {!isReadOnly && (
-                    <CalendarIcon 
-                        onClick={() => onOpenDateModal('date_fin')}
-                        disabled={false}
-                    />
-                )}
-                <label htmlFor="tarif-date-fin">Date de fin (optionnel)</label>
-                {validationErrors.dateFinTarifStandard && (
-                    <span className="error-message">{validationErrors.dateFinTarifStandard}</span>
-                )}
-            </div>
+            <SimpleDateInputField
+                id="tarif-date-fin"
+                label="Date de fin (optionnel)"
+                value={tarif.dateFinTarifStandard || ''}
+                onChange={(e) => onInputChange({ target: { name: 'date_fin', value: e.target.value } })}
+                required={false}
+                readOnly={isReadOnly}
+                errorMessage={validationErrors.dateFinTarifStandard}
+            />
             
             {validationErrors.general && (
                 <div className="notification error">

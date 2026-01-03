@@ -3,42 +3,65 @@
 import { FORM_TYPES } from '../../../constants/tarifConstants';
 import ModalComponents from '../../shared/ModalComponents';
 
+import { createLogger } from '../../../utils/createLogger';
+
+import DateService from '../../../utils/DateService';
+
+const log = createLogger("TarifFormService");
+
+
 export class TarifFormService {
   
   // Génération du contenu des formulaires
   static createFormContent(formType, itemData = {}, isEdit = false, additionalData = {}) {
     const isReadOnly = false;
+    log.debug("createFormContent - addistionalData : " , additionalData);
     const { services = [], unites = [], typesTarifs = [], clients = [] } = additionalData;
+
+    // Pour les services inactifs en mode édition : seul le champ "Actif" est modifiable
+    const isInactiveService = formType === FORM_TYPES.SERVICE && 
+                               isEdit && 
+                               (itemData.actif === false || itemData.actif === 0);
+    const fieldsReadOnly = isReadOnly || isInactiveService;
     
     switch (formType) {
       case FORM_TYPES.SERVICE:
         return `
           <form id="modalForm" class="modal-form" novalidate>
+          ${isInactiveService ? `
+              <div style="margin-bottom: 20px; padding: 12px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+                <strong>⚠️ Service inactif</strong><br>
+                <span style="font-size: 0.9em; color: #856404;">
+                  Ce service est actuellement inactif. Seule l'activation est autorisée. 
+                  Pour modifier les autres champs, veuillez d'abord réactiver le service.
+                </span>
+              </div>
+            ` : ''}
             ${ModalComponents.createTextInput(
-              'code', 
+              'codeService', 
               'Code du service', 
-              itemData.code || '', 
+              itemData.codeService || '', 
               'text', 
               true, 
-              isReadOnly,
+              fieldsReadOnly,
               'maxlength="10" style="text-transform: uppercase;" data-validation="service-code"'
             )}
             ${ModalComponents.createTextInput(
-              'nom', 
+              'nomService', 
               'Nom du service', 
               itemData.nomService || '', 
               'text', 
               true, 
-              isReadOnly,
+              fieldsReadOnly,
               'maxlength="100" data-validation="service-nom"'
             )}
             ${ModalComponents.createTextarea(
-              'description', 
+              'descriptionService', 
               'Description', 
-              itemData.description || '', 
+              itemData.descriptionService || '', 
               3, 
               false, 
-              isReadOnly
+              fieldsReadOnly
             )}
             
             <!-- Checkboxes côte à côte -->
@@ -61,7 +84,7 @@ export class TarifFormService {
                   name="isDefault" 
                   value="1"
                   ${(itemData.isDefault === true || itemData.isDefault === 1) ? 'checked' : ''}
-                  ${isReadOnly ? 'disabled' : ''}
+                  ${fieldsReadOnly ? 'disabled' : ''}
                   style="margin-right: 8px; transform: scale(1.2);"
                 />
                 <span style="font-weight: 500; color: #333;">Défaut</span>
@@ -82,16 +105,16 @@ export class TarifFormService {
         return `
           <form id="modalForm" class="modal-form" novalidate>
             ${ModalComponents.createTextInput(
-              'code', 
+              'codeUnite', 
               'Code de l\'unité', 
-              itemData.code || '', 
+              itemData.codeUnite || '', 
               'text', 
               true, 
               isReadOnly,
               'maxlength="10" style="text-transform: uppercase;" data-validation="unite-code"'
             )}
             ${ModalComponents.createTextInput(
-              'nom', 
+              'nomUnite', 
               'Nom de l\'unité', 
               itemData.nomUnite || '', 
               'text', 
@@ -100,9 +123,9 @@ export class TarifFormService {
               'maxlength="50" data-validation="unite-nom"'
             )}
             ${ModalComponents.createTextarea(
-              'description', 
+              'descriptionUnite', 
               'Description', 
-              itemData.description || '', 
+              itemData.descriptionUnite || '', 
               3, 
               false, 
               isReadOnly
@@ -122,27 +145,27 @@ export class TarifFormService {
         return `
           <form id="modalForm" class="modal-form" novalidate>
             ${ModalComponents.createTextInput(
-              'code', 
+              'codeTypeTarif', 
               'Code du type de tarif', 
-              itemData.code || '', 
+              itemData.codeTypeTarif || '', 
               'text', 
               true, 
               isReadOnly,
               'maxlength="20" style="text-transform: uppercase;" data-validation="typetarif-code"'
             )}
             ${ModalComponents.createTextInput(
-              'nom', 
+              'nomTypeTarif', 
               'Nom du type de tarif', 
-              itemData.nom || '', 
+              itemData.nomTypeTarif || '', 
               'text', 
               true, 
               isReadOnly,
               'maxlength="100" data-validation="typetarif-nom"'
             )}
             ${ModalComponents.createTextarea(
-              'description', 
+              'descriptionTypeTarif', 
               'Description', 
-              itemData.description || '', 
+              itemData.descriptionTypeTarif || '', 
               3, 
               false, 
               isReadOnly
@@ -160,15 +183,17 @@ export class TarifFormService {
       case FORM_TYPES.TARIF:
         // ✅ VÉRIFICATION ET SÉCURISATION des données avant .map()
         const serviceOptions = (services && Array.isArray(services)) 
-          ? services.map(s => ({ value: s.id, text: s.nomService }))
+          ? services.map(s => ({ value: s.idService, text: s.nomService }))
           : [];
-          
+         
+        log.debug("chargement uniteOptions - unites:", unites);
         const uniteOptions = (unites && Array.isArray(unites)) 
-          ? unites.map(u => ({ value: u.id, text: u.nomUnite }))
+          ? unites.map(u => ({ value: u.idUnite, text: u.nomUnite }))
           : [];
+        log.debug("chargement uniteOptions - Options chargées :", uniteOptions);
           
         const typeTarifOptions = (typesTarifs && Array.isArray(typesTarifs)) 
-          ? typesTarifs.map(t => ({ value: t.id, text: t.nom }))
+          ? typesTarifs.map(t => ({ value: t.idTypeTarif, text: t.nomTypeTarif }))
           : [];
 
         return `
@@ -190,35 +215,46 @@ export class TarifFormService {
               isReadOnly
             )}
             ${ModalComponents.createSelect(
-              'typeTarifId', 
+              'idTypeTarif', 
               'Type de tarif', 
               typeTarifOptions,       // ✅ CORRECTION: options en 3ème position
-              itemData.type_tarif_id || '', // ✅ CORRECTION: selectedValue en 4ème position
+              itemData.idTypeTarif || '', // ✅ CORRECTION: selectedValue en 4ème position
               true, 
               isReadOnly
             )}
             ${ModalComponents.createTextInput(
-              'prix', 
+              'prixTarifStandard', 
               'Prix (CHF)', 
-              itemData.prix || '', 
+              itemData.prixTarifStandard || '', 
               'number', 
               true, 
               isReadOnly,
               'min="0" step="0.01" data-validation="tarif-prix"'
             )}
-            ${ModalComponents.createTextInput(
-              'dateDebut', 
+            ${ModalComponents.createDateInputWithModal(
+              'dateDebutTarifStandard', 
               'Date de début', 
-              itemData.date_debut || new Date().toISOString().split('T')[0], 
+              itemData.dateDebutTarifStandard 
+                ? DateService.formatSingleDate(itemData.dateDebutTarifStandard, 'date')
+                : DateService.formatSingleDate(new Date(), 'date'), 
               'date', 
               true, 
-              isReadOnly,
+              {
+                readOnly: isReadOnly,
+                multiSelect: false,
+                minDate: null,
+                maxDate: null,
+                context: 'tarif',
+                helpText: 'Date de début de validité du tarif'
+              },
               'data-validation="tarif-date-debut"'
             )}
-            ${ModalComponents.createTextInput(
-              'dateFin', 
+            ${ModalComponents.createDateInputWithModal(
+              'dateFinTarifStandard', 
               'Date de fin', 
-              itemData.date_fin || '', 
+              itemData.dateFinTarifStandard 
+                ? DateService.formatSingleDate(itemData.dateFinTarifStandard, 'date')
+                : '', 
               'date', 
               false, 
               isReadOnly,
@@ -260,10 +296,10 @@ export class TarifFormService {
         return `
           <form id="modalForm" class="modal-form" novalidate>
             ${ModalComponents.createSelect(
-              'idClient', 
+              'clientId', 
               'Client', 
               clientOptions,          // ✅ CORRECTION: options en 3ème position
-              itemData.idClient || '',  // ✅ CORRECTION: selectedValue en 4ème position
+              itemData.clientId || '',  // ✅ CORRECTION: selectedValue en 4ème position
               true, 
               isReadOnly
             )}
@@ -284,27 +320,27 @@ export class TarifFormService {
               isReadOnly
             )}
             ${ModalComponents.createTextInput(
-              'prix', 
+              'prixTarifSpecial', 
               'Prix (CHF)', 
-              itemData.prix || '', 
+              itemData.prixTarifSpecial || '', 
               'number', 
               true, 
               isReadOnly,
               'min="0" step="0.01" data-validation="tarif-special-prix"'
             )}
             ${ModalComponents.createTextInput(
-              'dateDebut', 
+              'dateDebutTarifSpecial', 
               'Date de début', 
-              itemData.date_debut || new Date().toISOString().split('T')[0], 
+              itemData.dateDebutTarifSpecial || new Date().toISOString().split('T')[0], 
               'date', 
               true, 
               isReadOnly,
               'data-validation="tarif-special-date-debut"'
             )}
             ${ModalComponents.createTextInput(
-              'dateFin', 
+              'dateFinTarifSpecial', 
               'Date de fin', 
-              itemData.date_fin || '', 
+              itemData.dateFinTarifSpecial || '', 
               'date', 
               false, 
               isReadOnly,
@@ -360,17 +396,19 @@ export class TarifFormService {
 
   // Récupération des données d'un élément
   static getItemData(formType, itemId, gestionState) {
+    log.debug('getItemData - formType = ', formType);
+    log.debug('getItemData - gestionState = ', gestionState);
     switch (formType) {
       case FORM_TYPES.SERVICE:
-        return gestionState.services.find(s => s.id === itemId) || {};
+        return gestionState.services.find(s => s.idService === itemId) || {};
       case FORM_TYPES.UNITE:
-        return gestionState.unites.find(u => u.id === itemId) || {};
+        return gestionState.unites.find(u => u.idUnite === itemId) || {};
       case FORM_TYPES.TYPE_TARIF:
-        return gestionState.typesTarifs.find(t => t.id === itemId) || {};
+        return gestionState.typesTarifs.find(t => t.idTypeTarif === itemId) || {};
       case FORM_TYPES.TARIF:
-        return gestionState.tarifs.find(t => t.id === itemId) || {};
+        return gestionState.tarifs.find(t => t.idTarifStandard === itemId) || {};
       case FORM_TYPES.TARIF_SPECIAL:
-        return gestionState.tarifsSpeciaux.find(t => t.id === itemId) || {};
+        return gestionState.tarifsSpeciaux.find(t => t.idTarifSpecial === itemId) || {};
       default:
         return {};
     }
@@ -382,7 +420,7 @@ export class TarifFormService {
     // ✅ NETTOYAGE PRÉALABLE des dates vides avant envoi
     const cleanedFormData = TarifFormService.cleanFormDataDates(formData);
     
-    console.log('📤 Soumission formulaire:', {
+    log.debug('📤 Soumission formulaire:', {
       formType,
       originalData: formData,
       cleanedData: cleanedFormData,
@@ -435,20 +473,27 @@ export class TarifFormService {
     
     // ✅ LISTE des champs de date à nettoyer
     const dateFields = [
-      'dateDebut', 'date_debut',
-      'dateFin', 'date_fin',
-      'dateCreation', 'date_creation',
-      'dateModification', 'date_modification',
-      'dateFacture', 'date_facture',
-      'dateEcheance', 'date_echeance'
+      'dateDebut', 'dateDebutTarifStandard', 'dateDebutTarifSpecial',
+      'dateFin', 'dateFinTarifStandard', 'dateFinTarifSpecial',
+      'dateCreation',
+      'dateModification',
+      'dateFacture',
+      'dateEcheance'
     ];
     
     dateFields.forEach(field => {
       if (cleaned.hasOwnProperty(field)) {
         // Convertir les chaînes vides en null
         if (cleaned[field] === '' || cleaned[field] === undefined) {
-          console.log(`🔄 Nettoyage date vide: ${field} = "${cleaned[field]}" → null`);
+          log.debug(`🔄 Nettoyage date vide: ${field} = "${cleaned[field]}" → null`);
           cleaned[field] = null;
+        } else {
+          const dateObj = DateService.fromDisplayFormat(cleaned[field]) || 
+               DateService.fromInputFormat(cleaned[field]) || 
+               new Date(cleaned[field]);
+          if (dateObj && !isNaN(dateObj.getTime())) {
+            cleaned[field] = DateService.toInputFormat(dateObj);
+          }
         }
       }
     });
@@ -478,6 +523,7 @@ export class TarifFormService {
   static async checkItemUsage(formType, itemId, tarificationService) {
     try {
       let result;
+      log.debug("checkItemUsage - serviceId = ", itemId);
       
       switch (formType) {
         case FORM_TYPES.SERVICE:
@@ -499,7 +545,7 @@ export class TarifFormService {
           return { success: true, used: false, message: 'Type non supporté' };
       }
       
-      console.log(`🔍 Résultat brut de checkUsage pour ${formType}:`, result);
+      log.debug(`🔍 Résultat brut de checkUsage pour ${formType}:`, result);
       
       // 🛡️ NORMALISATION de la réponse selon différents formats d'API
       let normalizedResult = {
@@ -543,11 +589,11 @@ export class TarifFormService {
         }
       }
       
-      console.log(`📊 Résultat normalisé de checkUsage:`, normalizedResult);
+      log.debug(`📊 Résultat normalisé de checkUsage:`, normalizedResult);
       return normalizedResult;
       
     } catch (error) {
-      console.error(`❌ Erreur lors de la vérification d'utilisation pour ${formType}:`, error);
+      log.error(`❌ Erreur lors de la vérification d'utilisation pour ${formType}:`, error);
       
       // 🚨 Si l'erreur contient des mots-clés d'utilisation, c'est probablement une utilisation
       if (error.message && typeof error.message === 'string') {
@@ -571,7 +617,7 @@ export class TarifFormService {
 
   // Rafraîchissement des données
   static async refreshDataAfterSave(formType, gestionState) {
-    console.log(`🔄 Rafraîchissement données ${formType}...`);
+    log.debug(`🔄 Rafraîchissement données ${formType}...`);
     
     switch (formType) {
       case FORM_TYPES.SERVICE:
@@ -610,13 +656,15 @@ export class TarifFormService {
     
     switch (formType) {
       case FORM_TYPES.SERVICE:
+        return item.nomService || item.codeService || 'Sans nom';
       case FORM_TYPES.UNITE:
+        return item.nomUnite || item.codeUnite || 'Sans nom';
       case FORM_TYPES.TYPE_TARIF:
-        return item.nom || item.name || item.code || item.libelle || 'Sans nom';
+        return item.nomTypeTarif || item.codeTypeTarif || 'Sans nom';
       case FORM_TYPES.TARIF:
-        return `${item.nomService || item.serviceName || 'Service'} - ${item.nomUnite || item.uniteName || 'Unité'}`;
+        return `${item.nomService || 'Service'} - ${item.nomUnite || 'Unité'}`;
       case FORM_TYPES.TARIF_SPECIAL:
-        return `${item.client_nom || item.clientName || 'Client'} - ${item.nomService || item.serviceName || 'Service'}`;
+        return `${item.client_nom || item.clientName || 'Client'} - ${item.nomService || 'Service'}`;
       default:
         return 'Élément';
     }

@@ -1,12 +1,15 @@
 // src/components/paiements/sections/PaiementFormPaiementSection.jsx
-// ✅ VERSION UNIFIÉE utilisant DateInputField comme LigneFactureFields
+// VERSION REFACTORISÉE utilisant usePaiementActions et createLogger
 
 import React, { useEffect } from 'react';
-import PaiementService from '../../../services/PaiementService';
+import { usePaiementActions } from '../hooks/usePaiementActions';
+import { createLogger } from '../../../utils/createLogger';
 import DateInputField from '../../shared/DateInputField';
 import DateService from '../../../utils/DateService';
 import { formatMontant, formatDate } from '../../../utils/formatters';
 import { SECTION_TITLES, LABELS } from '../../../constants/paiementConstants';
+
+const log = createLogger('PaiementFormPaiementSection');
 
 const PaiementFormPaiementSection = ({ 
     paiement, 
@@ -16,34 +19,44 @@ const PaiementFormPaiementSection = ({
     factureSelectionnee,
     isCreate = false
 }) => {
-    const paiementService = new PaiementService();
+    const paiementActions = usePaiementActions();
 
-    // Initialiser le montant payé avec le montant restant
+    // Initialiser le montant payé avec le montant restant SEULEMENT si le champ est vide
     useEffect(() => {
-        console.log('🔍 useEffect montant - conditions:', { 
+        log.debug('Vérification conditions:', { 
             isCreate, 
             hasFacture: !!factureSelectionnee,
-            factureId: factureSelectionnee?.idFacture 
+            factureId: factureSelectionnee?.idFacture,
+            montantActuel: paiement?.montantPaye
         });
         
         if (isCreate && factureSelectionnee) {
+            // Ne pas écraser si l'utilisateur a déjà saisi un montant
+            const montantActuel = paiement?.montantPaye;
+            const montantEstVide = !montantActuel || montantActuel === '' || montantActuel === '0' || montantActuel === '0.00';
+            
+            if (!montantEstVide) {
+                log.debug('ℹ️ Montant déjà saisi, pas d\'écrasement:', montantActuel);
+                return;
+            }
+            
             const montantRestant = factureSelectionnee.montantRestant || 
                 (factureSelectionnee.totalAvecRistourne ? 
                     factureSelectionnee.totalAvecRistourne - (factureSelectionnee.montantPayeTotal || 0) :
                     factureSelectionnee.montantTotal - (factureSelectionnee.montantPayeTotal || 0)
                 );
             
-            console.log('💰 Montant restant calculé:', montantRestant);
+            log.debug('Montant restant calculé:', montantRestant);
             
             if (montantRestant > 0) {
-                console.log('✅ Initialisation automatique du montant payé:', montantRestant.toFixed(2));
+                log.debug('✅ Initialisation automatique du montant payé:', montantRestant.toFixed(2));
                 onInputChange('montantPaye', montantRestant.toFixed(2));
             }
         }
     }, [factureSelectionnee?.idFacture, isCreate]);
 
     /**
-     * ✅ Gestionnaire pour le champ date - compatible avec DateInputField
+     * Gestionnaire pour le champ date - compatible avec DateInputField
      * Convertit entre le format d'affichage (DD.MM.YYYY) et le format de stockage (YYYY-MM-DD)
      */
     const handleDateChange = (valueOrEvent) => {
@@ -56,7 +69,7 @@ const PaiementFormPaiementSection = ({
             dateValue = valueOrEvent.target.value;
         }
         
-        console.log('📅 PaiementFormPaiementSection - handleDateChange:', dateValue);
+        log.debug('Changement de date:', dateValue);
         
         // Convertir le format d'affichage (DD.MM.YYYY) vers le format de stockage (YYYY-MM-DD)
         if (dateValue && dateValue.includes('.')) {
@@ -73,7 +86,7 @@ const PaiementFormPaiementSection = ({
     };
 
     /**
-     * ✅ Formater la date pour l'affichage (YYYY-MM-DD -> DD.MM.YYYY)
+     * Formater la date pour l'affichage (YYYY-MM-DD -> DD.MM.YYYY)
      */
     const formatDateForDisplay = (dateStr) => {
         if (!dateStr) return '';
@@ -91,7 +104,7 @@ const PaiementFormPaiementSection = ({
         <div className="form-section">
             <h3>{SECTION_TITLES.PAIEMENT}</h3>
             
-            {/* ✅ Date de paiement - Utilisation de DateInputField unifié */}
+            {/* Date de paiement - Utilisation de DateInputField unifié */}
             <div className="form-row">
                 {/* Date de paiement - 50% */}
                 <div className="input-group">
@@ -159,7 +172,7 @@ const PaiementFormPaiementSection = ({
                             <input
                                 type="text"
                                 id="methodePaiement"
-                                value={paiementService.formatMethodePaiement(paiement.methodePaiement)}
+                                value={paiementActions.formatMethodePaiement(paiement.methodePaiement)}
                                 readOnly
                                 placeholder=" "
                             />
@@ -176,7 +189,7 @@ const PaiementFormPaiementSection = ({
                                 required
                             >
                                 <option value="">-- Sélectionner --</option>
-                                {paiementService.getMethodesPaiement().map(methode => (
+                                {paiementActions.getMethodesPaiement().map(methode => (
                                     <option key={methode.value} value={methode.value}>
                                         {methode.label}
                                     </option>

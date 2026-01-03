@@ -2,9 +2,17 @@ import React from 'react';
 import { FiClipboard } from 'react-icons/fi';
 import DateInputField from '../../shared/DateInputField';
 import { formatMontant } from '../../../utils/formatters';
+import { createLogger } from '../../../utils/createLogger';
 
 // CORRECTION : Import correct depuis FactureUIComponents
 import { ReadOnlyField } from '../../shared/FactureUIComponents';
+
+// ✅ AJOUT: Import du composant d'erreur unifié
+import { ValidationError } from '../../shared/forms/FormField';
+
+const log = createLogger("LigneFactureFields");
+    
+
 
 /**
  * Utilitaires pour l'extraction des valeurs depuis les objets enrichis
@@ -38,7 +46,7 @@ const EnrichedObjectHelpers = {
      * Extrait le nom d'affichage d'une unité depuis l'objet enrichi
      */
     getUniteDisplayName: (ligne) => {
-        console.log('getUniteDisplayName - ligne:', ligne);
+         log.debug('getUniteDisplayName - ligne:', ligne);
         
         if (ligne.unite && typeof ligne.unite === 'object') {
             return ligne.unite.nomUnite || ligne.unite.codeUnite || 'Unité inconnue';
@@ -327,27 +335,27 @@ function ServiceTypeSelect({
     const handleServiceChange = async (e) => {
         const serviceCode = e.target.value;
         
-        console.log('🔄 Changement de service vers:', serviceCode);
+         log.debug('🔄 Changement de service vers:', serviceCode);
         
         // Trouver l'objet service complet
         const serviceObj = services.find(s => s && s.codeService === serviceCode);
         
         if (serviceObj) {
-            console.log('✅ Service trouvé:', serviceObj);
+             log.debug('✅ Service trouvé:', serviceObj);
             
             // Mettre à jour le service
             onModify(index, 'service', serviceObj);
             onModify(index, 'serviceType', serviceCode);
             onModify(index, 'idService', serviceObj.idService);
             
-            console.log('🔍 DEBUG MAPPING:', unitesByService);
-            console.log('🔍 DEBUG SITEWEB:', unitesByService?.SiteWeb);
-            console.log('🔍 DEBUG UNITES ARRAY:', unites?.map(u => u.codeUnite));
+             log.debug('🔍 DEBUG MAPPING:', unitesByService);
+             log.debug('🔍 DEBUG SITEWEB:', unitesByService?.SiteWeb);
+             log.debug('🔍 DEBUG UNITES ARRAY:', unites?.map(u => u.codeUnite));
             // ✅ CORRECTION: Vérifier que unites existe avant de l'utiliser
             if (unites && Array.isArray(unites) && unites.length > 0) {
                 await selectDefaultUniteForService(serviceObj, serviceCode);
             } else {
-                console.warn('⚠️ Aucune unité disponible pour la sélection automatique');
+                 log.warn('⚠️ Aucune unité disponible pour la sélection automatique');
                 // Nettoyer l'unité actuelle
                 onModify(index, 'unite', null);
                 onModify(index, 'uniteCode', '');
@@ -370,69 +378,67 @@ function ServiceTypeSelect({
      * ✅ FONCTION CORRIGÉE: Sélectionne automatiquement l'unité par défaut pour un service
      */
     const selectDefaultUniteForService = async (serviceObj, serviceCode) => {
-        console.log('🔍 Recherche unité par défaut pour service:', serviceCode);
-        console.log('🔍 Unités disponibles:', unites?.length || 0);
-        console.log('🔍 Mapping unitesByService:', unitesByService);
+        log.debug('🔍 Recherche unité par défaut pour service:', serviceCode);
+        log.debug('🔍 Service enrichi:', serviceObj);
         
-        // ✅ CORRECTION: Vérifications de sécurité
-        if (!unites || !Array.isArray(unites) || unites.length === 0) {
-            console.warn('⚠️ Pas d\'unités disponibles');
+        // ✅ Vérifications de sécurité
+        if (!serviceObj) {
+            log.warn('⚠️ Service invalide');
             return;
         }
         
-        if (!serviceObj || !serviceObj.idService) {
-            console.warn('⚠️ Service invalide');
-            return;
+        let uniteObj = null;
+        let uniteDefautCode = null;
+
+        // ✅ MÉTHODE 1 : Utiliser uniteDefaut directement depuis le service enrichi
+        if (serviceObj.uniteDefaut) {
+            uniteObj = serviceObj.uniteDefaut;
+            uniteDefautCode = uniteObj.codeUnite || uniteObj.code;
+            log.debug('✅ Unité par défaut depuis service.uniteDefaut:', uniteDefautCode);
         }
-        
-        // ✅ CORRECTION: Prioriser le mapping unitesByService
-        if (unitesByService && unitesByService[serviceCode]?.length > 0) {
-            const premierCodeUnite = unitesByService[serviceCode][0];
-            console.log('🔍 Code unité depuis mapping:', premierCodeUnite);
-            
-            const uniteObj = unites.find(u => 
-                u && (u.codeUnite === premierCodeUnite || u.code === premierCodeUnite)
-            );
-            
-            if (uniteObj) {
-                console.log('✅ Unité trouvée via mapping:', uniteObj);
-                applyUniteSelection(uniteObj);
-                return;
-            } else {
-                console.warn('⚠️ Unité non trouvée pour le code:', premierCodeUnite, 'dans:', unites.map(u => u.codeUnite || u.code));
+
+        // ✅ MÉTHODE 2 : Chercher dans unitesLiees celle marquée isDefaultPourService
+        if (!uniteObj && serviceObj.unitesLiees?.length > 0) {
+            const uniteMarqueeDefaut = serviceObj.unitesLiees.find(u => u.isDefaultPourService === true);
+            if (uniteMarqueeDefaut) {
+                uniteObj = uniteMarqueeDefaut;
+                uniteDefautCode = uniteObj.codeUnite || uniteObj.code;
+                log.debug('✅ Unité par défaut depuis unitesLiees (isDefaultPourService):', uniteDefautCode);
             }
         }
-        
-        // Méthode 2: Chercher dans les unités avec isDefault = true pour ce service
-        const uniteParDefaut = unites.find(u => 
-            u && u.idService === serviceObj.idService && u.isDefault === true
-        );
-        
-        if (uniteParDefaut) {
-            console.log('✅ Unité par défaut trouvée via isDefault:', uniteParDefaut);
-            applyUniteSelection(uniteParDefaut);
-            return;
+
+        // ✅ MÉTHODE 3 : Utiliser idUniteDefaut pour trouver l'unité dans unitesLiees
+        if (!uniteObj && serviceObj.idUniteDefaut && serviceObj.unitesLiees?.length > 0) {
+            const uniteParId = serviceObj.unitesLiees.find(u => u.idUnite === serviceObj.idUniteDefaut);
+            if (uniteParId) {
+                uniteObj = uniteParId;
+                uniteDefautCode = uniteObj.codeUnite || uniteObj.code;
+                log.debug('✅ Unité par défaut depuis idUniteDefaut:', uniteDefautCode);
+            }
         }
-        
-        // Méthode 3: Prendre la première unité disponible pour ce service
-        const unitesDisponibles = unites.filter(u => 
-            u && u.idService === serviceObj.idService
-        );
-        
-        if (unitesDisponibles.length > 0) {
-            console.log('✅ Première unité disponible trouvée:', unitesDisponibles[0]);
-            applyUniteSelection(unitesDisponibles[0]);
-            return;
+
+        // ✅ MÉTHODE 4 (Fallback) : Prendre la première unité liée au service
+        if (!uniteObj && serviceObj.unitesLiees?.length > 0) {
+            uniteObj = serviceObj.unitesLiees[0];
+            uniteDefautCode = uniteObj.codeUnite || uniteObj.code;
+            log.debug('⚠️ Pas d\'unité par défaut, utilisation de la première:', uniteDefautCode);
         }
-        
-        console.warn('⚠️ Aucune unité trouvée pour le service:', serviceCode);
-        console.log('🔍 Debug - serviceObj.idService:', serviceObj.idService);
-        console.log('🔍 Debug - unites avec idService:', unites.filter(u => u.idService).map(u => ({code: u.codeUnite || u.code, idService: u.idService})));
-        
-        // Nettoyer l'unité si aucune trouvée
-        onModify(index, 'unite', null);
-        onModify(index, 'uniteCode', '');
-        onModify(index, 'idUnite', null);
+
+        // Appliquer l'unité trouvée
+        if (uniteObj) {
+            log.debug('🎯 Application de l\'unité par défaut:', {
+                code: uniteDefautCode,
+                nom: uniteObj.nomUnite || uniteObj.nom,
+                id: uniteObj.idUnite
+            });
+            applyUniteSelection(uniteObj);
+        } else {
+            log.warn('⚠️ Aucune unité trouvée pour le service:', serviceCode);
+            // Nettoyer l'unité si aucune trouvée
+            onModify(index, 'unite', null);
+            onModify(index, 'uniteCode', '');
+            onModify(index, 'idUnite', null);
+        }
     };
     
     /**
@@ -440,11 +446,11 @@ function ServiceTypeSelect({
      */
     const applyUniteSelection = (uniteObj) => {
         if (!uniteObj) {
-            console.warn('⚠️ Objet unité invalide');
+             log.warn('⚠️ Objet unité invalide');
             return;
         }
         
-        console.log('🎯 Application de l\'unité:', uniteObj);
+         log.debug('🎯 Application de l\'unité:', uniteObj);
         
         // Mettre à jour l'objet unité enrichi
         onModify(index, 'unite', uniteObj);
@@ -467,9 +473,9 @@ function ServiceTypeSelect({
                     uniteSelect.parentElement.classList.add('has-value');
                 }
                 
-                console.log('🎯 UI mise à jour pour unité:', codeUnite);
+                 log.debug('🎯 UI mise à jour pour unité:', codeUnite);
             } else {
-                console.warn('⚠️ Element select unité non trouvé:', `unite-${index}`);
+                 log.warn('⚠️ Element select unité non trouvé:', `unite-${index}`);
             }
         }, 100);
     };
@@ -501,11 +507,8 @@ function ServiceTypeSelect({
             <label htmlFor={`serviceType-${index}`}>
                 Type de service <span className="fdf_required">*</span>
             </label>
-            {validationErrors[index]?.serviceType && (
-                <div className="fdf_error-message">
-                    {validationErrors[index].serviceType}
-                </div>
-            )}
+            {/* ✅ MODIFIÉ: Utilisation du composant ValidationError unifié */}
+            <ValidationError message={validationErrors[index]?.serviceType} />
         </div>
     );
 }
@@ -528,12 +531,12 @@ function UniteSelect({
 }) {
     const errorClass = getErrorClass('unite');
     
-    console.log('--- UniteSelect Rendu ---');
-    console.log('🔍 Rendu UniteSelect - Ligne:', index, 'Unité actuelle:', ligne.unite, 'Code unité:', ligne.uniteCode);
-    console.log('🔍 Unités disponibles:', unites);
-    console.log('🔍 Unités par service:', unitesByService);
-    console.log('🔍 Client:', client);
-    console.log('🔍 Ligne complète:', ligne);
+     log.debug('--- UniteSelect Rendu ---');
+     log.debug('🔍 Rendu UniteSelect - Ligne:', index, 'Unité actuelle:', ligne.unite, 'Code unité:', ligne.uniteCode);
+     log.debug('🔍 Unités disponibles:', unites);
+     log.debug('🔍 Unités par service:', unitesByService);
+     log.debug('🔍 Client:', client);
+     log.debug('🔍 Ligne complète:', ligne);
     // NOUVELLE APPROCHE : Utiliser le code extrait pour le contrôle
     const currentValue = ligne.unite?.codeUnite || '';
     const hasValue = currentValue !== undefined && currentValue !== '';
@@ -546,13 +549,13 @@ function UniteSelect({
      */
     const handleUniteChange = async (e) => {
         const uniteValue = e.target.value;
-        console.log('🔄 Changement d\'unité:', uniteValue);
+         log.debug('🔄 Changement d\'unité:', uniteValue);
 
         // Trouver l'objet unite complet
         const uniteObj = unites.find(u => u && (u.codeUnite === uniteValue || u.code === uniteValue));
 
         if (uniteObj) {
-            console.log('✅ Objet unité trouvé:', uniteObj);
+             log.debug('✅ Objet unité trouvé:', uniteObj);
             
             // ✅ CORRECTION PRINCIPALE: Mise à jour SYNCHRONE ET GROUPÉE
             // 1. Mettre à jour l'objet unité enrichi
@@ -562,13 +565,13 @@ function UniteSelect({
             onModify(index, 'uniteCode', uniteObj.codeUnite || uniteObj.code);
             onModify(index, 'idUnite', uniteObj.idUnite);
             
-            console.log('✅ Unité mise à jour:', {
+             log.debug('✅ Unité mise à jour:', {
                 code: uniteObj.codeUnite || uniteObj.code,
                 id: uniteObj.idUnite,
                 nom: uniteObj.nomUnite || uniteObj.nom
             });
         } else {
-            console.warn('❌ Unité non trouvée pour le code:', uniteValue);
+             log.warn('❌ Unité non trouvée pour le code:', uniteValue);
             // Nettoyer si pas d'unité trouvée
             onModify(index, 'unite', null);
             onModify(index, 'uniteCode', null);
@@ -594,11 +597,8 @@ function UniteSelect({
             <label htmlFor={`unite-${index}`}>
                 Unité <span className="fdf_required">*</span>
             </label>
-            {validationErrors[index]?.unite && (
-                <div className="fdf_error-message">
-                    {validationErrors[index].unite}
-                </div>
-            )}
+            {/* ✅ MODIFIÉ: Utilisation du composant ValidationError unifié */}
+            <ValidationError message={validationErrors[index]?.unite} />
         </div>
     );
 }
@@ -659,11 +659,8 @@ function DescriptionInputGroup({
                     title={isClipboardDisabled ? "Veuillez d'abord sélectionner une unité" : "Copier le nom de l'unité en début de description"}
                 />
                 
-                {validationErrors[index]?.description && (
-                    <div className="fdf_error-message">
-                        {validationErrors[index].description}
-                    </div>
-                )}
+                {/* ✅ MODIFIÉ: Utilisation du composant ValidationError unifié */}
+                <ValidationError message={validationErrors[index]?.description} />
                 
                 {/* Compteur de caractères */}
                 <div className="fdf_char-limit-info" style={{
@@ -749,11 +746,8 @@ function QuantiteInput({
             <label htmlFor={`quantite-${index}`}>
                 Quantité <span className="fdf_required">*</span>
             </label>
-            {validationErrors[index]?.quantite && (
-                <div className="fdf_error-message">
-                    {validationErrors[index].quantite}
-                </div>
-            )}
+            {/* ✅ MODIFIÉ: Utilisation du composant ValidationError unifié */}
+            <ValidationError message={validationErrors[index]?.quantite} />
         </div>
     );
 }
@@ -798,11 +792,8 @@ function PrixUnitaireInput({
                 Prix unitaire <span className="fdf_required">*</span>
             </label>
             <span className="fdf_currency-suffix">CHF</span>
-            {validationErrors[index]?.prixUnitaire && (
-                <div className="fdf_error-message">
-                    {validationErrors[index].prixUnitaire}
-                </div>
-            )}
+            {/* ✅ MODIFIÉ: Utilisation du composant ValidationError unifié */}
+            <ValidationError message={validationErrors[index]?.prixUnitaire} />
         </div>
     );
 }
@@ -837,9 +828,9 @@ function getUniteOptions(ligne, unites, unitesByService) {
     // Extraction du service depuis l'objet enrichi
     const currentServiceType = ligne.serviceTypeCode || '';
     
-    console.log('🔍 getUniteOptions - Service:', currentServiceType);
-    console.log('🔍 getUniteOptions - Unités disponibles:', unites);
-    console.log('🔍 getUniteOptions - Mapping par service:', unitesByService);
+     log.debug('🔍 getUniteOptions - Service:', currentServiceType);
+     log.debug('🔍 getUniteOptions - Unités disponibles:', unites);
+     log.debug('🔍 getUniteOptions - Mapping par service:', unitesByService);
     
     // if (!currentServiceType) {
     //     return getFallbackOptions();
@@ -853,11 +844,11 @@ function getUniteOptions(ligne, unites, unitesByService) {
                                  unite.idService === ligne.idService ||
                                  (ligne.service && unite.idService === ligne.service.idService);
         
-        console.log(`🔍 Unité ${unite.nomUnite} (${unite.codeUnite}) appartient au service ${currentServiceType}:`, belongsToService);
+         log.debug(`🔍 Unité ${unite.nomUnite} (${unite.codeUnite}) appartient au service ${currentServiceType}:`, belongsToService);
         return belongsToService;
     });
     
-    console.log('✅ Unités filtrées pour le service:', unitesForService);
+     log.debug('✅ Unités filtrées pour le service:', unitesForService);
     
     if (unitesForService.length > 0) {
         return unitesForService.map((unite, index) => (
@@ -889,7 +880,7 @@ function getUniteOptions(ligne, unites, unitesByService) {
         }).filter(option => option !== null);
         
         if (options.length > 0) {
-            console.log('✅ Options créées depuis le mapping:', options.length);
+             log.debug('✅ Options créées depuis le mapping:', options.length);
             return options;
         }
     }

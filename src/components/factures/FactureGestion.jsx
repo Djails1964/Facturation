@@ -1,8 +1,15 @@
-import React, { useState, useEffect } from 'react';
+// src/components/factures/FactureGestion.jsx
+// ✅ REFACTORISÉ : Charge les données de tarification une seule fois à l'entrée
+// ✅ Les données sont passées aux composants enfants via props
+
+import React, { useState, useEffect, useCallback } from 'react';
 import FacturesListe from './FacturesListe';
-import FactureForm from './FactureForm'; // ✅ Import simple du composant
-import { FORM_MODES } from '../../constants/factureConstants'; // ✅ Import depuis les constantes
-import ClientService from '../../services/ClientService';
+import FactureForm from './FactureForm';
+import { FORM_MODES } from '../../constants/factureConstants';
+import { useClientActions } from '../clients/hooks/useClientActions';
+import { useTarifActions } from '../tarifs/hooks/useTarifActions';
+import { createLogger } from '../../utils/createLogger';
+import { useNotifications } from '../../services/NotificationService';
 
 function FactureGestion({ 
     section = 'liste', 
@@ -11,20 +18,40 @@ function FactureGestion({
     onSectionChange = null,
     initialFilter = {}, 
     onRetour = null,
-    navigationSource = 'liste'  // ✅ NOUVEAU - Track d'où on vient
+    navigationSource = 'liste'
 }) {
+    
+    const log = createLogger("FactureGestion");
+
+    // Hook du NotificationService
+    const { showSuccess, showError } = useNotifications();
+    
+    // ✅ Hooks d'actions
+    const { chargerClients: chargerClientsApi } = useClientActions();
+    const tarifActions = useTarifActions();
+    
     // États pour gérer la navigation entre les différentes vues
     const [activeView, setActiveView] = useState(section);
     const [selectedFactureId, setSelectedFactureId] = useState(idFacture);
-    const [notification, setNotification] = useState({ message: '', type: '' });
     
     // États pour la gestion des clients
     const [clients, setClients] = useState([]);
     const [clientsLoading, setClientsLoading] = useState(false);
     const [clientError, setClientError] = useState(null);
-
-    // Services
-    const clientService = new ClientService();
+    
+    // ✅ NOUVEAU : États pour les données de tarification
+    const [tarifData, setTarifData] = useState({
+        services: [],
+        unites: [],
+        typesTarifs: [],
+        isLoaded: false,
+        isLoading: true,
+        error: null
+    });
+    
+    // ✅ Refs pour éviter les appels multiples
+    const isLoadingClientsRef = React.useRef(false);
+    const isLoadingTarifRef = React.useRef(false);
 
     // Effet pour mettre à jour la vue active quand la prop section change
     useEffect(() => {
@@ -34,13 +61,11 @@ function FactureGestion({
     // Effet pour mettre à jour l'ID de la facture sélectionnée
     useEffect(() => {
         if (idFacture !== null && idFacture !== undefined) {
-            console.log('📌 FactureGestion - idFacture reçue de parent:', idFacture);
+            log.debug('📌 FactureGestion - idFacture reçue de parent:', idFacture);
             setSelectedFactureId(idFacture);
-            // Basculer vers le mode afficher quand on reçoit un ID de la prop
-            // Cela se déclenche quand le parent (DashboardWrapper) passe un ID
             setActiveView('afficher');
         }
-}, [idFacture]);
+    }, [idFacture]);
 
     // Effet pour notifier le parent du changement de section
     useEffect(() => {
@@ -49,88 +74,233 @@ function FactureGestion({
         }
     }, [activeView, onSectionChange]);
 
-    // Charger la liste des clients
-    const chargerClients = async () => {
+    // ✅ Charger la liste des clients via useClientActions
+    const chargerClients = useCallback(async () => {
+        if (isLoadingClientsRef.current) {
+            log.debug('⏳ Chargement des clients déjà en cours, ignoré');
+            return;
+        }
+        
+        isLoadingClientsRef.current = true;
         setClientsLoading(true);
         setClientError(null);
         
         try {
-            const clientsData = await clientService.chargerClients();
-            setClients(clientsData);
+            log.debug('📥 Chargement des clients via useClientActions');
+            const clientsData = await chargerClientsApi();
+            setClients(clientsData || []);
+            log.debug('✅ Clients chargés:', clientsData?.length || 0);
         } catch (error) {
-            console.error('Erreur lors du chargement des clients:', error);
+            log.error('❌ Erreur lors du chargement des clients:', error);
             setClientError('Une erreur est survenue lors du chargement des clients: ' + error.message);
         } finally {
             setClientsLoading(false);
+            isLoadingClientsRef.current = false;
         }
-    };
+    }, [chargerClientsApi, log]);
 
-    // Charger les clients au montage du composant
+    // ✅ NOUVEAU : Charger les données de tarification une seule fois
+    const chargerDonneesTarification = useCallback(async () => {
+        if (isLoadingTarifRef.current || tarifData.isLoaded) {
+            log.debug('⏳ Données tarif déjà chargées ou en cours de chargement');
+            return;
+        }
+        
+        isLoadingTarifRef.current = true;
+        setTarifData(prev => ({ ...prev, isLoading: true, error: null }));
+        
+        try {
+            log.debug('📥 Chargement des données de tarification via getDonneesInitiales...');
+            
+            // ✅ Appel unique pour récupérer toutes les données
+            const result = await tarifActions.getDonneesInitiales();
+            
+            if (result) {
+                log.debug('✅ Données de tarification chargées:', {
+                    services: result.services?.length || 0,
+                    unites: result.unites?.length || 0,
+                    typesTarifs: result.typesTarifs?.length || 0
+                });
+                
+                setTarifData({
+                    services: result.services || [],
+                    unites: result.unites || [],
+                    typesTarifs: result.typesTarifs || [],
+                    isLoaded: true,
+                    isLoading: false,
+                    error: null
+                });
+            } else {
+                throw new Error('Aucune donnée de tarification reçue');
+            }
+        } catch (error) {
+            log.error('❌ Erreur lors du chargement des données de tarification:', error);
+            setTarifData(prev => ({
+                ...prev,
+                isLoading: false,
+                error: error.message
+            }));
+        } finally {
+            isLoadingTarifRef.current = false;
+        }
+    }, [tarifActions, tarifData.isLoaded, log]);
+
+    // ✅ Charger les clients ET les données de tarification au montage
     useEffect(() => {
         chargerClients();
+        chargerDonneesTarification();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // ✅ NOUVEAU : Fonction pour forcer le rechargement des données tarif
+    const rechargerDonneesTarification = useCallback(async () => {
+        isLoadingTarifRef.current = false;
+        setTarifData(prev => ({ ...prev, isLoaded: false }));
+        await chargerDonneesTarification();
+    }, [chargerDonneesTarification]);
+
+    // ✅ NOUVEAU : Fonctions d'accès rapide aux données de tarification
+    const getUnitesPourService = useCallback((idService) => {
+        if (!idService || !tarifData.services.length) return [];
+        
+        const service = tarifData.services.find(s => s.idService === idService);
+        return service?.unitesLiees || [];
+    }, [tarifData.services]);
+
+    const getUniteDefautPourService = useCallback((idService) => {
+        if (!idService || !tarifData.services.length) return null;
+        
+        const service = tarifData.services.find(s => s.idService === idService);
+        return service?.uniteDefaut || null;
+    }, [tarifData.services]);
+
+    const getIdUniteDefautPourService = useCallback((idService) => {
+        if (!idService || !tarifData.services.length) return null;
+        
+        const service = tarifData.services.find(s => s.idService === idService);
+        return service?.idUniteDefaut || null;
+    }, [tarifData.services]);
+
+    const getServiceDefaut = useCallback(() => {
+        return tarifData.services.find(s => s.isDefault) || tarifData.services[0] || null;
+    }, [tarifData.services]);
+
     // Gestion du retour à la liste
-    const handleRetourListe = (idFacture = null, modified = false, message = '', type = '') => {
+    const handleRetourListe = useCallback((idFacture = null, modified = false, message = '', type = '') => {
         if (idFacture) {
             setSelectedFactureId(idFacture);
         }
         
         if (message) {
-            setNotification({ message, type: type || 'success' });
+            if (type === 'success') {
+                showSuccess(message);
+            } else if (type === 'error') {
+                showError(message);
+            }
         }
         
-        // ✅ Si on vient du dashboard, appeler onRetour pour revenir au dashboard
         if (navigationSource === 'dashboard' && onRetour) {
-            console.log('📍 Retour au dashboard');
+            log.debug('🔙 Retour au dashboard');
             onRetour(idFacture, modified, message, type);
         } else {
-            // Sinon retourner à la liste
-            console.log('📍 Retour à la liste des factures');
+            log.debug('🔙 Retour à la liste des factures');
             setActiveView('liste');
         }
-    };
+    }, [navigationSource, onRetour, showSuccess, showError, log]);
 
     // Gestion de la création de facture
-    const handleFactureCreated = (idFacture, message = 'Facture créée avec succès') => {
+    const handleFactureCreated = useCallback((idFacture, message = 'Facture créée avec succès') => {
         setSelectedFactureId(idFacture);
-        setNotification({ message, type: 'success' });
+        showSuccess(message);
         setActiveView('liste');
         
-        // Si un gestionnaire externe a été fourni, l'appeler
         if (onFactureCreated) {
             onFactureCreated(idFacture);
         }
-    };
+    }, [showSuccess, onFactureCreated]);
 
     // Gestion de la modification de facture
-    const handleModifierFacture = (idFacture) => {
+    const handleModifierFacture = useCallback((idFacture) => {
         setSelectedFactureId(idFacture);
         setActiveView('modifier');
-    };
+    }, []);
 
     // Gestion de l'affichage de facture
-        const handleAfficherFacture = (idFacture) => {
-        console.log('🔍 FactureGestion.handleAfficherFacture - ID reçu:', idFacture);
-        console.log('🔍 FactureGestion.handleAfficherFacture - Type:', typeof idFacture);
+    const handleAfficherFacture = useCallback((idFacture) => {
+        log.debug('🔍 FactureGestion.handleAfficherFacture - ID reçu:', idFacture);
         setSelectedFactureId(idFacture);
-        console.log('🔍 FactureGestion - selectedFactureId défini à:', idFacture);
         setActiveView('afficher');
-        console.log('🔍 FactureGestion - activeView défini à: afficher');
-    };
+    }, [log]);
 
     // Passer à la vue de création
-    const handleNouvelleFacture = () => {
+    const handleNouvelleFacture = useCallback(() => {
         setActiveView('nouveau');
-    };
+    }, []);
 
     // Gestion de la suppression de facture
-    const handleFactureSupprimee = (message = 'Facture supprimée avec succès') => {
-        setNotification({ message, type: 'success' });
+    const handleFactureSupprimee = useCallback((message = 'Facture supprimée avec succès') => {
+        showSuccess(message);
+    }, [showSuccess]);
+
+    // Gestion des notifications depuis FacturesListe
+    const handleSetNotification = useCallback((message, type) => {
+        if (type === 'success') {
+            showSuccess(message);
+        } else if (type === 'error') {
+            showError(message);
+        }
+    }, [showSuccess, showError]);
+
+    // ✅ NOUVEAU : Objet consolidé des données de tarification à passer aux enfants
+    const tarifDataProps = {
+        // Données brutes
+        services: tarifData.services,
+        unites: tarifData.unites,
+        typesTarifs: tarifData.typesTarifs,
+        
+        // États
+        isLoading: tarifData.isLoading,
+        isLoaded: tarifData.isLoaded,
+        error: tarifData.error,
+        
+        // Fonctions d'accès
+        getUnitesPourService,
+        getUniteDefautPourService,
+        getIdUniteDefautPourService,
+        getServiceDefaut,
+        
+        // Fonction de rechargement
+        rechargerDonneesTarification,
+        
+        // Accès au hook tarifActions pour les calculs de prix
+        tarifActions
     };
 
     // Rendu conditionnel selon la vue active
     const renderContent = () => {
+        // ✅ Afficher un loader si les données de tarification ne sont pas encore chargées
+        if (tarifData.isLoading && !tarifData.isLoaded) {
+            return (
+                <div className="loading-container">
+                    <div className="loading-spinner"></div>
+                    <p>Chargement des données de tarification...</p>
+                </div>
+            );
+        }
+
+        // ✅ Afficher une erreur si le chargement a échoué
+        if (tarifData.error && !tarifData.isLoaded) {
+            return (
+                <div className="error-container">
+                    <h2>Erreur</h2>
+                    <p className="error-message">{tarifData.error}</p>
+                    <button className="btn-primary" onClick={rechargerDonneesTarification}>
+                        Réessayer
+                    </button>
+                </div>
+            );
+        }
+
         switch (activeView) {
             case 'nouveau':
                 return (
@@ -141,6 +311,7 @@ function FactureGestion({
                         clients={clients}
                         clientsLoading={clientsLoading}
                         onRechargerClients={chargerClients}
+                        tarifData={tarifDataProps}
                     />
                 );
             case 'modifier':
@@ -152,10 +323,10 @@ function FactureGestion({
                         clients={clients}
                         clientsLoading={clientsLoading}
                         onRechargerClients={chargerClients}
+                        tarifData={tarifDataProps}
                     />
                 );
             case 'afficher':
-                console.log('🔍 FactureGestion RENDU afficher - selectedFactureId:', selectedFactureId);
                 return (
                     <FactureForm 
                         mode={FORM_MODES.VIEW}
@@ -164,6 +335,7 @@ function FactureGestion({
                         clients={clients}
                         clientsLoading={clientsLoading}
                         onRechargerClients={chargerClients}
+                        tarifData={tarifDataProps}
                     />
                 );
             case 'liste':
@@ -182,10 +354,8 @@ function FactureGestion({
                             onModifierFacture={handleModifierFacture}
                             onAfficherFacture={handleAfficherFacture}
                             onNouvelleFacture={handleNouvelleFacture}
-                            notification={notification}
-                            onClearNotification={() => setNotification({ message: '', type: '' })}
                             onFactureSupprimee={handleFactureSupprimee}
-                            onSetNotification={(message, type) => setNotification({ message, type })}
+                            onSetNotification={handleSetNotification}
                             initialFilter={initialFilter}
                         />
                     </>
@@ -197,7 +367,7 @@ function FactureGestion({
         <div className="paiement-gestion-container">
             {renderContent()}
             
-            {/* Bouton flottant pour ajouter une nouvelle facture (visible uniquement si on est dans la vue liste) */}
+            {/* Bouton flottant pour ajouter une nouvelle facture */}
             {activeView === 'liste' && section !== 'nouvelle' && (
                 <div className="floating-button" onClick={handleNouvelleFacture}>
                     <span>+</span>

@@ -7,20 +7,18 @@ import TarifFormHeader from '../sections/TarifFormHeader';
 import { AddButton } from '../../../components/ui/buttons';
 import UnifiedFilter from '../../../components/shared/filters/UnifiedFilter';
 import { useTarifFilter, createInitialFilters } from '../hooks/useTarifFilter';
+import { createLogger } from '../../../utils/createLogger';
 
 const TypeTarifGestion = ({ 
-  typesTarifs, 
-  setTypesTarifs, 
-  tarificationService, 
-  setMessage, 
-  setMessageType, 
-  setConfirmModal,
-  loadTypesTarifs,
+  typesTarifs = [], 
   highlightedId,
   onCreateTypeTarif,
   onEditTypeTarif,
   onDeleteTypeTarif
 }) => {
+
+  const log = createLogger('TypeTarifGestion');
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // ===== NORMALISATION DES DONNÉES =====
@@ -56,7 +54,7 @@ const TypeTarifGestion = ({
 
   // ===== OPTIONS DE FILTRAGE =====
   const filterOptions = useMemo(() => {
-    console.log('🔍 Préparation filterOptions pour types de tarifs:', typesTarifs.length);
+    log.debug('🔍 Préparation filterOptions pour types de tarifs:', typesTarifs.length);
     
     // Extraire les valeurs uniques pour chaque champ
     const uniqueCodes = [...new Set(
@@ -71,9 +69,9 @@ const TypeTarifGestion = ({
       typesTarifs.map(t => t.descriptionTypeTarif).filter(Boolean)
     )].sort();
     
-    console.log('📊 Codes uniques:', uniqueCodes);
-    console.log('📊 Noms uniques:', uniqueNoms);
-    console.log('📊 Descriptions uniques:', uniqueDescriptions);
+    log.debug('📊 Codes uniques:', uniqueCodes);
+    log.debug('📊 Noms uniques:', uniqueNoms);
+    log.debug('📊 Descriptions uniques:', uniqueDescriptions);
     
     return {
       code: uniqueCodes,
@@ -89,7 +87,7 @@ const TypeTarifGestion = ({
     if (onCreateTypeTarif) {
       onCreateTypeTarif(event);
     } else {
-      console.warn('⚠️ onCreateTypeTarif non fourni');
+      log.warn('⚠️ onCreateTypeTarif non fourni');
     }
   };
   
@@ -98,7 +96,7 @@ const TypeTarifGestion = ({
     if (onEditTypeTarif) {
       onEditTypeTarif(typeTarifId, event);
     } else {
-      console.warn('⚠️ onEditTypeTarif non fourni');
+      log.warn('⚠️ onEditTypeTarif non fourni');
     }
   };
   
@@ -108,7 +106,7 @@ const TypeTarifGestion = ({
     if (onDeleteTypeTarif) {
       onDeleteTypeTarif(typeTarifId, typeTarifName, event);
     } else {
-      console.warn('⚠️ onDeleteTypeTarif non fourni');
+      log.warn('⚠️ onDeleteTypeTarif non fourni');
     }
   };
 

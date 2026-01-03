@@ -5,16 +5,37 @@ import { useUnsavedChanges } from '../../../hooks/useUnsavedChanges';
 import { useAutoNavigationGuard } from '../../../hooks/useAutoNavigationGuard';
 import { showConfirm } from '../../../utils/modalSystem';
 import { FORM_MODES, VALIDATION_MESSAGES } from '../../../constants/clientConstants';
-import ClientService from '../../../services/ClientService';
+// ✅ Import de useClientActions pour les opérations CRUD uniquement
+import { useClientActions } from './useClientActions';
+// ✅ NOUVEAU: Import des fonctions de validation depuis clientValidators
+import { 
+  validateEmail, 
+  validatePhone, 
+  PHONE_TYPES 
+} from '../utils/clientValidators';
+// ✅ Import de createLogger
+import { createLogger } from '../../../utils/createLogger';
 import { normalizeBooleanFields, toBoolean } from '../../../utils/booleanHelper';
 
-export const useClientForm = (mode, idClient, propClientService = null) => {
+export const useClientForm = (mode, idClient) => {
+  // ✅ Initialisation du logger
+  const logger = createLogger('useClientForm');
+  
   // Navigation protection
   const { unregisterGuard } = useNavigationGuard();
   const guardId = `client-form-${idClient || 'new'}`;
 
-  // Service client
-  const clientService = propClientService || ClientService;
+  // ✅ Utilisation de useClientActions UNIQUEMENT pour les opérations CRUD
+  // ❌ SUPPRIMÉ: isValidEmail, detectPhoneType - maintenant depuis clientValidators
+  const {
+    getClient,
+    createClient,
+    updateClient,
+    normalizeClient,
+    isLoading: actionIsLoading,
+    error: actionError
+  } = useClientActions();
+
   const isReadOnly = mode === FORM_MODES.VIEW;
 
   // États principaux
@@ -31,9 +52,10 @@ export const useClientForm = (mode, idClient, propClientService = null) => {
     estTherapeute: false
   });
 
-  const [isLoading, setIsLoading] = useState(false);
+  // ✅ États locaux pour le chargement initial et les erreurs de validation
+  const [localIsLoading, setLocalIsLoading] = useState(false);
+  const [localError, setLocalError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
   const [fieldWarnings, setFieldWarnings] = useState({});
   const [phoneType, setPhoneType] = useState(null);
@@ -47,6 +69,10 @@ export const useClientForm = (mode, idClient, propClientService = null) => {
 
   // Référence pour éviter la double initialisation
   const hasInitialized = useRef(false);
+
+  // ================================
+  // FONCTIONS UTILITAIRES
+  // ================================
 
   // Fonction pour obtenir les données du formulaire
   const getFormData = useCallback(() => {
@@ -66,19 +92,24 @@ export const useClientForm = (mode, idClient, propClientService = null) => {
 
   // Fonction pour vérifier si on peut détecter les changements
   const canDetectChanges = useCallback(() => {
-    return !isLoading && 
+    return !localIsLoading && 
+           !actionIsLoading &&  // ✅ Vérifier aussi le loading des actions
            !isSubmitting && 
            isInitialLoadDone && 
            isFullyInitialized && 
            Object.keys(initialFormData).length > 0 &&
            mode !== FORM_MODES.VIEW;
-  }, [isLoading, isSubmitting, isInitialLoadDone, isFullyInitialized, initialFormData, mode]);
+  }, [localIsLoading, actionIsLoading, isSubmitting, isInitialLoadDone, isFullyInitialized, initialFormData, mode]);
 
   // Données actuelles pour la détection
   const currentFormData = useMemo(() => {
     const data = canDetectChanges() ? getFormData() : {};
     return data;
   }, [canDetectChanges, client]);
+
+  // ================================
+  // SYSTÈME DE DÉTECTION DES MODIFICATIONS
+  // ================================
 
   // Hook de détection des modifications
   const {
@@ -108,7 +139,7 @@ export const useClientForm = (mode, idClient, propClientService = null) => {
     if (mode === FORM_MODES.VIEW || !hasUnsavedChanges) return;
 
     const handleNavigationBlocked = async (event) => {
-      console.log('🌍 CLIENT FORM - Événement navigation-blocked reçu:', event.detail);
+      logger.debug('🌐 CLIENT FORM - Événement navigation-blocked reçu:', event.detail);
       
       if (event.detail && event.detail.callback) {
         try {
@@ -121,17 +152,17 @@ export const useClientForm = (mode, idClient, propClientService = null) => {
           });
 
           if (result.action === 'confirm') {
-            console.log('✅ CLIENT - Navigation confirmée');
+            logger.debug('✅ CLIENT - Navigation confirmée');
             resetChanges();
             unregisterGuard(guardId);
             if (event.detail.callback) {
               event.detail.callback();
             }
           } else {
-            console.log('❌ CLIENT - Navigation annulée');
+            logger.debug('❌ CLIENT - Navigation annulée');
           }
-        } catch (error) {
-          console.error('Erreur dans la modal de navigation:', error);
+        } catch (err) {
+          logger.error('Erreur dans la modal de navigation:', err);
         }
       }
     };
@@ -143,25 +174,95 @@ export const useClientForm = (mode, idClient, propClientService = null) => {
     };
   }, [mode, hasUnsavedChanges, resetChanges, unregisterGuard, guardId]);
 
-  // Fonction pour charger un client
+  // ================================
+  // ✅ VALIDATION AVEC clientValidators
+  // ================================
+
+  /**
+   * Valide l'email en utilisant clientValidators
+   * @param {string} email - Email à valider
+   * @returns {boolean} - true si valide
+   */
+  const validateEmailField = useCallback((email) => {
+    if (!email) {
+      setFieldErrors(prev => ({ ...prev, email: null }));
+      return true;
+    }
+
+    const result = validateEmail(email);
+    
+    setFieldErrors(prev => ({
+      ...prev,
+      email: result.isValid ? null : result.error
+    }));
+    
+    // Gérer les avertissements
+    if (result.warnings && result.warnings.length > 0) {
+      setFieldWarnings(prev => ({
+        ...prev,
+        email: result.warnings
+      }));
+    } else {
+      setFieldWarnings(prev => {
+        const { email: _, ...rest } = prev;
+        return rest;
+      });
+    }
+    
+    return result.isValid;
+  }, []);
+
+  /**
+   * Valide le téléphone en utilisant clientValidators
+   * @param {string} phone - Téléphone à valider
+   * @returns {boolean} - true si valide
+   */
+  const validatePhoneField = useCallback((phone) => {
+    if (!phone) {
+      setFieldErrors(prev => ({ ...prev, telephone: null }));
+      setPhoneType(null);
+      return true;
+    }
+
+    const result = validatePhone(phone);
+    
+    setFieldErrors(prev => ({
+      ...prev,
+      telephone: result.isValid ? null : result.error
+    }));
+    
+    // Mettre à jour le type de téléphone
+    setPhoneType(result.phoneType || null);
+    
+    return result.isValid;
+  }, []);
+
+  // ================================
+  // CHARGEMENT DU CLIENT
+  // ================================
+
   const chargerClient = async (id) => {
     if (hasInitialized.current) {
-      console.log('Client déjà initialisé, skip');
+      logger.debug('Client déjà initialisé, skip');
       return;
     }
 
     try {
-      setIsLoading(true);
+      setLocalIsLoading(true);
+      setLocalError(null);
       hasInitialized.current = true;
 
-      const data = await clientService.getClient(id);
+      // ✅ Utiliser getClient de useClientActions
+      const data = await getClient(id);
+
       if (data) {
-        const normalizedClient = normalizeBooleanFields(data, ['estTherapeute']);
+        // ✅ Utiliser normalizeClient du hook
+        const normalizedClient = normalizeClient(data);
         setClient(normalizedClient);
         
-        // Validation initiale
-        validateEmail(normalizedClient.email || '');
-        validatePhone(normalizedClient.telephone || '');
+        // ✅ Validation initiale avec clientValidators
+        validateEmailField(normalizedClient.email || '');
+        validatePhoneField(normalizedClient.telephone || '');
 
         // Sauvegarder les données initiales
         const formData = {
@@ -181,56 +282,17 @@ export const useClientForm = (mode, idClient, propClientService = null) => {
         setIsInitialLoadDone(true);
         setIsFullyInitialized(true);
       }
-    } catch (error) {
-      console.error('Erreur lors du chargement du client:', error);
-      setError(error.message);
+    } catch (err) {
+      logger.error('Erreur lors du chargement du client:', err);
+      setLocalError(err.message || 'Erreur lors du chargement du client');
     } finally {
-      setIsLoading(false);
+      setLocalIsLoading(false);
     }
   };
 
-  // Validation email
-  const validateEmail = (email) => {
-    if (!email) {
-      setFieldErrors(prev => ({ ...prev, email: null }));
-      return true;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setFieldErrors(prev => ({ ...prev, email: 'Format d\'email invalide' }));
-      return false;
-    }
-
-    setFieldErrors(prev => ({ ...prev, email: null }));
-    return true;
-  };
-
-  // Validation téléphone
-  const validatePhone = (phone) => {
-    if (!phone) {
-      setFieldErrors(prev => ({ ...prev, telephone: null }));
-      setPhoneType(null);
-      return true;
-    }
-
-    const swissRegex = /^(\+41|0041|0)[1-9]\d{8}$/;
-    const foreignRegex = /^\+(?!41)\d{1,3}\d{6,14}$/;
-
-    if (swissRegex.test(phone.replace(/\s/g, ''))) {
-      setPhoneType('swiss');
-      setFieldErrors(prev => ({ ...prev, telephone: null }));
-      return true;
-    } else if (foreignRegex.test(phone.replace(/\s/g, ''))) {
-      setPhoneType('foreign');
-      setFieldErrors(prev => ({ ...prev, telephone: null }));
-      return true;
-    } else {
-      setPhoneType(null);
-      setFieldErrors(prev => ({ ...prev, telephone: 'Format de téléphone invalide' }));
-      return false;
-    }
-  };
+  // ================================
+  // GESTIONNAIRES DE CHANGEMENT
+  // ================================
 
   // Gestionnaire de changement de champ
   const handleChange = useCallback((e) => {
@@ -239,13 +301,13 @@ export const useClientForm = (mode, idClient, propClientService = null) => {
     const { name, value } = e.target;
     setClient(prev => ({ ...prev, [name]: value }));
 
-    // Validation en temps réel
+    // ✅ Validation en temps réel avec clientValidators
     if (name === 'email') {
-      validateEmail(value);
+      validateEmailField(value);
     } else if (name === 'telephone') {
-      validatePhone(value);
+      validatePhoneField(value);
     }
-  }, [isReadOnly]);
+  }, [isReadOnly, validateEmailField, validatePhoneField]);
 
   // Toggle thérapeute
   const toggleTherapeute = useCallback(() => {
@@ -253,55 +315,61 @@ export const useClientForm = (mode, idClient, propClientService = null) => {
     setClient(prev => ({ ...prev, estTherapeute: !prev.estTherapeute }));
   }, [isReadOnly]);
 
-  // Soumission du formulaire
+  // ================================
+  // SOUMISSION DU FORMULAIRE
+  // ================================
+
   const handleSubmit = useCallback(async () => {
     if (isReadOnly || isSubmitting) return { success: false };
 
-    // Validation finale
-    const isEmailValid = validateEmail(client.email);
-    const isPhoneValid = validatePhone(client.telephone);
+    // ✅ Validation finale avec clientValidators
+    const isEmailValid = validateEmailField(client.email);
+    const isPhoneValid = validatePhoneField(client.telephone);
 
     if (!isEmailValid || !isPhoneValid) {
-      setError(VALIDATION_MESSAGES.INVALID_FIELDS);
+      setLocalError(VALIDATION_MESSAGES.INVALID_FIELDS);
       return { success: false, message: VALIDATION_MESSAGES.INVALID_FIELDS };
     }
 
     if (!client.nom || !client.prenom) {
-      setError(VALIDATION_MESSAGES.REQUIRED_FIELDS);
+      setLocalError(VALIDATION_MESSAGES.REQUIRED_FIELDS);
       return { success: false, message: VALIDATION_MESSAGES.REQUIRED_FIELDS };
     }
 
     setIsSubmitting(true);
-    setError(null);
+    setLocalError(null);
 
     try {
       let result;
       if (mode === FORM_MODES.CREATE) {
-        result = await clientService.createClient(client);
+        result = await createClient(client);
       } else if (mode === FORM_MODES.EDIT) {
-        result = await clientService.updateClient(idClient, client);
+        result = await updateClient(idClient, client);
       }
 
       if (result && result.success) {
         markAsSaved();
         return {
           success: true,
-          idClient: result.idClient || idClient,
+          idClient: result.idClient || result.id || idClient,
           message: mode === FORM_MODES.CREATE ? 'Client créé avec succès' : 'Client modifié avec succès'
         };
       } else {
         throw new Error(result?.message || 'Erreur lors de la sauvegarde');
       }
-    } catch (error) {
-      console.error('Erreur lors de la soumission:', error);
-      setError(error.message);
-      return { success: false, message: error.message };
+    } catch (err) {
+      logger.error('Erreur lors de la soumission:', err);
+      setLocalError(err.message);
+      return { success: false, message: err.message };
     } finally {
       setIsSubmitting(false);
     }
-  }, [mode, idClient, client, isReadOnly, isSubmitting, clientService, markAsSaved]);
+  }, [mode, idClient, client, isReadOnly, isSubmitting, createClient, updateClient, markAsSaved, validateEmailField, validatePhoneField]);
 
-  // Initialisation
+  // ================================
+  // INITIALISATION
+  // ================================
+
   useEffect(() => {
     if (mode === FORM_MODES.CREATE) {
       setInitialFormData(getFormData());
@@ -312,12 +380,16 @@ export const useClientForm = (mode, idClient, propClientService = null) => {
     }
   }, [mode, idClient]);
 
+  // ================================
+  // RETOUR DU HOOK
+  // ================================
+
   return {
-    // États
+    // États - Combiner les états locaux et ceux de useClientActions
     client,
-    isLoading,
+    isLoading: localIsLoading || actionIsLoading,
     isSubmitting,
-    error,
+    error: localError || actionError?.message,
     fieldErrors,
     fieldWarnings,
     phoneType,
@@ -336,9 +408,13 @@ export const useClientForm = (mode, idClient, propClientService = null) => {
     toggleTherapeute,
     handleSubmit,
     setClient,
-    setError,
+    setError: setLocalError,
     setFieldErrors,
     setFieldWarnings,
+    
+    // ✅ Fonctions de validation exposées
+    validateEmailField,
+    validatePhoneField,
     
     // Navigation functions
     markAsSaved,
@@ -350,6 +426,9 @@ export const useClientForm = (mode, idClient, propClientService = null) => {
     
     // Utilitaires
     getFormData,
-    canDetectChanges
+    canDetectChanges,
+    
+    // ✅ Constantes pour l'interface
+    PHONE_TYPES
   };
 };

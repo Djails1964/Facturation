@@ -12,7 +12,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 1500;
 }
 
 .gdp-modal {
@@ -25,7 +25,7 @@
   animation: gdp-fadeIn 0.3s;
   max-height: 90vh;
   overflow-y: auto;
-  z-index: 1001;
+  z-index: 1501;
 }
 
 @keyframes gdp-fadeIn {

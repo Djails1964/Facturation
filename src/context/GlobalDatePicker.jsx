@@ -80,7 +80,7 @@ function GlobalDatePicker() {
                             locale="fr"
                             onSelect={safeHandleDateSelect}
                             highlightDates={selectedDates}
-                            selected={null}
+                            selected={selectedDates.length > 0 ? selectedDates[0] : null}
                             dateFormat="dd/MM/yyyy"
                             showMonthDropdown
                             showYearDropdown

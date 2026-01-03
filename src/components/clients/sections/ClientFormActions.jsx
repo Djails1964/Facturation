@@ -4,6 +4,7 @@
 import React from 'react';
 import { FORM_MODES } from '../../../constants/clientConstants';
 import { getSubmitButtonText } from '../utils/clientHelpers';
+import { createLogger } from '../../../utils/createLogger';
 
 /**
  * Section des boutons d'action avec gestion contextuelle selon le mode
@@ -18,6 +19,9 @@ function ClientFormActions({
   className = '',
   customActions = null
 }) {
+
+  // ✅ Initialisation du logger
+  const logger = createLogger('ClientFormActions');
   
   const actionsClasses = ['form-actions'];
   if (className) actionsClasses.push(className);
@@ -26,7 +30,7 @@ function ClientFormActions({
   const canSubmit = !isSubmitting && isFormValid; // Supprimé hasErrors de la condition
 
   // Debug pour voir l'état du bouton
-  console.log('🔘 État du bouton submit:', {
+  logger.debug('🔘 État du bouton submit:', {
     isSubmitting,
     hasErrors,
     isFormValid,

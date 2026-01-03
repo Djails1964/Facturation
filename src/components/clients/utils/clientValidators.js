@@ -1,6 +1,11 @@
 // src/components/clients/utils/clientValidators.js
 // Fonctions de validation pour les composants clients
 
+import { createLogger } from '../../../utils/createLogger';
+
+// ✅ Initialisation du logger
+const logger = createLogger('clientValidators');
+
 /**
  * Types de téléphone
  */
@@ -192,7 +197,7 @@ function formatSwissPhone(phone) {
  */
 export function validateCodePostal(codePostal, required = true) {
   // AJOUTEZ CE LOG TEMPORAIRE
-  console.log('🔍 validateCodePostal - Input:', { codePostal, required, type: typeof codePostal });
+  logger.debug('🔍 validateCodePostal - Input:', { codePostal, required, type: typeof codePostal });
   
   const result = {
     isValid: true,
@@ -203,7 +208,7 @@ export function validateCodePostal(codePostal, required = true) {
 
   // Vérifier si requis
   if (required && (!codePostal || !codePostal.toString().trim())) {
-    console.log('🔍 validateCodePostal - ÉCHEC:', { codePostal, isEmpty: !codePostal, isEmptyString: !codePostal?.toString().trim() });
+    logger.debug('🔍 validateCodePostal - ÉCHEC:', { codePostal, isEmpty: !codePostal, isEmptyString: !codePostal?.toString().trim() });
     result.isValid = false;
     result.error = VALIDATION_MESSAGES.CODE_POSTAL_REQUIRED;
     return result;

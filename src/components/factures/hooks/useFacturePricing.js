@@ -1,4 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useApiCall } from '../../../hooks/useApiCall';
+import { createLogger } from '../../../utils/createLogger';
 
 /**
  * Hook personnalisé pour la gestion des calculs de prix dans les factures
@@ -7,13 +9,19 @@ import { useState, useCallback, useRef, useEffect } from 'react';
  */
 export function useFacturePricing(
     client,
-    tarificationService,
+    tarifActions,
     services,
     unites,
     lignes,
     modifierLigne,
     prixModifiesManuel
 ) {
+
+    const log = createLogger("useFacturePricing");
+
+    // ✅ Hook API centralisé
+    const { execute: executeApi } = useApiCall();
+
     // États pour le suivi des calculs
     const [isCalculating, setIsCalculating] = useState(false);
     const [lastCalculation, setLastCalculation] = useState({});
@@ -28,16 +36,16 @@ export function useFacturePricing(
     const calculerPrixPourClient = useCallback(async (params) => {
         const { idClient, idService, idUnite, forceRecalcul = false } = params;
 
-        console.log('Calcul prix pour client appelé avec:', { idClient, idService, idUnite, forceRecalcul });
+        log.debug('Calcul prix pour client appelé avec:', { idClient, idService, idUnite, forceRecalcul });
         
         // Validation stricte des paramètres
         if (!idClient || !idService || !idUnite) {
-            console.warn('Paramètres manquants pour calculerPrixPourClient:', { idClient, idService, idUnite });
+            log.warn('Paramètres manquants pour calculerPrixPourClient:', { idClient, idService, idUnite });
             return 0;
         }
 
-        if (!tarificationService) {
-            console.warn('TarificationService non disponible');
+        if (!tarifActions) {
+            log.warn('tarifActions non disponible');
             return 0;
         }
 
@@ -51,55 +59,63 @@ export function useFacturePricing(
                 const now = Date.now();
                 
                 if (now - cachedResult.timestamp < 10000) {
-                    console.log(`Prix récupéré du cache: ${cachedResult.prix} CHF pour ${cacheKey}`);
+                    log.debug(`Prix récupéré du cache: ${cachedResult.prix} CHF pour ${cacheKey}`);
                     return cachedResult.prix;
                 } else {
                     calculationCache.current.delete(cacheKey);
-                    console.log(`Cache expiré pour ${cacheKey}, recalcul nécessaire`);
+                    log.debug(`Cache expiré pour ${cacheKey}, recalcul nécessaire`);
                 }
             }
         } else {
             calculationCache.current.delete(cacheKey);
-            console.log(`Force recalcul demandé pour ${cacheKey}`);
+            log.debug(`Force recalcul demandé pour ${cacheKey}`);
         }
 
         // Protection contre les appels simultanés
         if (calculationPromises.current.has(cacheKey)) {
-            console.log(`Calcul déjà en cours pour ${cacheKey}, attente du résultat...`);
+            log.debug(`Calcul déjà en cours pour ${cacheKey}, attente du résultat...`);
             return await calculationPromises.current.get(cacheKey);
         }
 
         // Créer la promesse de calcul
         const calculationPromise = (async () => {
             try {
-                console.log('Calcul du prix initial pour:', {
-                    idClient,
-                    idService,
-                    idUnite,
-                    clientNom: client?.nom,
-                    forceRecalcul
-                });
+                return await executeApi(
+                    async () => {
+                        log.debug('🔥 Calcul du prix initial:', {
+                            idClient,
+                            idService,
+                            idUnite,
+                            clientNom: client?.nom
+                        });
 
-                const prix = await tarificationService.calculerPrix({
-                    idClient,
-                    idService,
-                    idUnite,
-                    date: new Date().toISOString().split('T')[0]
-                });
+                        const prix = await tarifActions.calculerPrix({
+                            idClient,
+                            idService,
+                            idUnite,
+                            date: new Date().toISOString().split('T')[0]
+                        });
 
-                const finalPrix = prix || 0;
-                
-                // Mise en cache du résultat
-                calculationCache.current.set(cacheKey, {
-                    prix: finalPrix,
-                    timestamp: Date.now()
-                });
-
-                console.log(`Prix calculé: ${finalPrix} CHF pour client ${client?.nom} (ID: ${idClient})`);
-                return finalPrix;
-            } catch (error) {
-                console.error('Erreur dans calculerPrixPourClient:', error);
-                return 0;
+                        return prix || 0;
+                    },
+                    (finalPrix) => {
+                        log.debug(`✅ Prix calculé: ${finalPrix} CHF pour client ${client?.nom}`);
+                        
+                        // Mise en cache du résultat
+                        calculationCache.current.set(cacheKey, {
+                            prix: finalPrix,
+                            timestamp: Date.now()
+                        });
+                    },
+                    (error) => {
+                        log.error('❌ Erreur calcul prix:', error);
+                        // Retourner 0 en cas d'erreur
+                        calculationCache.current.set(cacheKey, {
+                            prix: 0,
+                            timestamp: Date.now()
+                        });
+                    }
+                );
             } finally {
                 // Nettoyer la promesse
                 calculationPromises.current.delete(cacheKey);
@@ -110,7 +126,7 @@ export function useFacturePricing(
         calculationPromises.current.set(cacheKey, calculationPromise);
         
         return await calculationPromise;
-    }, [tarificationService, client]);
+    }, [tarifActions, client, executeApi]);
 
     /**
      * FONCTION UTILITAIRE: Extraction unifiée des IDs de service et unité
@@ -121,7 +137,7 @@ export function useFacturePricing(
         let serviceCode = null;
         let uniteCode = null;
 
-        console.log(`Extraction IDs ligne ${index}:`, {
+        log.debug(`Extraction IDs ligne ${index}:`, {
             ligne: ligne,
             nouvellesValeurs: nouvellesValeurs
         });
@@ -132,27 +148,27 @@ export function useFacturePricing(
             serviceCode = nouvellesValeurs.serviceType;
             const serviceObj = services?.find(s => s.codeService === serviceCode);
             idService = serviceObj?.idService;
-            console.log('Service ID depuis nouvelle valeur:', { serviceCode, idService });
+            log.debug('Service ID depuis nouvelle valeur:', { serviceCode, idService });
         } else if (nouvellesValeurs?.service && typeof nouvellesValeurs.service === 'object') {
             // Objet service fourni
             idService = nouvellesValeurs.service.idService;
             serviceCode = nouvellesValeurs.service.codeService;
-            console.log('Service ID depuis objet nouvelle valeur:', { serviceCode, idService });
+            log.debug('Service ID depuis objet nouvelle valeur:', { serviceCode, idService });
         } else if (ligne.service?.idService) {
             // Objet enrichi
             idService = ligne.service.idService;
             serviceCode = ligne.service.codeService;
-            console.log('Service ID depuis objet enrichi:', { serviceCode, idService });
+            log.debug('Service ID depuis objet enrichi:', { serviceCode, idService });
         } else if (ligne.idService) {
             // ID direct
             idService = ligne.idService;
-            console.log('Service ID depuis propriété directe:', idService);
+            log.debug('Service ID depuis propriété directe:', idService);
         } else if (ligne.serviceType && services) {
             // Code service
             serviceCode = ligne.serviceType;
             const serviceObj = services.find(s => s.codeService === serviceCode);
             idService = serviceObj?.idService;
-            console.log('Service ID depuis code service:', { serviceCode, idService });
+            log.debug('Service ID depuis code service:', { serviceCode, idService });
         }
 
         // EXTRACTION DE L'UNITÉ
@@ -161,38 +177,38 @@ export function useFacturePricing(
             if (typeof nouvellesValeurs.unite === 'object') {
                 idUnite = nouvellesValeurs.unite.idUnite;
                 uniteCode = nouvellesValeurs.unite.code || nouvellesValeurs.unite.codeUnite;
-                console.log('Unité ID depuis objet nouvelle valeur:', { uniteCode, idUnite });
+                log.debug('Unité ID depuis objet nouvelle valeur:', { uniteCode, idUnite });
             } else {
                 uniteCode = nouvellesValeurs.unite;
                 const uniteObj = unites?.find(u => u.code === uniteCode || u.codeUnite === uniteCode);
                 idUnite = uniteObj?.idUnite;
-                console.log('Unité ID depuis code nouvelle valeur:', { uniteCode, idUnite });
+                log.debug('Unité ID depuis code nouvelle valeur:', { uniteCode, idUnite });
             }
         } else if (ligne.unite?.idUnite) {
             // Objet enrichi
             idUnite = ligne.unite.idUnite;
             uniteCode = ligne.unite.code || ligne.unite.codeUnite;
-            console.log('Unité ID depuis objet enrichi:', { uniteCode, idUnite });
+            log.debug('Unité ID depuis objet enrichi:', { uniteCode, idUnite });
         } else if (ligne.idUnite) {
             // ID direct
             idUnite = ligne.idUnite;
-            console.log('Unité ID depuis propriété directe:', idUnite);
+            log.debug('Unité ID depuis propriété directe:', idUnite);
         } else if (ligne.uniteCode && unites) {
             // Code unité
             uniteCode = ligne.uniteCode;
             const uniteObj = unites.find(u => u.codeUnite === uniteCode || u.code === uniteCode);
             idUnite = uniteObj?.idUnite;
-            console.log('Unité ID depuis uniteCode:', { uniteCode, idUnite });
+            log.debug('Unité ID depuis uniteCode:', { uniteCode, idUnite });
         } else if (typeof ligne.unite === 'string' && unites) {
             // String unité
             uniteCode = ligne.unite;
             const uniteObj = unites.find(u => u.codeUnite === uniteCode || u.code === uniteCode);
             idUnite = uniteObj?.idUnite;
-            console.log('Unité ID depuis string unité:', { uniteCode, idUnite });
+            log.debug('Unité ID depuis string unité:', { uniteCode, idUnite });
         }
 
         const result = { idService, idUnite, serviceCode, uniteCode };
-        console.log(`IDs finaux ligne ${index}:`, result);
+        log.debug(`IDs finaux ligne ${index}:`, result);
         return result;
     }, [services, unites]);
 
@@ -208,17 +224,17 @@ export function useFacturePricing(
             forceRecalcul = false  // ✅ AJOUT: Paramètre pour forcer le recalcul
         } = options;
 
-        if (!client || !lignes?.length || !tarificationService || isCalculating) {
-            console.log('Conditions non remplies pour calcul prix:', {
+        if (!client || !lignes?.length || !tarifActions || isCalculating) {
+            log.debug('Conditions non remplies pour calcul prix:', {
                 client: !!client,
                 lignes: lignes?.length,
-                tarificationService: !!tarificationService,
+                tarifActions: !!tarifActions,
                 isCalculating
             });
             return;
         }
 
-        console.log(`Calcul prix unifié - Mode: ${mode}`, options);
+        log.debug(`Calcul prix unifié - Mode: ${mode}`, options);
 
         // Déterminer les lignes à traiter
         let lignesToProcess = [];
@@ -250,16 +266,16 @@ export function useFacturePricing(
                 break;
                 
             default:
-                console.warn('Mode de calcul inconnu:', mode);
+                log.warn('Mode de calcul inconnu:', mode);
                 return;
         }
 
         if (lignesToProcess.length === 0) {
-            console.log(`Aucune ligne à traiter pour le mode ${mode}`);
+            log.debug(`Aucune ligne à traiter pour le mode ${mode}`);
             return;
         }
 
-        console.log(`Traitement de ${lignesToProcess.length} ligne(s) en mode ${mode}`);
+        log.debug(`Traitement de ${lignesToProcess.length} ligne(s) en mode ${mode}`);
         setIsCalculating(true);
 
         try {
@@ -269,11 +285,11 @@ export function useFacturePricing(
                     const ids = extraireIdsLigne(ligne, index, nouvellesValeurs);
                     
                     if (!ids.idService || !ids.idUnite) {
-                        console.warn(`IDs manquants ligne ${index}:`, ids);
+                        log.warn(`IDs manquants ligne ${index}:`, ids);
                         continue;
                     }
 
-                    console.log(`Calcul prix ligne ${index}:`, {
+                    log.debug(`Calcul prix ligne ${index}:`, {
                         service: ids.serviceCode,
                         unite: ids.uniteCode,
                         ancienPrix: ligne.prixUnitaire
@@ -294,12 +310,12 @@ export function useFacturePricing(
                     if (nouveauPrix >= 0 && nouveauPrix !== ligne.prixUnitaire) {
                         if (modifierLigne && typeof modifierLigne === 'function') {
                             modifierLigne(index, 'prixUnitaire', nouveauPrix);
-                            console.log(`Prix mis à jour ligne ${index}: ${ligne.prixUnitaire} → ${nouveauPrix} CHF`);
+                            log.debug(`Prix mis à jour ligne ${index}: ${ligne.prixUnitaire} → ${nouveauPrix} CHF`);
                         }
                     }
 
                 } catch (error) {
-                    console.error(`Erreur calcul ligne ${index}:`, error);
+                    log.error(`Erreur calcul ligne ${index}:`, error);
                 }
 
                 // Délai entre les lignes pour éviter la surcharge
@@ -308,11 +324,11 @@ export function useFacturePricing(
                 }
             }
         } catch (error) {
-            console.error('Erreur dans calculerPrix:', error);
+            log.error('Erreur dans calculerPrix:', error);
         } finally {
             setIsCalculating(false);
         }
-    }, [client, lignes, tarificationService, isCalculating, calculerPrixPourClient, extraireIdsLigne, modifierLigne, prixModifiesManuel]);
+    }, [client, lignes, tarifActions, isCalculating, calculerPrixPourClient, extraireIdsLigne, modifierLigne, prixModifiesManuel]);
 
     // FONCTIONS PUBLIQUES SIMPLIFIÉES (wrappers)
     
@@ -353,7 +369,7 @@ export function useFacturePricing(
         const unite = unites.find(u => u.code === uniteCode || u.codeUnite === uniteCode);
 
         if (!service || !unite) {
-            console.warn('Service ou unité non trouvé:', { serviceCode, uniteCode });
+            log.warn('Service ou unité non trouvé:', { serviceCode, uniteCode });
             return 0;
         }
 
@@ -380,11 +396,11 @@ export function useFacturePricing(
         if (specificKey) {
             calculationCache.current.delete(specificKey);
             calculationPromises.current.delete(specificKey);
-            console.log('Cache vidé pour clé spécifique:', specificKey);
+            log.debug('Cache vidé pour clé spécifique:', specificKey);
         } else {
             calculationCache.current.clear();
             calculationPromises.current.clear();
-            console.log('Cache des prix entièrement vidé');
+            log.debug('Cache des prix entièrement vidé');
         }
     }, []);
 
@@ -401,17 +417,28 @@ export function useFacturePricing(
      * Obtention du tarif d'information pour un client
      */
     const getTarifInfo = useCallback(async () => {
-        if (!client || !tarificationService) {
+        if (!client || !tarifActions) {
             return '';
         }
 
-        try {
-            return await tarificationService.getTarifInfoMessage(client);
-        } catch (error) {
-            console.error('Erreur lors de la récupération du tarif info:', error);
-            return '';
-        }
-    }, [client, tarificationService]);
+        return new Promise((resolve) => {
+            executeApi(
+                async () => {
+                    log.debug('🔥 Récupération du message de tarif info...');
+                    const message = await tarifActions.getTarifInfoMessage(client);
+                    return message;
+                },
+                (message) => {
+                    log.debug('✅ Message de tarif info récupéré:', message);
+                    resolve(message || '');
+                },
+                (error) => {
+                    log.error('❌ Erreur récupération tarif info:', error);
+                    resolve('');
+                }
+            );
+        });
+    }, [client, tarifActions, executeApi]);
 
     /**
      * Validation qu'un prix est valide
@@ -436,7 +463,7 @@ export function useFacturePricing(
             clearCache();
             
             if (lastCalculation.idClient) { // Pas la première initialisation
-                console.log('Changement de client détecté:', {
+                log.debug('Changement de client détecté:', {
                     ancien: lastCalculation.idClient,
                     nouveau: client?.id
                 });
@@ -457,7 +484,7 @@ export function useFacturePricing(
      * Effet pour déclencher le calcul automatique des prix manquants
      */
     useEffect(() => {
-        if (!client || !lignes?.length || !tarificationService) {
+        if (!client || !lignes?.length || !tarifActions) {
             return;
         }
 
@@ -466,7 +493,7 @@ export function useFacturePricing(
         }, 300);
 
         return () => clearTimeout(timer);
-    }, [client?.id, lignes?.length, tarificationService, calculerPrixManquants]);
+    }, [client?.id, lignes?.length, tarifActions, calculerPrixManquants]);
 
     /**
      * Nettoyage lors du démontage

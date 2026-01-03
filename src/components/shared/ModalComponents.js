@@ -491,6 +491,8 @@ export const createSelect = (id, label, options, selectedValue = '', required = 
         const selected = value === selectedValue ? 'selected' : '';
         return `<option value="${value}" ${selected}>${text}</option>`;
     }).join('');
+
+    const includeEmptyOption = !selectedValue || selectedValue === '';
     
     return `
         <div class="input-group">
@@ -500,7 +502,7 @@ export const createSelect = (id, label, options, selectedValue = '', required = 
                 ${required ? 'required' : ''}
                 ${disabled ? 'disabled style="opacity: 0.6;"' : ''}
             >
-                ${!required ? '<option value="">Sélectionner...</option>' : ''}
+                ${includeEmptyOption ? '<option value="">Sélectionner...</option>' : ''}  // ✅ Option vide si aucune sélection
                 ${optionsHtml}
             </select>
             <label for="${id}" ${required ? 'class="required"' : ''}>${label}</label>

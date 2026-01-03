@@ -2,14 +2,17 @@
 
 import React from 'react';
 import ModalComponents from '../../../shared/ModalComponents';
+import { createLogger } from '../../../../utils/createLogger';
 
 /**
  * Gestionnaire pour la suppression/annulation de factures
  * Extrait de FacturesListe.jsx pour réduire la complexité
+ * ✅ REFACTORISÉ : Utilise factureActions au lieu de factureService
  */
 export class DeleteModalHandler {
     constructor(dependencies) {
-        this.factureService = dependencies.factureService;
+        // ✅ Utiliser factureActions au lieu de factureService
+        this.factureActions = dependencies.factureActions;
         this.showCustom = dependencies.showCustom;
         this.showLoading = dependencies.showLoading;
         this.formatMontant = dependencies.formatMontant;
@@ -18,6 +21,9 @@ export class DeleteModalHandler {
         this.onFactureSupprimee = dependencies.onFactureSupprimee;
         this.chargerFactures = dependencies.chargerFactures;
         this.filteredFactures = dependencies.filteredFactures;
+        
+        // ✅ Logger centralisé
+        this.log = createLogger('DeleteModalHandler');
     }
 
     /**
@@ -30,16 +36,16 @@ export class DeleteModalHandler {
         
         const anchorRef = this.createAnchorRef(event);
         
-        console.log('🚀 DeleteModalHandler - Début suppression/annulation facture ID:', idFacture);
-        console.log('this.filteredFactures: ', this.filteredFactures);
+        this.log.debug('🚀 Début suppression/annulation facture ID:', idFacture);
+        this.log.debug('filteredFactures:', this.filteredFactures);
         const facture = this.filteredFactures?.find(f => f.idFacture === idFacture);
-        console.log('facture à supprimer : ', facture);
+        this.log.debug('facture à supprimer:', facture);
         if (!facture) {
-            console.error('❌ Facture non trouvée:', idFacture);
+            this.log.error('❌ Facture non trouvée:', idFacture);
             return;
         }
 
-        console.log('📋 Facture trouvée:', {
+        this.log.debug('📋 Facture trouvée:', {
             idFacture: facture.idFacture,
             numeroFacture: facture.numeroFacture,
             etat: facture.etat,
@@ -49,10 +55,10 @@ export class DeleteModalHandler {
         const canDelete = facture.etat === 'En attente';
         const canCancel = ['Envoyée', 'Éditée', 'Retard', 'Partiellement payée'].includes(facture.etat);
         
-        console.log('🔍 Permissions:', { canDelete, canCancel, etat: facture.etat });
+        this.log.debug('🔍 Permissions:', { canDelete, canCancel, etat: facture.etat });
         
         if (!canDelete && !canCancel) {
-            console.log('❌ Action non autorisée pour l\'état:', facture.etat);
+            this.log.warn('❌ Action non autorisée pour l\'état:', facture.etat);
             this.onSetNotification(
                 'Cette facture ne peut être ni supprimée ni annulée dans son état actuel', 
                 'error'
@@ -61,25 +67,25 @@ export class DeleteModalHandler {
         }
         
         const isAnnulation = canCancel && !canDelete;
-        console.log('📝 Type d\'action déterminé:', isAnnulation ? 'ANNULATION' : 'SUPPRESSION');
+        this.log.debug('🔍 Type d\'action déterminé:', isAnnulation ? 'ANNULATION' : 'SUPPRESSION');
         
         try {
             // Afficher la modal de confirmation
-            console.log('🔄 Affichage de la modal de confirmation...');
+            this.log.debug('📄 Affichage de la modal de confirmation...');
             const result = await this.showConfirmationModal(facture, isAnnulation, anchorRef);
             
-            console.log('📤 Résultat de la modal de confirmation:', result);
+            this.log.debug('📤 Résultat de la modal de confirmation:', result);
             
             // ✅ CORRECTION: Vérifier aussi result.confirmed en plus de result.action
             if (result.action === 'confirm' || result.action === 'submit' || result.confirmed === true) {
-                console.log('✅ Confirmation reçue, exécution de l\'action...');
+                this.log.debug('✅ Confirmation reçue, exécution de l\'action...');
                 await this.executeAction(idFacture, facture, isAnnulation, anchorRef);
             } else {
-                console.log('❌ Action annulée par l\'utilisateur:', result);
+                this.log.debug('❌ Action annulée par l\'utilisateur:', result);
             }
             
         } catch (error) {
-            console.error('❌ Erreur lors de la préparation:', error);
+            this.log.error('❌ Erreur lors de la préparation:', error);
             await this.showError(
                 `Erreur lors de la préparation de l'action : ${error.message}`,
                 anchorRef
@@ -91,7 +97,7 @@ export class DeleteModalHandler {
      * Modal de confirmation de suppression/annulation
      */
     async showConfirmationModal(facture, isAnnulation, anchorRef) {
-        console.log('🔧 Création de la modal de confirmation:', { isAnnulation, facture: facture.numeroFacture });
+        this.log.debug('🔧 Création de la modal de confirmation:', { isAnnulation, facture: facture.numeroFacture });
         
         const modalConfig = {
             title: isAnnulation ? 'Confirmer l\'annulation' : 'Confirmer la suppression',
@@ -106,10 +112,10 @@ export class DeleteModalHandler {
             })
         };
         
-        console.log('📋 Configuration de la modal:', modalConfig);
+        this.log.debug('📋 Configuration de la modal:', modalConfig);
         
         const result = await this.showCustom(modalConfig);
-        console.log('📥 Résultat retourné par showCustom:', result);
+        this.log.debug('📥 Résultat retourné par showCustom:', result);
         
         return result;
     }
@@ -173,13 +179,14 @@ export class DeleteModalHandler {
 
     /**
      * Exécuter l'action de suppression/annulation
+     * ✅ REFACTORISÉ : Utilise factureActions au lieu de factureService
      */
     async executeAction(idFacture, facture, isAnnulation, anchorRef) {
-        console.log('🚀 Début exécution de l\'action:', { idFacture, isAnnulation });
+        this.log.debug('🚀 Début exécution de l\'action:', { idFacture, isAnnulation });
         
         try {
-            console.log('🔄 Affichage du loading...');
-            const actionResult = await this.showLoading(
+            this.log.debug('📄 Affichage du loading...');
+            await this.showLoading(
                 {
                     title: isAnnulation ? "Annulation en cours..." : "Suppression en cours...",
                     content: ModalComponents.createLoadingContent(
@@ -192,36 +199,30 @@ export class DeleteModalHandler {
                     position: 'smart'
                 },
                 async () => {
-                    console.log('📞 Appel du service facture...');
+                    this.log.debug('📞 Appel factureActions...');
                     if (isAnnulation) {
-                        console.log('📞 Changement d\'état vers "Annulée"');
-                        return await this.factureService.changerEtatFacture(idFacture, 'Annulée');
+                        this.log.debug('📞 Annulation de la facture');
+                        // ✅ Utiliser annulerFacture au lieu de changerEtatFacture
+                        return await this.factureActions.annulerFacture(idFacture);
                     } else {
-                        console.log('📞 Suppression de la facture');
-                        return await this.factureService.deleteFacture(idFacture);
+                        this.log.debug('📞 Suppression de la facture');
+                        // ✅ Utiliser supprimerFacture au lieu de deleteFacture
+                        return await this.factureActions.supprimerFacture(idFacture);
                     }
                 }
             );
             
-            console.log('📥 Résultat de l\'action:', actionResult);
-            
-            if (actionResult && actionResult.success) {
-                console.log('✅ Action réussie');
-                await this.showSuccessModal(facture, isAnnulation, anchorRef);
-                this.onFactureSupprimee(
-                    isAnnulation ? 'Facture annulée avec succès!' : 'Facture supprimée avec succès!'
-                );
-                this.chargerFactures();
-            } else {
-                console.error('❌ Échec de l\'action:', actionResult);
-                throw new Error(
-                    actionResult?.message || 
-                    `Erreur lors de ${isAnnulation ? 'l\'annulation' : 'la suppression'}`
-                );
-            }
+            // ✅ factureActions lance une exception en cas d'erreur
+            // Si on arrive ici, c'est que l'action a réussi
+            this.log.debug('✅ Action réussie');
+            await this.showSuccessModal(facture, isAnnulation, anchorRef);
+            this.onFactureSupprimee(
+                isAnnulation ? 'Facture annulée avec succès!' : 'Facture supprimée avec succès!'
+            );
+            this.chargerFactures();
             
         } catch (actionError) {
-            console.error('❌ Erreur lors de l\'action:', actionError);
+            this.log.error('❌ Erreur lors de l\'action:', actionError);
             await this.showActionError(actionError, isAnnulation, anchorRef);
         }
     }
@@ -230,7 +231,7 @@ export class DeleteModalHandler {
      * ✅ CORRECTION COMPLÈTE: Deux types de modales de succès différentes
      */
     async showSuccessModal(facture, isAnnulation, anchorRef) {
-        console.log('🎉 Affichage de la modal de succès');
+        this.log.debug('🎉 Affichage de la modal de succès');
         
         // Stocker le numéro de facture avant toute tentative d'accès
         const numeroFacture = facture?.numeroFacture || 'N/A';
@@ -284,7 +285,7 @@ export class DeleteModalHandler {
      * Modal d'erreur d'action
      */
     async showActionError(actionError, isAnnulation, anchorRef) {
-        console.log('❌ Affichage de l\'erreur d\'action:', actionError.message);
+        this.log.error('❌ Affichage de l\'erreur d\'action:', actionError.message);
         
         const config = ModalComponents.createSimpleModalConfig(
             "Erreur",
@@ -316,7 +317,7 @@ export class DeleteModalHandler {
      * Modal d'erreur générique
      */
     async showError(message, anchorRef) {
-        console.log('❌ Affichage d\'erreur générique:', message);
+        this.log.error('❌ Affichage d\'erreur générique:', message);
         
         const config = ModalComponents.createSimpleModalConfig(
             "Erreur",

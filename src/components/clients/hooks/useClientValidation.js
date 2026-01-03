@@ -1,5 +1,6 @@
 // src/components/clients/hooks/useClientValidation.js
 // Hook spécialisé pour la validation des clients
+// ✅ REFACTORISÉ: Utilisation de createLogger au lieu de console.log
 
 import { useState, useCallback, useMemo } from 'react';
 import { 
@@ -13,12 +14,17 @@ import {
   validateAllClientFields,
   getFieldHelpText 
 } from '../utils/clientValidators';
+// ✅ AJOUT: Import de createLogger
+import { createLogger } from '../../../utils/createLogger';
 
 /**
  * Hook spécialisé pour la validation des champs client
  * Gère la validation en temps réel et les messages d'aide contextuels
  */
 export function useClientValidation(client) {
+  // ✅ Initialisation du logger
+  const logger = createLogger('useClientValidation');
+
   // ================================
   // ÉTAT LOCAL
   // ================================
@@ -36,6 +42,7 @@ export function useClientValidation(client) {
   // ================================
 
   const validateEmailField = useCallback((email, required = false) => {
+    logger.debug('📧 Validation email:', email);
     const result = validateEmail(email, required);
     
     setFieldErrors(prev => ({
@@ -49,6 +56,7 @@ export function useClientValidation(client) {
         ...prev,
         email: result.warnings
       }));
+      logger.debug('⚠️ Avertissements email:', result.warnings);
     } else {
       setFieldWarnings(prev => {
         const { email, ...rest } = prev;
@@ -56,10 +64,12 @@ export function useClientValidation(client) {
       });
     }
     
+    logger.debug(`✅ Résultat validation email: ${result.isValid ? 'valide' : 'invalide'}`);
     return result;
-  }, []);
+  }, [logger]);
 
   const validatePhoneField = useCallback((phone, required = false) => {
+    logger.debug('📱 Validation téléphone:', phone);
     const result = validatePhone(phone, required);
     
     setFieldErrors(prev => ({
@@ -69,8 +79,11 @@ export function useClientValidation(client) {
     
     setPhoneType(result.phoneType);
     
+    logger.debug(`✅ Résultat validation téléphone: ${result.isValid ? 'valide' : 'invalide'}`, {
+      phoneType: result.phoneType
+    });
     return result;
-  }, []);
+  }, [logger]);
 
   // ================================
   // VALIDATION GLOBALE
@@ -85,8 +98,7 @@ export function useClientValidation(client) {
            !fieldErrors.email && 
            !fieldErrors.telephone;
            
-    // Debug pour voir pourquoi le formulaire n'est pas valide
-    console.log('🔍 Calcul isFormValid:', {
+    logger.debug('🔍 Calcul isFormValid:', {
       'globalValidation.isValid': globalValidation.isValid,
       'globalValidation.errors': globalValidation.errors,
       'fieldErrors.email': fieldErrors.email,
@@ -95,13 +107,15 @@ export function useClientValidation(client) {
     });
     
     return valid;
-  }, [globalValidation.isValid, fieldErrors]);
+  }, [globalValidation.isValid, fieldErrors, logger]);
 
   // ================================
   // GESTIONNAIRE DE VALIDATION GÉNÉRIQUE
   // ================================
 
   const validateField = useCallback((fieldName, value, required = false) => {
+    logger.debug(`🔄 Validation du champ: ${fieldName}`);
+    
     switch (fieldName) {
       case 'email':
         return validateEmailField(value, required);
@@ -116,7 +130,7 @@ export function useClientValidation(client) {
           error: result.errors[fieldName] || null
         };
     }
-  }, [client, validateEmailField, validatePhoneField]);
+  }, [client, validateEmailField, validatePhoneField, logger]);
 
   // ================================
   // UTILITAIRES POUR L'INTERFACE
@@ -155,26 +169,30 @@ export function useClientValidation(client) {
   // ================================
 
   const clearFieldError = useCallback((fieldName) => {
+    logger.debug(`🧹 Nettoyage erreur du champ: ${fieldName}`);
     setFieldErrors(prev => ({
       ...prev,
       [fieldName]: null
     }));
-  }, []);
+  }, [logger]);
 
   const clearAllErrors = useCallback(() => {
+    logger.debug('🧹 Nettoyage de toutes les erreurs');
     setFieldErrors({
       email: null,
       telephone: null
     });
     setFieldWarnings({});
     setPhoneType(null);
-  }, []);
+  }, [logger]);
 
   // ================================
   // VALIDATION BATCH (pour soumission)
   // ================================
 
   const validateAllFields = useCallback((requiredFields = null) => {
+    logger.info('🔍 Validation de tous les champs', { requiredFields });
+    
     // Valider les champs spéciaux
     const emailResult = validateEmailField(client.email, requiredFields?.includes('email'));
     const phoneResult = validatePhoneField(client.telephone, requiredFields?.includes('telephone'));
@@ -190,6 +208,11 @@ export function useClientValidation(client) {
     
     const isValid = Object.keys(combinedErrors).length === 0;
     
+    logger.info(`✅ Validation complète: ${isValid ? 'succès' : 'échec'}`, {
+      errorsCount: Object.keys(combinedErrors).length,
+      errors: combinedErrors
+    });
+    
     return {
       isValid,
       errors: combinedErrors,
@@ -200,7 +223,7 @@ export function useClientValidation(client) {
       hasErrors: !isValid,
       hasWarnings: Object.keys(fieldWarnings).length > 0
     };
-  }, [client, validateEmailField, validatePhoneField, fieldWarnings]);
+  }, [client, validateEmailField, validatePhoneField, fieldWarnings, logger]);
 
   // ================================
   // MESSAGES D'AIDE CONTEXTUELS
@@ -240,6 +263,12 @@ export function useClientValidation(client) {
     const validFields = totalFields - Object.keys(allValidation.errors).length;
     const completionPercentage = totalFields > 0 ? Math.round((validFields / totalFields) * 100) : 0;
     
+    logger.debug('📊 Statistiques de validation:', {
+      totalFields,
+      validFields,
+      completionPercentage
+    });
+    
     return {
       totalFields,
       validFields,
@@ -248,7 +277,7 @@ export function useClientValidation(client) {
       completionPercentage,
       isComplete: completionPercentage === 100
     };
-  }, [client, validateAllFields]);
+  }, [client, validateAllFields, logger]);
 
   // ================================
   // RETOUR DU HOOK

@@ -6,6 +6,7 @@ import TarifStandardGestion from '../modules/TarifStandardGestion';
 import TarifSpecialGestion from '../modules/TarifSpecialGestion';
 import ServiceUniteGestion from '../modules/ServiceUniteGestion';
 import { FORM_TYPES } from '../../../constants/tarifConstants';
+import { createLogger } from '../../../utils/createLogger';
 
 const TarifContent = ({
   activeTab,
@@ -14,17 +15,22 @@ const TarifContent = ({
   onCreateItem,
   onEditItem,
   onDeleteItem,
+  onUnlinkServiceUnite,
   onCreateFacture,
   onBulkAction,
   createButtonRef,
   editButtonRef,
   deleteButtonRef
 }) => {
+
+  const log = createLogger('TarifContent');
+
   if (!gestionState.isAuthorized) return null;
   
   // Props communes pour tous les modules
   const commonModuleProps = {
     tarificationService: gestionState.tarificationService,
+    tarifActions: gestionState.tarifActions,
     setMessage: gestionState.setMessage,
     setMessageType: gestionState.setMessageType,
     setConfirmModal: gestionState.setConfirmModal
@@ -34,9 +40,7 @@ const TarifContent = ({
     case 'services':
       return (
         <ServiceGestion 
-          {...commonModuleProps}
           services={gestionState.services}
-          loadServices={gestionState.loadServices}
           highlightedId={createdIds.service}
           onCreateService={(event) => {
             createButtonRef.current = event?.target;
@@ -56,9 +60,7 @@ const TarifContent = ({
     case 'unites':
       return (
         <UniteGestion
-          {...commonModuleProps}
           unites={gestionState.unites}
-          loadUnites={gestionState.loadUnites}
           highlightedId={createdIds.unite}
           onCreateUnite={(event) => {
             createButtonRef.current = event?.target;
@@ -83,15 +85,14 @@ const TarifContent = ({
           unites={gestionState.unites}
           loadUnites={gestionState.loadUnites}
           loadUnitesByService={gestionState.loadUnitesByService}
+          handleUnlinkServiceUnite={onUnlinkServiceUnite}
         />
       );
       
     case 'types-tarifs':
       return (
         <TypeTarifGestion
-          {...commonModuleProps}
           typesTarifs={gestionState.typesTarifs}
-          loadTypesTarifs={gestionState.loadTypesTarifs}
           highlightedId={createdIds.typeTarif}
           onCreateTypeTarif={(event) => {
             createButtonRef.current = event?.target;
@@ -111,15 +112,10 @@ const TarifContent = ({
     case 'tarifs':
       return (
         <TarifStandardGestion
-          {...commonModuleProps}
           tarifs={gestionState.tarifs}
           services={gestionState.services}
           unites={gestionState.unites}
           typesTarifs={gestionState.typesTarifs}
-          serviceUnites={gestionState.serviceUnites}
-          loadUnitesByService={gestionState.loadUnitesByService}
-          loadTarifs={gestionState.loadTarifs}
-          setSelectedidService={() => {}} // Simplified
           highlightedId={createdIds.tarif}
           onCreateTarif={(preselectedData, event) => {
             createButtonRef.current = event?.target;
@@ -133,23 +129,16 @@ const TarifContent = ({
             deleteButtonRef.current = event?.target;
             return onDeleteItem(FORM_TYPES.TARIF, tarifId, tarifName, deleteButtonRef);
           }}
-          onCreateFacture={onCreateFacture}
-          onBulkAction={onBulkAction}
         />
       );
       
     case 'tarifs-speciaux':
       return (
         <TarifSpecialGestion
-          {...commonModuleProps}
           tarifsSpeciaux={gestionState.tarifsSpeciaux}
           services={gestionState.services}
           unites={gestionState.unites}
           clients={gestionState.clients}
-          serviceUnites={gestionState.serviceUnites}
-          loadUnitesByService={gestionState.loadUnitesByService}
-          loadTarifsSpeciaux={gestionState.loadTarifsSpeciaux}
-          setSelectedidService={() => {}} // Simplified
           highlightedId={createdIds.tarifSpecial}
           onCreateTarifSpecial={(preselectedData, event) => {
             createButtonRef.current = event?.target;
@@ -163,8 +152,6 @@ const TarifContent = ({
             deleteButtonRef.current = event?.target;
             return onDeleteItem(FORM_TYPES.TARIF_SPECIAL, tarifSpecialId, tarifSpecialName, deleteButtonRef);
           }}
-          onCreateFacture={onCreateFacture}
-          onBulkAction={onBulkAction}
         />
       );
       

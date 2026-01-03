@@ -1,0 +1,1 @@
+{"version":3,"names":["VERSION","exports"],"sources":["data.js"],"sourcesContent":["export const VERSION = \"1.9.0\";"],"mappings":";;;;;;AAAO,MAAMA,OAAO,GAAAC,OAAA,CAAAD,OAAA,GAAG,OAAO","ignoreList":[]}

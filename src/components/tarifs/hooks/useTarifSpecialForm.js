@@ -1,9 +1,25 @@
 import { useState, useEffect } from 'react';
-import TarificationService from '../../../services/TarificationService';
-import ClientService from '../../../services/ClientService';
 import { FORM_MODES } from '../../../constants/tarifConstants';
 
-export const useTarifSpecialForm = ({ mode, tarifSpecialId, onRetourListe, onTarifSpecialCreated }) => {
+/**
+ * Hook pour gérer le formulaire de tarif spécial
+ * 
+ * ✅ REFACTORISÉ: Reçoit maintenant les données de useTarifGestionState
+ * au lieu de les charger lui-même (évite la duplication)
+ * ✅ NOUVEAU: Utilise tarifActions pour les appels API
+ */
+export const useTarifSpecialForm = ({ 
+    mode, 
+    tarifSpecialId, 
+    onRetourListe, 
+    onTarifSpecialCreated,
+    // ✅ NOUVEAU: Données reçues en props
+    clients = [],
+    services = [],
+    unites = [],
+    tarifActions, // ✅ NOUVEAU: Remplace tarificationService
+    loadUnitesByService
+}) => {
     const [isLoading, setIsLoading] = useState(true);
     const [tarifSpecial, setTarifSpecial] = useState({
         idClient: '',
@@ -22,15 +38,8 @@ export const useTarifSpecialForm = ({ mode, tarifSpecialId, onRetourListe, onTar
     const [globalNavigationCallback, setGlobalNavigationCallback] = useState(null);
     const [guardId] = useState(`tarif-special-form-${Date.now()}`);
     
-    // Services et données
-    const [clients, setClients] = useState([]);
-    const [services, setServices] = useState([]);
+    // ✅ MODIFIÉ: serviceUnites local uniquement (pour le filtre par service)
     const [serviceUnites, setServiceUnites] = useState({});
-    const [clientsLoading, setClientsLoading] = useState(false);
-    const [servicesLoading, setServicesLoading] = useState(false);
-    
-    const [tarificationService] = useState(new TarificationService());
-    const [clientService] = useState(new ClientService());
     
     // États dérivés
     const isCreate = mode === FORM_MODES.CREATE;
@@ -38,26 +47,27 @@ export const useTarifSpecialForm = ({ mode, tarifSpecialId, onRetourListe, onTar
     const isView = mode === FORM_MODES.VIEW;
     const isReadOnly = isView;
     
-    // Chargement initial
+    // ✅ SIMPLIFIÉ: Chargement initial sans duplication
     useEffect(() => {
         const initializeForm = async () => {
             try {
                 setIsLoading(true);
-                await tarificationService.initialiser();
                 
-                // Charger les données de base
-                await Promise.all([
-                    loadClients(),
-                    loadServices()
-                ]);
+                // ✅ IMPORTANT: Vérifier que les données sont disponibles
+                if (!clients || clients.length === 0) {
+                    console.warn('⚠️ useTarifSpecialForm: Clients non disponibles');
+                }
+                if (!services || services.length === 0) {
+                    console.warn('⚠️ useTarifSpecialForm: Services non disponibles');
+                }
                 
                 // Charger le tarif spécial si mode edit/view
-                if ((isEdit || isView) && tarifSpecialId) {
+                if ((isEdit || isView) && tarifSpecialId && tarifActions) {
                     await loadTarifSpecial(tarifSpecialId);
                 }
                 
             } catch (error) {
-                console.error('Erreur initialisation:', error);
+                console.error('❌ Erreur initialisation:', error);
                 setError('Erreur lors du chargement des données');
             } finally {
                 setIsLoading(false);
@@ -65,49 +75,37 @@ export const useTarifSpecialForm = ({ mode, tarifSpecialId, onRetourListe, onTar
         };
         
         initializeForm();
-    }, [mode, tarifSpecialId]);
+    }, [mode, tarifSpecialId, clients, services, tarifActions]);
     
-    const loadClients = async () => {
-        try {
-            setClientsLoading(true);
-            const clientsData = await clientService.chargerClients();
-            setClients(Array.isArray(clientsData) ? clientsData : []);
-        } catch (error) {
-            console.error('Erreur chargement clients:', error);
-            setError('Erreur lors du chargement des clients');
-        } finally {
-            setClientsLoading(false);
-        }
-    };
-    
-    const loadServices = async () => {
-        try {
-            setServicesLoading(true);
-            const servicesData = await tarificationService.chargerServices();
-            setServices(Array.isArray(servicesData) ? servicesData : []);
-        } catch (error) {
-            console.error('Erreur chargement services:', error);
-            setError('Erreur lors du chargement des services');
-        } finally {
-            setServicesLoading(false);
-        }
-    };
-    
+    // ✅ CONSERVÉ: Chargement des unités spécifiques à un service
     const loadServiceUnites = async (idService) => {
+        if (!loadUnitesByService) {
+            console.error('❌ loadUnitesByService non fourni');
+            return;
+        }
+        
         try {
-            const unitesForService = await tarificationService.chargerUnites(idService);
-            setServiceUnites(prev => ({
-                ...prev,
-                [idService]: Array.isArray(unitesForService) ? unitesForService : []
-            }));
+            await loadUnitesByService(idService);
         } catch (error) {
-            console.error('Erreur chargement unités service:', error);
+            console.error('❌ Erreur chargement unités service:', error);
         }
     };
     
+    // ✅ REFACTORISÉ: Chargement d'un tarif spécial avec tarifActions
     const loadTarifSpecial = async (id) => {
+        if (!tarifActions) {
+            console.error('❌ tarifActions non fourni');
+            setError('Actions de tarification non disponibles');
+            return;
+        }
+        
         try {
-            const tarifSpecialData = await tarificationService.getTarifSpecial(id);
+            // ✅ NOUVEAU: Utilisation de tarifActions.getTarifsSpeciaux au lieu de tarificationService.getTarifSpecial
+            const tarifsSpeciaux = await tarifActions.getTarifsSpeciaux({ id });
+            
+            // getTarifsSpeciaux retourne un tableau, prendre le premier élément
+            const tarifSpecialData = Array.isArray(tarifsSpeciaux) && tarifsSpeciaux.length > 0 ? tarifsSpeciaux[0] : null;
+            
             if (tarifSpecialData) {
                 setTarifSpecial(tarifSpecialData);
                 // Charger les unités pour le service sélectionné
@@ -118,7 +116,7 @@ export const useTarifSpecialForm = ({ mode, tarifSpecialId, onRetourListe, onTar
                 throw new Error('Tarif spécial non trouvé');
             }
         } catch (error) {
-            console.error('Erreur chargement tarif spécial:', error);
+            console.error('❌ Erreur chargement tarif spécial:', error);
             setError('Erreur lors du chargement du tarif spécial');
         }
     };
@@ -169,16 +167,16 @@ export const useTarifSpecialForm = ({ mode, tarifSpecialId, onRetourListe, onTar
         setGlobalNavigationCallback,
         guardId,
         
-        // Données
+        // ✅ MODIFIÉ: Données reçues en props
         clients,
         services,
         serviceUnites,
-        clientsLoading,
-        servicesLoading,
         
-        // Services
-        tarificationService,
-        clientService,
+        // ✅ SUPPRIMÉ: clientsLoading, servicesLoading
+        // Ces états sont maintenant dans useTarifGestionState
+        
+        // ✅ NOUVEAU: Exposer tarifActions pour les autres hooks
+        tarifActions,
         
         // États dérivés
         isCreate,
@@ -193,8 +191,9 @@ export const useTarifSpecialForm = ({ mode, tarifSpecialId, onRetourListe, onTar
         resetChanges,
         confirmNavigation,
         cancelNavigation,
-        loadServiceUnites,
-        loadClients,
-        loadServices
+        loadServiceUnites
+        
+        // ✅ SUPPRIMÉ: loadClients, loadServices
+        // Ces fonctions sont maintenant dans useTarifGestionState
     };
 };

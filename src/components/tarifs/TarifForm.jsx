@@ -11,10 +11,50 @@ import { useTarifFormHandlers } from './hooks/useTarifFormHandlers';
 import { FORM_MODES, FORM_TITLES, LOADING_MESSAGES } from '../../constants/tarifConstants';
 // import '../../styles/components/tarifs/TarifForm.css';
 
-function TarifForm({ mode = FORM_MODES.VIEW, tarifId = null, onRetourListe, onTarifCreated }) {
+/**
+ * Composant TarifForm - Formulaire de gestion des tarifs
+ * 
+ * ✅ REFACTORISÉ: Reçoit maintenant les données depuis le parent
+ * au lieu de les charger lui-même (évite la duplication avec useTarifGestionState)
+ * 
+ * @param {Object} props
+ * @param {string} props.mode - Mode du formulaire (CREATE, EDIT, VIEW)
+ * @param {number} props.tarifId - ID du tarif (pour EDIT/VIEW)
+ * @param {Function} props.onRetourListe - Callback pour retour à la liste
+ * @param {Function} props.onTarifCreated - Callback après création
+ * @param {Array} props.services - Services depuis useTarifGestionState
+ * @param {Array} props.unites - Unités depuis useTarifGestionState
+ * @param {Array} props.typesTarifs - Types tarifs depuis useTarifGestionState
+ * @param {Object} props.tarificationService - Service pour les appels API
+ * @param {Function} props.loadUnitesByService - Fonction pour charger unités par service
+ */
+function TarifForm({ 
+    mode = FORM_MODES.VIEW, 
+    tarifId = null, 
+    onRetourListe, 
+    onTarifCreated,
+    // ✅ NOUVEAU: Props pour les données
+    services = [],
+    unites = [],
+    typesTarifs = [],
+    tarificationService,
+    loadUnitesByService
+}) {
     
-    // Hooks personnalisés pour la logique métier
-    const formState = useTarifForm({ mode, tarifId, onRetourListe, onTarifCreated });
+    // ✅ MODIFIÉ: Passer les données à useTarifForm
+    const formState = useTarifForm({ 
+        mode, 
+        tarifId, 
+        onRetourListe, 
+        onTarifCreated,
+        // ✅ Passer les données reçues
+        services,
+        unites,
+        typesTarifs,
+        tarificationService,
+        loadUnitesByService
+    });
+    
     const formLogic = useTarifFormLogic(formState);
     const formValidation = useTarifFormValidation(formState);
     const formHandlers = useTarifFormHandlers(formState, formLogic, formValidation);

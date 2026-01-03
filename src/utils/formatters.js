@@ -157,9 +157,9 @@ export const formatAdresse = (adresse) => {
 export const getEtatClass = (etat) => {
     if (!etat) return 'etat-default';
     
-    const etatLower = etat.toLowerCase();
+    const etatLower = etat.toLowerCase().trim();
     
-    // États de factures
+    // ========== ÉTATS DE FACTURES ==========
     switch (etatLower) {
         case 'payée':
         case 'payee':
@@ -182,13 +182,26 @@ export const getEtatClass = (etat) => {
         case 'envoyée':
         case 'envoyee':
             return 'etat-envoyee';
-        // États de paiements
+        
+        // ========== ÉTATS DE PAIEMENTS ==========
         case 'validé':
         case 'valide':
             return 'etat-valide';
         case 'confirme':
         case 'confirmé':
             return 'etat-confirme';
+        
+        // ========== STATUTS UTILISATEURS ==========
+        case 'actif':
+        case 'active':
+            return 'etat-actif';
+        case 'inactif':
+        case 'inactive':
+        case 'désactivé':
+        case 'desactive':
+        case 'disabled':
+            return 'etat-inactif';
+        
         default:
             return 'etat-default';
     }
@@ -218,9 +231,10 @@ export const getBadgeClasses = (etat, variant = '') => {
 export const formatEtatText = (etat) => {
     if (!etat) return '';
     
-    const etatLower = etat.toLowerCase();
+    const etatLower = etat.toLowerCase().trim();
     
     switch(etatLower) {
+        // ========== FACTURES ==========
         case 'partiellement payée':
         case 'partiellement payee':
             return 'Part. Payée';
@@ -244,6 +258,18 @@ export const formatEtatText = (etat) => {
         case 'payee':
         case 'payée':
             return 'Payée';
+        
+        // ========== UTILISATEURS ==========
+        case 'actif':
+        case 'active':
+            return 'Actif';
+        case 'inactif':
+        case 'inactive':
+        case 'désactivé':
+        case 'desactive':
+        case 'disabled':
+            return 'Inactif';
+        
         default: 
             return etat;
     }

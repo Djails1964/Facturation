@@ -7,31 +7,21 @@ import TarifFormHeader from '../sections/TarifFormHeader';
 import { AddButton } from '../../../components/ui/buttons';
 import UnifiedFilter from '../../../components/shared/filters/UnifiedFilter';
 import { useTarifFilter, createInitialFilters, enrichTarifsWithEtat } from '../hooks/useTarifFilter';
+import { createLogger } from '../../../utils/createLogger';
 
 const TarifStandardGestion = ({ 
   tarifs, 
-  setTarifs, 
   services, 
   unites, 
   typesTarifs, 
-  serviceUnites, 
-  loadUnitesByService,
-  tarificationService, 
-  setSelectedidService, 
-  setMessage, 
-  setMessageType, 
-  setConfirmModal,
-  loadTarifs,
   highlightedId,
-  onEdit,
-  onView,
-  onNew,
-  onCreateFacture,
-  onBulkAction,
   onCreateTarif,
   onEditTarif,
   onDeleteTarif
 }) => {
+
+  const log = createLogger('TarifStandardGestion');
+
   const [selectedTarifs, setSelectedTarifs] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -40,14 +30,14 @@ const TarifStandardGestion = ({
   // 1. Enrichir les tarifs avec leur état (valide/invalide)
   const enrichedTarifs = useMemo(() => {
     if (!tarifs || tarifs.length === 0) {
-      console.log('⚠️ Aucun tarif à enrichir');
+      log.debug('⚠️ Aucun tarif à enrichir');
       return [];
     }
     
     // Debug: Afficher les tarifs BRUTS avant enrichissement
     if (tarifs.length > 0) {
-      console.log('🔍 TARIF BRUT (premier élément):', tarifs[0]);
-      console.log('🔍 Propriétés du tarif brut:', Object.keys(tarifs[0]));
+      log.debug('🔍 TARIF BRUT (premier élément):', tarifs[0]);
+      log.debug('🔍 Propriétés du tarif brut:', Object.keys(tarifs[0]));
     }
     
     return enrichTarifsWithEtat(tarifs || []);
@@ -55,8 +45,8 @@ const TarifStandardGestion = ({
 
   // 2. Normaliser les tarifs pour le filtrage
   const normalizedTarifs = useMemo(() => {
-    console.log('🔧 Normalisation des tarifs pour filtrage...');
-    console.log('📊 Tarifs enrichis:', enrichedTarifs.length);
+    log.debug('🔧 Normalisation des tarifs pour filtrage...');
+    log.debug('📊 Tarifs enrichis:', enrichedTarifs.length);
     
     const normalized = enrichedTarifs.map(tarif => {
       // Trouver les entités liées
@@ -73,7 +63,7 @@ const TarifStandardGestion = ({
       // S'assurer que statut a la bonne valeur
       const tarifStatut = tarif.etat || 'invalide';
       
-      console.log('📝 Tarif normalisé:', {
+      log.debug('📝 Tarif normalisé:', {
         id: tarif.id || tarif.idTarifStandard,
         etat: tarif.etat,
         statut: tarifStatut,
@@ -99,8 +89,8 @@ const TarifStandardGestion = ({
       };
     });
     
-    console.log('✅ Tarifs normalisés:', normalized.length);
-    console.log('📊 Répartition des statuts:', {
+    log.debug('✅ Tarifs normalisés:', normalized.length);
+    log.debug('📊 Répartition des statuts:', {
       valides: normalized.filter(t => t.statut === 'valide').length,
       invalides: normalized.filter(t => t.statut === 'invalide').length
     });
@@ -121,7 +111,7 @@ const TarifStandardGestion = ({
 
   // ===== OPTIONS DE FILTRAGE =====
   const filterOptions = useMemo(() => {
-    console.log('🔍 Préparation filterOptions pour tarifs standards');
+    log.debug('🔍 Préparation filterOptions pour tarifs standards');
     
     // ✅ CORRECTION: Extraire uniquement les services/unités/types UTILISÉS dans les tarifs
     const uniqueServices = [...new Set(
@@ -136,9 +126,9 @@ const TarifStandardGestion = ({
       normalizedTarifs.map(t => t.typeTarif).filter(Boolean)
     )].sort();
     
-    console.log('📊 Services utilisés dans les tarifs:', uniqueServices);
-    console.log('📊 Unités utilisées dans les tarifs:', uniqueUnites);
-    console.log('📊 Types de tarifs utilisés:', uniqueTypesTarifs);
+    log.debug('📊 Services utilisés dans les tarifs:', uniqueServices);
+    log.debug('📊 Unités utilisées dans les tarifs:', uniqueUnites);
+    log.debug('📊 Types de tarifs utilisés:', uniqueTypesTarifs);
     
     const options = {
       service: uniqueServices,
@@ -147,7 +137,7 @@ const TarifStandardGestion = ({
       statut: ['valide', 'invalide']
     };
     
-    console.log('📋 Options de filtrage configurées:', options);
+    log.debug('📋 Options de filtrage configurées:', options);
     
     return options;
   }, [normalizedTarifs]);
@@ -158,7 +148,7 @@ const TarifStandardGestion = ({
     if (onCreateTarif) {
       onCreateTarif(event);
     } else {
-      console.warn('⚠️ onCreateTarif non fourni');
+      log.warn('⚠️ onCreateTarif non fourni');
     }
   };
   
@@ -167,7 +157,7 @@ const TarifStandardGestion = ({
     if (onEditTarif) {
       onEditTarif(tarifId, event);
     } else {
-      console.warn('⚠️ onEditTarif non fourni');
+      log.warn('⚠️ onEditTarif non fourni');
     }
   };
   
@@ -177,7 +167,7 @@ const TarifStandardGestion = ({
     if (onDeleteTarif) {
       onDeleteTarif(tarifId, tarifName, event);
     } else {
-      console.warn('⚠️ onDeleteTarif non fourni');
+      log.warn('⚠️ onDeleteTarif non fourni');
     }
   };
 
@@ -238,7 +228,6 @@ const TarifStandardGestion = ({
         onSelectAll={handleSelectAll}
         onEdit={handleEditClick}
         onDelete={handleDeleteClick}
-        onView={onView}
         highlightedId={highlightedId}
         isSubmitting={isSubmitting}
       />

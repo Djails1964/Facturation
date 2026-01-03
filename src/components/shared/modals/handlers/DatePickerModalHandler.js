@@ -9,6 +9,7 @@ import {
     DATE_VALIDATION_MESSAGES,
     CONTEXT_CONFIGS 
 } from '../../../../constants/dateConstants';
+import { createLogger } from '../../../../utils/createLogger';
 
 /**
  * Gestionnaire pour la sélection de dates avec modal unifiée
@@ -19,6 +20,7 @@ export class DatePickerModalHandler {
         this.showCustom = dependencies.showCustom;
         this.showError = dependencies.showError;
         this.showLoading = dependencies.showLoading;
+        this.log = createLogger("DatePickerModalHandler");
     }
 
     /**
@@ -33,7 +35,7 @@ export class DatePickerModalHandler {
             anchorRef = null
         } = config;
 
-        console.log('📅 Ouverture du sélecteur de dates:', { 
+        this.log.debug('📅 Ouverture du sélecteur de dates:', { 
             multiSelect, 
             initialDates: initialDates.length,
             context,
@@ -59,11 +61,11 @@ export class DatePickerModalHandler {
 
             const result = await this.showDateSelectionModal(finalConfig);
 
-            console.log('📅 Résultat sélection dates:', result);
+            this.log.debug('📅 Résultat sélection dates:', result);
             return result;
 
         } catch (error) {
-            console.error('❌ Erreur dans DatePickerModalHandler:', error);
+            this.log.error('❌ Erreur dans DatePickerModalHandler:', error);
             await this.showError(
                 `Erreur lors de la sélection de dates : ${error.message}`,
                 modalAnchorRef
@@ -87,8 +89,8 @@ export class DatePickerModalHandler {
 
         let selectedDates = [...initialDates];
         
-        console.log('📅 Initialisation modal avec dates:', selectedDates.map(d => d.toLocaleDateString('fr-CH')));
-        console.log('📅 Context config:', contextConfig);
+        this.log.debug('📅 Initialisation modal avec dates:', selectedDates.map(d => d.toLocaleDateString('fr-CH')));
+        this.log.debug('📅 Context config:', contextConfig);
 
         try {
             const modalResult = await this.showCustom({
@@ -119,9 +121,28 @@ export class DatePickerModalHandler {
                                 ...config,
                                 initialDates: selectedDates,
                                 onDateSelect: (date) => {
-                                    selectedDates = this.handleDateSelect(date, selectedDates, multiSelect, contextConfig);
-                                    this.updateSelectedDatesDisplay(null, selectedDates);
-                                    this.updateConfirmButton(null, selectedDates, confirmText);
+                                    this.log.debug('=== DEBUG onDateSelect ===');
+                                    this.log.debug('📅 Date reçue:', date);
+                                    this.log.debug('📅 selectedDates AVANT:', selectedDates);
+                                    this.log.debug('📅 multiSelect:', multiSelect);
+                                    this.log.debug('📅 contextConfig:', contextConfig);
+                                    
+                                    const newDates = this.handleDateSelect(date, selectedDates, multiSelect, contextConfig);
+                                    
+                                    this.log.debug('📅 selectedDates APRÈS handleDateSelect:', newDates);
+                                    
+                                    selectedDates = newDates;
+                                    
+                                    this.log.debug('📅 selectedDates assigné:', selectedDates);
+                                    this.log.debug('📅 selectedDates.length:', selectedDates.length);
+                                    
+                                    const datePickerModal = workingContainer.closest(".unified-modal-container");
+                                    this.updateSelectedDatesDisplay(datePickerModal, selectedDates);
+                                    this.log.debug('✅ updateSelectedDatesDisplay appelé');
+                                    
+                                    this.updateConfirmButton(datePickerModal, selectedDates, confirmText);
+                                    this.log.debug('✅ updateConfirmButton appelé');
+                                    this.log.debug('========================');
                                 }
                             });
                         }
@@ -135,7 +156,7 @@ export class DatePickerModalHandler {
             return { action: 'cancel', dates: [], count: 0 };
 
         } catch (error) {
-            console.error('❌ Erreur lors de l\'affichage de la modal:', error);
+            this.log.error('❌ Erreur lors de l\'affichage de la modal:', error);
             return { action: 'cancel', dates: [], count: 0 };
         }
     }
@@ -184,7 +205,7 @@ export class DatePickerModalHandler {
      * Configurer le DatePicker dans la modal
      */
     setupDatePicker(container, config) {
-        console.log('🔧 Setup DatePicker avec config:', {
+        this.log.debug('🔧 Setup DatePicker avec config:', {
             context: config.context,
             allowFuture: config.contextConfig?.ALLOW_FUTURE,
             maxDate: config.maxDate
@@ -230,7 +251,7 @@ export class DatePickerModalHandler {
         // ✅ CORRECTION : Récupérer la configuration du contexte
         const allowFuture = contextConfig.ALLOW_FUTURE !== false; // Par défaut true sauf si explicitement false
         
-        console.log('🔧 Rendu calendrier - Allow future:', allowFuture, 'Context:', config.context);
+        this.log.debug('🔧 Rendu calendrier - Allow future:', allowFuture, 'Context:', config.context);
         
         // Gestion du mois/année
         let currentMonth, currentYear;
@@ -317,7 +338,7 @@ export class DatePickerModalHandler {
         const today = new Date();
         const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         
-        console.log('🔧 Génération jours - Allow future:', allowFuture);
+        this.log.debug('🔧 Génération jours - Allow future:', allowFuture);
         
         for (let i = 0; i < 42; i++) {
             const currentDate = new Date(startDate);
@@ -386,7 +407,7 @@ export class DatePickerModalHandler {
         const allowFuture = contextConfig.ALLOW_FUTURE !== false;
         let isSelecting = false;
         
-        console.log('🔧 Init events - Allow future:', allowFuture);
+        this.log.debug('🔧 Init events - Allow future:', allowFuture);
         
         setTimeout(() => {
             const dayButtons = container.querySelectorAll('.calendar-day-btn');
@@ -413,12 +434,12 @@ export class DatePickerModalHandler {
                     const isFutureDate = currentDateOnly > todayDateOnly;
                     
                     if (isFutureDate && !allowFuture) {
-                        console.log('❌ Date future bloquée:', date.toLocaleDateString('fr-CH'));
+                        this.log.debug('❌ Date future bloquée:', date.toLocaleDateString('fr-CH'));
                         isSelecting = false;
                         return false;
                     }
                     
-                    console.log('✅ Date sélectionnée:', date.toLocaleDateString('fr-CH'), 'Future:', isFutureDate, 'Allowed:', allowFuture);
+                    this.log.debug('✅ Date sélectionnée:', date.toLocaleDateString('fr-CH'), 'Future:', isFutureDate, 'Allowed:', allowFuture);
                     
                     // Gestion de la sélection avec classes CSS
                     if (!multiSelect || config.context === 'payment') {
@@ -510,7 +531,7 @@ export class DatePickerModalHandler {
         
         // ✅ CORRECTION : Bloquer seulement si future ET contexte ne l'autorise pas
         if (isFutureDate && !allowFuture) {
-            console.log('❌ Date future refusée dans handleDateSelect');
+            this.log.debug('❌ Date future refusée dans handleDateSelect');
             return currentDates;
         }
         
@@ -527,11 +548,16 @@ export class DatePickerModalHandler {
     }
 
     updateSelectedDatesDisplay(container, selectedDates) {
+        this.log.debug("updateSelectedDatesDisplay - input container : ", container);
+        this.log.debug("updateSelectedDatesDisplay - input selectedDates : ", selectedDates);
         const displayContainer = container || document.querySelector('.unified-modal-container');
+        this.log.debug("updateSelectedDatesDisplay - displayContainer : ", displayContainer);
         if (!displayContainer) return;
         
         const countElement = displayContainer.querySelector('#selected-count');
+        this.log.debug("updateSelectedDatesDisplay - countElement : ", countElement);
         const listElement = displayContainer.querySelector('#selected-list');
+        this.log.debug("updateSelectedDatesDisplay - listElement : ", listElement);
         
         if (countElement) countElement.textContent = selectedDates.length;
         
@@ -621,7 +647,7 @@ export class DatePickerModalHandler {
         };
         
         const result = configs[context] || configs.default;
-        console.log('📋 Config pour contexte', context, ':', result);
+        this.log.debug('📋 Config pour contexte', context, ':', result);
         return result;
     }
 

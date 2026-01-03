@@ -3,7 +3,7 @@
 import React from 'react';
 import '../../styles/components/factures/FactureRow.css';
 import FactureActions from './FactureActions';
-import { formatMontant } from '../../utils/formatters';
+import { formatMontant, formatDate } from '../../utils/formatters';
 import { getBadgeClasses, formatEtatText } from '../../utils/formatters';
 
 const FactureRow = ({
@@ -20,7 +20,7 @@ const FactureRow = ({
     onSetNotification
 }) => {
     
-    // ✅ CORRECTION: Utiliser etatAffichage en priorité, puis etat en fallback
+    // Utiliser etatAffichage en priorité, puis etat en fallback
     const etatAUtiliser = facture.etatAffichage || facture.etat;
     
     return (
@@ -38,6 +38,12 @@ const FactureRow = ({
                 {`${facture.client.prenom} ${facture.client.nom}`}
             </div>
             <div 
+                className="lf-table-cell lf-date-cell"
+                onClick={() => onSelectionFacture(facture.id)}
+            >
+                {formatDate(facture.dateFacture)}
+            </div>
+            <div 
                 className="lf-table-cell lf-montant-cell"
                 onClick={() => onSelectionFacture(facture.id)}
             >
@@ -48,7 +54,7 @@ const FactureRow = ({
                 onClick={() => onSelectionFacture(facture.id)}
             >
                 <span className={getBadgeClasses(etatAUtiliser)}>
-                    {formatEtatText(etatAUtiliser)} {/* ✅ CORRIGÉ: Utilise etatAffichage */}
+                    {formatEtatText(etatAUtiliser)}
                 </span>
             </div>
 

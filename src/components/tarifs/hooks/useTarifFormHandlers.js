@@ -2,6 +2,10 @@ import { useCallback } from 'react';
 import { useDateContext } from '../../../context/DateContext';
 import { formatDateToYYYYMMDD } from '../../../utils/formatters';
 
+/**
+ * Hook pour gérer les handlers du formulaire de tarif
+ * ✅ REFACTORISÉ: Utilise tarifActions au lieu de tarificationService
+ */
 export const useTarifFormHandlers = (formState, formLogic, formValidation) => {
     const {
         tarif,
@@ -10,7 +14,7 @@ export const useTarifFormHandlers = (formState, formLogic, formValidation) => {
         setIsSubmitting,
         hasUnsavedChanges,
         setShowUnsavedModal,
-        tarificationService,
+        tarifActions, // ✅ NOUVEAU: Utilise tarifActions
         isCreate,
         setHasUnsavedChanges
     } = formState;
@@ -40,12 +44,12 @@ export const useTarifFormHandlers = (formState, formLogic, formValidation) => {
                 prix: parseFloat(tarif.prix)
             };
             
-            // Sauvegarde
+            // ✅ REFACTORISÉ: Utilisation de tarifActions au lieu de tarificationService
             let result;
             if (isCreate) {
-                result = await tarificationService.createTarif(tarifData);
+                result = await tarifActions.create('tarif', tarifData);
             } else {
-                result = await tarificationService.updateTarif(tarif.id, tarifData);
+                result = await tarifActions.update('tarif', tarif.id, tarifData);
             }
             
             if (result.success) {
@@ -66,7 +70,7 @@ export const useTarifFormHandlers = (formState, formLogic, formValidation) => {
         } finally {
             setIsSubmitting(false);
         }
-    }, [tarif, isSubmitting, isCreate, validateForm, tarificationService, setError, setIsSubmitting, setHasUnsavedChanges]);
+    }, [tarif, isSubmitting, isCreate, validateForm, tarifActions, setError, setIsSubmitting, setHasUnsavedChanges, formState]);
     
     const handleCancel = useCallback(() => {
         if (hasUnsavedChanges) {

@@ -1,5 +1,6 @@
 // src/components/clients/ClientForm.jsx
 // Composant principal refactorisé - VERSION FINALE avec architecture unifiée
+// ✅ REFACTORISÉ: useClientActions est utilisé dans useClientForm, plus besoin de passer clientService
 
 import React from 'react';
 import { FORM_MODES, LOADING_MESSAGES } from '../../constants/clientConstants';
@@ -25,13 +26,14 @@ import '../../styles/components/clients/ClientForm.css';
  * ✅ Utilise exclusivement useUnsavedChanges pour la détection des modifications
  * ✅ Architecture modulaire avec sections réutilisables
  * ✅ Système de guard unifié pour toute l'application
+ * ✅ useClientActions est utilisé dans useClientForm (plus besoin de passer clientService)
  */
 function ClientForm({ 
   mode = FORM_MODES.VIEW, 
   idClient = null, 
   onRetourListe, 
   onClientCreated,
-  clientService = null,
+  // ❌ SUPPRIMÉ: clientService = null - useClientActions est utilisé dans useClientForm
   options = {}
 }) {
   
@@ -40,14 +42,15 @@ function ClientForm({
   // ================================
   
   // ✅ Hook principal avec système unifié de détection des modifications
-  const clientFormState = useClientForm(mode, idClient, clientService);
+  // useClientActions est utilisé à l'intérieur de useClientForm
+  const clientFormState = useClientForm(mode, idClient);
   
   // Hook de validation spécialisé
   const validation = useClientValidation(clientFormState.client);
   
   // ✅ Hook de navigation simplifié (utilise les données unifiées)
   const navigation = useClientNavigation(
-    clientFormState, // Contient maintenant hasUnsavedChanges, etc.
+    clientFormState,
     onRetourListe, 
     onClientCreated,
     options.navigation
@@ -59,7 +62,8 @@ function ClientForm({
   
   const {
     client, isLoading, isSubmitting, error,
-    handleChange, toggleTherapeute, isReadOnly
+    handleChange, toggleTherapeute, isReadOnly,
+    fieldErrors, phoneType  // ✅ AJOUT: Extraire fieldErrors et phoneType de useClientForm
   } = clientFormState;
 
   const { isFormValid } = validation;
@@ -75,7 +79,7 @@ function ClientForm({
   // Classes CSS conditionnelles pour les champs
   const getFieldClasses = (fieldName) => {
     const baseClass = 'form-control';
-    const errorClass = validation.fieldErrors?.[fieldName] ? ' error' : '';
+    const errorClass = fieldErrors?.[fieldName] ? ' error' : '';
     const readOnlyClass = isReadOnly ? ' readonly' : '';
     return `${baseClass}${errorClass}${readOnlyClass}`;
   };
@@ -91,13 +95,10 @@ function ClientForm({
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    console.log('📤 Soumission du formulaire ClientForm modulaire unifié');
-    
     try {
       // ✅ Utiliser la fonction de navigation intégrée
       await handleSubmitWithNavigation();
     } catch (error) {
-      console.error('❌ Erreur lors de la soumission:', error);
       // L'erreur est gérée par le hook useClientForm
     }
   };
@@ -131,54 +132,44 @@ function ClientForm({
           title="Erreur de chargement" 
           error={error}
         />
-        <div className="error-container">
-          <p className="error-message">{error}</p>
-          <div className="error-actions">
-            <button 
-              className="btn-primary" 
-              onClick={() => window.location.reload()}
-            >
-              Recharger la page
-            </button>
-            <button 
-              className="btn-secondary" 
-              onClick={handleRetour}
-            >
-              Retour à la liste
-            </button>
-          </div>
+        <div className="error-message critical">
+          {error}
         </div>
+        <button 
+          className="btn-secondary"
+          onClick={handleRetour}
+        >
+          Retour à la liste
+        </button>
       </div>
     );
   }
 
   // ================================
-  // RENDU PRINCIPAL DU FORMULAIRE
+  // RENDU PRINCIPAL
   // ================================
   
   return (
-    <div className="content-section-container">
+    <div className={`content-section-container ${getFormContainerClass(mode)}`}>
       
-      {/* En-tête avec titre et indicateurs de statut */}
+      {/* En-tête du formulaire */}
       <ClientFormHeader 
         title={formTitle}
-        loading={isLoading}
-        error={error}
+        mode={mode}
         hasUnsavedChanges={hasUnsavedChanges}
-        showStatusIndicators={true}
+        error={error}
       />
-      
-      {/* Formulaire principal */}
-      <form onSubmit={handleSubmit} className="formulaire-client">
-        <div className={getFormContainerClass(mode)}>
+
+      {/* Formulaire */}
+      <form onSubmit={handleSubmit} className="client-form">
+        <div className="form-content">
           
-          {/* Section gauche : Thérapeute + Titre */}
+          {/* Section gauche : Titre et Thérapeute */}
           <ClientFormLeftSection
             client={client}
             handleChange={handleChange}
             toggleTherapeute={toggleTherapeute}
             isReadOnly={isReadOnly}
-            fieldErrors={validation.fieldErrors}
             getFieldClasses={getFieldClasses}
           />
           
@@ -186,8 +177,8 @@ function ClientForm({
           <ClientFormMainSection
             client={client}
             handleChange={handleChange}
-            fieldErrors={validation.fieldErrors}
-            phoneType={validation.phoneType}
+            fieldErrors={fieldErrors}
+            phoneType={phoneType}
             isReadOnly={isReadOnly}
             getFieldClasses={getFieldClasses}
           />
@@ -216,7 +207,6 @@ function ClientForm({
         hasUnsavedChanges={hasUnsavedChanges}
         clientName={clientName}
         modalOptions={{}}
-        // Props pour navigation directe via modal system
         navigation={{
           guardId
         }}

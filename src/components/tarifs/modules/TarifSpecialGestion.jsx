@@ -7,31 +7,21 @@ import TarifFormHeader from '../sections/TarifFormHeader';
 import { AddButton } from '../../../components/ui/buttons';
 import UnifiedFilter from '../../../components/shared/filters/UnifiedFilter';
 import { useTarifFilter, createInitialFilters, enrichTarifsWithEtat } from '../hooks/useTarifFilter';
+import { createLogger } from '../../../utils/createLogger';
 
 const TarifSpecialGestion = ({ 
   tarifsSpeciaux, 
-  setTarifsSpeciaux, 
   services, 
   unites, 
   clients, 
-  serviceUnites, 
-  loadUnitesByService,
-  tarificationService, 
-  setSelectedidService, 
-  setMessage, 
-  setMessageType, 
-  setConfirmModal,
-  loadTarifsSpeciaux,
   highlightedId,
-  onEdit,
-  onView,
-  onNew,
-  onCreateFacture,
-  onBulkAction,
   onCreateTarifSpecial,
   onEditTarifSpecial,
   onDeleteTarifSpecial
 }) => {
+
+  const log = createLogger("TarifSpecialGestion");
+
   const [selectedTarifsSpeciaux, setSelectedTarifsSpeciaux] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -41,14 +31,14 @@ const TarifSpecialGestion = ({
   const enrichedTarifsSpeciaux = useMemo(() => {
     // Les tarifs arrivent via props depuis useTarifGestionState
     if (!tarifsSpeciaux || tarifsSpeciaux.length === 0) {
-      console.log('⚠️ Aucun tarif spécial à enrichir');
+      log.debug('⚠️ Aucun tarif spécial à enrichir');
       return [];
     }
     
     // Debug: Afficher les tarifs BRUTS avant enrichissement
     if (tarifsSpeciaux.length > 0) {
-      console.log('🔍 TARIF SPÉCIAL BRUT (premier élément):', tarifsSpeciaux[0]);
-      console.log('🔍 Propriétés du tarif spécial brut:', Object.keys(tarifsSpeciaux[0]));
+      log.debug('🔍 TARIF SPÉCIAL BRUT (premier élément):', tarifsSpeciaux[0]);
+      log.debug('🔍 Propriétés du tarif spécial brut:', Object.keys(tarifsSpeciaux[0]));
     }
     
     return enrichTarifsWithEtat(tarifsSpeciaux);
@@ -56,13 +46,13 @@ const TarifSpecialGestion = ({
 
   // 2. Normaliser les tarifs spéciaux pour le filtrage
   const normalizedTarifsSpeciaux = useMemo(() => {
-    console.log('🔧 Normalisation des tarifs spéciaux pour filtrage...');
-    console.log('📊 Tarifs spéciaux enrichis:', enrichedTarifsSpeciaux.length);
+    log.debug('🔧 Normalisation des tarifs spéciaux pour filtrage...');
+    log.debug('📊 Tarifs spéciaux enrichis:', enrichedTarifsSpeciaux.length);
     
     const normalized = enrichedTarifsSpeciaux.map(tarif => {
       // Trouver les entités liées
       const client = clients.find(c => 
-        c.id == (tarif.idClient)
+        c.id == (tarif.idClient || tarif.clientId)
       );
       const service = services.find(s => 
         (s.id || s.idService) === tarif.idService
@@ -76,7 +66,7 @@ const TarifSpecialGestion = ({
       
       const clientNom = client ? `${client.prenom} ${client.nom}` : '';
 
-      console.log('📝 Tarif spécial normalisé:', {
+      log.debug('📝 Tarif spécial normalisé:', {
         id: tarif.id || tarif.idTarifSpecial,
         etat: tarif.etat,
         statut: tarifStatut,
@@ -108,8 +98,8 @@ const TarifSpecialGestion = ({
       };
     });
     
-    console.log('✅ Tarifs spéciaux normalisés:', normalized.length);
-    console.log('📊 Répartition des statuts:', {
+    log.debug('✅ Tarifs spéciaux normalisés:', normalized.length);
+    log.debug('📊 Répartition des statuts:', {
       valides: normalized.filter(t => t.statut === 'valide').length,
       invalides: normalized.filter(t => t.statut === 'invalide').length
     });
@@ -130,7 +120,7 @@ const TarifSpecialGestion = ({
 
   // ===== OPTIONS DE FILTRAGE =====
   const filterOptions = useMemo(() => {
-    console.log('🔍 Préparation filterOptions pour tarifs spéciaux');
+    log.debug('🔍 Préparation filterOptions pour tarifs spéciaux');
     
     // ✅ CORRECTION: Extraire uniquement les clients/services/unités UTILISÉS dans les tarifs spéciaux
     const uniqueClients = [...new Set(
@@ -145,9 +135,9 @@ const TarifSpecialGestion = ({
       normalizedTarifsSpeciaux.map(t => t.unite).filter(Boolean)
     )].sort();
     
-    console.log('📊 Clients utilisés dans les tarifs spéciaux:', uniqueClients);
-    console.log('📊 Services utilisés dans les tarifs spéciaux:', uniqueServices);
-    console.log('📊 Unités utilisées dans les tarifs spéciaux:', uniqueUnites);
+    log.debug('📊 Clients utilisés dans les tarifs spéciaux:', uniqueClients);
+    log.debug('📊 Services utilisés dans les tarifs spéciaux:', uniqueServices);
+    log.debug('📊 Unités utilisées dans les tarifs spéciaux:', uniqueUnites);
     
     const options = {
       client: uniqueClients,
@@ -156,7 +146,7 @@ const TarifSpecialGestion = ({
       statut: ['valide', 'invalide']
     };
     
-    console.log('📋 Options de filtrage configurées:', options);
+    log.debug('📋 Options de filtrage configurées:', options);
     
     return options;
   }, [normalizedTarifsSpeciaux]);
@@ -166,7 +156,7 @@ const TarifSpecialGestion = ({
     if (onCreateTarifSpecial) {
       onCreateTarifSpecial(event);
     } else {
-      console.warn('⚠️ onCreateTarifSpecial non fourni');
+      log.warn('⚠️ onCreateTarifSpecial non fourni');
     }
   };
   
@@ -175,7 +165,7 @@ const TarifSpecialGestion = ({
     if (onEditTarifSpecial) {
       onEditTarifSpecial(tarifId, event);
     } else {
-      console.warn('⚠️ onEditTarifSpecial non fourni');
+      log.warn('⚠️ onEditTarifSpecial non fourni');
     }
   };
   
@@ -185,7 +175,7 @@ const TarifSpecialGestion = ({
     if (onDeleteTarifSpecial) {
       onDeleteTarifSpecial(tarifId, tarifName, event);
     } else {
-      console.warn('⚠️ onDeleteTarifSpecial non fourni');
+      log.warn('⚠️ onDeleteTarifSpecial non fourni');
     }
   };
 

@@ -9,6 +9,8 @@ import { toBoolean, normalizeBooleanFields, normalizeBooleanFieldsArray } from '
 import ParametreService from './ParametreService';
 import { formatMontant } from '../utils/formatters';
 import { handleApiError } from '../utils/apiErrorHandler';
+import { createLogger } from '../utils/createLogger';
+
 
 class FactureService {
   constructor() {
@@ -16,6 +18,8 @@ class FactureService {
     this._cacheFacture = {};
     this._parametreService = new ParametreService();
     this._delaiPaiementCache = null;
+
+    this.log = createLogger('FactureService');
   }
 
   /**
@@ -36,9 +40,9 @@ class FactureService {
 
       if (result.success && result.parametre) {
         this._delaiPaiementCache = parseInt(result.parametre.valeurParametre) || 30;
-        console.log('✅ Délai de paiement récupéré:', this._delaiPaiementCache, 'jours');
+        this.log.debug('✅ Délai de paiement récupéré:', this._delaiPaiementCache, 'jours');
       } else {
-        console.warn('⚠️ Paramètre "Delai Paiement" non trouvé, utilisation de la valeur par défaut (30 jours)');
+        this.log.warn('⚠️ Paramètre "Delai Paiement" non trouvé, utilisation de la valeur par défaut (30 jours)');
         this._delaiPaiementCache = 30;
       }
 
@@ -77,8 +81,7 @@ class FactureService {
   async _determinerEtatAffichage(facture) {
     const etatBase = this._determinerEtatBase(facture);
     
-    // console.log(`🔍 _determinerEtatAffichage - Facture ${facture.numeroFacture || facture.id}: état de base = ${etatBase}`);
-    
+   
     // Si la facture est "Envoyée" et pas encore payée, vérifier le retard
     if (etatBase === 'Envoyée' && !facture.date_paiement && await this._estEnRetard(facture)) {
       return 'Retard';
@@ -94,7 +97,7 @@ class FactureService {
    */
   async _estEnRetard(facture) {
     if (!facture.date_facture || facture.date_paiement || facture.date_annulation) {
-      console.log(`📅 Facture ${facture.numeroFacture || facture.id} - Pas de retard: date_facture=${facture.date_facture}, date_paiement=${facture.date_paiement}, date_annulation=${facture.date_annulation}`);
+      this.log.debug(`📅 Facture ${facture.numeroFacture || facture.id} - Pas de retard: date_facture=${facture.date_facture}, date_paiement=${facture.date_paiement}, date_annulation=${facture.date_annulation}`);
       return false;
     }
     
@@ -107,7 +110,7 @@ class FactureService {
     
     const estEnRetard = diffJours > delaiPaiement;
     
-    console.log(`📅 Vérification retard - Facture: ${facture.numeroFacture || facture.id}, Âge: ${diffJours} jours, Délai: ${delaiPaiement} jours, En retard: ${estEnRetard}`);
+    this.log.debug(`📅 Vérification retard - Facture: ${facture.numeroFacture || facture.id}, Âge: ${diffJours} jours, Délai: ${delaiPaiement} jours, En retard: ${estEnRetard}`);
     
     return estEnRetard;
   }
@@ -226,9 +229,9 @@ class FactureService {
         params.annee = annee;
       }
 
-      console.log('FactureService - Chargement des factures pour l\'année:', annee);
+      this.log.debug('FactureService - Chargement des factures pour l\'année:', annee);
       const response = await api.get('facture-api.php', params);
-      console.log('FactureService - Réponse de l\'API get:', response);
+      this.log.debug('FactureService - Réponse de l\'API get:', response);
       
       if (response && response.success) {
         const facturesData = response.factures || [];
@@ -286,9 +289,9 @@ class FactureService {
 
   async getFacture(id) {
     try {
-      console.log('Récupération de la facture:', id);
+      this.log.debug('Récupération de la facture:', id);
       if (id in this._cacheFacture) {
-          console.log('Facture trouvée dans le cache:', id);
+          this.log.debug('Facture trouvée dans le cache:', id);
           // ✅ Enrichir la facture du cache avec l'état d'affichage actuel
           const factureCache = this._cacheFacture[id];
           factureCache.etatAffichage = await this._determinerEtatAffichage(factureCache);
@@ -296,15 +299,15 @@ class FactureService {
       }
       
       const response = await api.get(`facture-api.php?id=${id}`);
-      console.log('Réponse de l\'API:', response);
+      this.log.debug('Réponse de l\'API:', response);
       
       if (response && response.success && response.facture) {
           const factureData = response.facture;
           
           // ✅ AJOUT: Debug des données brutes de l'API
-          console.log('🔍 Données brutes de l\'API facture:', factureData);
-          console.log('🔍 Clés disponibles dans factureData:', Object.keys(factureData));
-          console.log('🔍 Valeurs importantes:', {
+          this.log.debug('🔍 Données brutes de l\'API facture:', factureData);
+          this.log.debug('🔍 Clés disponibles dans factureData:', Object.keys(factureData));
+          this.log.debug('🔍 Valeurs importantes:', {
             idFacture: factureData.idFacture,
             numeroFacture: factureData.numeroFacture,
             dateFacture: factureData.dateFacture,
@@ -329,13 +332,13 @@ class FactureService {
                   }
                   
                   documentPath = backendUrl(`${outputDir}/${factureNormalisee.factfilename}`);
-                  console.log('Chemin du document de facture:', documentPath);
+                  this.log.debug('Chemin du document de facture:', documentPath);
               } catch (e) {
-                  console.warn('Erreur lors de la récupération du chemin du document:', e);
+                  this.log.warn('Erreur lors de la récupération du chemin du document:', e);
               }
           }
 
-          console.log('🔍 Données normalisées de la facture:', factureNormalisee);
+          this.log.debug('🔍 Données normalisées de la facture:', factureNormalisee);
 
           const factureFormattee = {
               // ✅ CORRECTION: Essayer différentes variantes de noms de champs
@@ -345,6 +348,7 @@ class FactureService {
               idClient: factureNormalisee.idClient,
               montantTotal: parseFloat(factureNormalisee.montantTotal || 0),
               ristourne: parseFloat(factureNormalisee.ristourne || 0),
+              montantBrut: parseFloat(factureNormalisee.montantBrut || 0),
               totalAvecRistourne: parseFloat(factureNormalisee.montantTotal || 0) - parseFloat(factureNormalisee.ristourne || 0),
               
               // Données des paiements multiples
@@ -386,12 +390,12 @@ class FactureService {
           };
           
           // ✅ AJOUT: Debug des données formatées
-          console.log('🔍 Données formatées pour le frontend:', factureFormattee);
+          this.log.debug('🔍 Données formatées pour le frontend:', factureFormattee);
           
           // ✅ ENRICHISSEMENT AUTOMATIQUE avec état d'affichage calculé dynamiquement
           factureFormattee.etatAffichage = await this._determinerEtatAffichage(factureFormattee);
           
-          console.log(`🔍 Facture ${factureFormattee.numeroFacture} - État de base: ${factureFormattee.etat}, État d'affichage: ${factureFormattee.etatAffichage}`);
+          this.log.debug(`🔍 Facture ${factureFormattee.numeroFacture} - État de base: ${factureFormattee.etat}, État d'affichage: ${factureFormattee.etatAffichage}`);
           
           this._cacheFacture[id] = factureFormattee;
           return factureFormattee;
@@ -421,10 +425,10 @@ class FactureService {
   }
 
   async createFacture(factureData) {
-    console.log('FactureService - createFacture - Création de la facture avec les données:', factureData);
+    this.log.debug('FactureService - createFacture - Création de la facture avec les données:', factureData);
     try {
       const response = await api.post('facture-api.php', factureData);
-      console.log('FactureService - createFacture - response', response)
+      this.log.debug('FactureService - createFacture - response', response)
       
       if (response && response.success) {
         this._clearCache();
@@ -443,9 +447,9 @@ class FactureService {
 
   async updateFacture(id, factureData) {
     try {
-      console.log(`FactureService - updateFacture - Mise à jour de la facture ${id} avec les données:`, factureData);
+      this.log.debug(`FactureService - updateFacture - Mise à jour de la facture ${id} avec les données:`, factureData);
       const response = await api.put(`facture-api.php?id=${id}`, factureData);
-      console.log(`FactureService - updateFacture - Réponse de l'API:`, response);
+      this.log.debug(`FactureService - updateFacture - Réponse de l'API:`, response);
 
       if (response && response.success) {
         delete this._cacheFacture[id];
@@ -483,7 +487,7 @@ class FactureService {
     try {
       // Empêcher la persistance de l'état "Retard"
       if (nouvelEtat === 'Retard') {
-        console.warn('⚠️ Tentative de persistance de l\'état "Retard" bloquée. Cet état est calculé dynamiquement.');
+        this.log.warn('⚠️ Tentative de persistance de l\'état "Retard" bloquée. Cet état est calculé dynamiquement.');
         return {
           success: false,
           message: 'L\'état "Retard" ne peut pas être persisté, il est calculé automatiquement.'
@@ -510,11 +514,25 @@ class FactureService {
     }
   }
 
+  /**
+   * Annule une facture en changeant son état à "Annulée"
+   * @param {number} id - ID de la facture à annuler
+   * @returns {Promise<Object>} - Résultat de l'opération
+   */
+  async annulerFacture(id) {
+    try {
+      this.log.debug(`🚫 Annulation de la facture ${id}`);
+      return await this.changerEtatFacture(id, 'Annulée');
+    } catch (error) {
+      handleApiError(error, `annulerFacture(${id})`);
+    }
+  }
+
   async envoyerFactureParEmail(idFacture, emailData) {
     try {
         const response = await api.post(`facture-api.php?envoyer&id=${idFacture}`, emailData);
         
-        console.log('Réponse de l\'API pour l\'envoi par email:', response);
+        this.log.debug('Réponse de l\'API pour l\'envoi par email:', response);
         
         if (response && response.success) {
             let processedResponse = { ...response };
@@ -654,9 +672,9 @@ class FactureService {
 
   async imprimerFacture(id, options = {}) {
     try {
-      console.log(`Impression de la facture ${id} avec options:`, options);
+      this.log.debug(`Impression de la facture ${id} avec options:`, options);
       const response = await api.post(`facture-api.php?imprimer=1&id=${id}`, { options });
-      console.log(`Réponse de l'impression de la facture ${id}:`, response);
+      this.log.debug(`Réponse de l'impression de la facture ${id}:`, response);
 
       if (response && response.success) {
         delete this._cacheFacture[id];
@@ -694,7 +712,7 @@ class FactureService {
       }
 
       const response = await api.get('facture-api.php', params);
-      console.log("getStatistiques Reponse :", response);
+      this.log.debug("getStatistiques Reponse :", response);
       
       if (response && response.success) {
         return {

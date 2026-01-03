@@ -190,7 +190,7 @@ export const LIMITS = {
 };
 
 export const DEFAULT_VALUES = {
-    METHODE_PAIEMENT: METHODES_PAIEMENT.ESPECES, // 'virement' par défaut
+    METHODE_PAIEMENT: METHODES_PAIEMENT.VIREMENT, // 'virement' par défaut
     DATE_PAIEMENT: null, // Sera initialisé par DateService.getTodayInputFormat()
     MONTANT_PAYE: '',
     COMMENTAIRE: ''

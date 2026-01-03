@@ -7,19 +7,17 @@ import { AddButton } from '../../../components/ui/buttons';
 import TarifFormHeader from '../sections/TarifFormHeader';
 import UnifiedFilter from '../../../components/shared/filters/UnifiedFilter';
 import { useTarifFilter, createInitialFilters } from '../hooks/useTarifFilter';
+import { createLogger } from '../../../utils/createLogger';
 
 const ServiceGestion = ({ 
   services = [],
-  loadServices,
   highlightedId,
-  tarificationService,
-  setMessage,
-  setMessageType,
-  setConfirmModal,
   onCreateService,
   onEditService,
   onDeleteService
 }) => {
+  const log = createLogger('ServiceGestion');
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // ✅ SOLUTION: N'afficher le composant que quand les données sont prêtes
@@ -53,7 +51,7 @@ const ServiceGestion = ({
 
   // ===== OPTIONS DE FILTRAGE =====
   const filterOptions = useMemo(() => {
-    console.log('🔍 Préparation filterOptions pour services:', services.length);
+    log.debug('🔍 Préparation filterOptions pour services:', services.length);
     
     // Extraire les valeurs uniques pour chaque champ
     const uniqueCodes = [...new Set(
@@ -68,9 +66,9 @@ const ServiceGestion = ({
       services.map(s => s.descriptionService).filter(Boolean)
     )].sort();
     
-    console.log('📊 Codes uniques:', uniqueCodes);
-    console.log('📊 Noms uniques:', uniqueNoms);
-    console.log('📊 Descriptions uniques:', uniqueDescriptions);
+    log.debug('📊 Codes uniques:', uniqueCodes);
+    log.debug('📊 Noms uniques:', uniqueNoms);
+    log.debug('📊 Descriptions uniques:', uniqueDescriptions);
     
     return {
       code: uniqueCodes,
@@ -107,7 +105,7 @@ const ServiceGestion = ({
     if (onCreateService) {
       onCreateService(event);
     } else {
-      console.warn('⚠️ onCreateService non fourni');
+      log.warn('⚠️ onCreateService non fourni');
     }
   };
   
@@ -116,7 +114,7 @@ const ServiceGestion = ({
     if (onEditService) {
       onEditService(idService, event);
     } else {
-      console.warn('⚠️ onEditService non fourni');
+      log.warn('⚠️ onEditService non fourni');
     }
   };
   
@@ -126,7 +124,7 @@ const ServiceGestion = ({
     if (onDeleteService) {
       onDeleteService(idService, serviceName, event);
     } else {
-      console.warn('⚠️ onDeleteService non fourni');
+      log.warn('⚠️ onDeleteService non fourni');
     }
   };
 

@@ -2,6 +2,10 @@
 // Fonctions utilitaires pour les composants clients
 
 import { FORM_MODES } from '../../../constants/factureConstants';
+import { createLogger } from '../../../utils/createLogger';
+
+// ✅ Initialisation du logger
+const logger = createLogger('clientHelpers');
 
 /**
  * Client par défaut pour l'initialisation

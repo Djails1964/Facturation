@@ -3,13 +3,16 @@
 import axios from 'axios';
 import FieldConverter from '../utils/FieldConverter';
 import { API_ENDPOINTS_MAPPING, toApiFormatWithDateHandling } from '../constants/fieldMappings';
+import { createLogger } from '../utils/createLogger';
 
-console.log('=================DEBUG API.JS-START=================');
-console.log("window.APP_CONFIG: ", window.APP_CONFIG);
-console.log("process.env.REACT_APP_API_BASE_URL:", process.env.REACT_APP_API_BASE_URL);
-console.log("window.location:", window.location);
-console.log("window.location.origin:", window.location.origin);
-console.log('==================DEBUG API.JS-END==================');
+const log = createLogger('api');
+
+log.debug('=================DEBUG API.JS-START=================');
+log.debug("window.APP_CONFIG: ", window.APP_CONFIG);
+log.debug("process.env.REACT_APP_API_BASE_URL:", process.env.REACT_APP_API_BASE_URL);
+log.debug("window.location:", window.location);
+log.debug("window.location.origin:", window.location.origin);
+log.debug('==================DEBUG API.JS-END==================');
 
 // ============================================
 // CONFIGURATION FIELD CONVERTER depuis constants
@@ -82,7 +85,7 @@ const determineBaseUrl = () => {
   if (process.env.REACT_APP_API_BASE_URL) {
     const envUrl = process.env.REACT_APP_API_BASE_URL;
     const finalUrl = envUrl.endsWith('/') ? envUrl : `${envUrl}/`;
-    console.log('🌍 Utilisation des variables d\'environnement:', finalUrl);
+    log.debug('🌍 Utilisation des variables d\'environnement:', finalUrl);
     return finalUrl;
   }
   
@@ -90,22 +93,22 @@ const determineBaseUrl = () => {
   if (window.APP_CONFIG?.apiEndpoint) {
     const endpoint = window.APP_CONFIG.apiEndpoint;
     const finalUrl = endpoint.endsWith('/') ? endpoint : `${endpoint}/`;
-    console.log('🪟 Utilisation de window.APP_CONFIG:', finalUrl);
+    log.debug('🪟 Utilisation de window.APP_CONFIG:', finalUrl);
     return finalUrl;
   }
   
   // URL par défaut selon l'environnement
   if (process.env.NODE_ENV === 'development') {
-    console.log('🔧 Mode développement - URL par défaut');
+    log.debug('🔧 Mode développement - URL par défaut');
     return 'https://localhost/fact-back/api/';
   } else {
-    console.log('🚀 Mode production - Chemin relatif');
+    log.debug('🚀 Mode production - Chemin relatif');
     return '/api/';
   }
 };
 
 const apiBaseUrl = determineBaseUrl();
-console.log("🎯 API Base URL finale:", apiBaseUrl);
+log.debug("🎯 API Base URL finale:", apiBaseUrl);
 
 // Configuration avec CORS pour le mode séparé
 const defaultConfig = {
@@ -122,13 +125,13 @@ const defaultConfig = {
 
 // Configuration HTTPS pour certificats auto-signés
 if (apiBaseUrl.startsWith('https://localhost')) {
-  console.log('🔒 Configuration HTTPS localhost détectée');
+  log.debug('🔒 Configuration HTTPS localhost détectée');
   // Pour les certificats auto-signés en développement
   defaultConfig.httpsAgent = new axios.create().defaults.httpsAgent;
 }
 
 // Logs de débogage
-console.log('📋 Configuration API:', { 
+log.debug('📋 Configuration API:', { 
   apiBaseUrl,
   baseURL: defaultConfig.baseURL,
   windowConfig: window.APP_CONFIG,
@@ -142,7 +145,7 @@ const apiClient = axios.create(defaultConfig);
 // Ajouter le token d'API s'il est disponible
 if (window.APP_CONFIG?.apiToken) {
   apiClient.defaults.headers.common['Authorization'] = `Bearer ${window.APP_CONFIG.apiToken}`;
-  console.log('🔑 Token API ajouté');
+  log.debug('🔑 Token API ajouté');
 }
 
 // ============================================
@@ -168,19 +171,19 @@ function extractAndConvertUrlParams(url) {
     params[key] = value;
   }
   
-  console.log('🔍 Paramètres extraits de l\'URL:', params);
+  log.debug('🔍 Paramètres extraits de l\'URL:', params);
   
   // Convertir les paramètres si l'endpoint doit être converti
   if (shouldConvertEndpoint(baseUrl)) {
     const context = getConversionContext(baseUrl);
-    console.log('🔄 Conversion des paramètres d\'URL:', { baseUrl, context, originalParams: params });
+    log.debug('🔄 Conversion des paramètres d\'URL:', { baseUrl, context, originalParams: params });
     
     const convertedParams = FieldConverter.toApiFormat(params, {
       context,
       preserveUnknown: true
     });
     
-    console.log('✅ Paramètres d\'URL convertis:', convertedParams);
+    log.debug('✅ Paramètres d\'URL convertis:', convertedParams);
     return { baseUrl, convertedParams };
   }
   
@@ -196,30 +199,33 @@ function convertRequestDataRecursively(data, context = null) {
     return data;
   }
   
-  console.log('🔄 convertRequestDataRecursively - Données entrantes:', data);
-  console.log('🔄 convertRequestDataRecursively - Contexte:', context);
+  log.debug('🔄 convertRequestDataRecursively - Données entrantes:', data);
+  log.debug('🔄 convertRequestDataRecursively - Contexte:', context);
   
   // Si c'est un tableau, convertir chaque élément
   if (Array.isArray(data)) {
     const converted = FieldConverter.convertArray(data, 'toApi', { context });
-    console.log('✅ Tableau converti vers API:', converted);
+    log.debug('✅ Tableau converti vers API:', converted);
     return converted;
   }
   
   // Convertir l'objet avec FieldConverter
   const converted = FieldConverter.toApiFormat(data, { context });
-  console.log('🔄 Objet converti initial:', converted);
+  log.debug('🔄 Objet converti initial:', converted);
   
   // Propriétés spécifiques qui contiennent des données imbriquées
   const nestedDataProperties = [
     'lignes', 'lines', 'items', 'data', 'services', 'unites', 
-    'clients', 'factures', 'paiements', 'details'
+    'clients', 'factures', 'paiements', 'details',
+    // ✅ NOUVEAU: Propriétés pour données enrichies
+    'unites_liees', 'unitesLiees', 'unite_defaut', 'uniteDefaut',
+    'types_tarifs', 'typesTarifs'
   ];
   
   // Convertir récursivement les propriétés imbriquées
   nestedDataProperties.forEach(prop => {
     if (converted[prop]) {
-      console.log(`🔄 Conversion récursive de la propriété '${prop}':`, converted[prop]);
+      log.debug(`🔄 Conversion récursive de la propriété '${prop}':`, converted[prop]);
       
       if (Array.isArray(converted[prop])) {
         // Convertir chaque élément du tableau
@@ -229,11 +235,11 @@ function convertRequestDataRecursively(data, context = null) {
           }
           return item;
         });
-        console.log(`✅ Tableau '${prop}' converti récursivement:`, converted[prop]);
+        log.debug(`✅ Tableau '${prop}' converti récursivement:`, converted[prop]);
       } else if (typeof converted[prop] === 'object' && converted[prop] !== null) {
         // Convertir l'objet récursivement
         converted[prop] = convertRequestDataRecursively(converted[prop], context);
-        console.log(`✅ Objet '${prop}' converti récursivement:`, converted[prop]);
+        log.debug(`✅ Objet '${prop}' converti récursivement:`, converted[prop]);
       }
     }
   });
@@ -254,10 +260,10 @@ function convertRequestDataRecursively(data, context = null) {
         if (key === 'unite' || key === 'service') {
           // Si c'est un objet unite/service, extraire seulement le code
           if (converted[key].code) {
-            console.log(`🔄 Simplification objet ${key}:`, converted[key], '→', converted[key].code);
+            log.debug(`🔄 Simplification objet ${key}:`, converted[key], '→', converted[key].code);
             converted[key] = converted[key].code;
           } else if (converted[key].nom) {
-            console.log(`🔄 Simplification objet ${key}:`, converted[key], '→', converted[key].nom);
+            log.debug(`🔄 Simplification objet ${key}:`, converted[key], '→', converted[key].nom);
             converted[key] = converted[key].nom;
           }
         } else {
@@ -268,7 +274,7 @@ function convertRequestDataRecursively(data, context = null) {
     }
   });
   
-  console.log('✅ Objet final converti récursivement:', converted);
+  log.debug('✅ Objet final converti récursivement:', converted);
   return converted;
 }
 
@@ -295,7 +301,7 @@ apiClient.interceptors.request.use(
         ...config.params // Les params explicites ont la priorité
       };
       
-      console.log('🔧 URL modifiée:', {
+      log.debug('🔧 URL modifiée:', {
         originalUrl: config.url + '?' + new URLSearchParams(convertedParams).toString(),
         newBaseUrl: baseUrl,
         mergedParams: config.params
@@ -305,7 +311,7 @@ apiClient.interceptors.request.use(
     // CORRECTION: Ajouter PHPSESSID à l'URL pour tous les fichiers .php
     if (config.url && config.url.includes('.php')) {
       config.url = addSessionToUrl(config.url);
-      console.log('🔐 Session ajoutée à l\'URL:', config.url);
+      log.debug('🔐 Session ajoutée à l\'URL:', config.url);
     }
     
     // ✅ CONVERSION AUTOMATIQUE DES DONNÉES avec gestion des dates (POST, PUT)
@@ -313,7 +319,7 @@ apiClient.interceptors.request.use(
       if (shouldConvertEndpoint(config.url)) {
         const context = getConversionContext(config.url);
         
-        console.log('🔄 Conversion Frontend → API avec récursion complète:', {
+        log.debug('🔄 Conversion Frontend → API avec récursion complète:', {
           url: config.url,
           context,
           originalData: config.data
@@ -337,21 +343,21 @@ apiClient.interceptors.request.use(
         
         config.data = convertedData;
         
-        console.log('✅ Données converties avec récursion complète:', convertedData);
+        log.debug('✅ Données converties avec récursion complète:', convertedData);
       }
     }
     
-    // 🔧 CONVERSION DES PARAMÈTRES GET (objets params)
-    if (config.method === 'get' && config.params && shouldConvertEndpoint(config.url)) {
+    // 🔧 CONVERSION DES PARAMÈTRES GET et DELETE (objets params)
+    if ((config.method === 'get' || config.method === 'delete') && config.params && shouldConvertEndpoint(config.url)) {
       const context = getConversionContext(config.url);
       
-      console.log('🔄 Conversion paramètres GET Frontend → API:', {
+      log.debug(`🔄 Conversion paramètres ${config.method.toUpperCase()} Frontend → API:`, {
         url: config.url,
         context,
         originalParams: config.params
       });
       
-      // Conversion des paramètres GET en utilisant FieldConverter
+      // Conversion des paramètres en utilisant FieldConverter
       const convertedParams = FieldConverter.toApiFormat(config.params, {
         context,
         preserveUnknown: true
@@ -359,7 +365,7 @@ apiClient.interceptors.request.use(
       
       config.params = convertedParams;
       
-      console.log('✅ Paramètres GET convertis:', convertedParams);
+      log.debug(`✅ Paramètres ${config.method.toUpperCase()} convertis:`, convertedParams);
     }
     
     // Pour les requêtes GET (ajout du timestamp après conversion)
@@ -373,21 +379,21 @@ apiClient.interceptors.request.use(
     // Journalisation en mode développement
     const debugMode = window.APP_CONFIG?.debugMode || process.env.REACT_APP_DEBUG === 'true';
     if (debugMode) {
-      console.log('📤 Requête API:', config.method.toUpperCase(), config.url, config.params || config.data);
-      console.log('🔗 URL complète:', config.baseURL + config.url);
+      log.debug('📤 Requête API:', config.method.toUpperCase(), config.url, config.params || config.data);
+      log.debug('🔗 URL complète:', config.baseURL + config.url);
     }
     
     return config;
   },
   error => {
-    console.error('❌ Erreur lors de la préparation de la requête:', error);
+    log.error('❌ Erreur lors de la préparation de la requête:', error);
     return Promise.reject(error);
   }
 );
 
 // ✅ FONCTION DE GESTION SESSION EXPIRÉE
 function handleSessionExpired() {
-  console.warn('🚨 Gestion de session expirée...');
+  log.warn('🚨 Gestion de session expirée...');
   
   // Nettoyer l'authentification locale
   localStorage.removeItem('user');
@@ -410,8 +416,8 @@ function handleSessionExpired() {
 // Intercepteur pour les réponses - AVEC CONVERSION AUTOMATIQUE
 apiClient.interceptors.response.use(
   response => {
-    console.log('📥 Intercepteur réponse - URL:', response.config.url);
-    console.log('📥 Intercepteur réponse - Données brutes:', response.data);
+    log.debug('📥 Intercepteur réponse - URL:', response.config.url);
+    log.debug('📥 Intercepteur réponse - Données brutes:', response.data);
     
     // ✅ VÉRIFICATION SESSION EXPIRÉE
     if (response.data) {
@@ -424,7 +430,7 @@ apiClient.interceptors.response.use(
           data.message === 'Session expirée' ||
           data.message === 'Non authentifié') {
         
-        console.warn('🚨 Session expirée détectée dans la réponse API');
+        log.warn('🚨 Session expirée détectée dans la réponse API');
         handleSessionExpired();
         return Promise.reject(new Error('SESSION_EXPIRED'));
       }
@@ -434,7 +440,7 @@ apiClient.interceptors.response.use(
     if (response.data && shouldConvertEndpoint(response.config.url)) {
       const context = getConversionContext(response.config.url);
       
-      // console.log('🔄 Conversion API → Frontend:', {
+      // log.debug('🔄 Conversion API → Frontend:', {
       //   url: response.config.url,
       //   context,
       //   shouldConvert: true,
@@ -444,15 +450,15 @@ apiClient.interceptors.response.use(
       const convertedData = convertApiResponse(response.data, context);
       response.data = convertedData;
       
-      console.log('✅ Réponse convertie:', convertedData);
+      log.debug('✅ Réponse convertie:', convertedData);
     } else {
-      console.log('⭐️ Pas de conversion pour:', response.config.url);
+      log.debug('⭐️ Pas de conversion pour:', response.config.url);
     }
     
     // Journalisation en mode développement
     const debugMode = window.APP_CONFIG?.debugMode || process.env.REACT_APP_DEBUG === 'true';
     if (debugMode) {
-      console.log('📥 Réponse API:', response.status, response.config.url, response.data);
+      log.debug('📥 Réponse API:', response.status, response.config.url, response.data);
     }
     
     return response;
@@ -461,7 +467,7 @@ apiClient.interceptors.response.use(
     // Journalisation des erreurs
     const debugMode = window.APP_CONFIG?.debugMode || process.env.REACT_APP_DEBUG === 'true';
     if (debugMode) {
-      console.error('❌ Erreur API:', 
+      log.error('❌ Erreur API:', 
         error.response ? `${error.response.status} ${error.response.config.url}` : error.message,
         error
       );
@@ -469,7 +475,7 @@ apiClient.interceptors.response.use(
     
     // ✅ GESTION DES ERREURS 401 - Session expirée
     if (error.response && error.response.status === 401) {
-      console.warn('🚨 Session expirée ou non authentifiée');
+      log.warn('🚨 Session expirée ou non authentifiée');
       
       // Nettoyer le localStorage
       localStorage.removeItem('user');
@@ -513,20 +519,20 @@ function convertApiResponse(data, context = null) {
     return data;
   }
   
-  console.log('🔄 convertApiResponse - Données entrantes:', data);
-  console.log('typeof data:', typeof data);
-  console.log('🔄 convertApiResponse - Contexte:', context);
+  log.debug('🔄 convertApiResponse - Données entrantes:', data);
+  log.debug('typeof data:', typeof data);
+  log.debug('🔄 convertApiResponse - Contexte:', context);
   
   // Si c'est un tableau, convertir chaque élément
   if (Array.isArray(data)) {
     const converted = FieldConverter.convertArray(data, 'toFrontend', { context });
-    console.log('✅ Tableau converti:', converted);
+    log.debug('✅ Tableau converti:', converted);
     return converted;
   }
   
   // ✅ CORRECTION: Traiter les objets de réponse wrap (success, paiement, etc.)
   const converted = { ...data };
-  console.log('🔄 Objet converti initial:', converted);
+  log.debug('🔄 Objet converti initial:', converted);
   
   // ✅ NOUVEAU: Propriétés spécifiques aux paiements
   const paiementProperties = [
@@ -540,6 +546,13 @@ function convertApiResponse(data, context = null) {
   // ✅ AJOUT: Propriété spécifique aux lignes de facture
   const lignesProperties = ['lignes'];
 
+  // ✅ NOUVEAU: Propriétés spécifiques aux données enrichies de tarification
+  const tarifEnrichedProperties = [
+    'unitesLiees', 'unites_liees',
+    'uniteDefaut', 'unite_defaut',
+    'typesTarifs', 'types_tarifs'
+  ];
+
   // ✅ NOUVEAU: Propriétés spécifiques aux autres entités
   const dataProperties = [
     'services', 'unites', 'servicesUnites', 'typesTarifs', 'tarifs', 'tarifsSpeciaux',
@@ -547,21 +560,22 @@ function convertApiResponse(data, context = null) {
     ...paiementProperties,
     ...factureProperties,
     ...lignesProperties,
-    ...parametreProperties
+    ...parametreProperties,
+    ...tarifEnrichedProperties
   ];
   
   // Convertir les propriétés qui contiennent des données métier
   dataProperties.forEach(prop => {
     if (converted[prop]) {
-      console.log(`🔄 Conversion de la propriété '${prop}':`, converted[prop]);
+      log.debug(`🔄 Conversion de la propriété '${prop}':`, converted[prop]);
       
       if (Array.isArray(converted[prop])) {
         converted[prop] = FieldConverter.convertArray(converted[prop], 'toFrontend', { context });
-        console.log(`✅ Tableau '${prop}' converti:`, converted[prop]);
+        log.debug(`✅ Tableau '${prop}' converti:`, converted[prop]);
       } else if (typeof converted[prop] === 'object') {
         // ✅ CORRECTION PRINCIPALE: Conversion récursive complète des objets
         converted[prop] = convertObjectRecursively(converted[prop], context);
-        console.log(`✅ Objet '${prop}' converti:`, converted[prop]);
+        log.debug(`✅ Objet '${prop}' converti:`, converted[prop]);
       }
     }
   });
@@ -571,14 +585,14 @@ function convertApiResponse(data, context = null) {
   const isSimpleDataObject = !dataProperties.some(prop => converted[prop]);
   
   if (isSimpleDataObject && hasSnakeCaseFields) {
-    console.log('🔄 Conversion objet simple avec snake_case:', converted);
+    log.debug('🔄 Conversion objet simple avec snake_case:', converted);
     // ✅ CORRECTION: Convertir l'objet entier, pas seulement data
     const directConverted = FieldConverter.toFrontendFormat(converted, { context });
-    console.log('✅ Objet simple converti:', directConverted);
+    log.debug('✅ Objet simple converti:', directConverted);
     return directConverted;
   }
   
-  console.log('✅ Réponse finale convertie:', converted);
+  log.debug('✅ Réponse finale convertie:', converted);
   return converted;
 }
 
@@ -602,9 +616,9 @@ function convertObjectRecursively(obj, context = null) {
   // ✅ CORRECTION PRINCIPALE: Parcourir toutes les propriétés pour convertir les tableaux imbriqués
   Object.keys(converted).forEach(key => {
     if (Array.isArray(converted[key])) {
-      console.log(`🔄 Conversion tableau imbriqué '${key}':`, converted[key]);
+      log.debug(`🔄 Conversion tableau imbriqué '${key}':`, converted[key]);
       converted[key] = FieldConverter.convertArray(converted[key], 'toFrontend', { context });
-      console.log(`✅ Tableau imbriqué '${key}' converti:`, converted[key]);
+      log.debug(`✅ Tableau imbriqué '${key}' converti:`, converted[key]);
     } else if (converted[key] && typeof converted[key] === 'object' && !Array.isArray(converted[key])) {
       // Conversion récursive pour les objets imbriqués
       converted[key] = convertObjectRecursively(converted[key], context);
@@ -631,8 +645,8 @@ const api = {
   
   post: async (url, data = {}) => {
     try {
-      console.log('📤 API.js -- POST -- Données envoyées (avant conversion):', data);
-      console.log('📤 API.js -- POST -- URL:', url);
+      log.debug('📤 API.js -- POST -- Données envoyées (avant conversion):', data);
+      log.debug('📤 API.js -- POST -- URL:', url);
       const response = await apiClient.post(url, data);
       return response.data;
     } catch (error) {
@@ -713,13 +727,13 @@ const api = {
 // Fonction pour configurer les endpoints de conversion
 export const configureFieldConversion = (config) => {
   Object.assign(ENDPOINT_CONVERSION_CONFIG, config);
-  console.log('🔧 Configuration FieldConverter mise à jour:', ENDPOINT_CONVERSION_CONFIG);
+  log.debug('🔧 Configuration FieldConverter mise à jour:', ENDPOINT_CONVERSION_CONFIG);
 };
 
 // Fonction pour désactiver temporairement la conversion
 export const disableFieldConversion = () => {
   ENDPOINT_CONVERSION_CONFIG.autoConvert = [];
-  console.log('⏸️ Conversion automatique désactivée');
+  log.debug('⏸️ Conversion automatique désactivée');
 };
 
 // Fonction pour réactiver la conversion
@@ -730,7 +744,7 @@ export const enableFieldConversion = () => {
     'facture-api.php',
     'user-api.php'
   ];
-  console.log('▶️ Conversion automatique réactivée');
+  log.debug('▶️ Conversion automatique réactivée');
 };
 
 // ============================================
@@ -742,17 +756,17 @@ export const enableFieldConversion = () => {
  * @param {string} testUrl - URL de test
  */
 function testUrlConversion(testUrl) {
-  console.group('🧪 Test conversion URL');
-  console.log('URL originale:', testUrl);
+  log.group('🧪 Test conversion URL');
+  log.debug('URL originale:', testUrl);
   
   const result = extractAndConvertUrlParams(testUrl);
-  console.log('Résultat:', result);
+  log.debug('Résultat:', result);
   
   // Reconstituer l'URL finale
   const finalUrl = result.baseUrl + '?' + new URLSearchParams(result.convertedParams).toString();
-  console.log('URL finale:', finalUrl);
+  log.debug('URL finale:', finalUrl);
   
-  console.groupEnd();
+  log.groupEnd();
 }
 
 // ✅ Fonctions utilitaires pour debug

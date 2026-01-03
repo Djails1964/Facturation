@@ -123,7 +123,7 @@ export function DateProvider({ children }) {
      * Analyse une chaîne formatée pour extraire les dates
      */
     const parseDatesFromString = useCallback((formattedString) => {
-        return DateService.parseDatesFromFormattedString(formattedString);
+        return DateService.parseDatesFromCompact(formattedString);
     }, []);
 
     // Valeur du contexte

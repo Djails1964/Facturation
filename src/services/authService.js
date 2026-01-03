@@ -1,8 +1,11 @@
 // src/services/authService.js - VERSION MISE À JOUR avec gestion des booléens
 import api from './api';
 import { toBoolean, normalizeBooleanFields, normalizeBooleanFieldsArray, toBooleanInt } from '../utils/booleanHelper'; // ✅ IMPORT du helper
+import { createLogger } from '../utils/createLogger';
 
-console.log('🔐 AuthService configuré avec api.js centralisé et gestion des booléens');
+const log = createLogger('authService');
+
+log.info('🔐 AuthService configuré avec api.js centralisé et gestion des booléens');
 
 const authService = {
   // ====================================
@@ -90,7 +93,7 @@ const authService = {
     booleanFields.forEach(field => {
       if (prepared[field] !== undefined) {
         prepared[field] = toBooleanInt(prepared[field]);
-        console.log(`✅ Conversion ${field}:`, userData[field], '→', prepared[field]);
+        log.debug(`✅ Conversion ${field}:`, userData[field], '→', prepared[field]);
       }
     });
     
@@ -103,52 +106,52 @@ const authService = {
   
   login: async (username, password) => {
     try {
-      console.log('🔐 Tentative de connexion pour:', username);
+      log.info('🔐 Tentative de connexion pour:', username);
       
       const response = await api.post('auth-api.php?login=1', {
         username, 
         password
       });
 
-      console.log('✅ Réponse login brute:', response);
+      log.debug('✅ Réponse login brute:', response);
       
       // ✅ NORMALISATION DE LA RÉPONSE
       const normalizedResponse = authService.normalizeAuthResponse(response);
-      console.log('✅ Réponse login normalisée:', normalizedResponse);
+      log.debug('✅ Réponse login normalisée:', normalizedResponse);
       
       if (normalizedResponse.success) {
         localStorage.setItem('user', JSON.stringify(normalizedResponse.user));
-        console.log('✅ Connexion réussie:', normalizedResponse.user);
+        log.info('✅ Connexion réussie:', normalizedResponse.user);
         
         // TEST: Vérifier immédiatement la session après connexion
         try {
-          console.log('🔍 Test de session immédiatement après connexion...');
+          log.debug('🔍 Test de session immédiatement après connexion...');
           const sessionTest = await api.get('auth-api.php?check_session=1');
           const normalizedSessionTest = authService.normalizeAuthResponse(sessionTest);
-          console.log('🔍 Test session après login (normalisé):', normalizedSessionTest);
+          log.debug('🔍 Test session après login (normalisé):', normalizedSessionTest);
         } catch (sessionError) {
-          console.error('❌ Session test échoué:', sessionError);
+          log.error('❌ Session test échoué:', sessionError);
         }
       }
       
       return normalizedResponse;
     } catch (error) {
-      console.error('❌ Erreur de connexion:', error);
+      log.error('❌ Erreur de connexion:', error);
       throw error;
     }
   },
 
   checkAuth: async () => {
     try {
-      console.log('🔍 Vérification de session...');
+      log.info('🔍 Vérification de session...');
       
       const response = await api.get('auth-api.php?check_session=1');
       
-      console.log('🔍 Réponse check auth brute:', response);
+      log.debug('🔍 Réponse check auth brute:', response);
       
       // ✅ NORMALISATION DE LA RÉPONSE
       const normalizedResponse = authService.normalizeAuthResponse(response);
-      console.log('🔍 Réponse check auth normalisée:', normalizedResponse);
+      log.debug('🔍 Réponse check auth normalisée:', normalizedResponse);
       
       if (normalizedResponse.success && normalizedResponse.user) {
         localStorage.setItem('user', JSON.stringify(normalizedResponse.user));
@@ -158,7 +161,7 @@ const authService = {
         return null;
       }
     } catch (error) {
-      console.log('🔍 Vérification d\'auth échouée:', error.message);
+      log.debug('🔍 Vérification d\'auth échouée:', error.message);
       localStorage.removeItem('user');
       return null;
     }
@@ -166,17 +169,17 @@ const authService = {
 
   logout: async () => {
     try {
-      console.log('🚪 Déconnexion...');
+      log.info('🚪 Déconnexion...');
       
       const response = await api.delete('auth-api.php?logout=1');
       
       // ✅ NORMALISATION DE LA RÉPONSE
       const normalizedResponse = authService.normalizeAuthResponse(response);
-      console.log('✅ Déconnexion API réussie (normalisée):', normalizedResponse);
+      log.debug('✅ Déconnexion API réussie (normalisée):', normalizedResponse);
       
       return normalizedResponse.success;
     } catch (error) {
-      console.error('❌ Erreur de déconnexion', error);
+      log.error('❌ Erreur de déconnexion', error);
       return false;
     } finally {
       localStorage.removeItem('user');
@@ -197,7 +200,7 @@ const authService = {
         // ✅ NORMALISATION PRÉVENTIVE DE L'UTILISATEUR DU CACHE
         return authService.normalizeUser(user);
       } catch (error) {
-        console.error('Erreur lors du parsing de l\'utilisateur du localStorage:', error);
+        log.error('Erreur lors du parsing de l\'utilisateur du localStorage:', error);
         localStorage.removeItem('user');
         return null;
       }
@@ -218,19 +221,19 @@ const authService = {
   // Obtenir tous les utilisateurs (admin/gestionnaire)
   getUsers: async () => {
     try {
-      console.log('📋 Récupération des utilisateurs...');
+      log.debug('📋 Récupération des utilisateurs...');
       
       const response = await api.get('auth-api.php?action=utilisateurs');
       
-      console.log('📋 Réponse getUsers brute:', response);
+      log.debug('📋 Réponse getUsers brute:', response);
       
       // ✅ NORMALISATION DE LA RÉPONSE
       const normalizedResponse = authService.normalizeAuthResponse(response);
-      console.log('📋 Réponse getUsers normalisée:', normalizedResponse);
+      log.debug('📋 Réponse getUsers normalisée:', normalizedResponse);
       
       return normalizedResponse;
     } catch (error) {
-      console.error('❌ Erreur récupération utilisateurs:', error);
+      log.error('❌ Erreur récupération utilisateurs:', error);
       throw error;
     }
   },
@@ -238,23 +241,23 @@ const authService = {
   // Créer un nouvel utilisateur (admin/gestionnaire)
   createUser: async (userData) => {
     try {
-      console.log('👤 Création utilisateur (données brutes):', userData);
+      log.debug('👤 Création utilisateur (données brutes):', userData);
       
       // ✅ PRÉPARATION DES DONNÉES POUR L'API
       const preparedData = authService.prepareUserDataForApi(userData);
-      console.log('👤 Création utilisateur (données préparées):', preparedData);
+      log.debug('👤 Création utilisateur (données préparées):', preparedData);
       
       const response = await api.post('auth-api.php?action=creer_utilisateur', preparedData);
       
-      console.log('👤 Réponse création brute:', response);
+      log.debug('👤 Réponse création brute:', response);
       
       // ✅ NORMALISATION DE LA RÉPONSE
       const normalizedResponse = authService.normalizeAuthResponse(response);
-      console.log('👤 Réponse création normalisée:', normalizedResponse);
+      log.debug('👤 Réponse création normalisée:', normalizedResponse);
       
       return normalizedResponse;
     } catch (error) {
-      console.error('❌ Erreur création utilisateur:', error);
+      log.error('❌ Erreur création utilisateur:', error);
       throw error;
     }
   },
@@ -262,23 +265,23 @@ const authService = {
   // Modifier un utilisateur existant (admin/gestionnaire)
   updateUser: async (userId, userData) => {
     try {
-      console.log('✏️ Modification utilisateur ID:', userId, 'Data brute:', userData);
+      log.debug('✏️ Modification utilisateur ID:', userId, 'Data brute:', userData);
       
       // ✅ PRÉPARATION DES DONNÉES POUR L'API
       const preparedData = authService.prepareUserDataForApi(userData);
-      console.log('✏️ Modification utilisateur (données préparées):', preparedData);
+      log.debug('✏️ Modification utilisateur (données préparées):', preparedData);
       
       const response = await api.put(`auth-api.php?action=modifier_utilisateur&id=${userId}`, preparedData);
       
-      console.log('✏️ Réponse modification brute:', response);
+      log.debug('✏️ Réponse modification brute:', response);
       
       // ✅ NORMALISATION DE LA RÉPONSE
       const normalizedResponse = authService.normalizeAuthResponse(response);
-      console.log('✏️ Réponse modification normalisée:', normalizedResponse);
+      log.debug('✏️ Réponse modification normalisée:', normalizedResponse);
       
       return normalizedResponse;
     } catch (error) {
-      console.error('❌ Erreur modification utilisateur:', error);
+      log.error('❌ Erreur modification utilisateur:', error);
       throw error;
     }
   },
@@ -286,19 +289,19 @@ const authService = {
   // Supprimer un utilisateur (admin/gestionnaire)
   deleteUser: async (userId) => {
     try {
-      console.log('🗑️ Suppression utilisateur ID:', userId);
+      log.debug('🗑️ Suppression utilisateur ID:', userId);
       
       const response = await api.delete(`auth-api.php?action=supprimer_utilisateur&id=${userId}`);
       
-      console.log('🗑️ Réponse suppression brute:', response);
+      log.debug('🗑️ Réponse suppression brute:', response);
       
       // ✅ NORMALISATION DE LA RÉPONSE
       const normalizedResponse = authService.normalizeAuthResponse(response);
-      console.log('🗑️ Réponse suppression normalisée:', normalizedResponse);
+      log.debug('🗑️ Réponse suppression normalisée:', normalizedResponse);
       
       return normalizedResponse;
     } catch (error) {
-      console.error('❌ Erreur suppression utilisateur:', error);
+      log.error('❌ Erreur suppression utilisateur:', error);
       throw error;
     }
   },
@@ -306,19 +309,19 @@ const authService = {
   // Obtenir un utilisateur spécifique par ID (admin/gestionnaire)
   getUserById: async (userId) => {
     try {
-      console.log('👤 Récupération utilisateur ID:', userId);
+      log.debug('👤 Récupération utilisateur ID:', userId);
       
       const response = await api.get(`auth-api.php?action=utilisateur&id=${userId}`);
       
-      console.log('👤 Réponse getUserById brute:', response);
+      log.debug('👤 Réponse getUserById brute:', response);
       
       // ✅ NORMALISATION DE LA RÉPONSE
       const normalizedResponse = authService.normalizeAuthResponse(response);
-      console.log('👤 Réponse getUserById normalisée:', normalizedResponse);
+      log.debug('👤 Réponse getUserById normalisée:', normalizedResponse);
       
       return normalizedResponse;
     } catch (error) {
-      console.error('❌ Erreur récupération utilisateur:', error);
+      log.error('❌ Erreur récupération utilisateur:', error);
       throw error;
     }
   },
@@ -330,7 +333,7 @@ const authService = {
   // Changer le mot de passe (utilisateur connecté)
   changePassword: async (userId, oldPassword, newPassword) => {
     try {
-      console.log('🔑 Changement de mot de passe pour utilisateur ID:', userId);
+      log.debug('🔑 Changement de mot de passe pour utilisateur ID:', userId);
       
       const response = await api.post('auth-api.php', {
         action: 'changePassword',
@@ -339,15 +342,15 @@ const authService = {
         newPassword
       });
       
-      console.log('🔑 Réponse changement mot de passe brute:', response);
+      log.debug('🔑 Réponse changement mot de passe brute:', response);
       
       // ✅ NORMALISATION DE LA RÉPONSE
       const normalizedResponse = authService.normalizeAuthResponse(response);
-      console.log('🔑 Réponse changement mot de passe normalisée:', normalizedResponse);
+      log.debug('🔑 Réponse changement mot de passe normalisée:', normalizedResponse);
       
       return normalizedResponse;
     } catch (error) {
-      console.error('❌ Erreur changement mot de passe:', error);
+      log.error('❌ Erreur changement mot de passe:', error);
       throw error;
     }
   },
@@ -359,21 +362,21 @@ const authService = {
   // Demander une réinitialisation de mot de passe
   requestPasswordReset: async (email) => {
     try {
-      console.log('📧 Demande de réinitialisation pour:', email);
+      log.debug('📧 Demande de réinitialisation pour:', email);
       
       const response = await api.post('auth-api.php?reset_password=1', {
         email: email
       });
       
-      console.log('📧 Réponse réinitialisation brute:', response);
+      log.debug('📧 Réponse réinitialisation brute:', response);
       
       // ✅ NORMALISATION DE LA RÉPONSE
       const normalizedResponse = authService.normalizeAuthResponse(response);
-      console.log('📧 Réponse réinitialisation normalisée:', normalizedResponse);
+      log.debug('📧 Réponse réinitialisation normalisée:', normalizedResponse);
       
       return normalizedResponse;
     } catch (error) {
-      console.error('❌ Erreur demande réinitialisation:', error);
+      log.error('❌ Erreur demande réinitialisation:', error);
       throw error;
     }
   },
@@ -381,19 +384,19 @@ const authService = {
   // Vérifier un token de réinitialisation
   verifyResetToken: async (token) => {
     try {
-      console.log('🔍 Vérification token:', token);
+      log.debug('🔍 Vérification token:', token);
       
       const response = await api.get(`auth-api.php?verify_token=1&token=${encodeURIComponent(token)}`);
       
-      console.log('🔍 Réponse vérification token brute:', response);
+      log.debug('🔍 Réponse vérification token brute:', response);
       
       // ✅ NORMALISATION DE LA RÉPONSE
       const normalizedResponse = authService.normalizeAuthResponse(response);
-      console.log('🔍 Réponse vérification token normalisée:', normalizedResponse);
+      log.debug('🔍 Réponse vérification token normalisée:', normalizedResponse);
       
       return normalizedResponse;
     } catch (error) {
-      console.error('❌ Erreur vérification token:', error);
+      log.error('❌ Erreur vérification token:', error);
       throw error;
     }
   },
@@ -401,22 +404,22 @@ const authService = {
   // Réinitialiser le mot de passe avec un token
   resetPasswordWithToken: async (token, newPassword) => {
     try {
-      console.log('🔄 Réinitialisation avec token:', token);
+      log.debug('🔄 Réinitialisation avec token:', token);
       
       const response = await api.post('auth-api.php?verify_token=1', {
         token: token,
         password: newPassword
       });
       
-      console.log('🔄 Réponse réinitialisation brute:', response);
+      log.debug('🔄 Réponse réinitialisation brute:', response);
       
       // ✅ NORMALISATION DE LA RÉPONSE
       const normalizedResponse = authService.normalizeAuthResponse(response);
-      console.log('🔄 Réponse réinitialisation normalisée:', normalizedResponse);
+      log.debug('🔄 Réponse réinitialisation normalisée:', normalizedResponse);
       
       return normalizedResponse;
     } catch (error) {
-      console.error('❌ Erreur réinitialisation:', error);
+      log.error('❌ Erreur réinitialisation:', error);
       throw error;
     }
   },
@@ -428,19 +431,19 @@ const authService = {
   // Récupérer les données du dashboard (admin/gestionnaire)
   getDashboardData: async () => {
     try {
-      console.log('📊 Récupération données dashboard...');
+      log.debug('📊 Récupération données dashboard...');
       
       const response = await api.get('auth-api.php?action=dashboard');
       
-      console.log('📊 Réponse dashboard brute:', response);
+      log.debug('📊 Réponse dashboard brute:', response);
       
       // ✅ NORMALISATION DE LA RÉPONSE
       const normalizedResponse = authService.normalizeAuthResponse(response);
-      console.log('📊 Réponse dashboard normalisée:', normalizedResponse);
+      log.debug('📊 Réponse dashboard normalisée:', normalizedResponse);
       
       return normalizedResponse;
     } catch (error) {
-      console.error('❌ Erreur récupération dashboard:', error);
+      log.error('❌ Erreur récupération dashboard:', error);
       throw error;
     }
   },
@@ -500,8 +503,8 @@ const authService = {
 
   // Debug des cookies et session
   debugSession: () => {
-    console.log('🍪 DEBUG SESSION:');
-    console.log('document.cookie:', document.cookie);
+    log.debug('🍪 DEBUG SESSION:');
+    log.debug('document.cookie:', document.cookie);
     
     // Fonction helper pour obtenir PHPSESSID
     const getSessionIdFromCookies = () => {
@@ -518,9 +521,9 @@ const authService = {
     // Vérifier spécifiquement PHPSESSID
     const sessionId = getSessionIdFromCookies();
     if (sessionId) {
-      console.log('✅ PHPSESSID trouvé:', sessionId);
+      log.debug('✅ PHPSESSID trouvé:', sessionId);
     } else {
-      console.log('❌ PHPSESSID manquant');
+      log.debug('❌ PHPSESSID manquant');
     }
     
     return { sessionId };
@@ -529,14 +532,14 @@ const authService = {
   // Test de session après login
   testSessionAfterLogin: async () => {
     try {
-      console.log('🔍 Test session immédiatement après login...');
+      log.debug('🔍 Test session immédiatement après login...');
       
       // Debug cookies
       const debugInfo = authService.debugSession();
       
       // Test checkAuth
       const sessionCheck = await authService.checkAuth();
-      console.log('🔍 Session check result:', sessionCheck);
+      log.debug('🔍 Session check result:', sessionCheck);
       
       return {
         success: true,
@@ -544,7 +547,7 @@ const authService = {
         sessionCheck
       };
     } catch (error) {
-      console.error('❌ Test session échoué:', error);
+      log.error('❌ Test session échoué:', error);
       return {
         success: false,
         error: error.message
@@ -553,36 +556,36 @@ const authService = {
   },
 
   testSessionComplete: async () => {
-    console.log('🧪 === TEST COMPLET DE SESSION ===');
+    log.debug('🧪 === TEST COMPLET DE SESSION ===');
     
     try {
       // 1. État initial
-      console.log('📋 1. État initial:');
-      console.log('   - Cookies:', document.cookie);
-      console.log('   - localStorage user:', localStorage.getItem('user'));
+      log.debug('📋 1. État initial:');
+      log.debug('   - Cookies:', document.cookie);
+      log.debug('   - localStorage user:', localStorage.getItem('user'));
       
       // 2. Debug session côté PHP
-      console.log('📋 2. Debug session PHP:');
+      log.debug('📋 2. Debug session PHP:');
       const debugResult = await api.get('auth-api.php?debug_session=1');
       const normalizedDebug = authService.normalizeAuthResponse(debugResult);
-      console.log('   - Réponse debug (normalisée):', normalizedDebug);
+      log.debug('   - Réponse debug (normalisée):', normalizedDebug);
       
       // 3. Test de login
-      console.log('📋 3. Test de login:');
+      log.debug('📋 3. Test de login:');
       const loginResult = await api.post('auth-api.php?login=1', {
         username: 'test_admin', // Remplace par tes identifiants
         password: 'Test123!'
       });
       const normalizedLogin = authService.normalizeAuthResponse(loginResult);
-      console.log('   - Réponse login (normalisée):', normalizedLogin);
+      log.debug('   - Réponse login (normalisée):', normalizedLogin);
       
       // 4. Attendre que les cookies se propagent
-      console.log('📋 4. Attente propagation cookies (1s)...');
+      log.debug('📋 4. Attente propagation cookies (1s)...');
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // 5. Vérifier les cookies après login
-      console.log('📋 5. Cookies après login:');
-      console.log('   - document.cookie:', document.cookie);
+      log.debug('📋 5. Cookies après login:');
+      log.debug('   - document.cookie:', document.cookie);
       
       // Parser les cookies pour debug
       const cookies = {};
@@ -590,36 +593,36 @@ const authService = {
         const [name, value] = cookie.trim().split('=');
         if (name && value) cookies[name] = value;
       });
-      console.log('   - Cookies parsés:', cookies);
-      console.log('   - PHPSESSID trouvé:', cookies.PHPSESSID ? 'OUI' : 'NON');
+      log.debug('   - Cookies parsés:', cookies);
+      log.debug('   - PHPSESSID trouvé:', cookies.PHPSESSID ? 'OUI' : 'NON');
       
       // 6. Re-debug session après login
-      console.log('📋 6. Re-debug session après login:');
+      log.debug('📋 6. Re-debug session après login:');
       const debugResult2 = await api.get('auth-api.php?debug_session=1');
       const normalizedDebug2 = authService.normalizeAuthResponse(debugResult2);
-      console.log('   - Session après login (normalisée):', normalizedDebug2);
+      log.debug('   - Session après login (normalisée):', normalizedDebug2);
       
       // 7. Test check_session
-      console.log('📋 7. Test check_session:');
+      log.debug('📋 7. Test check_session:');
       const checkResult = await api.get('auth-api.php?check_session=1');
       const normalizedCheck = authService.normalizeAuthResponse(checkResult);
-      console.log('   - Check session (normalisée):', normalizedCheck);
+      log.debug('   - Check session (normalisée):', normalizedCheck);
       
       // 8. Test getUsers
-      console.log('📋 8. Test getUsers:');
+      log.debug('📋 8. Test getUsers:');
       try {
         const usersResult = await authService.getUsers();
-        console.log('   - Users récupérés:', usersResult.success ? 'OUI' : 'NON');
-        console.log('   - Nombre d\'utilisateurs:', usersResult.utilisateurs?.length || 0);
+        log.debug('   - Users récupérés:', usersResult.success ? 'OUI' : 'NON');
+        log.debug('   - Nombre d\'utilisateurs:', usersResult.utilisateurs?.length || 0);
       } catch (userError) {
-        console.log('   - Erreur getUsers:', userError.message);
+        log.debug('   - Erreur getUsers:', userError.message);
       }
       
       // 9. Résumé
-      console.log('📋 9. RÉSUMÉ:');
-      console.log('   - Login:', normalizedLogin.success ? '✅' : '❌');
-      console.log('   - Cookie PHPSESSID:', cookies.PHPSESSID ? '✅' : '❌');
-      console.log('   - Check session:', normalizedCheck.success ? '✅' : '❌');
+      log.debug('📋 9. RÉSUMÉ:');
+      log.debug('   - Login:', normalizedLogin.success ? '✅' : '❌');
+      log.debug('   - Cookie PHPSESSID:', cookies.PHPSESSID ? '✅' : '❌');
+      log.debug('   - Check session:', normalizedCheck.success ? '✅' : '❌');
       
       return {
         success: true,
@@ -632,7 +635,7 @@ const authService = {
       };
       
     } catch (error) {
-      console.error('❌ Test complet échoué:', error);
+      log.error('❌ Test complet échoué:', error);
       return {
         success: false,
         error: error.message

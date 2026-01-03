@@ -1,0 +1,34 @@
+218b4956b172b05b1b38cc735748dcbd
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = exports.createLogger = void 0;
+var _logger = _interopRequireDefault(require("./logger"));
+function _interopRequireDefault(e) { return e && e.__esModule ? e : { default: e }; }
+// src/utils/createLogger.js
+// ✅ Factory pour créer des loggers unifiés utilisables partout
+
+/**
+ * Crée un logger centralisé
+ * Utilisable dans les composants React ET les services API
+ * 
+ * @param {string} context - Nom du contexte (composant, service, etc.)
+ * @returns {Object} Logger avec méthodes info, debug, warn, error
+ * 
+ * @example
+ * // Dans un composant React
+ * const logger = createLogger('UserForm');
+ * logger.info('Formulaire soumis', { userId: 123 });
+ * 
+ * // Dans un service
+ * const logger = createLogger('authService');
+ * logger.info('Tentative de connexion', { username });
+ */
+const createLogger = context => {
+  return _logger.default.withPrefix(context);
+};
+exports.createLogger = createLogger;
+var _default = exports.default = createLogger;
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJuYW1lcyI6WyJfbG9nZ2VyIiwiX2ludGVyb3BSZXF1aXJlRGVmYXVsdCIsInJlcXVpcmUiLCJlIiwiX19lc01vZHVsZSIsImRlZmF1bHQiLCJjcmVhdGVMb2dnZXIiLCJjb250ZXh0IiwibG9nZ2VyIiwid2l0aFByZWZpeCIsImV4cG9ydHMiLCJfZGVmYXVsdCJdLCJzb3VyY2VzIjpbImNyZWF0ZUxvZ2dlci5qcyJdLCJzb3VyY2VzQ29udGVudCI6WyIvLyBzcmMvdXRpbHMvY3JlYXRlTG9nZ2VyLmpzXHJcbi8vIOKchSBGYWN0b3J5IHBvdXIgY3LDqWVyIGRlcyBsb2dnZXJzIHVuaWZpw6lzIHV0aWxpc2FibGVzIHBhcnRvdXRcclxuXHJcbmltcG9ydCBsb2dnZXIgZnJvbSAnLi9sb2dnZXInO1xyXG5cclxuLyoqXHJcbiAqIENyw6llIHVuIGxvZ2dlciBjZW50cmFsaXPDqVxyXG4gKiBVdGlsaXNhYmxlIGRhbnMgbGVzIGNvbXBvc2FudHMgUmVhY3QgRVQgbGVzIHNlcnZpY2VzIEFQSVxyXG4gKiBcclxuICogQHBhcmFtIHtzdHJpbmd9IGNvbnRleHQgLSBOb20gZHUgY29udGV4dGUgKGNvbXBvc2FudCwgc2VydmljZSwgZXRjLilcclxuICogQHJldHVybnMge09iamVjdH0gTG9nZ2VyIGF2ZWMgbcOpdGhvZGVzIGluZm8sIGRlYnVnLCB3YXJuLCBlcnJvclxyXG4gKiBcclxuICogQGV4YW1wbGVcclxuICogLy8gRGFucyB1biBjb21wb3NhbnQgUmVhY3RcclxuICogY29uc3QgbG9nZ2VyID0gY3JlYXRlTG9nZ2VyKCdVc2VyRm9ybScpO1xyXG4gKiBsb2dnZXIuaW5mbygnRm9ybXVsYWlyZSBzb3VtaXMnLCB7IHVzZXJJZDogMTIzIH0pO1xyXG4gKiBcclxuICogLy8gRGFucyB1biBzZXJ2aWNlXHJcbiAqIGNvbnN0IGxvZ2dlciA9IGNyZWF0ZUxvZ2dlcignYXV0aFNlcnZpY2UnKTtcclxuICogbG9nZ2VyLmluZm8oJ1RlbnRhdGl2ZSBkZSBjb25uZXhpb24nLCB7IHVzZXJuYW1lIH0pO1xyXG4gKi9cclxuZXhwb3J0IGNvbnN0IGNyZWF0ZUxvZ2dlciA9IChjb250ZXh0KSA9PiB7XHJcbiAgcmV0dXJuIGxvZ2dlci53aXRoUHJlZml4KGNvbnRleHQpO1xyXG59O1xyXG5cclxuZXhwb3J0IGRlZmF1bHQgY3JlYXRlTG9nZ2VyOyJdLCJtYXBwaW5ncyI6Ijs7Ozs7O0FBR0EsSUFBQUEsT0FBQSxHQUFBQyxzQkFBQSxDQUFBQyxPQUFBO0FBQThCLFNBQUFELHVCQUFBRSxDQUFBLFdBQUFBLENBQUEsSUFBQUEsQ0FBQSxDQUFBQyxVQUFBLEdBQUFELENBQUEsS0FBQUUsT0FBQSxFQUFBRixDQUFBO0FBSDlCO0FBQ0E7O0FBSUE7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDTyxNQUFNRyxZQUFZLEdBQUlDLE9BQU8sSUFBSztFQUN2QyxPQUFPQyxlQUFNLENBQUNDLFVBQVUsQ0FBQ0YsT0FBTyxDQUFDO0FBQ25DLENBQUM7QUFBQ0csT0FBQSxDQUFBSixZQUFBLEdBQUFBLFlBQUE7QUFBQSxJQUFBSyxRQUFBLEdBQUFELE9BQUEsQ0FBQUwsT0FBQSxHQUVhQyxZQUFZIiwiaWdub3JlTGlzdCI6W119

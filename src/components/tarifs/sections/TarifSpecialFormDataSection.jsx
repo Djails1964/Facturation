@@ -1,5 +1,5 @@
 import React from 'react';
-import { FiCalendar } from 'react-icons/fi';
+import SimpleDateInputField from '../../../context/SimpleDateInputField';
 
 const TarifSpecialFormDataSection = ({ 
     tarifSpecial,
@@ -109,51 +109,26 @@ const TarifSpecialFormDataSection = ({
             </div>
 
             {/* Date début */}
-            <div className="input-group date-input">
-                <input
-                    type="date"
-                    id="tarif-special-date-debut"
-                    name="date_debut"
-                    value={tarifSpecial.date_debut}
-                    onChange={onInputChange}
-                    required
-                    disabled={isReadOnly}
-                    className={validationErrors.date_debut ? 'error' : ''}
-                />
-                {!isReadOnly && (
-                    <FiCalendar 
-                        className="calendar-icon" 
-                        onClick={() => onOpenDateModal('date_debut')}
-                    />
-                )}
-                <label htmlFor="tarif-special-date-debut" className="required">Date de début</label>
-                {validationErrors.date_debut && (
-                    <span className="error-message">{validationErrors.date_debut}</span>
-                )}
-            </div>
+            <SimpleDateInputField
+                id="tarif-special-date-debut"
+                label="Date de début"
+                value={tarifSpecial.date_debut || ''}
+                onChange={(e) => onInputChange({ target: { name: 'date_debut', value: e.target.value } })}
+                required={true}
+                readOnly={isReadOnly}
+                errorMessage={validationErrors.date_debut}
+            />
 
             {/* Date fin */}
-            <div className="input-group date-input">
-                <input
-                    type="date"
-                    id="tarif-special-date-fin"
-                    name="date_fin"
-                    value={tarifSpecial.date_fin || ''}
-                    onChange={onInputChange}
-                    disabled={isReadOnly}
-                    className={validationErrors.date_fin ? 'error' : ''}
-                />
-                {!isReadOnly && (
-                    <FiCalendar 
-                        className="calendar-icon" 
-                        onClick={() => onOpenDateModal('date_fin')}
-                    />
-                )}
-                <label htmlFor="tarif-special-date-fin">Date de fin (optionnel)</label>
-                {validationErrors.date_fin && (
-                    <span className="error-message">{validationErrors.date_fin}</span>
-                )}
-            </div>
+            <SimpleDateInputField
+                id="tarif-special-date-fin"
+                label="Date de fin (optionnel)"
+                value={tarifSpecial.date_fin || ''}
+                onChange={(e) => onInputChange({ target: { name: 'date_fin', value: e.target.value } })}
+                required={false}
+                readOnly={isReadOnly}
+                errorMessage={validationErrors.date_fin}
+            />
 
             {/* Note */}
             <div className="input-group">

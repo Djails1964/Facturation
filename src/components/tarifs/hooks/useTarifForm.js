@@ -1,9 +1,36 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import TarificationService from '../../../services/TarificationService';
 import { FORM_MODES } from '../../../constants/tarifConstants';
 
-export const useTarifForm = ({ mode, tarifId, onRetourListe, onTarifCreated }) => {
+/**
+ * Hook pour gérer le formulaire de tarif
+ * 
+ * ✅ REFACTORISÉ: Reçoit maintenant les données de useTarifGestionState
+ * au lieu de les charger lui-même (évite la duplication)
+ * ✅ NOUVEAU: Utilise tarifActions pour les appels API
+ * 
+ * @param {Object} params
+ * @param {string} params.mode - Mode du formulaire (CREATE, EDIT, VIEW)
+ * @param {number} params.tarifId - ID du tarif (pour EDIT/VIEW)
+ * @param {Function} params.onRetourListe - Callback pour retour à la liste
+ * @param {Function} params.onTarifCreated - Callback après création
+ * @param {Array} params.services - Services depuis useTarifGestionState
+ * @param {Array} params.unites - Unités depuis useTarifGestionState
+ * @param {Array} params.typesTarifs - Types tarifs depuis useTarifGestionState
+ * @param {Object} params.tarifActions - Actions API depuis useTarifGestionState
+ * @param {Function} params.loadUnitesByService - Fonction pour charger les unités d'un service
+ */
+export const useTarifForm = ({ 
+    mode, 
+    tarifId, 
+    onRetourListe, 
+    onTarifCreated,
+    services = [],
+    unites = [],
+    typesTarifs = [],
+    tarifActions,
+    loadUnitesByService
+}) => {
     const [isLoading, setIsLoading] = useState(true);
     const [tarif, setTarif] = useState({
         idService: '',
@@ -21,16 +48,9 @@ export const useTarifForm = ({ mode, tarifId, onRetourListe, onTarifCreated }) =
     const [globalNavigationCallback, setGlobalNavigationCallback] = useState(null);
     const [guardId] = useState(`tarif-form-${Date.now()}`);
     
-    // Services et données
-    const [services, setServices] = useState([]);
-    const [unites, setUnites] = useState([]);
-    const [typesTarifs, setTypesTarifs] = useState([]);
+    // serviceUnites local uniquement (pour le filtre par service)
     const [serviceUnites, setServiceUnites] = useState({});
-    const [servicesLoading, setServicesLoading] = useState(false);
-    const [unitesLoading, setUnitesLoading] = useState(false);
-    const [typesTarifsLoading, setTypesTarifsLoading] = useState(false);
     
-    const [tarificationService] = useState(new TarificationService());
     const navigate = useNavigate();
     
     // États dérivés
@@ -39,27 +59,30 @@ export const useTarifForm = ({ mode, tarifId, onRetourListe, onTarifCreated }) =
     const isView = mode === FORM_MODES.VIEW;
     const isReadOnly = isView;
     
-    // Chargement initial
+    // Chargement initial sans duplication
     useEffect(() => {
         const initializeForm = async () => {
             try {
                 setIsLoading(true);
-                await tarificationService.initialiser();
                 
-                // Charger les données de base
-                await Promise.all([
-                    loadServices(),
-                    loadUnites(),
-                    loadTypesTarifs()
-                ]);
+                // ✅ IMPORTANT: Vérifier que les données sont disponibles
+                if (!services || services.length === 0) {
+                    console.warn('⚠️ useTarifForm: Services non disponibles');
+                }
+                if (!unites || unites.length === 0) {
+                    console.warn('⚠️ useTarifForm: Unités non disponibles');
+                }
+                if (!typesTarifs || typesTarifs.length === 0) {
+                    console.warn('⚠️ useTarifForm: Types tarifs non disponibles');
+                }
                 
                 // Charger le tarif si mode edit/view
-                if ((isEdit || isView) && tarifId) {
+                if ((isEdit || isView) && tarifId && tarifActions) {
                     await loadTarif(tarifId);
                 }
                 
             } catch (error) {
-                console.error('Erreur initialisation:', error);
+                console.error('❌ Erreur initialisation:', error);
                 setError('Erreur lors du chargement des données');
             } finally {
                 setIsLoading(false);
@@ -67,62 +90,41 @@ export const useTarifForm = ({ mode, tarifId, onRetourListe, onTarifCreated }) =
         };
         
         initializeForm();
-    }, [mode, tarifId]);
+    }, [mode, tarifId, services, unites, typesTarifs, tarifActions]);
     
-    const loadServices = async () => {
-        try {
-            setServicesLoading(true);
-            const servicesData = await tarificationService.chargerServices();
-            setServices(Array.isArray(servicesData) ? servicesData : []);
-        } catch (error) {
-            console.error('Erreur chargement services:', error);
-            setError('Erreur lors du chargement des services');
-        } finally {
-            setServicesLoading(false);
-        }
-    };
-    
-    const loadUnites = async () => {
-        try {
-            setUnitesLoading(true);
-            const unitesData = await tarificationService.chargerUnites();
-            setUnites(Array.isArray(unitesData) ? unitesData : []);
-        } catch (error) {
-            console.error('Erreur chargement unités:', error);
-            setError('Erreur lors du chargement des unités');
-        } finally {
-            setUnitesLoading(false);
-        }
-    };
-    
-    const loadTypesTarifs = async () => {
-        try {
-            setTypesTarifsLoading(true);
-            const typesTarifsData = await tarificationService.chargerTypesTarifs();
-            setTypesTarifs(Array.isArray(typesTarifsData) ? typesTarifsData : []);
-        } catch (error) {
-            console.error('Erreur chargement types tarifs:', error);
-            setError('Erreur lors du chargement des types de tarifs');
-        } finally {
-            setTypesTarifsLoading(false);
-        }
-    };
-    
+    // Chargement des unités spécifiques à un service
     const loadServiceUnites = async (idService) => {
+        if (!loadUnitesByService) {
+            console.error('❌ loadUnitesByService non fourni');
+            return;
+        }
+        
         try {
-            const unitesForService = await tarificationService.chargerUnites(idService);
-            setServiceUnites(prev => ({
-                ...prev,
-                [idService]: Array.isArray(unitesForService) ? unitesForService : []
-            }));
+            // Utilise la fonction fournie par useTarifGestionState
+            await loadUnitesByService(idService);
+            
+            // Note: Les données seront dans serviceUnites de useTarifGestionState
+            // On pourrait aussi les stocker localement si nécessaire
         } catch (error) {
-            console.error('Erreur chargement unités service:', error);
+            console.error('❌ Erreur chargement unités service:', error);
         }
     };
     
+    // ✅ REFACTORISÉ: Chargement d'un tarif spécifique avec tarifActions
     const loadTarif = async (id) => {
+        if (!tarifActions) {
+            console.error('❌ tarifActions non fourni');
+            setError('Actions de tarification non disponibles');
+            return;
+        }
+        
         try {
-            const tarifData = await tarificationService.getTarif(id);
+            // ✅ NOUVEAU: Utilisation de tarifActions.getTarifs au lieu de tarificationService.getTarif
+            const tarifs = await tarifActions.getTarifs({ id });
+            
+            // getTarifs retourne un tableau, prendre le premier élément
+            const tarifData = Array.isArray(tarifs) && tarifs.length > 0 ? tarifs[0] : null;
+            
             if (tarifData) {
                 setTarif(tarifData);
                 // Charger les unités pour le service sélectionné
@@ -133,7 +135,7 @@ export const useTarifForm = ({ mode, tarifId, onRetourListe, onTarifCreated }) =
                 throw new Error('Tarif non trouvé');
             }
         } catch (error) {
-            console.error('Erreur chargement tarif:', error);
+            console.error('❌ Erreur chargement tarif:', error);
             setError('Erreur lors du chargement du tarif');
         }
     };
@@ -142,7 +144,6 @@ export const useTarifForm = ({ mode, tarifId, onRetourListe, onTarifCreated }) =
     const canDetectChanges = () => !isView;
     
     const registerGuard = (id, guardFunction) => {
-        // Implémentation du guard
         console.log('Guard registered:', id);
     };
     
@@ -184,18 +185,13 @@ export const useTarifForm = ({ mode, tarifId, onRetourListe, onTarifCreated }) =
         globalNavigationCallback,
         setGlobalNavigationCallback,
         guardId,
-        
-        // Données
         services,
         unites,
         typesTarifs,
         serviceUnites,
-        servicesLoading,
-        unitesLoading,
-        typesTarifsLoading,
-        
-        // Services
-        tarificationService,
+
+        // ✅ NOUVEAU: Exposer tarifActions pour les autres hooks
+        tarifActions,
         
         // États dérivés
         isCreate,
@@ -210,9 +206,7 @@ export const useTarifForm = ({ mode, tarifId, onRetourListe, onTarifCreated }) =
         resetChanges,
         confirmNavigation,
         cancelNavigation,
-        loadServiceUnites,
-        loadServices,
-        loadUnites,
-        loadTypesTarifs
+        loadServiceUnites
+        
     };
 };

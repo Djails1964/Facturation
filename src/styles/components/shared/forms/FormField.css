@@ -1,0 +1,652 @@
+/* src/styles/components/shared/forms/FormField.css */
+/* ✅ Styles unifiés pour FormField - Utilise les variables globales de l'application */
+
+/* ==========================================================================
+   NOTE: Ce fichier utilise les variables définies dans variables.css
+   Les styles de base des input-group sont dans forms.css
+   ========================================================================== */
+
+/* ==========================================================================
+   COMPOSANT FORM-FIELD - BASE
+   Étend les styles de .input-group définis dans forms.css
+   ========================================================================== */
+.form-field {
+    position: relative;
+    margin-bottom: var(--spacing-lg, 20px);
+}
+
+/* ==========================================================================
+   VARIANT: UNDERLINE (défaut - compatible avec input-group de forms.css)
+   ========================================================================== */
+.form-field--underline {
+    padding-top: 16px;
+}
+
+.form-field--underline .form-field__input,
+.form-field--underline .form-field__select,
+.form-field--underline .form-field__textarea {
+    width: 100%;
+    padding: 15px 0 10px 0;
+    border: none;
+    border-bottom: 1px solid var(--color-border, #ccc);
+    background-color: transparent;
+    font-size: 16px;
+    font-family: inherit;
+    color: var(--color-text, #333);
+    transition: border-color var(--transition-speed, 0.2s) var(--transition-ease, ease);
+    outline: none;
+    box-sizing: border-box;
+}
+
+.form-field--underline .form-field__input:focus,
+.form-field--underline .form-field__select:focus,
+.form-field--underline .form-field__textarea:focus {
+    border-bottom: 2px solid var(--color-primary, #800000);
+}
+
+.form-field--underline .form-field__label {
+    position: absolute;
+    left: 0;
+    top: 24px;
+    font-size: 16px;
+    color: var(--color-text-light, #999);
+    pointer-events: none;
+    transition: all var(--transition-speed, 0.2s) var(--transition-ease, ease);
+    font-weight: normal;
+}
+
+.form-field--underline.form-field--focused .form-field__label,
+.form-field--underline.form-field--has-value .form-field__label {
+    top: 0;
+    font-size: 12px;
+    color: var(--color-primary, #800000);
+    font-weight: 500;
+}
+
+/* ==========================================================================
+   VARIANT: OUTLINED
+   ========================================================================== */
+.form-field--outlined {
+    padding-top: 8px;
+}
+
+.form-field--outlined .form-field__input,
+.form-field--outlined .form-field__select,
+.form-field--outlined .form-field__textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--color-border, #ccc);
+    border-radius: var(--border-radius-sm, 4px);
+    background-color: transparent;
+    font-size: 16px;
+    font-family: inherit;
+    color: var(--color-text, #333);
+    transition: border-color var(--transition-speed, 0.2s), box-shadow var(--transition-speed, 0.2s);
+    outline: none;
+    box-sizing: border-box;
+}
+
+.form-field--outlined .form-field__input:focus,
+.form-field--outlined .form-field__select:focus,
+.form-field--outlined .form-field__textarea:focus {
+    border-color: var(--color-primary, #800000);
+    box-shadow: 0 0 0 2px rgba(128, 0, 0, 0.1);
+}
+
+.form-field--outlined .form-field__label {
+    position: absolute;
+    left: 12px;
+    top: 20px;
+    font-size: 16px;
+    color: var(--color-text-light, #999);
+    pointer-events: none;
+    transition: all var(--transition-speed, 0.2s);
+    background-color: var(--color-background, white);
+    padding: 0 4px;
+}
+
+.form-field--outlined.form-field--focused .form-field__label,
+.form-field--outlined.form-field--has-value .form-field__label {
+    top: 0;
+    font-size: 12px;
+    color: var(--color-primary, #800000);
+}
+
+/* ==========================================================================
+   VARIANT: FILLED
+   ========================================================================== */
+.form-field--filled {
+    padding-top: 8px;
+}
+
+.form-field--filled .form-field__input,
+.form-field--filled .form-field__select,
+.form-field--filled .form-field__textarea {
+    width: 100%;
+    padding: 20px 14px 8px 14px;
+    border: none;
+    border-bottom: 1px solid var(--color-border, #ccc);
+    border-radius: var(--border-radius-sm, 4px) var(--border-radius-sm, 4px) 0 0;
+    background-color: var(--color-secondary, #f0f0f0);
+    font-size: 16px;
+    font-family: inherit;
+    color: var(--color-text, #333);
+    transition: background-color var(--transition-speed, 0.2s), border-color var(--transition-speed, 0.2s);
+    outline: none;
+    box-sizing: border-box;
+}
+
+.form-field--filled .form-field__input:focus,
+.form-field--filled .form-field__select:focus,
+.form-field--filled .form-field__textarea:focus {
+    background-color: #e8e8e8;
+    border-bottom: 2px solid var(--color-primary, #800000);
+}
+
+.form-field--filled .form-field__label {
+    position: absolute;
+    left: 14px;
+    top: 24px;
+    font-size: 16px;
+    color: var(--color-text-light, #999);
+    pointer-events: none;
+    transition: all var(--transition-speed, 0.2s);
+}
+
+.form-field--filled.form-field--focused .form-field__label,
+.form-field--filled.form-field--has-value .form-field__label {
+    top: 12px;
+    font-size: 12px;
+    color: var(--color-primary, #800000);
+}
+
+/* ==========================================================================
+   SIZES (utilise les espacements de variables.css)
+   ========================================================================== */
+.form-field--small {
+    margin-bottom: var(--spacing-md, 15px);
+}
+
+.form-field--small .form-field__input,
+.form-field--small .form-field__select {
+    font-size: 14px;
+    padding-top: 10px;
+    padding-bottom: 6px;
+}
+
+.form-field--small .form-field__label {
+    font-size: 14px;
+}
+
+.form-field--small.form-field--focused .form-field__label,
+.form-field--small.form-field--has-value .form-field__label {
+    font-size: 11px;
+}
+
+.form-field--large {
+    margin-bottom: var(--spacing-xl, 30px);
+}
+
+.form-field--large .form-field__input,
+.form-field--large .form-field__select {
+    font-size: 18px;
+    padding-top: 18px;
+    padding-bottom: 12px;
+}
+
+.form-field--large .form-field__label {
+    font-size: 18px;
+}
+
+.form-field--large.form-field--focused .form-field__label,
+.form-field--large.form-field--has-value .form-field__label {
+    font-size: 13px;
+}
+
+/* ==========================================================================
+   SELECT STYLES (cohérent avec forms.css)
+   ========================================================================== */
+.form-field__select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 16px;
+    padding-right: 32px !important;
+    cursor: pointer;
+}
+
+.form-field--focused .form-field__select {
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23800000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+}
+
+/* ==========================================================================
+   TEXTAREA STYLES
+   ========================================================================== */
+.form-field__textarea {
+    resize: vertical;
+    min-height: 100px;
+    line-height: 1.5;
+}
+
+/* ==========================================================================
+   ERROR STATE (utilise les couleurs d'erreur de variables.css)
+   ========================================================================== */
+.form-field--error .form-field__input,
+.form-field--error .form-field__select,
+.form-field--error .form-field__textarea {
+    border-color: var(--color-error-text, #dc3545) !important;
+}
+
+.form-field--error .form-field__label {
+    color: var(--color-error-text, #dc3545) !important;
+}
+
+.form-field--error.form-field--outlined .form-field__input:focus,
+.form-field--error.form-field--outlined .form-field__select:focus,
+.form-field--error.form-field--outlined .form-field__textarea:focus {
+    box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.1);
+}
+
+/* ==========================================================================
+   SUCCESS STATE (utilise les couleurs de succès de variables.css)
+   ========================================================================== */
+.form-field--success .form-field__input,
+.form-field--success .form-field__select,
+.form-field--success .form-field__textarea {
+    border-color: var(--color-success-text, #28a745) !important;
+}
+
+.form-field--success .form-field__label {
+    color: var(--color-success-text, #28a745) !important;
+}
+
+/* ==========================================================================
+   DISABLED STATE
+   ========================================================================== */
+.form-field--disabled .form-field__input,
+.form-field--disabled .form-field__select,
+.form-field--disabled .form-field__textarea {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: var(--color-secondary, #f9f9f9);
+}
+
+.form-field--disabled .form-field__label {
+    color: var(--color-text-light, #999);
+}
+
+/* ==========================================================================
+   READONLY STATE
+   ========================================================================== */
+.form-field--readonly .form-field__input,
+.form-field--readonly .form-field__select,
+.form-field--readonly .form-field__textarea {
+    cursor: default;
+    border-color: var(--color-secondary, #f0f0f0);
+    background-color: transparent;
+    color: var(--color-text, #333);
+}
+
+/* ==========================================================================
+   VALIDATION ERROR MESSAGE 
+   Style unifié pour tous les messages d'erreur de l'application
+   ========================================================================== */
+.validation-error {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-xs, 6px);
+    margin-top: var(--spacing-xs, 6px);
+    padding: var(--spacing-xs, 6px) var(--spacing-sm, 8px);
+    background-color: var(--color-error-bg, #fff5f5);
+    border-left: 3px solid var(--color-error-text, #dc3545);
+    border-radius: 0 var(--border-radius-sm, 4px) var(--border-radius-sm, 4px) 0;
+    animation: validationSlideIn var(--transition-speed, 0.2s) ease-out;
+}
+
+@keyframes validationSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.validation-error-icon {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    color: var(--color-error-text, #dc3545);
+    margin-top: 1px;
+}
+
+.validation-error-text {
+    font-size: 13px;
+    color: var(--color-error-text, #dc3545);
+    line-height: 1.4;
+}
+
+/* ==========================================================================
+   CHARACTER COUNTER
+   ========================================================================== */
+.character-counter {
+    position: absolute;
+    right: 0;
+    bottom: -20px;
+    font-size: 12px;
+    color: var(--color-text-light, #999);
+}
+
+.character-counter.warning {
+    color: var(--color-warning-text, #856404);
+}
+
+.character-counter.error {
+    color: var(--color-error-text, #dc3545);
+    font-weight: 500;
+}
+
+/* ==========================================================================
+   HELP TEXT
+   ========================================================================== */
+.form-field__help {
+    margin-top: var(--spacing-xs, 6px);
+    font-size: 13px;
+    color: var(--color-text-light, #666);
+    line-height: 1.4;
+}
+
+/* ==========================================================================
+   REQUIRED INDICATOR (cohérent avec forms.css .required)
+   ========================================================================== */
+.form-field__required {
+    color: var(--color-primary, #800000);
+    margin-left: 2px;
+}
+
+/* ==========================================================================
+   PREFIX/SUFFIX ICONS
+   ========================================================================== */
+.form-field--has-prefix .form-field__input {
+    padding-left: 36px;
+}
+
+.form-field--has-suffix .form-field__input {
+    padding-right: 36px;
+}
+
+.form-field__prefix-icon,
+.form-field__suffix-icon {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    color: var(--color-text-light, #666);
+}
+
+.form-field__prefix-icon {
+    left: 8px;
+}
+
+.form-field__suffix-icon {
+    right: 8px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: var(--border-radius-circle, 50%);
+    transition: background-color var(--transition-speed, 0.2s);
+    color: var(--color-primary, #800000);
+}
+
+.form-field__suffix-icon:hover {
+    background-color: rgba(128, 0, 0, 0.1);
+}
+
+.form-field__suffix-icon:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* ==========================================================================
+   CHECKBOX STYLES (cohérent avec forms.css .checkbox-group)
+   ========================================================================== */
+.form-field__checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.form-field__checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--color-border, #ccc);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all var(--transition-speed, 0.2s);
+    position: relative;
+    flex-shrink: 0;
+}
+
+.form-field__checkbox:checked {
+    background-color: var(--color-primary, #800000);
+    border-color: var(--color-primary, #800000);
+}
+
+.form-field__checkbox:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.form-field__checkbox:hover {
+    border-color: var(--color-primary, #800000);
+}
+
+.form-field__checkbox:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(128, 0, 0, 0.2);
+}
+
+.form-field__checkbox-label {
+    font-size: 14px;
+    color: var(--color-text, #333);
+    cursor: pointer;
+    user-select: none;
+}
+
+.form-field--error .form-field__checkbox {
+    border-color: var(--color-error-text, #dc3545);
+}
+
+/* ==========================================================================
+   RADIO STYLES (cohérent avec forms.css .radio-group)
+   ========================================================================== */
+.form-field__radio-label-group {
+    font-size: 16px;
+    color: var(--color-text, #333);
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+.form-field__radio-group {
+    display: flex;
+    gap: var(--spacing-lg, 20px);
+    flex-wrap: wrap;
+}
+
+.form-field__radio-option {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm, 8px);
+}
+
+.form-field__radio {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--color-border, #ccc);
+    border-radius: var(--border-radius-circle, 50%);
+    cursor: pointer;
+    transition: all var(--transition-speed, 0.2s);
+    position: relative;
+    flex-shrink: 0;
+}
+
+.form-field__radio:checked {
+    border-color: var(--color-primary, #800000);
+}
+
+.form-field__radio:checked::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 10px;
+    height: 10px;
+    background-color: var(--color-primary, #800000);
+    border-radius: var(--border-radius-circle, 50%);
+}
+
+.form-field__radio:hover {
+    border-color: var(--color-primary, #800000);
+}
+
+.form-field__radio:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(128, 0, 0, 0.2);
+}
+
+.form-field__radio-label {
+    font-size: 14px;
+    color: var(--color-text, #333);
+    cursor: pointer;
+    user-select: none;
+}
+
+.form-field--error .form-field__radio {
+    border-color: var(--color-error-text, #dc3545);
+}
+
+/* ==========================================================================
+   PLACEHOLDER
+   ========================================================================== */
+.form-field__input::placeholder,
+.form-field__textarea::placeholder {
+    color: transparent;
+}
+
+.form-field--focused .form-field__input::placeholder,
+.form-field--focused .form-field__textarea::placeholder {
+    color: var(--color-text-light, #999);
+}
+
+/* ==========================================================================
+   NUMBER INPUT - Remove spinners (cohérent avec forms.css)
+   ========================================================================== */
+.form-field__input[type="number"]::-webkit-outer-spin-button,
+.form-field__input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.form-field__input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+/* ==========================================================================
+   RESPONSIVE (cohérent avec les breakpoints de l'application)
+   ========================================================================== */
+@media (max-width: 768px) {
+    .form-field {
+        margin-bottom: var(--spacing-md, 15px);
+    }
+    
+    .form-field__radio-group {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .validation-error {
+        padding: var(--spacing-sm, 8px) 10px;
+    }
+    
+    .validation-error-text {
+        font-size: 12px;
+    }
+}
+
+/* ==========================================================================
+   ACCESSIBILITÉ (cohérent avec les autres composants)
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+    .form-field__label,
+    .form-field__input,
+    .form-field__select,
+    .form-field__textarea,
+    .form-field__checkbox,
+    .form-field__radio,
+    .validation-error {
+        transition: none;
+        animation: none;
+    }
+}
+
+@media (prefers-contrast: high) {
+    .form-field__input,
+    .form-field__select,
+    .form-field__textarea {
+        border-width: 2px;
+    }
+    
+    .form-field__checkbox,
+    .form-field__radio {
+        border-width: 3px;
+    }
+    
+    .validation-error {
+        border-left-width: 4px;
+    }
+}
+
+/* ==========================================================================
+   PRINT
+   ========================================================================== */
+@media print {
+    .form-field__suffix-icon,
+    .form-field__prefix-icon,
+    .character-counter {
+        display: none;
+    }
+    
+    .form-field__input,
+    .form-field__select,
+    .form-field__textarea {
+        border: 1px solid #000 !important;
+        background: white !important;
+    }
+    
+    .validation-error {
+        border: 1px solid #000;
+        background: white;
+    }
+}

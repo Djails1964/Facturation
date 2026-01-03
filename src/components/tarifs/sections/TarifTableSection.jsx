@@ -2,6 +2,7 @@ import React from 'react';
 import TableSection from './TableSection';
 import { TarifStandardActions } from './TarifListActions';
 import { getEtatValidite } from '../../../utils/formatters';
+import { createLogger } from '../../../utils/createLogger';
 
 const TarifTableSection = ({ 
   tarifs, 
@@ -10,9 +11,11 @@ const TarifTableSection = ({
   highlightedId,
   isSubmitting 
 }) => {
+
+  const log = createLogger('TarifTableSection');
   
   // 🛑 LOGS DE DEBUG LIMITÉS
-  console.log('🔍 TarifTableSection - Props reçues:', {
+  log.debug('🔍 TarifTableSection - Props reçues:', {
     tarifs: tarifs,
     type: typeof tarifs,
     isArray: Array.isArray(tarifs),
@@ -22,7 +25,7 @@ const TarifTableSection = ({
 
   // 🔧 VALIDATION IMMÉDIATE ET SIMPLE
   if (!Array.isArray(tarifs)) {
-    console.warn('⚠️ TarifTableSection - tarifs n\'est pas un tableau, affichage message');
+    log.warn('⚠️ TarifTableSection - tarifs n\'est pas un tableau, affichage message');
     return (
       <div>
         <h3>Liste des tarifs standards (0)</h3>
@@ -150,7 +153,7 @@ const TarifTableSection = ({
     }
   ];
 
-  console.log('✅ TarifTableSection - Rendu tableau avec', processedTarifs.length, 'tarifs');
+  log.debug('✅ TarifTableSection - Rendu tableau avec', processedTarifs.length, 'tarifs');
 
   return (
     <div>

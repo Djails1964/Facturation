@@ -8,7 +8,7 @@
  */
 
 import { useCallback } from 'react';
-import { useLogger } from '../../../hooks/useLogger';
+import { createLogger } from '../../../utils/createLogger';
 import { DeleteUserHandler } from '../handlers/DeleteUserHandler';
 
 /**
@@ -26,7 +26,6 @@ import { DeleteUserHandler } from '../handlers/DeleteUserHandler';
  * @returns {Function} handleSupprimerUtilisateur - Handler pour supprimer un utilisateur
  * 
  * @example
- * const { log } = useLogger('GestionUtilisateurs');
  * const modalDependencies = {
  *   authService,
  *   showCustom,
@@ -40,10 +39,10 @@ import { DeleteUserHandler } from '../handlers/DeleteUserHandler';
  */
 export const useUserModals = (dependencies) => {
   // Créer le logger pour ce hook (doit être appelé inconditionnellement)
-  const { log: hookLog } = useLogger('useUserModals');
+  const log = createLogger('useUserModals');
   
   // Utiliser le logger des dépendances s'il existe, sinon utiliser celui du hook
-  const log = dependencies.log || hookLog;
+  const finalLog = dependencies.log || log;
 
   /**
    * Handler pour la suppression d'un utilisateur
@@ -55,7 +54,7 @@ export const useUserModals = (dependencies) => {
    */
   const handleSupprimerUtilisateur = useCallback(async (userId, username, event) => {
     try {
-      log.info('Demande de suppression utilisateur', { userId, username });
+      finalLog.info('Demande de suppression utilisateur', { userId, username });
 
       // Créer une instance du handler avec les dépendances
       // ✅ Inclure le logger dans les dépendances
@@ -67,9 +66,9 @@ export const useUserModals = (dependencies) => {
       // Exécuter la suppression (gère la modal de confirmation)
       await deleteHandler.handle(userId, username, event);
 
-      log.info('Suppression terminée avec succès');
+      finalLog.info('Suppression terminée avec succès');
     } catch (error) {
-      log.error('Erreur lors de la suppression', { error: error.message });
+      finalLog.error('Erreur lors de la suppression', { error: error.message });
 
       // Notifier l'erreur via le callback
       dependencies.onSetNotification(

@@ -1,16 +1,22 @@
 // src/components/clients/ClientsListe.jsx
-// ✅ VERSION MIGRÉE vers le système modal unifié
+// ✅ VERSION REFACTORISÉE avec useClientActions au lieu de ClientService direct
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { FiEdit, FiEye, FiTrash2, FiMail, FiPhone, FiMapPin } from 'react-icons/fi';
 import '../../styles/components/clients/ClientsListe.css';
 
-// ✅ CHANGEMENT: Remplacer ConfirmationModal par le système unifié
+// ✅ Système modal unifié
 import { showConfirm, showLoading, showCustom } from '../../utils/modalSystem';
 import ModalComponents from '../shared/ModalComponents';
 
-import ClientService from '../../services/ClientService';
+// ✅ MODIFICATION: Import de useClientActions au lieu de ClientService
+import { useClientActions } from './hooks/useClientActions';
 import { toBoolean, normalizeBooleanFieldsArray } from '../../utils/booleanHelper';
+// ✅ Import de createLogger
+import { createLogger } from '../../utils/createLogger';
+
+// ✅ Logger créé une seule fois en dehors du composant pour éviter les re-renders
+const logger = createLogger('ClientsListe');
 
 function ClientsListe({ 
     nouveauClientId = null, 
@@ -21,16 +27,32 @@ function ClientsListe({
     notification = { message: '', type: '' }, 
     onClearNotification 
 }) {
+    // ✅ Utilisation de useClientActions pour toutes les opérations API
+    const {
+        chargerClients: chargerClientsApi,
+        checkClientDeletable,
+        deleteClient,
+        isLoading: actionIsLoading,
+        error: actionError
+    } = useClientActions();
+
     const [clients, setClients] = useState([]);
     const [clientsNonFiltres, setClientsNonFiltres] = useState([]);
     const [clientSelectionne, setClientSelectionne] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [termeRecherche, setTermeRecherche] = useState('');
-    const [clientService] = useState(() => new ClientService());
 
-    // ✅ SUPPRESSION: Plus besoin de confirmModal state
-    // const [confirmModal, setConfirmModal] = useState({ ... });
+    // ✅ Ref pour stocker la fonction chargerClientsApi (évite les dépendances instables)
+    const chargerClientsApiRef = React.useRef(chargerClientsApi);
+    chargerClientsApiRef.current = chargerClientsApi;
+    
+    // ✅ Refs pour les autres fonctions de useClientActions
+    const checkClientDeletableRef = React.useRef(checkClientDeletable);
+    checkClientDeletableRef.current = checkClientDeletable;
+    
+    const deleteClientRef = React.useRef(deleteClient);
+    deleteClientRef.current = deleteClient;
 
     // Fonction de normalisation des clients
     const normalizeClientsData = React.useCallback((clientsData) => {
@@ -38,23 +60,27 @@ function ClientsListe({
         return normalizeBooleanFieldsArray(clientsData, ['estTherapeute']);
     }, []);
     
-    // Charger les clients
+    // ✅ Charger les clients avec useClientActions - SANS dépendances instables
     const chargerClients = useCallback(async () => {
         setIsLoading(true);
         try {
-            const data = await clientService.chargerClients();
-            const normalizedData = normalizeClientsData(data);
+            logger.info('🔄 Chargement des clients...');
+            // Utiliser la ref pour accéder à la fonction la plus récente
+            const data = await chargerClientsApiRef.current();
+            const normalizedData = normalizeBooleanFieldsArray(data || [], ['estTherapeute']);
             setClientsNonFiltres(normalizedData);
             setClients(normalizedData);
             setError(null);
+            logger.info(`✅ ${normalizedData.length} clients chargés`);
         } catch (err) {
-            console.error('Erreur lors du chargement des clients:', err);
+            logger.error('❌ Erreur lors du chargement des clients:', err);
             setError('Impossible de charger les clients. Veuillez réessayer.');
         } finally {
             setIsLoading(false);
         }
-    }, [clientService, normalizeClientsData]);
+    }, []); // ✅ Pas de dépendances instables!
 
+    // ✅ Charger les clients une seule fois au montage
     useEffect(() => {
         chargerClients();
     }, [chargerClients]);
@@ -94,7 +120,7 @@ function ClientsListe({
         }
     };
 
-    // ✅ NOUVELLE VERSION: Suppression client avec système modal unifié
+    // ✅ Suppression client avec useClientActions et système modal unifié
     const handleSupprimerClient = async (idClient, event) => {
         if (event) {
             event.stopPropagation();
@@ -110,7 +136,8 @@ function ClientsListe({
         }
 
         try {
-            // 1. Vérifier si le client a des factures
+            // 1. Vérifier si le client a des factures avec useClientActions
+            logger.info(`🔍 Vérification de la supprimabilité du client #${idClient}`);
             const checkResult = await showLoading(
                 {
                     title: "Vérification...",
@@ -120,16 +147,16 @@ function ClientsListe({
                     position: 'smart'
                 },
                 async () => {
-                    return await clientService.checkClientDeletable(idClient);
+                    // ✅ Utilisation de la ref pour checkClientDeletable
+                    return await checkClientDeletableRef.current(idClient);
                 }
             );
 
-            console.log('✅ checkResult:', checkResult);
+            logger.debug('✅ checkResult:', checkResult);
 
             // 2. Si le client a des factures, afficher l'erreur
-            // checkResult.aUneFacture est un booléen
             if (checkResult.aUneFacture === true) {
-                // ✅ Utiliser showCustom pour avoir un seul bouton
+                logger.warn(`⚠️ Client #${idClient} a des factures, suppression impossible`);
                 await showCustom({
                     title: "Suppression impossible",
                     content: ModalComponents.createWarningSection(
@@ -164,10 +191,12 @@ function ClientsListe({
             });
 
             if (confirmResult.action !== 'confirm') {
-                return; // Utilisateur a annulé
+                logger.debug('❌ Suppression annulée par l\'utilisateur');
+                return;
             }
 
-            // 4. Effectuer la suppression
+            // 4. Effectuer la suppression avec useClientActions
+            logger.info(`🗑️ Suppression du client #${idClient}`);
             const deleteResult = await showLoading(
                 {
                     title: "Suppression en cours...",
@@ -177,12 +206,15 @@ function ClientsListe({
                     position: 'smart'
                 },
                 async () => {
-                    return await clientService.deleteClient(idClient);
+                    // ✅ Utilisation de la ref pour deleteClient
+                    return await deleteClientRef.current(idClient);
                 }
             );
 
             // 5. Traiter le résultat
             if (deleteResult.success) {
+                logger.info(`✅ Client #${idClient} supprimé avec succès`);
+                
                 // Notifier le succès
                 if (onClientSupprime) {
                     onClientSupprime(deleteResult.message || 'Client supprimé avec succès');
@@ -196,7 +228,7 @@ function ClientsListe({
             }
 
         } catch (error) {
-            console.error('Erreur lors de la suppression du client:', error);
+            logger.error('❌ Erreur lors de la suppression du client:', error);
             if (onSetNotification) {
                 onSetNotification(
                     'Une erreur est survenue lors de la suppression du client: ' + error.message,

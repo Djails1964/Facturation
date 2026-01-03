@@ -1,49 +1,48 @@
 // src/components/paiements/PaiementsListe.jsx
-// ✅ CORRECTION : Ajout de l'affichage de la notification
+// VERSION REFACTORISÉE avec usePaiementActions et createLogger
+// Les notifications sont gérées par NotificationService via PaiementGestion
 
-import React, { useEffect, useMemo } from 'react'; // ✅ AJOUT de useEffect
+import React, { useMemo } from 'react';
 import { usePaiementsData } from './hooks/usePaiementsData';
 import { usePaiementsFiltres } from './hooks/usePaiementsFiltres';
 import { usePaiementsActions } from './hooks/usePaiementsActions';
+import { usePaiementActions } from './hooks/usePaiementActions';
+import { createLogger } from '../../utils/createLogger';
 import UnifiedFilter from '../../components/shared/filters/UnifiedFilter';
-
 import PaiementsTableau from './sections/PaiementsTableau';
-import PaiementService from '../../services/PaiementService';
-
 import '../../styles/components/paiements/PaiementsListe.css';
+
+const log = createLogger('PaiementsListe');
 
 function PaiementsListe({
     nouveauPaiementId,
     onModifierPaiement,
     onAfficherPaiement,
     onNouveauPaiement,
-    notification,
-    onClearNotification,
-    onPaiementSupprime,
     onPaiementAnnule,
     onSetNotification,
     initialFilter = {}
 }) {
-    console.log('📋 PaiementsListe - notification reçue:', notification);
-    
-    // ✅ AJOUT : useEffect pour faire disparaître la notification après 5 secondes
-    useEffect(() => {
-        if (notification && notification.message) {
-            const timer = setTimeout(() => {
-                if (onClearNotification) {
-                    onClearNotification();
-                }
-            }, 5000); // La notification disparaît après 5 secondes
-            return () => clearTimeout(timer);
-        }
-    }, [notification, onClearNotification]);
-    
     // Hooks de données
     const filtresHook = usePaiementsFiltres(initialFilter);
     const dataHook = usePaiementsData(filtresHook.filtres, nouveauPaiementId);
-    const actionsHook = usePaiementsActions(onPaiementAnnule, onSetNotification);
+    const paiementActions = usePaiementActions();
+    
+    // Passer chargerPaiements pour rafraîchir la liste après annulation
+    const actionsHook = usePaiementsActions(
+        (idPaiement, shouldRefresh) => {
+            if (onPaiementAnnule) {
+                onPaiementAnnule(idPaiement);
+            }
+            // Rafraîchir la liste des paiements
+            if (shouldRefresh) {
+                dataHook.chargerPaiements();
+            }
+        }, 
+        onSetNotification
+    );
 
-       const {
+    const {
         filtres,
         setFiltres,
         resetFiltres,
@@ -55,7 +54,7 @@ function PaiementsListe({
 
     const {
         paiements,
-        filteredPaiements,  // ✅ AJOUT
+        filteredPaiements,
         isLoading,
         error,
         paiementSelectionne,
@@ -73,12 +72,12 @@ function PaiementsListe({
         for (let i = 0; i <= 5; i++) {
             options.push(anneeActuelle - i);
         }
+        log.debug(`Années disponibles: ${options.length}`);
         return options;
     }, []);
 
     const filterOptions = useMemo(() => {
-        const paiementService = new PaiementService();
-        return {
+        const options = {
             annee: anneesOptions,
             mois: Array.from({length: 12}, (_, i) => ({
                 value: i + 1,
@@ -88,63 +87,36 @@ function PaiementsListe({
                 value: c.id, 
                 label: `${c.prenom} ${c.nom}` 
             })),
-            methode: paiementService.getMethodesPaiement(),
+            methode: paiementActions.getMethodesPaiement(),
             statut: [
                 { value: 'confirme', label: 'Confirmés' },
                 { value: 'annule', label: 'Annulés' }
             ]
         };
-    }, [anneesOptions, clients]);
+        log.debug('Options de filtres préparées');
+        return options;
+    }, [anneesOptions, clients, paiementActions]);
 
-
-    // ✅ CORRECTION : Classes CSS correctes (sans tiret entre notification et type)
-    const renderNotification = () => {
-        if (!notification || !notification.message) return null;
-        
-        const className = notification.type === 'success' 
-            ? 'notification success'  // ✅ CORRECTION : 'notification success' au lieu de 'notification-success'
-            : 'notification error';   // ✅ CORRECTION : 'notification error' au lieu de 'notification-error'
-        
-        return (
-            <div className={className}>
-                <span>{notification.message}</span>
-                <button 
-                    onClick={onClearNotification} 
-                    className="notification-close"
-                    aria-label="Fermer la notification"
-                >
-                    ×
-                </button>
-            </div>
-        );
-    };
+    log.debug(`Affichage de ${paiements.length} paiements (${filteredPaiements.length} filtrés)`);
 
     return (
         <div className="content-section-container">
             <div className="content-section-title">
                 <h2>Paiements ({paiements.length})</h2>
             </div>
-            {/* ✅ AJOUT : Affichage de la notification en haut */}
-            {renderNotification()}
-            
-            {/* <div className="paiements-header-left">
-                <h2>Liste des paiements</h2>
-            </div> */}
 
             <UnifiedFilter
                 filterType="paiements"
                 filterOptions={filterOptions}
                 filters={filtres}
                 onFilterChange={(field, value) => {
-                    // Mapper les noms de champs si nécessaire
                     const fieldMapping = {
                         'client': 'idClient'
                     };
                     
                     const mappedField = fieldMapping[field] || field;
-                    console.log('🎯 onFilterChange:', field, '→', mappedField, '=', value);
+                    log.debug('Changement de filtre:', field, '→', mappedField, '=', value);
                     
-                    // setFiltres est en fait updateFiltres qui attend un objet
                     setFiltres({ [mappedField]: value });
                 }}
                 onResetFilters={resetFiltres}

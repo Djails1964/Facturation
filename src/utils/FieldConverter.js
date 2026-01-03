@@ -1,8 +1,14 @@
 // utils/FieldConverter.js - Helper centralisé pour conversion des noms de champs
+// ✅ VERSION CORRIGÉE : Conversion récursive complète des objets imbriqués
+
+import { createLogger } from './createLogger';
+
+const log = createLogger('FieldConverter');
 
 /**
  * Service centralisé pour convertir les noms de champs entre frontend et API
  * Gère les conversions camelCase ↔ snake_case de manière cohérente
+ * ✅ Supporte la conversion récursive des objets et tableaux imbriqués
  */
 export class FieldConverter {
   
@@ -21,8 +27,8 @@ export class FieldConverter {
     montantTotal: 'montant_total',
     
     // Champs tarification
-    idService: 'service_id',
-    idUnite: 'unite_id',
+    idService: 'id_service',
+    idUnite: 'id_unite',
     typeTarifId: 'type_tarif_id', 
     clientId: 'client_id',
     tarifId: 'tarif_id',
@@ -37,8 +43,6 @@ export class FieldConverter {
     isActif: 'is_actif',
     createdAt: 'created_at',
     updatedAt: 'updated_at',
-    
-    // Ajoutez d'autres mappings selon vos besoins...
   };
   
   /**
@@ -55,6 +59,7 @@ export class FieldConverter {
   
   /**
    * Convertit un objet du format Frontend vers API (camelCase → snake_case)
+   * ✅ RÉCURSIF : Convertit aussi les objets et tableaux imbriqués
    * @param {object} data - Données à convertir
    * @param {object} options - Options de conversion
    * @returns {object} Données converties
@@ -63,12 +68,22 @@ export class FieldConverter {
     const {
       excludeFields = [],      // Champs à ne pas convertir
       customMapping = {},      // Mapping personnalisé pour ce cas
-      preserveUnknown = true   // Garder les champs non mappés
+      preserveUnknown = true,  // Garder les champs non mappés
+      recursive = true         // ✅ Conversion récursive activée par défaut
     } = options;
     
-    if (!data || typeof data !== 'object') {
-      console.warn('FieldConverter.toApiFormat: data invalide', data);
+    // Gestion des cas null/undefined/primitifs
+    if (data === null || data === undefined) {
       return data;
+    }
+    
+    if (typeof data !== 'object') {
+      return data;
+    }
+    
+    // ✅ Gestion des tableaux
+    if (Array.isArray(data)) {
+      return data.map(item => FieldConverter.toApiFormat(item, options));
     }
     
     const mapping = { ...FieldConverter.FRONTEND_TO_API, ...customMapping };
@@ -84,14 +99,15 @@ export class FieldConverter {
       const apiKey = mapping[key] || (preserveUnknown ? key : null);
       
       if (apiKey) {
-        converted[apiKey] = data[key];
+        const value = data[key];
+        
+        // ✅ Conversion récursive des valeurs imbriquées
+        if (recursive && value !== null && typeof value === 'object') {
+          converted[apiKey] = FieldConverter.toApiFormat(value, options);
+        } else {
+          converted[apiKey] = value;
+        }
       }
-    });
-    
-    console.log('🔄 Conversion Frontend → API:', { 
-      original: data, 
-      converted, 
-      mapping: Object.keys(mapping).filter(k => data.hasOwnProperty(k))
     });
     
     return converted;
@@ -99,6 +115,7 @@ export class FieldConverter {
   
   /**
    * Convertit un objet du format API vers Frontend (snake_case → camelCase)
+   * ✅ RÉCURSIF : Convertit aussi les objets et tableaux imbriqués
    * @param {object} data - Données à convertir
    * @param {object} options - Options de conversion
    * @returns {object} Données converties
@@ -107,12 +124,22 @@ export class FieldConverter {
     const {
       excludeFields = [],
       customMapping = {},
-      preserveUnknown = true
+      preserveUnknown = true,
+      recursive = true         // ✅ Conversion récursive activée par défaut
     } = options;
     
-    if (!data || typeof data !== 'object') {
-      console.warn('FieldConverter.toFrontendFormat: data invalide', data);
+    // Gestion des cas null/undefined/primitifs
+    if (data === null || data === undefined) {
       return data;
+    }
+    
+    if (typeof data !== 'object') {
+      return data;
+    }
+    
+    // ✅ Gestion des tableaux
+    if (Array.isArray(data)) {
+      return data.map(item => FieldConverter.toFrontendFormat(item, options));
     }
     
     const mapping = { ...FieldConverter.API_TO_FRONTEND, ...customMapping };
@@ -126,15 +153,16 @@ export class FieldConverter {
       const frontendKey = mapping[key] || (preserveUnknown ? key : null);
       
       if (frontendKey) {
-        converted[frontendKey] = data[key];
+        const value = data[key];
+        
+        // ✅ Conversion récursive des valeurs imbriquées
+        if (recursive && value !== null && typeof value === 'object') {
+          converted[frontendKey] = FieldConverter.toFrontendFormat(value, options);
+        } else {
+          converted[frontendKey] = value;
+        }
       }
     });
-    
-    // console.log('🔄 Conversion API → Frontend:', { 
-    //   original: data, 
-    //   converted,
-    //   mapping: Object.keys(mapping).filter(k => data.hasOwnProperty(k))
-    // });
     
     return converted;
   }
@@ -148,7 +176,7 @@ export class FieldConverter {
    */
   static convertArray(dataArray, direction = 'toApi', options = {}) {
     if (!Array.isArray(dataArray)) {
-      console.warn('FieldConverter.convertArray: dataArray doit être un tableau', dataArray);
+      log.warn('FieldConverter.convertArray: dataArray doit être un tableau', dataArray);
       return dataArray;
     }
     
@@ -222,7 +250,7 @@ export class FieldConverter {
     );
     Object.assign(FieldConverter.API_TO_FRONTEND, newApiToFrontend);
     
-    console.log('✅ Nouveaux mappings ajoutés:', newMappings);
+    log.debug('✅ Nouveaux mappings ajoutés:', Object.keys(newMappings).length);
   }
   
   /**
@@ -257,10 +285,10 @@ export class FieldConverter {
    * Debug: affiche tous les mappings disponibles
    */
   static debugMappings() {
-    console.group('🔍 FieldConverter - Mappings disponibles');
-    console.log('Frontend → API:', FieldConverter.FRONTEND_TO_API);
-    console.log('API → Frontend:', FieldConverter.API_TO_FRONTEND);
-    console.groupEnd();
+    log.group('🔍 FieldConverter - Mappings disponibles');
+    log.debug('Frontend → API:', Object.keys(FieldConverter.FRONTEND_TO_API).length, 'mappings');
+    log.debug('API → Frontend:', Object.keys(FieldConverter.API_TO_FRONTEND).length, 'mappings');
+    log.groupEnd();
   }
 }
 

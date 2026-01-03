@@ -1,6 +1,7 @@
 // src/components/factures/modals/handlers/CopyModalHandler.js
 
 import React from 'react';
+import { createLogger } from '../../../../utils/createLogger';
 import ModalComponents from '../../../shared/ModalComponents';
 
 /**
@@ -9,7 +10,7 @@ import ModalComponents from '../../../shared/ModalComponents';
  */
 export class CopyModalHandler {
     constructor(dependencies) {
-        this.factureService = dependencies.factureService;
+        this.factureActions = dependencies.factureActions;
         this.showCustom = dependencies.showCustom;
         this.showLoading = dependencies.showLoading;
         this.formatMontant = dependencies.formatMontant;
@@ -17,13 +18,15 @@ export class CopyModalHandler {
         this.onSetNotification = dependencies.onSetNotification;
         this.chargerFactures = dependencies.chargerFactures;
         this.setFactureSelectionnee = dependencies.setFactureSelectionnee;
+
+        this.log = createLogger('CopyModalHandler');
     }
 
     /**
      * Point d'entrée principal
      */
     async handle(idFacture, event) {
-        console.log('🔄 Début copie facture ID:', idFacture);
+        this.log.info('🔄 Début copie facture ID:', idFacture);
         
         if (event) {
             event.stopPropagation();
@@ -33,29 +36,29 @@ export class CopyModalHandler {
         
         try {
             // Charger les données nécessaires
-            console.log('🔄 Chargement des données pour la copie...');
+            this.log.debug('🔄 Chargement des données pour la copie...');
             const [factureData, nouveauNumero] = await this.loadCopyData(idFacture, anchorRef);
             
             if (!factureData) {
                 throw new Error('Erreur lors du chargement de la facture à copier');
             }
             
-            console.log('🔄 Données chargées - Facture:', factureData.numeroFacture, 'Nouveau numéro:', nouveauNumero);
+            this.log.debug('🔄 Données chargées - Facture:', factureData.numeroFacture, 'Nouveau numéro:', nouveauNumero);
             
             // Afficher la modal de confirmation
             const result = await this.showCopyConfirmationModal(factureData, nouveauNumero, anchorRef);
             
-            console.log('🔄 Action utilisateur:', result.action);
+            this.log.debug('🔄 Action utilisateur:', result.action);
             
             if (result.action === 'confirm') {
-                console.log('🔄 Confirmation reçue, exécution de la copie...');
+                this.log.debug('🔄 Confirmation reçue, exécution de la copie...');
                 await this.executeFactureCopy(factureData, nouveauNumero, anchorRef);
             } else {
-                console.log('🔄 Copie annulée par l\'utilisateur');
+                this.log.debug('🔄 Copie annulée par l\'utilisateur');
             }
             
         } catch (error) {
-            console.error('❌ Erreur lors de la préparation de la copie:', error);
+            this.log.error('❌ Erreur lors de la préparation de la copie:', error);
             await this.showError(
                 `Erreur lors de la préparation de la copie : ${error.message}`,
                 anchorRef
@@ -76,11 +79,18 @@ export class CopyModalHandler {
                 position: 'smart'
             },
             async () => {
-                const factureData = await this.factureService.getFacture(idFacture);
+                // ✅ Appel 1 : Charger la facture via factureActions
+                this.log.debug('📥 Chargement facture via factureActions');
+                const factureData = await this.factureActions.chargerFacture(idFacture);
+                this.log.debug('✅ Facture chargée:', factureData.numeroFacture);
+                
+                // ✅ Appel 2 : Obtenir le nouveau numéro via factureActions
                 const today = new Date();
                 const annee = today.getFullYear();
-                const nouveauNumero = await this.factureService.getProchainNumeroFacture(annee);
-                
+                this.log.debug('📥 Obtention nouveau numéro via factureActions');
+                const nouveauNumero = await this.factureActions.getProchainNumeroFacture(annee);
+                this.log.debug('✅ Nouveau numéro obtenu:', nouveauNumero);
+                                
                 return [factureData, nouveauNumero];
             }
         );
@@ -90,7 +100,7 @@ export class CopyModalHandler {
      * Modal de confirmation de copie
      */
     async showCopyConfirmationModal(factureData, nouveauNumero, anchorRef) {
-        console.log('🔄 Affichage modal de confirmation copie pour facture:', factureData.numeroFacture);
+        this.log.debug('🔄 Affichage modal de confirmation copie pour facture:', factureData.numeroFacture);
         
         const result = await this.showCustom({
             title: "Copier la facture",
@@ -111,11 +121,11 @@ export class CopyModalHandler {
                 }
             ],
             onMount: (container) => {
-                console.log('🔄 Modal copie montée, container:', container);
+                this.log.debug('🔄 Modal copie montée, container:', container);
             }
         });
         
-        console.log('🔄 Résultat modal copie:', result);
+        this.log.debug('🔄 Résultat modal copie:', result);
         return result;
     }
 
@@ -171,42 +181,45 @@ export class CopyModalHandler {
      * Exécuter la copie de la facture
      */
     async executeFactureCopy(factureData, nouveauNumero, anchorRef) {
-        console.log('📄 Début exécution copie - Nouvelle facture:', nouveauNumero);
-        
         try {
+            this.log.debug('📄 Début de l\'exécution de la copie...');
+            
+            // Préparer les données pour la nouvelle facture
+            const newFactureData = this.prepareNewFactureData(factureData, nouveauNumero);
+            
+            // Créer la nouvelle facture dans un modal de chargement
             const createResult = await this.showLoading(
                 {
-                    title: "Création en cours...",
-                    content: ModalComponents.createLoadingContent("Création de la nouvelle facture..."),
+                    title: "Création de la facture...",
+                    content: ModalComponents.createLoadingContent("Création de la nouvelle facture en cours..."),
                     anchorRef,
                     size: 'small',
                     position: 'smart'
                 },
                 async () => {
-                    console.log('📄 Préparation des données de la nouvelle facture...');
-                    const nouvelleFactureData = this.prepareNewFactureData(factureData, nouveauNumero);
-                    console.log('📄 Données préparées:', nouvelleFactureData);
-                    
-                    console.log('📄 Appel API createFacture...');
-                    const result = await this.factureService.createFacture(nouvelleFactureData);
-                    console.log('📄 Résultat API createFacture:', result);
-                    
+                    // ✅ Créer la nouvelle facture via factureActions
+                    this.log.debug('📥 Création facture via factureActions');
+                    this.log.debug('📥 Données envoyées:', newFactureData);
+                    const result = await this.factureActions.creerFacture(newFactureData);
+                    this.log.debug('✅ Facture créée avec succès, résultat:', result);
                     return result;
                 }
             );
             
-            console.log('📄 Résultat création:', createResult);
+            this.log.debug('📄 Résultat de la création:', createResult);
             
-            if (createResult && createResult.success) {
-                console.log('✅ Copie réussie, récupération des détails de la facture créée...');
+            if (createResult && (createResult.success || createResult.id)) {
+                this.log.debug('✅ Création réussie, ID:', createResult.id);
                 
-                // ✅ CORRECTION: Récupérer les détails complets de la facture créée
+                // ✅ Récupérer les détails complets de la facture créée
                 let nouvelleFacture = null;
                 if (createResult.id) {
                     try {
-                        nouvelleFacture = await this.factureService.getFacture(createResult.id);
+                        this.log.debug('📥 Récupération détails via factureActions');
+                        nouvelleFacture = await this.factureActions.chargerFacture(createResult.id);
+                        this.log.debug('✅ Détails de la nouvelle facture récupérés');
                     } catch (error) {
-                        console.warn('⚠️ Impossible de récupérer les détails de la nouvelle facture:', error);
+                        this.log.warn('⚠️ Impossible de récupérer les détails de la nouvelle facture:', error);
                     }
                 }
                 
@@ -220,21 +233,21 @@ export class CopyModalHandler {
                 
                 this.onSetNotification(`Facture ${nouveauNumero} créée avec succès!`, 'success');
                 
-                console.log('📄 Rechargement des factures...');
+                this.log.debug('📄 Rechargement des factures...');
                 this.chargerFactures();
                 
                 if (createResult.id && this.setFactureSelectionnee) {
-                    console.log('📄 Sélection de la nouvelle facture:', createResult.id);
+                    this.log.debug('📄 Sélection de la nouvelle facture:', createResult.id);
                     this.setFactureSelectionnee(createResult.id);
                 }
             } else {
                 const errorMessage = createResult?.message || 'Erreur lors de la création de la nouvelle facture';
-                console.error('❌ Échec de la création:', errorMessage);
+                this.log.error('❌ Échec de la création:', errorMessage);
                 throw new Error(errorMessage);
             }
             
         } catch (createError) {
-            console.error('❌ Erreur lors de la création:', createError);
+            this.log.error('❌ Erreur lors de la création:', createError);
             await this.showCreateError(createError, anchorRef);
         }
     }
@@ -243,8 +256,8 @@ export class CopyModalHandler {
      * ✅ CORRECTION: Préparer les données avec les bons noms de champs pour le backend
      */
     prepareNewFactureData(factureData, nouveauNumero) {
-        console.log('📄 Préparation des données pour la nouvelle facture avec numéro:', nouveauNumero);
-        console.log('📄 Données source:', factureData);
+        this.log.debug('📄 Préparation des données pour la nouvelle facture avec numéro:', nouveauNumero);
+        this.log.debug('📄 Données source:', factureData);
         
         // ✅ Construction du nom du client de manière robuste
         let clientNom = 'Client inconnu';
@@ -255,7 +268,7 @@ export class CopyModalHandler {
             clientNom = `${factureData.prenom} ${factureData.nom}`;
         }
         
-        console.log('✅ Nom du client pour la copie:', clientNom);
+        this.log.debug('✅ Nom du client pour la copie:', clientNom);
         
         return {
             numeroFacture: nouveauNumero,
@@ -282,7 +295,7 @@ export class CopyModalHandler {
      * Modal de succès de copie
      */
     async showCopySuccess(nouveauNumero, ancienNumero, nouvelleFacture, anchorRef) {
-        console.log('📄 Affichage modal succès avec données:', nouvelleFacture);
+        this.log.debug('📄 Affichage modal succès avec données:', nouvelleFacture);
         
         // Créer le contenu avec le message de succès et les détails de la facture
         const content = `

@@ -1,22 +1,36 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import TarificationService from '../../../services/TarificationService';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { createLogger } from '../../../utils/createLogger';
+import { toBoolean, normalizeServices } from '../../../utils/booleanHelper';
 
 /**
  * Hook personnalisé pour la gestion de la configuration des factures
- * Gère les services, unités, tarification et valeurs par défaut
+ * 
+ * ✅ REFACTORISÉ : Utilise les données de tarification passées en props depuis FactureGestion
+ * ✅ Plus d'appels API directs - les données sont déjà chargées
+ * ✅ Calcule uniquement les mappings et valeurs par défaut
+ * 
+ * @param {Object} client - Client sélectionné
+ * @param {boolean} readOnly - Mode lecture seule
+ * @param {Object} tarifData - Données de tarification depuis FactureGestion
  */
-export function useFactureConfiguration(client, readOnly) {
+export function useFactureConfiguration(client, readOnly, tarifData = null) {
+
+    const log = createLogger("useFactureConfiguration");
+    log.debug(`Entrée dans useFactureConfiguration avec:`, {
+        clientId: client?.id,
+        readOnly,
+        hasTarifData: !!tarifData,
+        tarifDataLoaded: tarifData?.isLoaded
+    });
+
     // États de configuration
-    const [services, setServices] = useState([]);
-    const [unites, setUnites] = useState([]);
     const [unitesByService, setUnitesByService] = useState({});
     const [defaultService, setDefaultService] = useState(null);
     const [defaultUnites, setDefaultUnites] = useState({});
-    const [tarificationService, setTarificationService] = useState(null);
     const [tarifInfo, setTarifInfo] = useState('');
     
     // États de chargement
-    const [isLoading, setIsLoading] = useState(!readOnly);
+    const [isLoading, setIsLoading] = useState(true);
     const [loadingError, setLoadingError] = useState(null);
     const [message, setMessage] = useState('');
     const [messageType, setMessageType] = useState('');
@@ -25,315 +39,243 @@ export function useFactureConfiguration(client, readOnly) {
     const initRef = useRef(false);
     const clientPrecedent = useRef(null);
 
+    // ✅ Extraire les données de tarifData
+    const services = useMemo(() => tarifData?.services || [], [tarifData?.services]);
+    const unites = useMemo(() => tarifData?.unites || [], [tarifData?.unites]);
+    const tarifActions = tarifData?.tarifActions || null;
+
     /**
-     * Initialise les services et unités pour un client donné
+     * Crée le mapping des unités par service
+     * ✅ Utilise directement unitesLiees depuis les services enrichis
      */
-    const initializeConfiguration = useCallback(async () => {
-        if (!client || !client.id) {
-            console.log("Attente du client ou mode lecture seule...");
+    const createUniteMappings = useCallback((servicesData) => {
+        const unitesMap = {};
+        
+        log.debug("📝 createUniteMappings - Services enrichis:", servicesData?.length);
+        
+        if (!servicesData || servicesData.length === 0) {
+            log.warn("Aucun service disponible pour le mapping");
+            return unitesMap;
+        }
+
+        servicesData.forEach(service => {
+            const codeService = service.codeService || service.code;
+            
+            // ✅ NOUVEAU : Utiliser directement unitesLiees depuis le service enrichi
+            if (service.unitesLiees && Array.isArray(service.unitesLiees)) {
+                const codesUnites = service.unitesLiees
+                    .map(u => u.codeUnite || u.code)
+                    .filter(Boolean);
+                
+                unitesMap[codeService] = [...new Set(codesUnites)]; // Éviter les doublons
+                
+                log.debug(`✅ Unités pour ${codeService}:`, unitesMap[codeService]);
+            } else {
+                log.warn(`⚠️ Service ${codeService} sans unitesLiees`);
+                unitesMap[codeService] = [];
+            }
+        });
+        
+        log.debug("✅ Mapping final des unités par service:", unitesMap);
+        return unitesMap;
+    }, [log]);
+
+    /**
+     * Crée les valeurs par défaut
+     * ✅ Utilise directement uniteDefaut depuis les services enrichis
+     */
+    const createDefaultValues = useCallback((servicesData) => {
+        log.debug("Création des valeurs par défaut");
+
+        // Normaliser les services pour convertir isDefault correctement
+        const normalizedServices = normalizeServices(servicesData);
+        
+        // Trouver le service par défaut
+        const defaultServiceObj = normalizedServices.find(s => s.isDefault === true);
+        
+        if (!defaultServiceObj) {
+            log.warn("Aucun service par défaut trouvé, utilisation du premier");
+        } else {
+            log.debug("Service par défaut trouvé:", defaultServiceObj.nomService);
+        }
+        
+        // ✅ NOUVEAU : Créer le mapping des unités par défaut depuis les services enrichis
+        const defaultUniteMap = {};
+        
+        servicesData.forEach(service => {
+            const codeService = service.codeService || service.code;
+            
+            // Utiliser directement idUniteDefaut ou uniteDefaut du service enrichi
+            if (service.idUniteDefaut) {
+                // Trouver le code de l'unité par défaut
+                const uniteDefaut = service.uniteDefaut || 
+                    service.unitesLiees?.find(u => u.idUnite === service.idUniteDefaut);
+                
+                if (uniteDefaut) {
+                    defaultUniteMap[codeService] = uniteDefaut.codeUnite || uniteDefaut.code;
+                    log.debug(`✅ Unité par défaut pour ${codeService}:`, defaultUniteMap[codeService]);
+                }
+            } else if (service.unitesLiees?.length > 0) {
+                // Chercher une unité marquée comme défaut dans unitesLiees
+                const uniteDefault = service.unitesLiees.find(u => u.isDefaultPourService);
+                if (uniteDefault) {
+                    defaultUniteMap[codeService] = uniteDefault.codeUnite || uniteDefault.code;
+                } else {
+                    // Sinon prendre la première unité
+                    defaultUniteMap[codeService] = service.unitesLiees[0].codeUnite || service.unitesLiees[0].code;
+                }
+                log.debug(`✅ Unité par défaut (fallback) pour ${codeService}:`, defaultUniteMap[codeService]);
+            }
+        });
+
+        log.debug("Mapping final des unités par défaut:", defaultUniteMap);
+
+        return {
+            service: defaultServiceObj || normalizedServices[0] || null,
+            unites: defaultUniteMap
+        };
+    }, [log]);
+
+    /**
+     * Initialise la configuration à partir des données de tarification
+     */
+    const initializeConfiguration = useCallback(() => {
+        // Vérifier que les données de tarification sont chargées
+        if (!tarifData?.isLoaded) {
+            log.debug("⏳ Attente du chargement des données de tarification...");
+            setIsLoading(true);
+            return;
+        }
+
+        if (services.length === 0) {
+            log.warn("⚠️ Aucun service disponible");
+            setIsLoading(false);
+            setMessage("Aucun service disponible");
+            setMessageType('warning');
+            return;
+        }
+
+        // Éviter les rechargements inutiles
+        if (initRef.current && clientPrecedent.current === client?.id) {
+            log.debug("Déjà initialisé pour ce client");
             return;
         }
         
-        // Éviter les rechargements inutiles
-        if (initRef.current && clientPrecedent.current === client.id) {
-            console.log("Déjà initialisé pour ce client");
-            return;
-        }
+        setIsLoading(true);
         
         try {
-            setIsLoading(true);
-            setLoadingError(null);
-            console.log("Initialisation des services pour le client:", client.id);
+            log.debug('📥 Initialisation configuration depuis tarifData:', {
+                services: services.length,
+                unites: unites.length,
+                clientId: client?.id
+            });
+
+            // ✅ Création des mappings (plus d'appels API)
+            const mappings = createUniteMappings(services);
             
-            const service = await initializeTarificationService();
-            const servicesData = await loadServices(service);
-            const unitesData = await loadUnites(service, client.id);
-            const serviceUnitesData = await loadServiceUnites(service);
+            // ✅ Création des valeurs par défaut (plus d'appels API)
+            const defaults = createDefaultValues(services);
             
-            const mappings = createUniteMappings(servicesData, unitesData, serviceUnitesData);
-            const defaults = await createDefaultValues(service, servicesData, unitesData);
-            
-            // Mettre à jour les états
-            updateConfigurationState({
-                tarificationService: service,
-                services: servicesData,
-                unites: unitesData,
-                unitesByService: mappings,
-                defaultService: defaults.service,
-                defaultUnites: defaults.unites
+            log.debug('✅ Configuration créée:', {
+                unitesByService: Object.keys(mappings).length,
+                defaultService: defaults.service?.nomService,
+                defaultUnites: Object.keys(defaults.unites).length
             });
             
-            // Marquer comme initialisé
-            clientPrecedent.current = client.id;
+            setUnitesByService(mappings);
+            setDefaultService(defaults.service);
+            setDefaultUnites(defaults.unites);
+            setMessage('');
+            setMessageType('');
+            
             initRef.current = true;
-            setIsLoading(false);
+            clientPrecedent.current = client?.id;
             
         } catch (error) {
-            handleConfigurationError(error);
+            log.error('❌ Erreur configuration:', error);
+            setLoadingError(error.message);
+            setMessage(error.message);
+            setMessageType('error');
+        } finally {
+            setIsLoading(false);
         }
-    }, [client, readOnly]);
+    }, [client?.id, tarifData?.isLoaded, services, unites, createUniteMappings, createDefaultValues, log]);
 
     /**
      * Met à jour l'information sur le tarif appliqué
      */
     const updateTarifInfo = useCallback(async () => {
-        if (readOnly || !tarificationService || !client) {
+        if (readOnly || !client || !tarifActions) {
             setTarifInfo('');
             return;
         }
-        
+
         try {
-            const message = await tarificationService.getTarifInfoMessage(client);
-            setTarifInfo(message);
+            log.debug('📥 Récupération du message de tarif...');
+            const message = await tarifActions.getTarifInfoMessage(client);
+            
+            if (message) {
+                log.debug('✅ Message de tarif reçu:', message);
+                setTarifInfo(message);
+            } else {
+                setTarifInfo('');
+            }
         } catch (error) {
-            console.error('Erreur lors de la récupération du message de tarif:', error);
+            log.error('❌ Erreur récupération message tarif:', error);
             setTarifInfo('');
         }
-    }, [tarificationService, client, readOnly]);
+    }, [readOnly, client, tarifActions, log]);
 
-    // Effets
+    // ✅ Effet pour initialiser quand les données de tarification sont chargées
     useEffect(() => {
-        initializeConfiguration();
-    }, [initializeConfiguration]);
+        if (tarifData?.isLoaded) {
+            initializeConfiguration();
+        }
+    }, [tarifData?.isLoaded, initializeConfiguration]);
 
+    // ✅ Effet pour mettre à jour le tarif info quand le client change
     useEffect(() => {
-        updateTarifInfo();
-    }, [updateTarifInfo]);
-
-    // Méthodes privées
-    async function initializeTarificationService() {
-        const service = new TarificationService();
-        await service.initialiser();
-        return service;
-    }
-
-    async function loadServices(service) {
-        const servicesTous = await service.chargerServices();
-        console.log("Services chargés:", servicesTous);
-        
-        if (!servicesTous || servicesTous.length === 0) {
-            throw new Error("Aucun service chargé");
+        if (!readOnly && client && tarifData?.isLoaded) {
+            updateTarifInfo();
         }
-        
-        return servicesTous;
-    }
+    }, [client?.id, readOnly, tarifData?.isLoaded, updateTarifInfo]);
 
-    async function loadUnites(service, idClient) {
-        const unitesTous = await service.getUnitesApplicablesPourClient(idClient);
-        console.log("Unités applicables pour le client:", unitesTous);
-        return unitesTous;
-    }
-
-    async function loadServiceUnites(service) {
-        return await service.chargerServicesUnites();
-    }
-
-    function createUniteMappings(services, unites, serviceUnites) {
-        const unitesMap = {};
-        
-        console.log("🔍 createUniteMappings - Services:", services);
-        console.log("🔍 createUniteMappings - Unités:", unites);
-        console.log("🔍 createUniteMappings - ServiceUnites:", serviceUnites);
-        
-        if (serviceUnites && Array.isArray(serviceUnites) && serviceUnites.length > 0) {
-            console.log("Table de liaison services-unités chargée:", serviceUnites);
-            
-            services.forEach(service => {
-                console.log(`\n🔍 Traitement du service: ${service.nomService} (${service.codeService}) - ID: ${service.idService}`);
-                
-                // ✅ CORRECTION PRINCIPALE : Améliorer le filtrage avec debug
-                const liaisonsService = serviceUnites.filter(liaison => {
-                    // Normaliser les IDs en strings pour comparaison
-                    const liaisonServiceId = String(liaison.idService || liaison.idService || '');
-                    const currentServiceId = String(service.idService || '');
-                    
-                    const matches = liaisonServiceId === currentServiceId;
-                    
-                    if (matches) {
-                        console.log(`✅ Liaison trouvée:`, liaison);
-                    } else {
-                        console.log(`❌ Liaison ignorée (${liaisonServiceId} ≠ ${currentServiceId}):`, liaison);
-                    }
-                    
-                    return matches;
-                });
-                
-                console.log(`🔍 Liaisons filtrées pour ${service.codeService}:`, liaisonsService);
-                
-                if (liaisonsService.length === 0) {
-                    console.warn(`⚠️ Aucune liaison trouvée pour le service ${service.codeService} (ID: ${service.idService})`);
-                    console.warn("Liaisons disponibles:", serviceUnites.map(l => ({
-                        idService: l.idService || l.idService,
-                        idUnite: l.idUnite || l.idUnite
-                    })));
-                }
-                
-                const unitesCodes = liaisonsService.map(liaison => {
-                    console.log(`🔍 Traitement de la liaison:`, liaison);
-                    
-                    // Normaliser les IDs pour la recherche d'unité
-                    const liaisonUniteId = liaison.idUnite || liaison.idUnite;
-                    
-                    // ✅ CORRECTION CRITIQUE : Debug et recherche par ID
-                    console.log(`🔍 Recherche d'unité avec ID: ${liaisonUniteId}`);
-                    console.log(`🔍 Unités disponibles pour debug:`, unites.map(u => ({
-                        idUnite: u.idUnite,
-                        codeUnite: u.codeUnite,
-                        nomUnite: u.nomUnite
-                    })));
-                    
-                    const unite = unites.find(u => {
-                        const idUnite = u.idUnite || u.idUnite || u.id;
-                        const matches = String(idUnite) === String(liaisonUniteId);
-                        console.log(`🔍 Test unité ${u.nomUnite} (ID: ${idUnite}) === ${liaisonUniteId} ? ${matches}`);
-                        return matches;
-                    });
-                    
-                    if (unite) {
-                        console.log(`✅ Unité trouvée pour liaison:`, unite);
-                        return unite.codeUnite || unite.code;
-                    } else {
-                        console.warn(`❌ Aucune unité trouvée pour liaison:`, liaison);
-                        console.warn("Unités disponibles:", unites.map(u => ({
-                            id: u.idUnite || u.idUnite || u.id,
-                            code: u.codeUnite || u.code
-                        })));
-                        return null;
-                    }
-                }).filter(codeUnite => codeUnite !== null);
-
-                // ✅ IMPORTANT: Éviter les doublons et valider
-                const codesUniques = [...new Set(unitesCodes)];
-                unitesMap[service.codeService] = codesUniques;
-                
-                console.log(`✅ Unités uniques pour le service ${service.nomService} (${service.codeService}):`, codesUniques);
-                
-                // ✅ AJOUT : Validation finale
-                if (codesUniques.length === 0) {
-                    console.warn(`⚠️ Aucune unité mappée pour ${service.codeService}, utilisation du fallback`);
-                    
-                    // Fallback : chercher les unités directement liées au service
-                    const unitesDirectes = unites.filter(u => {
-                        const uniteServiceId = String(u.idService || u.idService || '');
-                        const currentServiceId = String(service.idService || '');
-                        return uniteServiceId === currentServiceId;
-                    });
-                    
-                    if (unitesDirectes.length > 0) {
-                        const codesFallback = unitesDirectes.map(u => u.codeUnite || u.code).filter(Boolean);
-                        unitesMap[service.codeService] = [...new Set(codesFallback)];
-                        console.log(`🔄 Fallback appliqué pour ${service.codeService}:`, unitesMap[service.codeService]);
-                    }
-                }
-            });
-        } else {
-            console.warn("Aucune donnée dans serviceUnites, création d'un mapping alternatif");
-            
-            services.forEach(service => {
-                // ✅ CORRECTION : Utiliser la logique de fallback directement
-                const unitesForService = unites.filter(u => {
-                    const uniteServiceId = String(u.idService || u.idService || '');
-                    const currentServiceId = String(service.idService || '');
-                    return uniteServiceId === currentServiceId;
-                });
-                
-                const codes = unitesForService.map(u => u.codeUnite || u.code).filter(Boolean);
-                unitesMap[service.codeService] = [...new Set(codes)]; // Éviter les doublons
-                
-                console.log(`Unités directes pour ${service.codeService}:`, unitesMap[service.codeService]);
-            });
+    // ✅ Réinitialiser si le client change
+    useEffect(() => {
+        if (client?.id !== clientPrecedent.current) {
+            log.debug('🔄 Changement de client détecté, réinitialisation...');
+            initRef.current = false;
+            initializeConfiguration();
         }
-        
-        console.log("✅ Mapping final des unités par service:", unitesMap);
-        
-        // ✅ AJOUT : Validation finale du mapping
-        const servicesAvecUnites = Object.keys(unitesMap).filter(service => unitesMap[service].length > 0);
-        const servicesSansUnites = Object.keys(unitesMap).filter(service => unitesMap[service].length === 0);
-        
-        console.log(`✅ Services avec unités (${servicesAvecUnites.length}):`, servicesAvecUnites);
-        if (servicesSansUnites.length > 0) {
-            console.warn(`⚠️ Services sans unités (${servicesSansUnites.length}):`, servicesSansUnites);
+    }, [client?.id, initializeConfiguration, log]);
+
+    // ✅ NOUVEAU : Fonctions d'accès rapide aux données
+    const getUnitesPourService = useCallback((idService) => {
+        if (tarifData?.getUnitesPourService) {
+            return tarifData.getUnitesPourService(idService);
         }
-        
-        return unitesMap;
-    }
+        // Fallback local
+        const service = services.find(s => s.idService === idService);
+        return service?.unitesLiees || [];
+    }, [tarifData, services]);
 
-    async function createDefaultValues(service, services, unites) {
-        console.log("Création des valeurs par défaut");
-        console.log("Services disponibles pour défauts:", services);
-        console.log("Unités disponibles pour défauts:", unites);    
-        // ✅ CORRECTION : Chercher le service par défaut avec le bon nom de propriété
-        const defaultServiceObj = services.find(s => s.isDefault === true || s.isDefault === 1);
-        
-        if (!defaultServiceObj) {
-            console.warn("Aucun service par défaut trouvé");
-        } else {
-            console.log("Service par défaut trouvé:", defaultServiceObj);
+    const getUniteDefautPourService = useCallback((idService) => {
+        if (tarifData?.getUniteDefautPourService) {
+            return tarifData.getUniteDefautPourService(idService);
         }
-        
-        const defaultUnitesArray = await Promise.all(
-            services.map(async (serviceObj) => {
-                try {
-                    // ✅ CORRECTION : Utiliser idService converti par api.js
-                    const defaultUniteId = await service.getUniteDefault(serviceObj);
+        // Fallback local
+        const service = services.find(s => s.idService === idService);
+        return service?.uniteDefaut || null;
+    }, [tarifData, services]);
 
-                    console.log(`Unité par défaut pour le service ${serviceObj.codeService} (ID: ${serviceObj.idService}):`, defaultUniteId);
-                    
-                    if (!defaultUniteId) {
-                        // ✅ CORRECTION : Chercher par idService converti
-                        const unitesPourService = unites.filter(u => 
-                            u.idService === serviceObj.idService || 
-                            u.idService === serviceObj.idService
-                        );
-                        
-                        if (unitesPourService.length > 0) {
-                            return { [serviceObj.codeService]: unitesPourService[0].codeUnite || unitesPourService[0].code };
-                        }
-                        return null;
-                    }
-                    
-                    // ✅ CORRECTION : Chercher par idUnite converti
-                    const defaultUnite = unites.find(unite => unite.idUnite === defaultUniteId || unite.id === defaultUniteId);
-                    console.log(`Unité trouvée pour l'ID ${defaultUniteId}:`, defaultUnite);
-                    //return defaultUnite ? { [serviceObj.codeService]: defaultUnite.codeUnite || defaultUnite.code } : null;
-                    return defaultUnite ? defaultUnite : null;
-                } catch (error) {
-                    console.error(`Erreur pour le service ${serviceObj.codeService}:`, error);
-                    return null;
-                }
-            })
-        );
-
-        console.log("Unités par défaut trouvées:", defaultUnitesArray);
-        
-        const defaultUniteMap = defaultUnitesArray
-            .filter(item => item !== null)
-            .reduce((acc, item) => ({...acc, ...item}), {});
-        
-        console.log("Mapping final des unités par défaut:", defaultUniteMap);
-
-        return {
-            service: defaultServiceObj,
-            unites: defaultUnitesArray
-        };
-    }
-
-    function updateConfigurationState(config) {
-        setTarificationService(config.tarificationService);
-        setServices(config.services);
-        setUnites(config.unites);
-        setUnitesByService(config.unitesByService);
-        setDefaultUnites(config.defaultUnites);
-        setDefaultService(config.defaultService);
-    }
-
-    function handleConfigurationError(error) {
-        console.error('Erreur lors de l\'initialisation avec le client:', error);
-        setMessage('Erreur lors du chargement des services pour ce client');
-        setMessageType('error');
-        setLoadingError(error);
-        setIsLoading(false);
-    }
+    const getIdUniteDefautPourService = useCallback((idService) => {
+        if (tarifData?.getIdUniteDefautPourService) {
+            return tarifData.getIdUniteDefautPourService(idService);
+        }
+        // Fallback local
+        const service = services.find(s => s.idService === idService);
+        return service?.idUniteDefaut || null;
+    }, [tarifData, services]);
 
     return {
         // Configuration
@@ -342,14 +284,19 @@ export function useFactureConfiguration(client, readOnly) {
         unitesByService,
         defaultService,
         defaultUnites,
-        tarificationService,
+        tarifActions,
         tarifInfo,
         
         // États de chargement
-        isLoading,
+        isLoading: isLoading || (tarifData?.isLoading ?? true),
         loadingError,
         message,
         messageType,
+        
+        // ✅ NOUVEAU : Fonctions d'accès aux données enrichies
+        getUnitesPourService,
+        getUniteDefautPourService,
+        getIdUniteDefautPourService,
         
         // Méthodes
         initializeConfiguration,

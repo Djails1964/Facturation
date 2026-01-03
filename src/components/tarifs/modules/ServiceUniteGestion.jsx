@@ -1,34 +1,43 @@
-// ServiceUniteGestion.jsx - Version nettoyée SANS CSS inline
-import React, { useState, useEffect, useCallback } from 'react';
+// ServiceUniteGestion.jsx - Version finale avec tarifActions et rendu original
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ActionButton, ICONS } from '../../../components/ui/buttons';
 import TarifFormHeader from '../sections/TarifFormHeader';
 import { compareIds, normalizeId } from '../../../utils/formUtils';
 import { normalizeServices, normalizeUnites } from '../../../utils/booleanHelper';
-import { useAsyncOperation } from '../../../utils/stateHelpers';
+import { createLogger } from '../../../utils/createLogger';
 
+/**
+ * ✅ REFACTORISÉ: Utilise tarifActions au lieu de tarificationService
+ * ✅ CORRIGÉ: Suppression de la boucle infinie dans les useEffect
+ * ✅ PRÉSERVÉ: Rendu original avec cards, grid et fonctions de rendu
+ */
 const ServiceUniteGestion = ({ 
   services, 
   unites, 
-  tarificationService, 
+  tarifActions,  // ✅ Utilise tarifActions
   setMessage, 
   setMessageType, 
-  setConfirmModal,
   loadUnites,
-  loadUnitesByService
+  loadAllServicesUnites,
+  loadUnitesByService,
+  handleUnlinkServiceUnite
 }) => {
+
+  const log = createLogger("ServiceUniteGestion");
+
   const [selectedidService, setSelectedidService] = useState('');
   const [associatedUnites, setAssociatedUnites] = useState([]);
   const [unassociatedUnites, setUnassociatedUnites] = useState([]);
   const [defaultidUnite, setDefaultidUnite] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Hook pour les opérations asynchrones avec loading/message
-  const { executeWithLoading } = useAsyncOperation();
-
   // État pour gérer les tooltips
   const [tooltip, setTooltip] = useState({ show: false, text: '', x: 0, y: 0 });
 
-  // Normalisation des données reçues via props
+  // Refs pour les boutons de dissociation
+  const unlinkButtonRefs = useRef({});
+
+  // Normalisation des données
   const normalizedServices = React.useMemo(() => {
     if (!services || !Array.isArray(services)) return [];
     return normalizeServices(services);
@@ -39,218 +48,213 @@ const ServiceUniteGestion = ({
     return normalizeUnites(unites);
   }, [unites]);
 
-  // 🔧 FONCTION CORRIGÉE - Fonction de chargement des données d'unités
+  // ✅ CORRECTION: loadUniteData ne doit PAS être dans les dépendances des useEffect qui l'appellent
   const loadUniteData = useCallback(async () => {
-    console.log('🔍 loadUniteData appelée avec selectedidService:', selectedidService, 'Type:', typeof selectedidService);
+    log.debug('🔍 loadUniteData appelée avec selectedidService:', selectedidService);
     
-    if (!selectedidService || !tarificationService) {
-      console.log('❌ Conditions non remplies - selectedidService:', selectedidService, 'tarificationService:', !!tarificationService);
+    if (!selectedidService || !tarifActions) {
+      log.debug('❌ Conditions non remplies');
       return;
     }
     
-    // Utiliser normalizeId pour valider et convertir l'ID
     const numericidService = normalizeId(selectedidService);
     if (!numericidService) {
-      console.error('❌ selectedidService n\'est pas un ID valide:', selectedidService);
+      log.error('❌ selectedidService invalide:', selectedidService);
       setMessage('Erreur: ID de service invalide');
       setMessageType('error');
       return;
     }
     
-    await executeWithLoading(
-      async () => {
-        console.log('🔍 Chargement des unités pour le service ID:', numericidService);
-        
-        // Charger les unités associées au service
-        const serviceUnites = await tarificationService.chargerUnites(numericidService);
-        console.log('📊 Unités retournées par chargerUnites:', serviceUnites);
-        
-        // Charger l'unité par défaut
-        const defaultUnite = await tarificationService.getUniteDefault({ idService: numericidService });
-        console.log('🎯 ServiceUniteForm - loadUniteData - defaultUnite reçu:', defaultUnite);
-        
-        // Extraire l'ID de l'unité par défaut selon la structure de la réponse
-        let defaultId = null;
-        if (defaultUnite && typeof defaultUnite === 'object') {
-          // Si c'est un objet avec idUnite
-          defaultId = defaultUnite.idUnite || defaultUnite.id;
-        } else if (defaultUnite && (typeof defaultUnite === 'number' || typeof defaultUnite === 'string')) {
-          // Si c'est directement l'ID
-          defaultId = defaultUnite;
-        }
-        
-        console.log('🎯 ID de l\'unité par défaut extrait:', defaultId);
-        setDefaultidUnite(defaultId);
-        
-        // S'assurer que serviceUnites est un tableau
-        const validServiceUnites = Array.isArray(serviceUnites) ? serviceUnites : [];
-        console.log('✅ Unités associées validées:', validServiceUnites);
-        
-        // ✅ CORRECTION: Créer un Set des IDs d'unités associées avec la bonne propriété
-        const associatedIds = new Set(validServiceUnites.map(unite => String(unite.idUnite)));
-        console.log('🔍 IDs des unités associées:', Array.from(associatedIds));
-        
-        // ✅ CORRECTION: Filtrer correctement les unités non associées
-        const filteredUnassociatedUnites = normalizedUnites.filter(unite => {
-          const idUniteStr = String(unite.idUnite);
-          const isAssociated = associatedIds.has(idUniteStr);
-          console.log(`Unite ${unite.nomUnite} (ID: ${idUniteStr}) - Associée: ${isAssociated}`);
-          return !isAssociated;
-        });
-        
-        console.log('📊 Résultat du filtrage:');
-        console.log('- Unités associées:', validServiceUnites.length);
-        console.log('- Unités non associées:', filteredUnassociatedUnites.length);
-        console.log('- Total unités disponibles:', normalizedUnites.length);
-        
-        setAssociatedUnites(validServiceUnites);
-        setUnassociatedUnites(filteredUnassociatedUnites);
-
-        return { success: true };
-      },
-      { setLoading, setMessage, setMessageType },
-      {
-        errorPrefix: 'Erreur lors du chargement des unités: '
+    setLoading(true);
+    
+    try {
+      log.debug('🔥 Chargement des unités pour le service ID:', numericidService);
+      
+      // ✅ Appels directs via tarifActions
+      const serviceUnites = await tarifActions.charger('unite', { idService: numericidService });
+      log.debug('📊 Unités retournées:', serviceUnites);
+      
+      const defaultUnite = await tarifActions.getUniteDefault({ idService: numericidService });
+      log.debug('🎯 defaultUnite reçu:', defaultUnite);
+      
+      // Extraire l'ID de l'unité par défaut
+      let defaultId = null;
+      if (defaultUnite && typeof defaultUnite === 'object') {
+        defaultId = defaultUnite.idUnite || defaultUnite.id;
+      } else if (defaultUnite && (typeof defaultUnite === 'number' || typeof defaultUnite === 'string')) {
+        defaultId = defaultUnite;
       }
-    ).catch(() => {
-      // En cas d'erreur, reset des états
+      
+      log.debug('🎯 ID unité par défaut:', defaultId);
+      setDefaultidUnite(defaultId);
+      
+      // S'assurer que serviceUnites est un tableau
+      const validServiceUnites = Array.isArray(serviceUnites) ? serviceUnites : [];
+      log.debug('✅ Unités associées validées:', validServiceUnites);
+      
+      // Créer un Set des IDs d'unités associées
+      const associatedIds = new Set(validServiceUnites.map(unite => String(unite.idUnite)));
+      log.debug('🔑 IDs des unités associées:', Array.from(associatedIds));
+      
+      // Filtrer les unités
+      const associated = normalizedUnites.filter(unite => associatedIds.has(String(unite.idUnite)));
+      const unassociated = normalizedUnites.filter(unite => !associatedIds.has(String(unite.idUnite)));
+      
+      log.debug('✅ Unités associées:', associated.length);
+      log.debug('✅ Unités non associées:', unassociated.length);
+      
+      setAssociatedUnites(associated);
+      setUnassociatedUnites(unassociated);
+      
+    } catch (error) {
+      log.error('❌ Erreur chargement données:', error);
+      setMessage('Erreur lors du chargement des unités');
+      setMessageType('error');
       setAssociatedUnites([]);
       setUnassociatedUnites(normalizedUnites);
-    });
-  }, [selectedidService, tarificationService, normalizedUnites, setMessage, setMessageType, executeWithLoading]);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedidService, normalizedUnites, tarifActions, log]); 
 
-  // Reset propre quand le service change
+  // Sélection automatique du premier service
+  useEffect(() => {
+    if (normalizedServices.length > 0 && !selectedidService) {
+      const defaultService = normalizedServices.find(s => s.isDefault);
+      const serviceToSelect = defaultService || normalizedServices[0];
+      
+      if (serviceToSelect) {
+        log.debug('🎯 Sélection automatique du service:', serviceToSelect.nomService);
+        setSelectedidService(serviceToSelect.idService);
+      }
+    }
+  }, [normalizedServices, selectedidService, log]);
+
+  // ✅ CORRECTION: Charger les données quand le service change
   useEffect(() => {
     if (selectedidService) {
-      console.log('🔄 Changement de service vers:', selectedidService);
+      log.debug('🔄 Changement de service vers:', selectedidService);
       loadUniteData();
     } else {
-      console.log('🔄 Aucun service sélectionné - Reset des données');
+      log.debug('🔄 Aucun service sélectionné - Reset');
       setAssociatedUnites([]);
       setUnassociatedUnites([]);
       setDefaultidUnite(null);
     }
-  }, [selectedidService, loadUniteData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedidService]); // loadUniteData intentionnellement omis
 
-  // Recharger quand les unités globales changent
+  // ✅ CORRECTION: Recharger quand les unités globales changent
   useEffect(() => {
     if (selectedidService && normalizedUnites.length > 0) {
-      console.log('🔄 Les unités globales ont changé, rechargement...');
+      log.debug('🔄 Les unités globales ont changé, rechargement...');
       loadUniteData();
     }
-  }, [normalizedUnites, selectedidService, loadUniteData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [normalizedUnites, selectedidService]); // loadUniteData intentionnellement omis
 
   // Associer une unité au service
   const handleLinkServiceUnite = async (idUnite) => {
     if (!selectedidService || !idUnite) return;
     
-    await executeWithLoading(
-      () => tarificationService.linkServiceUnite(selectedidService, idUnite),
-      { setLoading, setMessage, setMessageType },
-      { 
-        successMessage: 'Unité associée avec succès au service',
-        errorPrefix: 'Erreur lors de l\'association: '
+    setLoading(true);
+    
+    try {
+      await tarifActions.linkServiceUnite(selectedidService, idUnite);
+      
+      setMessage("Unité associée avec succès au service");
+      setMessageType("success");
+      
+      if (typeof loadAllServicesUnites === "function") {
+        log.debug("🔄 Rechargement des associations service-unité...");
+        await loadAllServicesUnites();
       }
-    );
-
-    // Recharger les données après l'association
-    await loadUniteData();
-    if (typeof loadUnites === 'function') {
-      loadUnites();
+      
+      if (typeof loadUnites === "function") {
+        log.debug("🔄 Rechargement des unités globales...");
+        await loadUnites();
+      }
+      
+      log.debug("🔄 Rechargement des données locales...");
+      await loadUniteData();
+      
+    } catch (error) {
+      log.error('❌ Erreur lors de l\'association:', error);
+      setMessage('Erreur lors de l\'association de l\'unité');
+      setMessageType('error');
+    } finally {
+      setLoading(false);
     }
   };
 
   // Dissocier une unité du service
-  const handleUnlinkServiceUnite = async (idService, idUnite, uniteName) => {
-    try {
-      const checkResult = await tarificationService.checkServiceUniteUsageInFacture(idService, idUnite);
-      
-      if (checkResult.isUsed) {
-        setConfirmModal({
-          isOpen: true,
-          title: 'Dissociation impossible',
-          message: `Cette liaison est utilisée dans ${checkResult.count} ligne(s) de facture et ne peut pas être supprimée.`,
-          onConfirm: () => {
-            setConfirmModal(prev => ({ ...prev, isOpen: false }));
-          },
-          type: 'warning',
-          confirmText: 'OK',
-          entityType: 'serviceUnite',
-          singleButton: true
-        });
-      } else {
-        setConfirmModal({
-          isOpen: true,
-          title: 'Confirmation de suppression',
-          message: `Êtes-vous sûr de vouloir dissocier l'unité "${uniteName}" du service ?`,
-          onConfirm: async () => {
-            try {
-              console.log('🔗 Dissociation unité', idUnite, 'du service', idService);
-              const result = await tarificationService.unlinkServiceUnite(idService, idUnite);
-              
-              if (result.success) {
-                setMessage(result.message);
-                setMessageType('success');
-                
-                // Recharger les données après la dissociation
-                await loadUniteData(); 
-              } else {
-                throw new Error(result.message || 'Erreur lors de la dissociation de l\'unité');
-              }
-            } catch (error) {
-              console.error('❌ Erreur lors de la dissociation:', error);
-              setMessage('Erreur lors de la dissociation: ' + error.message);
-              setMessageType('error');
-            } finally {
-              setConfirmModal(prev => ({ ...prev, isOpen: false }));
-            }
-          },
-          onCancel: () => {
-            setConfirmModal(prev => ({ ...prev, isOpen: false }));
-          },
-          type: 'danger',
-          confirmText: 'Supprimer',
-          entityType: 'serviceUnite'
-        });
-      }
-    } catch (error) {
-      console.error('❌ Erreur lors de la vérification:', error);
-      setMessage('Erreur: ' + error.message);
+  const onUnlinkServiceUnite = async (idUnite, uniteName) => {
+    if (!handleUnlinkServiceUnite) {
+      log.error('❌ handleUnlinkServiceUnite non fourni');
+      setMessage('Erreur: fonctionnalité de dissociation non disponible');
       setMessageType('error');
+      return;
+    }
+
+    const anchorRef = unlinkButtonRefs.current[idUnite];
+    
+    const success = await handleUnlinkServiceUnite(
+      selectedidService, 
+      idUnite, 
+      uniteName,
+      anchorRef
+    );
+
+    if (success) {
+      if (typeof loadUnites === 'function') {
+        await loadUnites();
+      }
+      if (typeof loadUnitesByService === 'function') {
+        await loadUnitesByService(selectedidService);
+      }
+      
+      log.debug("🔄 Rechargement des données locales...");
+      await loadUniteData();
     }
   };
 
   // Définir une unité comme unité par défaut
   const handleSetDefaultUnite = async (idUnite) => {
-    if (!selectedidService || !idUnite) return;
+    setLoading(true);
     
-    await executeWithLoading(
-      async () => {
-        const result = await tarificationService.updateServiceUniteDefault(selectedidService, idUnite);
-        
-        if (result.success) {
-          setDefaultidUnite(idUnite);
-          return result;
-        } else {
-          throw new Error(result.message || 'Erreur lors de la définition de l\'unité par défaut');
-        }
-      },
-      { setLoading, setMessage, setMessageType },
-      { 
-        successMessage: 'Unité définie comme unité par défaut',
-        errorPrefix: 'Erreur: '
+    try {
+      await tarifActions.updateServiceUniteDefault(selectedidService, idUnite);
+      
+      setMessage('Unité définie comme unité par défaut');
+      setMessageType('success');
+      
+      if (typeof loadUnites === 'function') {
+        await loadUnites();
       }
-    );
+      if (typeof loadUnitesByService === 'function') {
+        await loadUnitesByService(selectedidService);
+      }
+      
+      log.debug("🔄 Rechargement des données locales...");
+      await loadUniteData();
+      
+    } catch (error) {
+      log.error('❌ Erreur définition unité par défaut:', error);
+      setMessage('Erreur lors de la définition de l\'unité par défaut');
+      setMessageType('error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Gestionnaires de tooltip
+  // Gestion des tooltips
   const handleMouseEnter = (e, text) => {
-    const rect = e.target.getBoundingClientRect();
+    const rect = e.currentTarget.getBoundingClientRect();
     setTooltip({
       show: true,
       text: text,
       x: rect.left + rect.width / 2,
-      y: rect.top - 5
+      y: rect.top - 8
     });
   };
 
@@ -260,47 +264,46 @@ const ServiceUniteGestion = ({
 
   // Rendu des unités associées
   const renderAssociatedUnites = () => {
-    console.log('🎨 renderAssociatedUnites - defaultidUnite:', defaultidUnite, 'type:', typeof defaultidUnite);
-    console.log('🎨 Unités associées:', associatedUnites);
-    
     return (
       <div className="unites-section">
         <h4>Unités associées ({associatedUnites.length})</h4>
         {associatedUnites.length > 0 ? (
           <div className="unites-grid">
-            {associatedUnites.map((unite) => {
-              console.log('🎨 Rendu unité associée:', unite);
-              const isDefault = compareIds(defaultidUnite, unite.idUnite);
-              console.log(`🎨 Unite ${unite.nomUnite} - defaultidUnite: ${defaultidUnite}, unite.idUnite: ${unite.idUnite}, isDefault: ${isDefault}`);
+            {associatedUnites.map(unite => {
+              const isDefault = compareIds(unite.idUnite, defaultidUnite);
+              
+              log.debug('🎯 Rendu unité:', {
+                idUnite: unite.idUnite,
+                nomUnite: unite.nomUnite,
+                defaultidUnite: defaultidUnite,
+                isDefault: isDefault
+              });
               
               return (
                 <div key={unite.idUnite} className="unite-card associated">
                   <div className="unite-card-content">
                     <div className="unite-name" title={unite.nomUnite}>
                       {unite.nomUnite.length > 20 ? `${unite.nomUnite.substring(0, 17)}...` : unite.nomUnite}
-                      {/* 🔍 DEBUG VISUEL */}
-                      {process.env.NODE_ENV === 'development' && (
-                        <div style={{fontSize: '10px', color: '#999', marginTop: '2px'}}>
-                          ID: {unite.idUnite} | Default: {defaultidUnite} | isDefault: {isDefault ? 'TRUE' : 'FALSE'}
-                        </div>
-                      )}
                     </div>
                     <div className="unite-actions">
                       {/* Bouton dissocier */}
                       <ActionButton
-                        icon={ICONS.CLOSE_ALT}
-                        onClick={() => handleUnlinkServiceUnite(selectedidService, unite.idUnite, unite.nomUnite)}
+                        ref={(el) => {
+                          if (el) unlinkButtonRefs.current[unite.idUnite] = el;
+                        }}
+                        icon={ICONS.UNLINK}
+                        onClick={() => onUnlinkServiceUnite(unite.idUnite, unite.nomUnite)}
                         onMouseEnter={(e) => handleMouseEnter(e, 'Dissocier')}
                         onMouseLeave={handleMouseLeave}
                         tooltip="Dissocier cette unité"
                         className="btn-disconnect"
                       />
                       
-                      {/* Bouton définir par défaut - ✅ CLASSES NETTOYÉES */}
+                      {/* Bouton définir par défaut */}
                       <ActionButton
                         icon={ICONS.HEART}
                         onClick={() => {
-                          console.log('❤️ Clic sur cœur - Unité:', {
+                          log.debug('❤️ Clic sur cœur - Unité:', {
                             idUnite: unite.idUnite,
                             nomUnite: unite.nomUnite,
                             currentDefault: defaultidUnite,
@@ -309,7 +312,7 @@ const ServiceUniteGestion = ({
                           });
                           
                           if (!isDefault) {
-                            console.log('🔄 Changement d\'unité par défaut vers:', unite.nomUnite);
+                            log.debug('🔄 Changement d\'unité par défaut vers:', unite.nomUnite);
                           }
                           
                           handleSetDefaultUnite(unite.idUnite);
@@ -319,20 +322,6 @@ const ServiceUniteGestion = ({
                         tooltip={isDefault ? 'Unité par défaut' : 'Définir comme unité par défaut'}
                         className={`btn-default ${isDefault ? 'heart-filled' : 'heart-empty'}`}
                       />
-                      
-                      {/* 🔍 DEBUG VISUEL SUPPLÉMENTAIRE pour le bouton */}
-                      {process.env.NODE_ENV === 'development' && (
-                        <div style={{
-                          fontSize: '8px', 
-                          color: isDefault ? '#800020' : '#666',
-                          backgroundColor: isDefault ? '#ffe6e6' : '#f0f0f0',
-                          padding: '2px 4px',
-                          borderRadius: '2px',
-                          marginTop: '2px'
-                        }}>
-                          {isDefault ? '❤️ DÉFAUT' : '🤍 vide'}
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -393,7 +382,7 @@ const ServiceUniteGestion = ({
         description="Associez des unités de mesure à vos services pour définir comment ils peuvent être facturés"
       />
 
-      {/* ✅ SÉLECTION DU SERVICE CORRIGÉE */}
+      {/* ✅ SÉLECTION DU SERVICE */}
       <div className="service-selection">
         <div className="input-group">
           <select 
@@ -401,7 +390,7 @@ const ServiceUniteGestion = ({
             name="idService"
             value={selectedidService}
             onChange={(e) => {
-              console.log('🔄 Service sélectionné - valeur:', e.target.value);
+              log.debug('🔄 Service sélectionné - valeur:', e.target.value);
               setSelectedidService(e.target.value);
             }}
           >
@@ -409,7 +398,7 @@ const ServiceUniteGestion = ({
             {normalizedServices.map(service => (
               <option key={service.idService} value={service.idService}>
                 {service.nomService}
-                {service.isDefault && ' (défaut)'}
+                {service.isDefault}
               </option>
             ))}
           </select>

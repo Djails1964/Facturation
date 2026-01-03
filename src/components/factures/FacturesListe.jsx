@@ -3,7 +3,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import '../../styles/components/factures/FacturesListe.css';
 
 // Import des composants
-import FacturesFilters from './FacturesFilters';
 import FacturesTable from './FacturesTable';
 import UnifiedFilter from '../../components/shared/filters/UnifiedFilter';
 
@@ -13,6 +12,7 @@ import { showCustom, showLoading } from '../../utils/modalSystem';
 // Import des services
 import FactureService from '../../services/FactureService';
 import PaiementService from '../../services/PaiementService';
+import { useNotifications } from '../../services/NotificationService';
 
 // Import des hooks personnalisés
 import { useFactures } from './hooks/useFactures';
@@ -20,6 +20,7 @@ import { useFactureFilters } from './hooks/useFactureFilters';
 import { useTemplates } from './hooks/useTemplates';
 import { useFactureModals } from './hooks/useFactureModals';
 import { formatMontant, formatDate } from '../../utils/formatters';
+import { createLogger } from '../../utils/createLogger';
 
 function FacturesListe({ 
     nouvelleFactureId,
@@ -33,6 +34,8 @@ function FacturesListe({
     factureModified = false,
     onResetFactureModified = null
 }) {
+
+    const log = createLogger("FacturesListe");
     
     const isDevelopment = () => {
         return process.env.NODE_ENV === 'development' || 
@@ -40,6 +43,8 @@ function FacturesListe({
             window.location.hostname === '127.0.0.1' ||
             window.location.port === '3000';
     };
+
+    const { showSuccess, showError, showWarning, showInfo } = useNotifications();
     
     // Initialisation des services
     const factureService = new FactureService();
@@ -69,6 +74,16 @@ function FacturesListe({
         setAnneeSelectionnee      // ✅ Récupérer depuis useFactures
     } = useFactures(nouvelleFactureId, factureModified, onResetFactureModified);
 
+    useEffect(() => {
+        if (facturesNonFiltrees.length > 0) {
+            log.debug('🔢 DÉCOMPTE EXACT:', {
+                facturesNonFiltrees_length: facturesNonFiltrees.length,
+                IDs: facturesNonFiltrees.map(f => f.idFacture),
+                doublons: facturesNonFiltrees.length - new Set(facturesNonFiltrees.map(f => f.idFacture)).size
+            });
+        }
+    }, [facturesNonFiltrees]);
+
     const {
         clients,
         isLoadingClients, 
@@ -86,6 +101,47 @@ function FacturesListe({
         anneeSelectionnee,        // ✅ Passer depuis useFactures
         setAnneeSelectionnee      // ✅ Passer depuis useFactures
     );
+
+    useEffect(() => {
+        log.debug('📊 STATS FACTURES:', {
+            facturesNonFiltrees: facturesNonFiltrees.length,
+            filteredFactures: filteredFactures.length,
+            difference: facturesNonFiltrees.length - filteredFactures.length,
+            nouvelleFactureId,
+            anneeSelectionnee,
+            clientSelectionne,
+            etatSelectionne
+        });
+        
+        // Afficher les IDs des factures pour détecter les doublons
+        if (facturesNonFiltrees.length > 0) {
+            const ids = facturesNonFiltrees.map(f => f.idFacture);
+            const doublons = ids.filter((id, index) => ids.indexOf(id) !== index);
+            
+            log.debug('📋 IDs facturesNonFiltrees:', ids);
+            if (doublons.length > 0) {
+                log.warn('⚠️ DOUBLONS DÉTECTÉS:', doublons);
+            }
+        }
+        
+        if (filteredFactures.length > 0) {
+            const ids = filteredFactures.map(f => f.idFacture);
+            const doublons = ids.filter((id, index) => ids.indexOf(id) !== index);
+            
+            log.debug('📋 IDs filteredFactures:', ids);
+            if (doublons.length > 0) {
+                log.warn('⚠️ DOUBLONS DÉTECTÉS:', doublons);
+            }
+        }
+        
+    }, [facturesNonFiltrees, filteredFactures]);
+
+    useEffect(() => {
+        log.debug('🎯 UnifiedFilter va recevoir:', {
+            totalCount: facturesNonFiltrees.length,
+            filteredCount: filteredFactures.length
+        });
+    }, [facturesNonFiltrees.length, filteredFactures.length]);
     
     const { emailTemplates, chargerTemplatesEmail } = useTemplates();
 
@@ -99,7 +155,7 @@ function FacturesListe({
         formatDate: (dateStr) => formatDate(dateStr),
         formatEmailMessage: (template, facture) => {
             if (!template) {
-                console.warn("Template vide ou non défini");
+                log.warn("Template vide ou non défini");
                 return '';
             }
             
@@ -125,7 +181,7 @@ function FacturesListe({
                 
                 return message;
             } catch (error) {
-                console.error("Erreur lors du formatage du message email:", error);
+                log.error("Erreur lors du formatage du message email:", error);
                 return template;
             }
         },
@@ -166,7 +222,7 @@ function FacturesListe({
     // Gérer les erreurs
     useEffect(() => {
         if (error) {
-            onSetNotification(error, 'error');
+            showError(error);
         }
     }, [error]);
 
@@ -201,26 +257,26 @@ function FacturesListe({
         });
     };
 
-    const renderNotification = () => {
-        if (!notification || !notification.message) return null;
+    // const renderNotification = () => {
+    //     if (!notification || !notification.message) return null;
         
-        const className = notification.type === 'success' 
-            ? 'notification success'  // ✅ CORRECTION : 'notification success' au lieu de 'notification-success'
-            : 'notification error';   // ✅ CORRECTION : 'notification error' au lieu de 'notification-error'
+    //     const className = notification.type === 'success' 
+    //         ? 'notification success'  // ✅ CORRECTION : 'notification success' au lieu de 'notification-success'
+    //         : 'notification error';   // ✅ CORRECTION : 'notification error' au lieu de 'notification-error'
         
-        return (
-            <div className={className}>
-                <span>{notification.message}</span>
-                <button 
-                    onClick={onClearNotification} 
-                    className="notification-close"
-                    aria-label="Fermer la notification"
-                >
-                    ×
-                </button>
-            </div>
-        );
-    };
+    //     return (
+    //         <div className={className}>
+    //             <span>{notification.message}</span>
+    //             <button 
+    //                 onClick={onClearNotification} 
+    //                 className="notification-close"
+    //                 aria-label="Fermer la notification"
+    //             >
+    //                 ×
+    //             </button>
+    //         </div>
+    //     );
+    // };
 
     // Rendu
     return (
@@ -229,7 +285,7 @@ function FacturesListe({
                 <h2>Factures ({filteredFactures.length})</h2>
             </div>
             {/* ✅ AJOUT : Affichage de la notification en haut */}
-            {renderNotification()}
+            {/* {renderNotification()} */}
 
             {/* Filtres */}
             <UnifiedFilter
@@ -248,7 +304,7 @@ function FacturesListe({
                 onResetFilters={() => {
                     handleAnneeChange({ target: { value: new Date().getFullYear() } });
                     handleClientChange({ target: { value: '' } });
-                    handleEtatChange({ target: { value: 'Tous' } });
+                    handleEtatChange({ target: { value: 'Sans annulées' } });
                 }}
                 showFilters={showFilters}
                 onToggleFilters={() => setShowFilters(!showFilters)}
@@ -272,29 +328,6 @@ function FacturesListe({
                 impressionEnCours={impressionEnCours}
             />
 
-            {/* Bouton flottant pour nouvelle facture */}
-            {onNouvelleFacture && (
-                <button
-                    className="floating-action-button"
-                    onClick={onNouvelleFacture}
-                    onMouseMove={handleFloatingButtonMouseMove}
-                    onMouseLeave={handleFloatingButtonMouseLeave}
-                    aria-label="Créer une nouvelle facture"
-                >
-                    <span className="fab-icon">+</span>
-                    {floatingButtonTooltip.visible && (
-                        <span 
-                            className="fab-tooltip"
-                            style={{
-                                left: `${floatingButtonTooltip.position.x + 15}px`,
-                                top: `${floatingButtonTooltip.position.y - 10}px`
-                            }}
-                        >
-                            Nouvelle Facture
-                        </span>
-                    )}
-                </button>
-            )}
         </div>
     );
 }

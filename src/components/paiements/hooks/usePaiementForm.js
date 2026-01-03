@@ -1,15 +1,15 @@
 // src/components/paiements/hooks/usePaiementForm.js
-// ✅ VERSION CORRIGÉE avec accès à guardId et unregisterGuard
+// ✅ VERSION REFACTORISÉE - Utilise usePaiementActions et useFactureActions
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigationGuard } from '../../../App'; // ✅ AJOUTER
+import { useNavigationGuard } from '../../../App';
 import { useUnsavedChanges } from '../../../hooks/useUnsavedChanges';
 import { useAutoNavigationGuard } from '../../../hooks/useAutoNavigationGuard';
-import { showConfirm } from '../../../utils/modalSystem'; // ✅ AJOUTER
-import PaiementService from '../../../services/PaiementService';
-import FactureService from '../../../services/FactureService';
-import activityLogsService from '../../../services/activityLogsService';
+import { showConfirm } from '../../../utils/modalSystem';
+import { usePaiementActions } from './usePaiementActions'; // ✅ NOUVEAU
+import { useFactureActions } from '../../factures/hooks/useFactureActions'; // ✅ NOUVEAU
 import DateService from '../../../utils/DateService';
+import { createLogger } from '../../../utils/createLogger';
 import { 
     FORM_MODES, 
     VALIDATION_MESSAGES, 
@@ -19,11 +19,14 @@ import {
 } from '../../../constants/paiementConstants';
 
 export const usePaiementForm = ({ mode, idPaiement, onRetourListe, onPaiementCreated }) => {
-    // Services
-    const paiementService = new PaiementService();
-    const factureService = new FactureService();
+
+    const log = createLogger('usePaiementForm');
+
+    // ✅ Services via hooks d'actions
+    const paiementActions = usePaiementActions();
+    const factureActions = useFactureActions();
     
-    // ✅ Navigation protection - AJOUTER
+    // Navigation protection
     const { registerGuard, unregisterGuard } = useNavigationGuard();
     const guardId = `paiement-form-${idPaiement || 'new'}`;
     
@@ -113,18 +116,16 @@ export const usePaiementForm = ({ mode, idPaiement, onRetourListe, onPaiementCre
         debug: false
     });
     
-    // ✅ GESTION DES ÉVÉNEMENTS DE NAVIGATION GLOBALE - VERSION CORRIGÉE
+    // Gestion des événements de navigation globale
     useEffect(() => {
         if (mode === FORM_MODES.VIEW || !hasUnsavedChanges) return;
 
         const handleNavigationBlocked = async (event) => {
-            console.log('🌐 PAIEMENT FORM - Événement navigation-blocked reçu:', event.detail);
+            log.debug('🌐 PAIEMENT FORM - Événement navigation-blocked reçu:', event.detail);
             
             if (event.detail && event.detail.callback) {
-                // Stocker le callback
                 setGlobalNavigationCallback(() => event.detail.callback);
                 
-                // Afficher la modal via le système modal
                 try {
                     const result = await showConfirm({
                         title: "Modifications non sauvegardées",
@@ -135,17 +136,17 @@ export const usePaiementForm = ({ mode, idPaiement, onRetourListe, onPaiementCre
                     });
                     
                     if (result.action === 'confirm') {
-                        console.log('✅ PAIEMENT - Navigation confirmée');
+                        log.debug('✅ PAIEMENT - Navigation confirmée');
                         resetChanges();
-                        unregisterGuard(guardId); // ✅ maintenant accessible
+                        unregisterGuard(guardId);
                         event.detail.callback();
                         setGlobalNavigationCallback(null);
                     } else {
-                        console.log('❌ PAIEMENT - Navigation annulée');
+                        log.debug('❌ PAIEMENT - Navigation annulée');
                         setGlobalNavigationCallback(null);
                     }
                 } catch (error) {
-                    console.error('❌ Erreur modal globale:', error);
+                    log.error('❌ Erreur modal globale:', error);
                 }
             }
         };
@@ -155,7 +156,7 @@ export const usePaiementForm = ({ mode, idPaiement, onRetourListe, onPaiementCre
         return () => {
             window.removeEventListener('navigation-blocked', handleNavigationBlocked);
         };
-    }, [mode, hasUnsavedChanges, resetChanges, guardId, unregisterGuard]); // ✅ dépendances correctes
+    }, [mode, hasUnsavedChanges, resetChanges, guardId, unregisterGuard]);
     
     // RETOUR DES DONNÉES ET FONCTIONS
     return {
@@ -208,7 +209,7 @@ export const usePaiementForm = ({ mode, idPaiement, onRetourListe, onPaiementCre
         canEdit,
         canDetectChanges,
         getFormData,
-        guardId, // ✅ Retourner pour utilisation dans handlers
+        guardId,
         
         // Paramètres d'entrée
         mode,
@@ -216,9 +217,9 @@ export const usePaiementForm = ({ mode, idPaiement, onRetourListe, onPaiementCre
         onRetourListe,
         onPaiementCreated,
         
-        // Services
-        paiementService,
-        factureService,
-        unregisterGuard // ✅ Retourner pour utilisation dans handlers
+        // ✅ Actions au lieu de services directs
+        paiementActions,
+        factureActions,
+        unregisterGuard
     };
 };

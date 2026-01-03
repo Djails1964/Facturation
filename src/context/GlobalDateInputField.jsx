@@ -45,7 +45,12 @@ function GlobalDateInputField({
         if (readOnly) return;
         
         // Analyser les dates existantes avec sécurité
-        const existingDates = parseDatesFromString(value || '');
+        let existingDates = parseDatesFromString(value || '');
+
+        // ✅ Si aucune date n'existe, pré-sélectionner la date du jour
+        if (!existingDates || existingDates.length === 0) {
+            existingDates = [new Date()];
+        }
         console.log('GlobalDateInputField - Dates existantes:', existingDates);
         
         // Configuration du DatePicker

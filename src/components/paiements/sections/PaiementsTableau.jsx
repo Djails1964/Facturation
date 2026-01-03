@@ -1,7 +1,13 @@
+// src/components/paiements/PaiementsTableau.jsx
+// ✅ VERSION REFACTORISÉE utilisant usePaiementActions et createLogger
+
 import React from 'react';
 import { FiEye, FiEdit, FiX } from 'react-icons/fi';
 import { formatMontant, formatDate, getBadgeClasses, formatEtatText } from '../../../utils/formatters';
-import PaiementService from '../../../services/PaiementService';
+import { usePaiementActions } from '../hooks/usePaiementActions'; // ✅ NOUVEAU
+import { createLogger } from '../../../utils/createLogger'; // ✅ NOUVEAU
+
+const log = createLogger('PaiementsTableau'); // ✅ NOUVEAU
 
 function PaiementsTableau({
     paiements,
@@ -15,20 +21,25 @@ function PaiementsTableau({
     isProcessing
 }) {
     if (isLoading) {
+        log.debug('Chargement des paiements...');
         return <div className="loading">Chargement des paiements...</div>;
     }
 
     if (error) {
+        log.error('Erreur:', error);
         return <div className="error-message">{error}</div>;
     }
 
     if (paiements.length === 0) {
+        log.debug('Aucun paiement trouvé');
         return (
             <div className="no-data">
                 <p>Aucun paiement trouvé.</p>
             </div>
         );
     }
+
+    log.debug(`Affichage de ${paiements.length} paiements`);
 
     return (
         <div className="paiements-table-container">
@@ -75,9 +86,9 @@ function PaiementLigne({
 }) {
     const isAnnule = paiement.statut === 'annule';
 
-    // ✅ UTILISATION DE LA FONCTION STANDARDISÉE POUR FORMATER LA MÉTHODE
-    const paiementService = new PaiementService();
-    const methodeFormatee = paiementService.formatMethodePaiement(paiement.methodePaiement);
+    // ✅ UTILISATION DE usePaiementActions POUR FORMATER LA MÉTHODE
+    const paiementActions = usePaiementActions();
+    const methodeFormatee = paiementActions.formatMethodePaiement(paiement.methodePaiement);
 
     return (
         <div 

@@ -1,0 +1,252 @@
+# .github/workflows/tests.yml
+# Configuration GitHub Actions pour les tests automatisés
+
+name: Tests Automatisés - Gestion Factures
+
+on:
+  # Exécution sur push
+  push:
+    branches: [main, develop]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'package.json'
+  
+  # Exécution sur pull request
+  pull_request:
+    branches: [main, develop]
+  
+  # Exécution planifiée (toutes les 6 heures)
+  schedule:
+    - cron: '0 */6 * * *'
+  
+  # Exécution manuelle
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Type de tests à exécuter'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - unit
+          - integration
+          - e2e
+          - factures
+
+env:
+  NODE_VERSION: '18.x'
+
+jobs:
+  # ============================================
+  # JOB: Tests unitaires
+  # ============================================
+  unit-tests:
+    name: 🧪 Tests Unitaires
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout du code
+        uses: actions/checkout@v4
+      
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: 📚 Installation des dépendances
+        run: npm ci
+      
+      - name: 🧪 Exécution des tests unitaires
+        run: npm run test:unit -- --coverage --coverageReporters=json-summary
+      
+      - name: 📊 Upload couverture
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage/coverage-summary.json
+          flags: unit
+          name: unit-tests
+      
+      - name: 📄 Upload rapport de tests
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: unit-test-report
+          path: reports/
+          retention-days: 30
+
+  # ============================================
+  # JOB: Tests d'intégration
+  # ============================================
+  integration-tests:
+    name: 🔗 Tests d'Intégration
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    
+    steps:
+      - name: 📥 Checkout du code
+        uses: actions/checkout@v4
+      
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: 📚 Installation des dépendances
+        run: npm ci
+      
+      - name: 🔗 Exécution des tests d'intégration
+        run: npm run test:integration -- --coverage
+      
+      - name: 📊 Upload couverture
+        uses: codecov/codecov-action@v3
+        with:
+          flags: integration
+          name: integration-tests
+      
+      - name: 📄 Upload rapport
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: integration-test-report
+          path: reports/
+          retention-days: 30
+
+  # ============================================
+  # JOB: Tests E2E
+  # ============================================
+  e2e-tests:
+    name: 🎯 Tests E2E
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    
+    steps:
+      - name: 📥 Checkout du code
+        uses: actions/checkout@v4
+      
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: 📚 Installation des dépendances
+        run: npm ci
+      
+      - name: 🎯 Exécution des tests E2E
+        run: npm run test:e2e
+      
+      - name: 📄 Upload rapport
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: e2e-test-report
+          path: reports/
+          retention-days: 30
+
+  # ============================================
+  # JOB: Tests complets des factures
+  # ============================================
+  factures-tests:
+    name: 📋 Tests Factures (Complet)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout du code
+        uses: actions/checkout@v4
+      
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: 📚 Installation des dépendances
+        run: npm ci
+      
+      - name: 📋 Exécution des tests factures
+        run: npm run test:factures -- --coverage --coverageReporters=html
+      
+      - name: 📊 Upload couverture HTML
+        uses: actions/upload-artifact@v3
+        with:
+          name: factures-coverage-report
+          path: coverage/
+          retention-days: 30
+
+  # ============================================
+  # JOB: Rapport de couverture global
+  # ============================================
+  coverage-report:
+    name: 📈 Rapport de Couverture
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, e2e-tests]
+    if: always()
+    
+    steps:
+      - name: 📥 Checkout du code
+        uses: actions/checkout@v4
+      
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: 📚 Installation des dépendances
+        run: npm ci
+      
+      - name: 📊 Génération du rapport complet
+        run: npm run test:coverage
+      
+      - name: 📈 Vérification des seuils de couverture
+        run: |
+          COVERAGE=$(cat coverage/coverage-summary.json | jq '.total.lines.pct')
+          echo "Couverture actuelle: $COVERAGE%"
+          if (( $(echo "$COVERAGE < 50" | bc -l) )); then
+            echo "⚠️ Couverture insuffisante (< 50%)"
+            exit 1
+          fi
+          echo "✅ Couverture suffisante"
+      
+      - name: 📄 Upload rapport final
+        uses: actions/upload-artifact@v3
+        with:
+          name: full-coverage-report
+          path: coverage/
+          retention-days: 90
+
+  # ============================================
+  # JOB: Notification
+  # ============================================
+  notify:
+    name: 📧 Notification
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, e2e-tests, factures-tests]
+    if: always()
+    
+    steps:
+      - name: 📊 Résumé des tests
+        run: |
+          echo "## 📊 Résumé des Tests" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Statut |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests Unitaires | ${{ needs.unit-tests.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests Intégration | ${{ needs.integration-tests.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests E2E | ${{ needs.e2e-tests.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests Factures | ${{ needs.factures-tests.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+      
+      - name: 📧 Notification Slack (optionnel)
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#tests-alerts'
+          text: '❌ Les tests automatisés ont échoué!'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+        continue-on-error: true

@@ -1,22 +1,40 @@
 // src/components/clients/hooks/useClientInitialization.js
 // Hook spécialisé pour l'initialisation et le chargement des données client
+// ✅ REFACTORISÉ: Utilisation de useClientActions et createLogger
 
 import { useState, useEffect, useCallback } from 'react';
 import { FORM_MODES } from '../../../constants/clientConstants';
 import { getDefaultClient, getFormData } from '../utils/clientHelpers';
 import { normalizeBooleanFields } from '../../../utils/booleanHelper';
+// ✅ AJOUT: Import de createLogger
+import { createLogger } from '../../../utils/createLogger';
+// ✅ AJOUT: Import de useClientActions
+import { useClientActions } from './useClientActions';
 
 /**
  * Hook pour l'initialisation et le chargement des données client
  * Gère le cycle de vie complet du chargement et de l'initialisation
+ * 
+ * ✅ Utilise useClientActions pour les appels API
+ * ✅ Utilise createLogger pour le logging
  */
 export function useClientInitialization(mode, idClient, dependencies = {}) {
   const {
     setClient,
     setIsLoading,
-    clientService,
     validation
   } = dependencies;
+
+  // ✅ Initialisation du logger
+  const logger = createLogger('useClientInitialization');
+
+  // ✅ Utilisation de useClientActions pour les opérations API
+  const {
+    getClient,
+    normalizeClient,
+    isLoading: actionIsLoading,
+    error: actionError
+  } = useClientActions();
 
   // ================================
   // ÉTAT LOCAL
@@ -39,17 +57,19 @@ export function useClientInitialization(mode, idClient, dependencies = {}) {
       if (!silent) setIsLoading?.(true);
       setLoadingError(null);
       
-      console.log('🔄 Chargement du client:', id);
+      logger.info('🔄 Chargement du client:', id);
       
-      // Appel API
-      const data = await clientService.getClient(id);
+      // ✅ Appel API via useClientActions
+      // getClient retourne directement le client (pas un objet wrappé {success, client})
+      const clientData = await getClient(id);
       
-      if (!data) {
+      // ✅ Vérification que le client existe
+      if (!clientData) {
         throw new Error('Client introuvable');
       }
       
-      // Normalisation des données
-      const normalizedClient = normalizeBooleanFields(data, ['estTherapeute']);
+      // ✅ Normalisation des données via useClientActions
+      const normalizedClient = normalizeClient(clientData);
       
       // Mise à jour de l'état
       setClient?.(normalizedClient);
@@ -60,7 +80,7 @@ export function useClientInitialization(mode, idClient, dependencies = {}) {
         validation.validateField?.('telephone', normalizedClient.telephone || '');
       }
       
-      console.log('✅ Client chargé avec succès:', {
+      logger.info('✅ Client chargé avec succès:', {
         id: normalizedClient.id,
         nom: `${normalizedClient.prenom} ${normalizedClient.nom}`,
         estTherapeute: normalizedClient.estTherapeute
@@ -74,7 +94,7 @@ export function useClientInitialization(mode, idClient, dependencies = {}) {
       return normalizedClient;
       
     } catch (error) {
-      console.error('❌ Erreur lors du chargement du client:', error);
+      logger.error('❌ Erreur lors du chargement du client:', error);
       setLoadingError(error.message || 'Erreur lors du chargement du client');
       
       // En cas d'erreur, retourner un client par défaut pour éviter les crashes
@@ -85,14 +105,14 @@ export function useClientInitialization(mode, idClient, dependencies = {}) {
     } finally {
       if (!silent) setIsLoading?.(false);
     }
-  }, [clientService, setClient, setIsLoading, validation, retryCount]);
+  }, [getClient, normalizeClient, setClient, setIsLoading, validation, retryCount, logger]);
 
   // ================================
   // INITIALISATION POUR CRÉATION
   // ================================
 
   const initializerForCreation = useCallback(() => {
-    console.log('✨ Initialisation pour création d\'un nouveau client');
+    logger.info('✨ Initialisation pour création d\'un nouveau client');
     
     const defaultClient = getDefaultClient();
     
@@ -107,7 +127,7 @@ export function useClientInitialization(mode, idClient, dependencies = {}) {
     }
     
     return defaultClient;
-  }, [setClient, setIsLoading, validation]);
+  }, [setClient, setIsLoading, validation, logger]);
 
   // ================================
   // RETRY ET RÉCUPÉRATION D'ERREUR
@@ -119,12 +139,12 @@ export function useClientInitialization(mode, idClient, dependencies = {}) {
     const newRetryCount = retryCount + 1;
     setRetryCount(newRetryCount);
     
-    console.log(`🔄 Tentative de rechargement #${newRetryCount} pour le client:`, idClient);
+    logger.info(`🔄 Tentative de rechargement #${newRetryCount} pour le client:`, idClient);
     
     try {
       await chargerClient(idClient, { retry: true });
     } catch (error) {
-      console.error(`❌ Échec de la tentative #${newRetryCount}:`, error);
+      logger.error(`❌ Échec de la tentative #${newRetryCount}:`, error);
       
       // Après 3 échecs, proposer une action alternative
       if (newRetryCount >= 3) {
@@ -134,43 +154,36 @@ export function useClientInitialization(mode, idClient, dependencies = {}) {
         );
       }
     }
-  }, [idClient, mode, retryCount, chargerClient]);
+  }, [idClient, mode, retryCount, chargerClient, logger]);
 
   // ================================
   // RÉINITIALISATION
   // ================================
 
-  const reinitialize = useCallback(async (newMode = null, newClientId = null) => {
-    console.log('🔄 Réinitialisation du hook:', { newMode, newClientId });
+  const reinitialize = useCallback(async () => {
+    logger.info('🔄 Réinitialisation complète');
     
-    // Reset de l'état
     setIsInitialLoadDone(false);
     setIsFullyInitialized(false);
     setInitialFormData({});
     setLoadingError(null);
     setRetryCount(0);
     
-    const targetMode = newMode || mode;
-    const targetClientId = newClientId || idClient;
-    
-    // Chargement selon le mode
-    if (targetClientId && (targetMode === FORM_MODES.VIEW || targetMode === FORM_MODES.EDIT)) {
-      await chargerClient(targetClientId);
-    } else if (targetMode === FORM_MODES.CREATE) {
-      initializerForCreation();
+    if (mode === FORM_MODES.CREATE) {
+      return initializerForCreation();
+    } else if (idClient) {
+      return chargerClient(idClient);
     }
-    
-    setIsInitialLoadDone(true);
-  }, [mode, idClient, chargerClient, initializerForCreation]);
+  }, [mode, idClient, initializerForCreation, chargerClient, logger]);
 
   // ================================
   // FINALISATION DE L'INITIALISATION
   // ================================
 
   const finalizeInitialization = useCallback((client) => {
-    const currentData = getFormData(client);
+    const currentData = client ? getFormData(client) : {};
     
-    // Vérifier que nous avons des données valides
+    // Vérifier que les données sont valides
     const hasValidData = mode === FORM_MODES.CREATE ? 
       true : (currentData && Object.keys(currentData).some(key => currentData[key]));
 
@@ -178,17 +191,17 @@ export function useClientInitialization(mode, idClient, dependencies = {}) {
       setInitialFormData(currentData);
       setIsFullyInitialized(true);
       
-      console.log('🎯 Initialisation finalisée pour la détection de modifications:', {
+      logger.info('🎯 Initialisation finalisée pour la détection de modifications:', {
         mode,
         hasData: Object.keys(currentData).length > 0,
-        idClient: client.id || 'nouveau'
+        idClient: client?.id || 'nouveau'
       });
       
       return true;
     }
     
     return false;
-  }, [mode]);
+  }, [mode, logger]);
 
   // ================================
   // EFFET PRINCIPAL D'INITIALISATION
@@ -196,7 +209,7 @@ export function useClientInitialization(mode, idClient, dependencies = {}) {
 
   useEffect(() => {
     const initializeData = async () => {
-      console.log('🚀 Début d\'initialisation:', { mode, idClient });
+      logger.info('🚀 Début d\'initialisation:', { mode, idClient });
       
       try {
         if (idClient && (mode === FORM_MODES.VIEW || mode === FORM_MODES.EDIT)) {
@@ -205,7 +218,7 @@ export function useClientInitialization(mode, idClient, dependencies = {}) {
           initializerForCreation();
         }
       } catch (error) {
-        console.error('❌ Erreur lors de l\'initialisation:', error);
+        logger.error('❌ Erreur lors de l\'initialisation:', error);
       } finally {
         setIsInitialLoadDone(true);
       }
@@ -215,7 +228,7 @@ export function useClientInitialization(mode, idClient, dependencies = {}) {
     if (!isInitialLoadDone) {
       initializeData();
     }
-  }, [idClient, mode, chargerClient, initializerForCreation, isInitialLoadDone]);
+  }, [idClient, mode, chargerClient, initializerForCreation, isInitialLoadDone, logger]);
 
   // ================================
   // UTILITAIRES DE STATUS
@@ -225,21 +238,21 @@ export function useClientInitialization(mode, idClient, dependencies = {}) {
     return {
       isInitialLoadDone,
       isFullyInitialized,
-      hasError: !!loadingError,
-      error: loadingError,
+      hasError: !!loadingError || !!actionError,
+      error: loadingError || actionError?.message,
       retryCount,
-      canRetry: retryCount < 3 && !!loadingError && mode !== FORM_MODES.CREATE,
+      canRetry: retryCount < 3 && !!(loadingError || actionError) && mode !== FORM_MODES.CREATE,
       mode,
       idClient: idClient || 'nouveau'
     };
   }, [
-    isInitialLoadDone, isFullyInitialized, loadingError, 
+    isInitialLoadDone, isFullyInitialized, loadingError, actionError,
     retryCount, mode, idClient
   ]);
 
   const isReady = useCallback(() => {
-    return isInitialLoadDone && !loadingError;
-  }, [isInitialLoadDone, loadingError]);
+    return isInitialLoadDone && !loadingError && !actionError;
+  }, [isInitialLoadDone, loadingError, actionError]);
 
   // ================================
   // RETOUR DU HOOK
@@ -250,8 +263,11 @@ export function useClientInitialization(mode, idClient, dependencies = {}) {
     isInitialLoadDone,
     isFullyInitialized,
     initialFormData,
-    loadingError,
+    loadingError: loadingError || actionError?.message,
     retryCount,
+    
+    // État de chargement depuis useClientActions
+    isLoading: actionIsLoading,
     
     // Fonctions de chargement
     chargerClient,

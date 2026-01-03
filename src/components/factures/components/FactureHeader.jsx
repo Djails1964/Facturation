@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { FiFile, FiCalendar, FiCreditCard, FiDollarSign, FiClock } from 'react-icons/fi';
 import { useDateContext } from '../../../context/DateContext';
 import { getBadgeClasses, formatEtatText, formatDate, formatDateToYYYYMMDD } from '../../../utils/formatters';
-import FactureService from '../../../services/FactureService';
+import { ValidationError } from '../../shared/forms/FormField'; // ✅ AJOUT: Import du composant d'erreur unifié
 import '../../../styles/components/factures/FactureHeader.css';
 
 /**
  * Composant d'en-tête de facture standardisé
+ * ✅ MISE À JOUR: Intégration de la validation unifiée
  */
 function FactureHeader({
   numeroFacture = '',
@@ -21,11 +22,13 @@ function FactureHeader({
   documentPath = null,
   mode = 'view',
   etat = '',
-  etatAffichage = '', // ✅ NOUVEAU: Paramètre pour l'état d'affichage
+  etatAffichage = '',
   idFacture = null,
-  factureData = null
+  factureData = null,
+  // ✅ AJOUT: Props pour les erreurs de validation unifiées
+  errors = {}
 }) {
-    // ✅ AJOUT: Debug détaillé des props reçues
+    // Debug détaillé des props reçues
     console.log(`[HEADER] FactureHeader initialisé - mode: ${mode}, état: ${etat}, etatAffichage: ${etatAffichage}, idFacture: ${idFacture}`);
     console.log(`[HEADER] FactureHeader initialisé - numeroFacture: ${numeroFacture}, dateFacture: ${dateFacture}, idClient: ${idClient}`);
     
@@ -40,7 +43,8 @@ function FactureHeader({
         etat,
         etatAffichage,
         idFacture,
-        factureData
+        factureData,
+        errors // ✅ AJOUT: Log des erreurs
       });
     }
 
@@ -49,16 +53,13 @@ function FactureHeader({
   const [dateFactureFocused, setDateFactureFocused] = useState(false);
   const [clientFocused, setClientFocused] = useState(false);
 
-  // Service
-  const factureService = React.useMemo(() => new FactureService(), []);
-
   // Accéder au contexte de dates pour utiliser le DatePicker
   const { openDatePicker } = useDateContext();
 
-  // ✅ CORRECTION: Déterminer l'état à utiliser pour l'affichage
+  // Déterminer l'état à utiliser pour l'affichage
   const etatAUtiliser = etatAffichage || etat;
 
-  // ✅ AJOUT: Effect pour surveiller les changements de props
+  // Effect pour surveiller les changements de props
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       console.log('[HEADER] Props mises à jour:', {
@@ -99,7 +100,7 @@ function FactureHeader({
       title: 'Sélectionner la date de facture',
       multiSelect: false,
       confirmText: 'Confirmer la date',
-      maxDate: new Date()  // ✅ AJOUT : bloquer les dates futures
+      maxDate: new Date()
     };
     
     const callback = (dates) => {
@@ -116,20 +117,20 @@ function FactureHeader({
     openDatePicker(config, callback, initialDate ? [initialDate] : []);
   };
   
-  // Calcul des classes CSS conditionnelles
+  // ✅ MODIFIÉ: Calcul des classes CSS conditionnelles avec support des erreurs
   const getNumeroFactureInputClass = () => {
-    return `facture-header-input ${numeroFacture || numeroFactureFocused ? 'focused' : ''}`;
+    return `facture-header-input ${numeroFacture || numeroFactureFocused ? 'focused' : ''} ${errors.numeroFacture ? 'has-error' : ''}`;
   };
 
   const getDateFactureInputClass = () => {
-    return `facture-header-input ${dateFacture || dateFactureFocused ? 'focused' : ''}`;
+    return `facture-header-input ${dateFacture || dateFactureFocused ? 'focused' : ''} ${errors.dateFacture ? 'has-error' : ''}`;
   };
 
   const getClientInputClass = () => {
-    return `facture-header-input ${idClient || clientFocused ? 'focused' : ''}`;
+    return `facture-header-input ${idClient || clientFocused ? 'focused' : ''} ${errors.idClient ? 'has-error' : ''}`;
   };
 
-  // ✅ AJOUT: Affichage conditionnel pour debug
+  // Affichage conditionnel pour debug
   if (process.env.NODE_ENV === 'development' && mode === 'view' && !numeroFacture && !dateFacture) {
     console.warn('[HEADER] Mode VIEW sans données - possible problème de timing');
   }
@@ -137,7 +138,7 @@ function FactureHeader({
   return (
     <div className="facture-header-container">
       
-      {/* ✅ CORRIGÉ: Badge d'état utilise etatAUtiliser (etatAffichage en priorité) */}
+      {/* Badge d'état utilise etatAUtiliser (etatAffichage en priorité) */}
       {readOnly && etatAUtiliser && (
         <div className="facture-header-etat-simple">
           <span className={getBadgeClasses(etatAUtiliser)}>
@@ -162,10 +163,14 @@ function FactureHeader({
               required
               disabled={true}
               placeholder=" "
+              aria-invalid={!!errors.numeroFacture}
+              aria-describedby={errors.numeroFacture ? "numeroFacture-error" : undefined}
             />
             <label htmlFor="numeroFacture" className="required">
               Numéro de facture
             </label>
+            {/* ✅ AJOUT: Message d'erreur unifié */}
+            <ValidationError message={errors.numeroFacture} />
           </div>
         </div>
 
@@ -188,6 +193,8 @@ function FactureHeader({
                   required
                   placeholder=" "
                   max={new Date().toISOString().split('T')[0]}
+                  aria-invalid={!!errors.dateFacture}
+                  aria-describedby={errors.dateFacture ? "dateFacture-error" : undefined}
                 />
                 <FiCalendar 
                   className="facture-calendar-icon" 
@@ -198,6 +205,8 @@ function FactureHeader({
             <label htmlFor="dateFacture" className="required">
               Date de facture
             </label>
+            {/* ✅ AJOUT: Message d'erreur unifié */}
+            {!readOnly && <ValidationError message={errors.dateFacture} />}
           </div>
           
           {/* Bouton document si présent et en mode lecture */}
@@ -235,6 +244,8 @@ function FactureHeader({
                 onBlur={() => setClientFocused(false)}
                 disabled={readOnly || clientsLoading}
                 required
+                aria-invalid={!!errors.idClient}
+                aria-describedby={errors.idClient ? "idClient-error" : undefined}
               >
                 {mode === 'create' && <option value="">Sélectionnez un client</option>}
                 {clients.map(client => (
@@ -248,6 +259,8 @@ function FactureHeader({
               Client
             </label>
             {clientsLoading && <span className="loading-indicator">Chargement...</span>}
+            {/* ✅ AJOUT: Message d'erreur unifié */}
+            {!readOnly && <ValidationError message={errors.idClient} />}
           </div>
         </div>
         

@@ -1,6 +1,6 @@
 // src/components/users/hooks/useUsers.js
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useLogger } from '../../../hooks/useLogger';
+import { createLogger } from '../../../utils/createLogger';
 import authService from '../../../services/authService';
 
 /**
@@ -11,7 +11,7 @@ import authService from '../../../services/authService';
  * @returns {Object} { users, loading, error, fetchUsers, createUser, updateUser, deleteUser }
  */
 export const useUsers = () => {
-  const { log } = useLogger('useUsers');
+  const log  = createLogger('useUsers');
 
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);

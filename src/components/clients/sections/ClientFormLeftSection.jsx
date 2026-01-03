@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { toBoolean } from '../../../utils/booleanHelper';
+import { createLogger } from '../../../utils/createLogger';
 
 /**
  * Section gauche du formulaire avec le switch thérapeute et le select titre
@@ -15,6 +16,9 @@ function ClientFormLeftSection({
   fieldErrors = {},
   className = ''
 }) {
+
+  // ✅ Initialisation du logger
+  const logger = createLogger('ClientFormLeftSection');
   
   const sectionClasses = ['form-left-section'];
   if (className) sectionClasses.push(className);

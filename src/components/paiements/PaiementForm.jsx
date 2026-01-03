@@ -16,7 +16,7 @@ import PaiementFormPaiementSection from './sections/PaiementFormPaiementSection'
 import PaiementFormSystemInfoSection from './sections/PaiementFormSystemInfoSection';
 import PaiementFormActions from './sections/PaiementFormActions';
 
-// ✅ AJOUT : Import des hooks personnalisés
+// Import des hooks personnalisés
 import { usePaiementForm } from './hooks/usePaiementForm';
 import { usePaiementFormLogic } from './hooks/usePaiementFormLogic';
 import { usePaiementFormHandlers } from './hooks/usePaiementFormHandlers';
@@ -52,7 +52,7 @@ function PaiementForm({
         hasOnPaiementCreated: !!onPaiementCreated
     });
 
-    // ✅ UTILISATION DES HOOKS PERSONNALISÉS
+    // UTILISATION DES HOOKS PERSONNALISÉS
     
     // Hook principal pour l'état du formulaire
     const formState = usePaiementForm({ mode, idPaiement, onRetourListe, onPaiementCreated });
@@ -63,10 +63,10 @@ function PaiementForm({
     // Hook pour la validation
     const formValidation = usePaiementFormValidation(formState);
     
-    // Hook pour les gestionnaires d'événements (✅ PASSER formValidation en 3ème paramètre)
+    // Hook pour les gestionnaires d'événements (passer formValidation en 3ème paramètre)
     const formHandlers = usePaiementFormHandlers(formState, formLogic, formValidation);
 
-    // ✅ EXTRACTION DES DONNÉES ET FONCTIONS DEPUIS LES HOOKS
+    // EXTRACTION DES DONNÉES ET FONCTIONS DEPUIS LES HOOKS
     const {
         paiement,
         factures,
@@ -94,12 +94,12 @@ function PaiementForm({
         handleInputChange,
         handleFactureChange,
         handleSubmit,
-        handleCancel,              // ✅ AJOUT pour le retour
+        handleCancel,
         handleAnnulerPaiement,
         handleOpenDateModal
     } = formHandlers;
 
-    // ✅ EFFET D'INITIALISATION - VERSION SIMPLIFIÉE
+    // EFFET D'INITIALISATION
     useEffect(() => {
         const initialize = async () => {
             console.log('🚀 Initialisation PaiementForm:', { mode, idPaiement });
@@ -112,9 +112,9 @@ function PaiementForm({
                 
                 // 2. Charger le paiement et les logs en mode édition/visualisation
                 if (idPaiement && (isEdit || isView)) {
-                    await chargerFactures(); // D'abord les factures
-                    await chargerPaiement(); // Puis le paiement
-                    await chargerLogsUtilisateur(idPaiement); // ✅ ENFIN LES LOGS
+                    await chargerFactures();
+                    await chargerPaiement();
+                    await chargerLogsUtilisateur(idPaiement);
                 }
                 
                 console.log('✅ Initialisation terminée');
@@ -127,12 +127,12 @@ function PaiementForm({
         initialize();
     }, [mode, idPaiement, isCreate, isEdit, isView]);
 
-    // ✅ FONCTION UTILITAIRE POUR LA DATE
+    // FONCTION UTILITAIRE POUR LA DATE
     const getTodayDate = useCallback(() => {
         return new Date().toISOString().split('T')[0];
     }, []);
 
-    // ✅ CALCUL DU MONTANT RESTANT
+    // CALCUL DU MONTANT RESTANT
     const calculateMontantRestant = useCallback((facture) => {
         if (!facture) return 0;
         
@@ -140,7 +140,7 @@ function PaiementForm({
             (facture.totalAvecRistourne - (facture.montantPayeTotal || 0));
     }, []);
 
-    // ✅ GESTION DU TITRE DU FORMULAIRE
+    // GESTION DU TITRE DU FORMULAIRE
     const getTitreFormulaire = () => {
         if (isPaiementAnnule) {
             return isEdit ? FORM_TITLES.EDIT_CANCELLED : FORM_TITLES.VIEW_CANCELLED;
@@ -158,7 +158,7 @@ function PaiementForm({
         }
     };
 
-    // ✅ AFFICHAGE CONDITIONNEL DU CHARGEMENT
+    // AFFICHAGE CONDITIONNEL DU CHARGEMENT
     if (isLoading) {
         return (
             <div className="form-container">
@@ -170,7 +170,7 @@ function PaiementForm({
         );
     }
 
-    // ✅ AFFICHAGE CONDITIONNEL DES ERREURS
+    // AFFICHAGE CONDITIONNEL DES ERREURS
     if (error) {
         return (
             <div className="form-container">
@@ -190,9 +190,10 @@ function PaiementForm({
         );
     }
 
-    // ✅ RENDU PRINCIPAL DU COMPOSANT
+    // RENDU PRINCIPAL DU COMPOSANT
     console.log('🔍 DEBUG PaiementForm - logsInfo:', logsInfo);
     console.log('🔍 DEBUG PaiementForm - factureSelectionnee:', factureSelectionnee);
+    
     return (
         <DateProvider>
             <div className="form-container">
@@ -214,31 +215,33 @@ function PaiementForm({
 
                     {/* Section de sélection de facture */}
                     <PaiementFormFactureSection
-                        isCreate={isCreate}                    // ✅ AJOUT
+                        isCreate={isCreate}
                         paiement={paiement}
-                        onInputChange={handleInputChange}       // ✅ CORRECTION
+                        onInputChange={handleInputChange}
                         factures={factures}
-                        facturesLoading={facturesLoading}       // ✅ CORRECTION (était isLoading)
+                        facturesLoading={facturesLoading}
                         factureSelectionnee={factureSelectionnee}
                     />
 
-                    {/* Section des détails du paiement */}
-                    <PaiementFormPaiementSection
-                        paiement={paiement}
-                        onInputChange={handleInputChange}
-                        onOpenDateModal={handleOpenDateModal}
-                        isReadOnly={isReadOnly}
-                        isPaiementAnnule={isPaiementAnnule}
-                        factureSelectionnee={factureSelectionnee}
-                        isCreate={isCreate}  // ✅ AJOUT de la prop isCreate
-                    />
+                    {/* Section des détails du paiement - Affichée seulement si facture sélectionnée en création */}
+                    {(!isCreate || factureSelectionnee) && (
+                        <PaiementFormPaiementSection
+                            paiement={paiement}
+                            onInputChange={handleInputChange}
+                            onOpenDateModal={handleOpenDateModal}
+                            isReadOnly={isReadOnly}
+                            isPaiementAnnule={isPaiementAnnule}
+                            factureSelectionnee={factureSelectionnee}
+                            isCreate={isCreate}
+                        />
+                    )}
 
                     {/* Section des informations système et logs */}
                     {!isCreate && (
                         <PaiementFormSystemInfoSection
-                            logsInfo={logsInfo}           // ✅ LOGS FOURNIS PAR LE HOOK
+                            logsInfo={logsInfo}
                             paiement={paiement}
-                            logsLoading={logsLoading}     // ✅ ÉTAT DE CHARGEMENT
+                            logsLoading={logsLoading}
                         />
                     )}
 
@@ -249,8 +252,9 @@ function PaiementForm({
                         isReadOnly={isReadOnly}
                         isPaiementAnnule={isPaiementAnnule}
                         isCreate={isCreate}
-                        onCancel={handleCancel}  // ✅ CORRECTION: La prop s'appelle onCancel, pas onRetourListe
+                        onCancel={handleCancel}
                         onAnnulerPaiement={handleAnnulerPaiement}
+                        isFormValid={formValidation.isFormValid()}
                     />
 
                 </form>

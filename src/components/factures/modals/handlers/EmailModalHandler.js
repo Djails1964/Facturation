@@ -3,6 +3,7 @@
 import React from 'react';
 import { emailClientSenderUrlWithSession } from '../../../../utils/urlHelper';
 import ModalComponents from '../../../shared/ModalComponents';
+import { createLogger } from '../../../../utils/createLogger';
 
 /**
  * Gestionnaire pour la modal d'envoi d'email - VERSION FINALE NETTOYÉE
@@ -11,7 +12,7 @@ import ModalComponents from '../../../shared/ModalComponents';
  */
 export class EmailModalHandler {
     constructor(dependencies) {
-        this.factureService = dependencies.factureService;
+        this.factureActions = dependencies.factureActions;
         this.showCustom = dependencies.showCustom;
         this.showLoading = dependencies.showLoading;
         this.formatMontant = dependencies.formatMontant;
@@ -22,6 +23,8 @@ export class EmailModalHandler {
         this.chargerFactures = dependencies.chargerFactures;
         
         this.isDevelopment = this.detectDevelopment();
+
+        this.log = createLogger('EmailModalHandler');
     }
 
     /**
@@ -49,7 +52,7 @@ export class EmailModalHandler {
             }
 
         } catch (error) {
-            console.error('❌ Erreur préparation email:', error);
+            this.log.error('❌ Erreur préparation email:', error);
             await this.showError(error.message, anchorRef);
         }
     }
@@ -67,11 +70,11 @@ export class EmailModalHandler {
                 position: 'smart'
             },
             async () => {
-                const facture = await this.factureService.getFacture(idFacture);
+                const facture = await this.factureActions.chargerFacture(idFacture);  // ✅
                 
                 let pdfResult = null;
                 try {
-                    pdfResult = await this.factureService.getFactureUrl(idFacture);
+                    pdfResult = await this.factureActions.getFactureUrl(idFacture);
                     console.log(`✅ Résultat getFactureUrl:`, pdfResult);
                 } catch (error) {
                     console.log(`❌ Erreur getFactureUrl: ${error.message}`);
@@ -373,7 +376,7 @@ export class EmailModalHandler {
                     size: 'small',
                     position: 'smart'
                 },
-                async () => await this.factureService.envoyerFactureParEmail(idFacture, emailDataToSend)
+                async () => await this.factureActions.envoyerFactureParEmail(idFacture, emailDataToSend) 
             );
             
             if (sendResult.success) {
@@ -413,20 +416,20 @@ export class EmailModalHandler {
             );
             
             if (popup && !popup.closed) {
-                console.log('✅ Popup ouverte avec succès');
+                this.log.debug('✅ Popup ouverte avec succès');
                 
                 // ✅ AMÉLIORATION: Surveiller la fermeture de la popup
                 this.monitorPopupClosure(popup, formData);
                 
-                // ✅ Notification discrète
-                this.onSetNotification('Interface email moderne préparée', 'success');
+                // // ✅ Notification discrète
+                // this.onSetNotification('Interface email moderne préparée', 'success');
                 
             } else {
-                console.warn('❌ Popup bloquée par le navigateur');
+                this.log.warn('❌ Popup bloquée par le navigateur');
                 await this.handleBlockedPopup(clientPageUrl, sendResult, formData, anchorRef);
             }
         } catch (error) {
-            console.error('❌ Erreur ouverture popup:', error);
+            this.log.error('❌ Erreur ouverture popup:', error);
             await this.handlePopupError(clientPageUrl, sendResult, formData, anchorRef);
         }
     }
@@ -439,7 +442,7 @@ export class EmailModalHandler {
         const checkClosed = setInterval(() => {
             if (popup.closed) {
                 clearInterval(checkClosed);
-                console.log('✅ Popup fermée automatiquement');
+                this.log.debug('✅ Popup fermée automatiquement');
                 
                 // Notification de succès finale
                 this.onSetNotification(
@@ -456,7 +459,7 @@ export class EmailModalHandler {
         setTimeout(() => {
             if (!popup.closed) {
                 clearInterval(checkClosed);
-                console.log('⚠️ Arrêt de la surveillance popup (timeout)');
+                this.log.debug('⚠️ Arrêt de la surveillance popup (timeout)');
             }
         }, 600000); // 10 minutes
     }

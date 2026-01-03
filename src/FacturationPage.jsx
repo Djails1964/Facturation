@@ -15,10 +15,14 @@ import GestionUtilisateurs from './components/users/GestionUtilisateurs';
 import { GestionParametres } from './components/parametres';
 import AdminDashboard from './components/AdminDashboard';
 import { useNavigationGuard } from './App';
+import { createLogger } from './utils/createLogger';
 import { APP_VERSION } from './version';
 import './FacturationPage.css';
 
 const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
+
+  const log = createLogger('FacturationPage');
+
   const [activeSection, setActiveSection] = useState(initialSection);
   const [clientCreatedId, setClientCreatedId] = useState(null);
   const [factureCreatedId, setFactureCreatedId] = useState(null);
@@ -65,12 +69,12 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
   const handleSectionChange = (newSection) => {
     interceptNavigation(
       () => {
-        console.log('📄 Changement de section:', activeSection, '->', newSection);
+        log.info('📄 Changement de section:', activeSection, '->', newSection);
         
         // Si on quitte les tarifs, incrémenter la clé pour forcer le remontage au retour
         if (activeSection === 'tarifs' && newSection !== 'tarifs') {
           setTarifKey(prev => prev + 1);
-          console.log('🔑 Clé tarifs incrémentée pour réinitialisation future');
+          log.debug('🔑 Clé tarifs incrémentée pour réinitialisation future');
         }
         
         setActiveSection(newSection);
@@ -91,7 +95,7 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
   };
 
   const handleTarifIntegrationAction = useCallback((action, data) => {
-    console.log('📄 Action tarif:', action, data);
+    log.debug('📄 Action tarif:', action, data);
     
     setTarifIntegration(prev => ({
       ...prev,

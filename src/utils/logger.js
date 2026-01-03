@@ -9,6 +9,14 @@
  *   logger.warn('Avertissement');
  *   logger.error('Erreur');
  *   
+ * ✅ Avec groupes:
+ *   logger.group('Titre du groupe');
+ *   logger.debug('Message dans le groupe');
+ *   logger.groupEnd();
+ *   
+ * ✅ Avec tables:
+ *   logger.table([{ id: 1, nom: 'Test' }]);
+ *   
  * Configuration :
  *   logger.setEnabled(true/false);  // Activer/désactiver globalement
  *   logger.setLevel('debug');       // Définir le niveau minimum
@@ -88,15 +96,72 @@ class Logger {
   }
 
   /**
+   * ✅ NOUVEAU: Créer un groupe de logs
+   * Utilisation:
+   *   logger.group('Titre du groupe');
+   *   logger.debug('Message 1');
+   *   logger.debug('Message 2');
+   *   logger.groupEnd();
+   */
+  group(title, level = 'info') {
+    if (this.shouldLog(level)) {
+      console.group(`%c[${level.toUpperCase()}]%c ${title}`, `color: #0066cc; font-weight: bold;`, '');
+    }
+  }
+
+  /**
+   * ✅ NOUVEAU: Créer un groupe de logs collapsé
+   * Utilisation:
+   *   logger.groupCollapsed('Titre du groupe');
+   *   logger.debug('Message 1');
+   *   logger.groupEnd();
+   */
+  groupCollapsed(title, level = 'debug') {
+    if (this.shouldLog(level)) {
+      console.groupCollapsed(`%c[${level.toUpperCase()}]%c ${title}`, `color: #888; font-weight: normal;`, '');
+    }
+  }
+
+  /**
+   * ✅ NOUVEAU: Fermer un groupe de logs
+   */
+  groupEnd() {
+    if (this.enabled) {
+      console.groupEnd();
+    }
+  }
+
+  /**
+   * ✅ NOUVEAU: Afficher un tableau
+   * Utilisation:
+   *   logger.table([
+   *     { id: 1, nom: 'Alice', age: 30 },
+   *     { id: 2, nom: 'Bob', age: 25 }
+   *   ]);
+   */
+  table(data, level = 'debug') {
+    if (this.shouldLog(level)) {
+      console.table(data);
+    }
+  }
+
+  /**
    * Logger avec un préfixe (pour les modules)
    * Utile pour tracer d'où vient le log
+   * ✅ Inclut les groupes et tables
    */
   withPrefix(prefix) {
     return {
       debug: (message, data) => this.debug(`[${prefix}] ${message}`, data),
       info: (message, data) => this.info(`[${prefix}] ${message}`, data),
       warn: (message, data) => this.warn(`[${prefix}] ${message}`, data),
-      error: (message, data) => this.error(`[${prefix}] ${message}`, data)
+      error: (message, data) => this.error(`[${prefix}] ${message}`, data),
+      // ✅ Groupes avec préfixe
+      group: (title, level) => this.group(`[${prefix}] ${title}`, level),
+      groupCollapsed: (title, level) => this.groupCollapsed(`[${prefix}] ${title}`, level),
+      groupEnd: () => this.groupEnd(),
+      // ✅ Table avec préfixe (optionnel)
+      table: (data, level) => this.table(data, level)
     };
   }
 
@@ -118,7 +183,7 @@ class Logger {
       return;
     }
     this.level = level;
-    this.info(`Niveau de logging défini à: ${level}`);
+    this.info(`Niveau de logging défini à : ${level}`);
   }
 
   /**

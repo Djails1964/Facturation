@@ -1,5 +1,9 @@
+// src/components/paiements/hooks/usePaiementsData.js
+// ✅ VERSION REFACTORISÉE - Utilise usePaiementActions au lieu de PaiementService
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import PaiementService from '../../../services/PaiementService';
+import { usePaiementActions } from './usePaiementActions'; // ✅ CHANGÉ
+import { createLogger } from '../../../utils/createLogger';
 
 /**
  * Hook personnalisé pour gérer les données des paiements
@@ -10,11 +14,15 @@ import PaiementService from '../../../services/PaiementService';
  * - Gère l'état de chargement et les erreurs
  * - Maintient la sélection du paiement actif
  * 
+ * ✅ REFACTORISÉ : Utilise usePaiementActions au lieu de PaiementService direct
+ * 
  * @param {Object} filtres - Filtres à appliquer (annee, mois, methode, idClient, statut)
  * @param {number|null} nouveauPaiementId - ID d'un paiement nouvellement créé à sélectionner
  * @returns {Object} État des paiements et fonctions de gestion
  */
 export function usePaiementsData(filtres, nouveauPaiementId) {
+
+    const log = createLogger('usePaiementsData');
     // ============================================
     // ÉTAT LOCAL
     // ============================================
@@ -34,8 +42,8 @@ export function usePaiementsData(filtres, nouveauPaiementId) {
     // ID du paiement actuellement sélectionné dans l'interface
     const [paiementSelectionne, setPaiementSelectionne] = useState(null);
     
-    // Instance du service pour les appels API
-    const paiementService = new PaiementService();
+    // ✅ Utilisation de usePaiementActions
+    const paiementActions = usePaiementActions();
 
     // ============================================
     // CHARGEMENT DES DONNÉES DEPUIS L'API
@@ -45,6 +53,8 @@ export function usePaiementsData(filtres, nouveauPaiementId) {
      * Charge les paiements depuis l'API
      * Filtre uniquement par année côté serveur pour optimiser les performances
      * Les autres filtres (statut, méthode, etc.) sont appliqués côté client
+     * 
+     * ✅ REFACTORISÉ : Utilise paiementActions.chargerPaiements()
      */
     const chargerPaiements = useCallback(async () => {
         setIsLoading(true);
@@ -59,20 +69,20 @@ export function usePaiementsData(filtres, nouveauPaiementId) {
                 limit: 50
             };
             
-            // Appel à l'API
-            const result = await paiementService.chargerPaiements(options);
+            // ✅ Appel à l'API via paiementActions
+            const result = await paiementActions.chargerPaiements(options);
             
             // Mise à jour de l'état avec les données reçues
             setPaiements(result.paiements || []);
             setPagination(result.pagination);
             
         } catch (err) {
-            console.error('Erreur lors du chargement des paiements:', err);
+            log.error('Erreur lors du chargement des paiements:', err);
             setError('Erreur lors du chargement des paiements: ' + err.message);
         } finally {
             setIsLoading(false);
         }
-    }, [filtres.annee]); // Recharger uniquement si l'année change
+    }, [filtres.annee, paiementActions]); // ✅ AJOUTÉ paiementActions dans les dépendances
 
     // ============================================
     // FILTRAGE CÔTÉ CLIENT

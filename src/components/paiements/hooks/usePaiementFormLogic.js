@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import DateService from '../../../utils/DateService';
+import { createLogger } from '../../../utils/createLogger';
 import { 
     VALIDATION_MESSAGES, 
     NOTIFICATIONS, 
@@ -10,7 +11,6 @@ import {
 } from '../../../constants/paiementConstants';
 import activityLogsService from '../../../services/activityLogsService';
 import authService from '../../../services/authService';
-import PaiementService from '../../../services/PaiementService';
 
 // ✅ CACHE GLOBAL pour les utilisateurs
 const usersCache = new Map();
@@ -20,22 +20,24 @@ export const usePaiementFormLogic = (formState) => {
         paiement, setPaiement, factures, setFactures, factureSelectionnee, setFactureSelectionnee,
         logsInfo, setLogsInfo, isLoading, setIsLoading, error, setError, logsLoading, setLogsLoading,
         facturesLoading, setFacturesLoading, isCreate, isEdit, mode, idPaiement,
-        paiementService, factureService, setIsInitialLoadDone, setIsFullyInitialized,
+        paiementActions, factureActions, setIsInitialLoadDone, setIsFullyInitialized,
         getFormData, setInitialFormData
     } = formState;
     
+    const logLine = createLogger('usePaiementFormLogic');
+
     // ✅ FONCTION DE CACHE pour les utilisateurs
     const getCachedUserDetails = async (userId) => {
         if (usersCache.has(userId)) {
-            console.log(`📦 Cache HIT pour utilisateur ${userId}`);
+            logLine.debug(`📦 Cache HIT pour utilisateur ${userId}`);
             return usersCache.get(userId);
         }
         
-        console.log(`🌐 Cache MISS pour utilisateur ${userId} - Appel API`);
+        logLine.debug(`🌐 Cache MISS pour utilisateur ${userId} - Appel API`);
         try {
             const userResponse = await authService.getUserById(userId);
             
-            console.log(`📥 DEBUG - Réponse authService.getUserById(${userId}):`, userResponse);
+            logLine.debug(`📥 DEBUG - Réponse authService.getUserById(${userId}):`, userResponse);
             
             if (userResponse.success && userResponse.utilisateur) { // ✅ CORRECTION: utilisateur au lieu de user
                 const userDetails = {
@@ -44,17 +46,17 @@ export const usePaiementFormLogic = (formState) => {
                     username: userResponse.utilisateur.username || 'Username manquant' // ✅ CORRECTION: utilisateur.username
                 };
                 
-                console.log(`✅ Utilisateur ${userId} mis en cache:`, userDetails);
+                logLine.debug(`✅ Utilisateur ${userId} mis en cache:`, userDetails);
                 usersCache.set(userId, userDetails);
                 return userDetails;
             } else {
-                console.log(`❌ API failed - success: ${userResponse.success}, hasUtilisateur: ${!!userResponse.utilisateur}`);
+                logLine.debug(`❌ API failed - success: ${userResponse.success}, hasUtilisateur: ${!!userResponse.utilisateur}`);
                 const fallbackDetails = { prenom: '', nom: '', username: 'API Failed' };
                 usersCache.set(userId, fallbackDetails);
                 return fallbackDetails;
             }
         } catch (error) {
-            console.error(`❌ Exception getUserById(${userId}):`, error);
+            logLine.error(`❌ Exception getUserById(${userId}):`, error);
             const fallbackDetails = { prenom: '', nom: '', username: 'Exception: ' + error.message };
             usersCache.set(userId, fallbackDetails);
             return fallbackDetails;
@@ -80,13 +82,13 @@ export const usePaiementFormLogic = (formState) => {
     // Chargement initial
     useEffect(() => {
         const loadData = async () => {
-            console.log('🚀 Début loadData:', { mode, idPaiement, isEdit, isCreate });
+            logLine.debug('🚀 Début loadData:', { mode, idPaiement, isEdit, isCreate });
             if (isEdit || mode === 'view') {
-                console.log('📥 Appel chargerPaiement pour:', idPaiement);
+                logLine.debug('📥 Appel chargerPaiement pour:', idPaiement);
                 await chargerPaiement();
             }
             if (isCreate) {
-                console.log('📋 Mode création - chargement factures');
+                logLine.debug('📋 Mode création - chargement factures');
                 await chargerFactures();
                 setPaiement(prev => ({
                     ...prev,
@@ -127,17 +129,17 @@ export const usePaiementFormLogic = (formState) => {
     // Fonctions de chargement
     const chargerPaiement = async () => {
         if (!idPaiement) {
-            console.log('❌ Pas de idPaiement:', idPaiement);
+            logLine.debug('❌ Pas de idPaiement:', idPaiement);
             return;
         }
-        console.log('🔄 Début chargement paiement:', idPaiement);
+        logLine.debug('🔄 Début chargement paiement:', idPaiement);
         setIsLoading(true);
         setError(null);
         
         try {
-            console.log('📥 Appel API paiementService.getPaiement avec ID:', idPaiement);
-            const paiementData = await paiementService.getPaiement(idPaiement);
-            console.log('🔥 Données brutes reçues:', paiementData);
+            logLine.debug('🌐 Appel API paiementActions.getPaiement avec ID:', idPaiement);
+            const paiementData = await paiementActions.getPaiement(idPaiement);
+            logLine.debug('🔥 Données brutes reçues:', paiementData);
             if (paiementData) {
                 const newPaiement = {
                     idFacture: paiementData.idFacture,
@@ -151,20 +153,20 @@ export const usePaiementFormLogic = (formState) => {
                     dateAnnulation: paiementData.dateAnnulation || ''
                 };
                 
-                console.log('🎯 Nouvel état paiement:', newPaiement);
+                logLine.debug('🎯 Nouvel état paiement:', newPaiement);
                 setPaiement(newPaiement);
                 
                 // ✅ AMÉLIORATION: Chargement de la facture avec plus de debug
                 if (paiementData.idFacture) {
-                    console.log('🔄 Chargement facture:', paiementData.idFacture);
-                    console.log('🔍 Type idFacture:', typeof paiementData.idFacture);
+                    logLine.debug('🔄 Chargement facture:', paiementData.idFacture);
+                    logLine.debug('🔍 Type idFacture:', typeof paiementData.idFacture);
                     
                     try {
-                        const factureData = await factureService.getFacture(paiementData.idFacture);
-                        console.log('🔥 Données facture reçues:', factureData);
+                        const factureData = await factureActions.chargerFacture(paiementData.idFacture);
+                        logLine.debug('🔥 Données facture reçues:', factureData);
                         
                         if (factureData) {
-                            console.log('✅ Facture chargée avec succès:', {
+                            logLine.debug('✅ Facture chargée avec succès:', {
                                 id: factureData.idFacture,
                                 numero: factureData.numeroFacture,
                                 client: factureData.client,
@@ -172,29 +174,29 @@ export const usePaiementFormLogic = (formState) => {
                             });
                             setFactureSelectionnee(factureData);
                         } else {
-                            console.log('❌ Aucune donnée de facture retournée');
+                            logLine.debug('❌ Aucune donnée de facture retournée');
                             setError('Impossible de charger les détails de la facture');
                         }
                     } catch (factureError) {
-                        console.error('❌ Erreur lors du chargement de la facture:', factureError);
+                        logLine.error('❌ Erreur lors du chargement de la facture:', factureError);
                         setError('Erreur lors du chargement de la facture: ' + factureError.message);
                     }
                 } else {
-                    console.log('⚠️ Aucun idFacture dans les données du paiement');
-                    console.log('⚠️ Données complètes du paiement:', paiementData);
+                    logLine.debug('⚠️ Aucun idFacture dans les données du paiement');
+                    logLine.debug('⚠️ Données complètes du paiement:', paiementData);
                 }
                 
                 await chargerLogsUtilisateur(idPaiement);
             } else {
-                console.log('❌ Aucune donnée de paiement reçue');
+                logLine.debug('❌ Aucune donnée de paiement reçue');
                 setError(VALIDATION_MESSAGES.PAIEMENT_NON_TROUVE);
             }
         } catch (error) {
-            console.error('❌ Erreur lors du chargement du paiement:', error);
+            logLine.error('❌ Erreur lors du chargement du paiement:', error);
             setError(NOTIFICATIONS.ERROR.LOAD + ': ' + error.message);
         } finally {
             setIsLoading(false);
-            console.log('✅ Fin chargement paiement');
+            logLine.debug('✅ Fin chargement paiement');
         }
     };
     
@@ -203,16 +205,16 @@ export const usePaiementFormLogic = (formState) => {
         setFacturesLoading(true);
         
         try {
-            console.log('🔄 Chargement des factures payables...');
+            logLine.debug('🔄 Chargement des factures payables...');
             
             // ✅ CORRECTION: Utiliser getFacturesPayables au lieu de chargerFactures + filtrage manuel
-            const facturesPayables = await factureService.getFacturesPayables();
+            const facturesPayables = await factureActions.chargerFacturesPayables();
             
-            console.log('📋 Factures payables reçues:', facturesPayables);
-            console.log('📊 Nombre de factures:', facturesPayables?.length || 0);
+            logLine.debug('📋 Factures payables reçues:', facturesPayables);
+            logLine.debug('📊 Nombre de factures:', facturesPayables?.length || 0);
             
             if (!facturesPayables || facturesPayables.length === 0) {
-                console.warn('⚠️ Aucune facture payable trouvée');
+                logLine.warn('⚠️ Aucune facture payable trouvée');
                 setFactures([]);
                 return;
             }
@@ -221,7 +223,7 @@ export const usePaiementFormLogic = (formState) => {
             const facturesEnrichies = await Promise.all(
                 facturesPayables.map(async (facture) => {
                     try {
-                        const factureComplete = await factureService.getFacture(facture.id || facture.idFacture);
+                        const factureComplete = await factureActions.chargerFacture(facture.id || facture.idFacture);
                         if (factureComplete) {
                             return {
                                 ...facture,
@@ -236,7 +238,7 @@ export const usePaiementFormLogic = (formState) => {
                         }
                         return facture;
                     } catch (error) {
-                        console.error(`Erreur lors de l'enrichissement de la facture ${facture.id || facture.idFacture}:`, error);
+                        logLine.error(`Erreur lors de l'enrichissement de la facture ${facture.id || facture.idFacture}:`, error);
                         return facture;
                     }
                 })
@@ -249,11 +251,11 @@ export const usePaiementFormLogic = (formState) => {
                 return montantRestant > 0;
             });
             
-            console.log('✅ Factures enrichies et filtrées:', facturesAvecMontantRestant);
+            logLine.debug('✅ Factures enrichies et filtrées:', facturesAvecMontantRestant);
             setFactures(facturesAvecMontantRestant);
             
         } catch (error) {
-            console.error('❌ Erreur lors du chargement des factures:', error);
+            logLine.error('❌ Erreur lors du chargement des factures:', error);
             setError('Impossible de charger les factures: ' + error.message);
             setFactures([]);
         } finally {
@@ -272,7 +274,7 @@ export const usePaiementFormLogic = (formState) => {
                 entity_id: idPaiement,
                 action_type: `${LOG_ACTIONS.PAIEMENT_CREATE},${LOG_ACTIONS.PAIEMENT_UPDATE},${LOG_ACTIONS.PAIEMENT_CANCEL}`
             });
-            console.log('chargerLogsUtilisateur - getLogs - logsResponse:', logsResponse);
+            logLine.debug('chargerLogsUtilisateur - getLogs - logsResponse:', logsResponse);
             
             if (logsResponse.success && logsResponse.logs) {
                 const logs = logsResponse.logs;
@@ -282,6 +284,7 @@ export const usePaiementFormLogic = (formState) => {
                 const enrichedLogs = [];
                 
                 for (const log of logs) {
+                    logLine.debug("chargerLogsUtilisateur - ligne de log : ", log);
                     const userName = await formatUserNameWithCache(log);
                     const actionLabel = getActionLabel(log.action_type);
                     const modificationDetails = parseModificationDetails(log.details);
@@ -294,7 +297,7 @@ export const usePaiementFormLogic = (formState) => {
                         actionType: log.action_type
                     });
                     
-                    console.log(`🔄 DEBUG - Log enrichi:`, {
+                    logLine.debug(`🔄 DEBUG - Log enrichi:`, {
                         action: actionLabel,
                         userName: userName,
                         date: log.created_at,
@@ -308,11 +311,11 @@ export const usePaiementFormLogic = (formState) => {
                     allLogs: enrichedLogs // Tous les logs enrichis
                 };
                 
-                console.log('📊 DEBUG - Tous les logs enrichis:', enrichedLogs);
+                logLine.debug('📊 DEBUG - Tous les logs enrichis:', enrichedLogs);
                 setLogsInfo(newLogsInfo);
             }
         } catch (error) {
-            console.error('❌ Erreur lors du chargement des logs utilisateur:', error);
+            logLine.error('❌ Erreur lors du chargement des logs utilisateur:', error);
         } finally {
             setLogsLoading(false);
         }
@@ -362,7 +365,7 @@ export const usePaiementFormLogic = (formState) => {
             
             return changes.length > 0 ? changes : null;
         } catch (error) {
-            console.error('❌ Erreur parsing détails:', error);
+            logLine.error('❌ Erreur parsing détails:', error);
             return null;
         }
     };
@@ -409,8 +412,8 @@ export const usePaiementFormLogic = (formState) => {
 
     // ✅ FONCTION pour formater les méthodes de paiement
     const formatMethodePaiement = (methode) => {
-        const paiementService = new PaiementService();
-        return paiementService.formatMethodePaiement(methode);
+        return paiementActions.formatMethodePaiement(methode); // 2705 CHANGÉ
+        return paiementActions.formatMethodePaiement(methode); // 2705 CHANGÉ
     };
     
     const extractUserName = (log) => {
@@ -431,7 +434,7 @@ export const usePaiementFormLogic = (formState) => {
         getCachedUserDetails,
         clearUsersCache: () => {
             usersCache.clear();
-            console.log('🧹 Cache utilisateurs vidé');
+            logLine.debug('🧹 Cache utilisateurs vidé');
         },
         getCacheStats: () => ({
             size: usersCache.size,

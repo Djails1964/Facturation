@@ -3,6 +3,7 @@
 
 import React, { useEffect } from 'react';
 import { showConfirm } from '../../../utils/modalSystem';
+import { createLogger } from '../../../utils/createLogger';
 
 /**
  * Composant pour gérer toutes les modales du formulaire client
@@ -22,7 +23,10 @@ function ClientFormModals({
   onRetourListe = null
 }) {
 
-  console.log('📋 ClientFormModals - Props reçues:', {
+  // ✅ Initialisation du logger
+  const logger = createLogger('ClientFormModals');
+
+  logger.debug('📋 ClientFormModals - Props reçues:', {
     showUnsavedModal,
     showGlobalModal,
     hasUnsavedChanges,
@@ -35,7 +39,7 @@ function ClientFormModals({
   
   useEffect(() => {
     if (showUnsavedModal) {
-      console.log('🎭 ClientFormModals - Affichage modal locale (bouton Retour)');
+      logger.debug('🎭 ClientFormModals - Affichage modal locale (bouton Retour)');
       
       const modalConfig = {
         title: "Modifications non sauvegardées",
@@ -49,18 +53,18 @@ function ClientFormModals({
 
       showConfirm(modalConfig)
         .then((result) => {
-          console.log('🎭 Modal locale - Résultat:', result);
+          logger.debug('🎭 Modal locale - Résultat:', result);
           
           if (result.action === 'confirm') {
-            console.log('✅ Modal locale confirmée - exécution callback');
+            logger.debug('✅ Modal locale confirmée - exécution callback');
             confirmNavigation?.();
           } else {
-            console.log('❌ Modal locale annulée');
+            logger.debug('❌ Modal locale annulée');
             cancelNavigation?.();
           }
         })
         .catch((error) => {
-          console.error('❌ Erreur modal locale:', error);
+          logger.error('❌ Erreur modal locale:', error);
           cancelNavigation?.();
         });
     }
@@ -72,7 +76,7 @@ function ClientFormModals({
   
   useEffect(() => {
     if (showGlobalModal) {
-      console.log('🎭 ClientFormModals - Affichage modal globale (navigation menu)');
+      logger.debug('🎭 ClientFormModals - Affichage modal globale (navigation menu)');
       
       const modalConfig = {
         title: "Modifications non sauvegardées",
@@ -86,18 +90,18 @@ function ClientFormModals({
 
       showConfirm(modalConfig)
         .then((result) => {
-          console.log('🎭 Modal globale - Résultat:', result);
+          logger.debug('🎭 Modal globale - Résultat:', result);
           
           if (result.action === 'confirm') {
-            console.log('✅ Modal globale confirmée - exécution callback de navigation');
+            logger.debug('✅ Modal globale confirmée - exécution callback de navigation');
             handleConfirmGlobalNavigation?.();
           } else {
-            console.log('❌ Modal globale annulée');
+            logger.debug('❌ Modal globale annulée');
             handleCancelGlobalNavigation?.();
           }
         })
         .catch((error) => {
-          console.error('❌ Erreur modal globale:', error);
+          logger.error('❌ Erreur modal globale:', error);
           handleCancelGlobalNavigation?.();
         });
     }

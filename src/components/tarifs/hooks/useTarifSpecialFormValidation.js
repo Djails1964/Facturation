@@ -1,10 +1,14 @@
 import { useState, useCallback } from 'react';
 
+/**
+ * Hook pour gérer la validation du formulaire de tarif spécial
+ * ✅ REFACTORISÉ: Utilise tarifActions au lieu de tarificationService
+ */
 export const useTarifSpecialFormValidation = (formState) => {
     const [validationErrors, setValidationErrors] = useState({});
     const [isValidating, setIsValidating] = useState(false);
     
-    const { tarifSpecial, tarificationService } = formState;
+    const { tarifSpecial, tarifActions } = formState; // ✅ MODIFIÉ: tarifActions au lieu de tarificationService
     
     const validateField = useCallback(async (fieldName, value) => {
         setIsValidating(true);
@@ -66,7 +70,7 @@ export const useTarifSpecialFormValidation = (formState) => {
         }));
         
         return Object.keys(errors).length === 0;
-    }, [tarifSpecial, tarificationService]);
+    }, [tarifSpecial]);
     
     const validateForm = useCallback(async () => {
         setIsValidating(true);
@@ -95,10 +99,14 @@ export const useTarifSpecialFormValidation = (formState) => {
                 }
             }
             
-            // Validation métier (conflits de tarifs spéciaux)
-            if (tarifSpecial.idClient && tarifSpecial.idService && tarifSpecial.idUnite && tarifSpecial.date_debut) {
+            // ⚠️ TODO: Validation métier (conflits de tarifs spéciaux)
+            // La méthode checkTarifSpecialConflict n'existe pas encore dans TarificationService
+            // Elle devrait être ajoutée et exposée via tarifActions
+            /*
+            if (tarifSpecial.idClient && tarifSpecial.idService && tarifSpecial.idUnite && tarifSpecial.date_debut && tarifActions) {
                 try {
-                    const conflictCheck = await tarificationService.checkTarifSpecialConflict({
+                    // ✅ FUTUR: Utiliser tarifActions.checkTarifSpecialConflict une fois implémenté
+                    const conflictCheck = await tarifActions.checkTarifSpecialConflict({
                         idClient: tarifSpecial.idClient,
                         idService: tarifSpecial.idService,
                         idUnite: tarifSpecial.idUnite,
@@ -114,6 +122,7 @@ export const useTarifSpecialFormValidation = (formState) => {
                     console.warn('Erreur vérification conflit:', error);
                 }
             }
+            */
             
         } catch (error) {
             console.error('Erreur validation form:', error);
@@ -124,7 +133,7 @@ export const useTarifSpecialFormValidation = (formState) => {
         
         setValidationErrors(errors);
         return Object.keys(errors).length === 0;
-    }, [tarifSpecial, tarificationService]);
+    }, [tarifSpecial, tarifActions]);
     
     const clearValidationErrors = useCallback(() => {
         setValidationErrors({});

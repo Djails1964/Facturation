@@ -1,9 +1,16 @@
+// src/components/tarifs/hooks/useTarifGestionState.js
+// ✅ REFACTORISÉ : Utilise useTarifActions (autonome) et useClientActions
+// ✅ Ne crée plus de services en interne (délégué aux hooks d'actions)
+
 import { useState, useEffect, useCallback, useRef } from 'react';
-import TarificationService from '../../../services/TarificationService';
-import ClientService from '../../../services/ClientService';
-import api from '../../../services/api';
+import { createLogger } from '../../../utils/createLogger';
+import { useTarifActions } from './useTarifActions';
+import { useClientActions } from '../../clients/hooks/useClientActions';
 
 export const useTarifGestionState = () => {
+
+  const log = createLogger("useTarifGestionState");
+
   // États de base
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -23,10 +30,10 @@ export const useTarifGestionState = () => {
     entityType: ''
   });
   
-  // Services
-  const [tarificationService, setTarificationService] = useState(null);
-  const [clientService] = useState(() => new ClientService());
+  // ✅ Ref pour éviter les initialisations multiples
   const initializationRef = useRef(false);
+  const isLoadingClientsRef = useRef(false);
+  const isLoadingAllDataRef = useRef(false);
   
   // États partagés entre composants
   const [services, setServices] = useState([]);
@@ -36,117 +43,58 @@ export const useTarifGestionState = () => {
   const [tarifsSpeciaux, setTarifsSpeciaux] = useState([]);
   const [clients, setClients] = useState([]);
   const [serviceUnites, setServiceUnites] = useState({});
+  const [servicesUnites, setServicesUnites] = useState({});
   const [defaultUnites, setDefaultUnites] = useState({});
   
-  // Vérification d'autorisation - UNE SEULE FOIS
-  // useEffect(() => {
-  //   if (initializationRef.current) return;
-    
-  //   const initializeEverything = async () => {
-  //     try {
-  //       // 1. Vérifier l'autorisation
-  //       console.log('🔍 Vérification des droits via API...');
-  //       setIsLoading(true);
-        
-  //       const response = await api.get('auth-api.php?check_session');
-        
-  //       if (response.success && response.user) {
-  //         const user = response.user;
-  //         const rolesAutorises = ['admin', 'gestionnaire'];
-  //         const userRole = user.role?.toLowerCase();
-          
-  //         if (rolesAutorises.includes(userRole)) {
-  //           console.log(`✅ Accès autorisé pour le rôle: ${user.role}`);
-  //           setUserInfo(user);
-  //           setIsAuthorized(true);
-            
-  //           // 2. Initialiser le service DIRECTEMENT (pas dans un autre useEffect)
-  //           console.log('Initialisation du service de tarification...');
-  //           const service = new TarificationService();
-  //           await service.initialiser();
-  //           setTarificationService(service);
-  //           setIsInitialized(true);
-            
-  //           // 3. Charger les données
-  //           await loadAllData(service);
-  //         } else {
-  //           setIsAuthorized(false);
-  //           setMessage('Accès refusé');
-  //         }
-  //       }
-  //     } catch (error) {
-  //       console.error('Erreur:', error);
-  //       setIsAuthorized(false);
-  //     } finally {
-  //       setIsLoading(false);
-  //     }
-  //   };
-    
-  //   initializationRef.current = true;
-  //   initializeEverything();
-  // }, []);
-  
-  // Fonctions de chargement des données avec useCallback pour stabilité
-  const loadServices = useCallback(async (service = tarificationService) => {
-    if (!service) return;
-    
+  // ✅ MODIFIÉ : Utilisation des hooks d'actions autonomes
+  const tarifActions = useTarifActions();
+  const { chargerClients: chargerClientsApi } = useClientActions();
+
+  // ========================================
+  // FONCTIONS DE CHARGEMENT REFACTORISÉES
+  // ========================================
+ 
+  /**
+   * Charge tous les services
+   */
+  const loadServices = useCallback(async () => {
     try {
-      console.log('📡 Chargement des services...');
-      const servicesData = await service.chargerServices();
-      console.log('✅ Services chargés:', servicesData?.length || 0);
-      setServices(Array.isArray(servicesData) ? servicesData : []);
+      log.debug('📡 Chargement des services...');
+      const servicesData = await tarifActions.charger('service');
+      log.debug('✅ Services chargés:', servicesData?.length || 0);
+      setServices(servicesData || []);
     } catch (error) {
-      console.error('❌ Erreur chargement services:', error);
+      log.error('❌ Erreur chargement services:', error);
       setMessage('Erreur lors du chargement des services: ' + error.message);
       setMessageType('error');
       setServices([]);
     }
-  }, [tarificationService]);
+  }, [tarifActions, log]);
   
-  const loadUnites = useCallback(async (service = tarificationService) => {
-    if (!service) return;
-    
+  /**
+   * Charge toutes les unités
+   */
+  const loadUnites = useCallback(async () => {
     try {
-      console.log('📡 Chargement des unités...');
-      const unitesData = await service.chargerUnites();
-      
-      let unitesArray = [];
-      
-      if (Array.isArray(unitesData)) {
-        unitesArray = unitesData;
-      } else if (unitesData && typeof unitesData === 'object') {
-        try {
-          if (Object.keys(unitesData).length > 0) {
-            const values = Object.values(unitesData);
-            if (Array.isArray(values[0])) {
-              values.forEach(v => {
-                if (Array.isArray(v)) unitesArray = [...unitesArray, ...v];
-              });
-            } else {
-              unitesArray = values;
-            }
-          }
-        } catch (error) {
-          console.error("Erreur lors du traitement de l'objet unités:", error);
-        }
-      }
-      
-      console.log('✅ Unités chargées:', unitesArray?.length || 0);
-      setUnites(unitesArray);
+      log.debug('📡 Chargement des unités...');
+      const unitesData = await tarifActions.charger('unite');
+      log.debug('✅ Unités chargées:', unitesData?.length || 0);
+      setUnites(unitesData || []);
     } catch (error) {
-      console.error('❌ Erreur chargement unités:', error);
+      log.error('❌ Erreur chargement unités:', error);
       setMessage('Erreur lors du chargement des unités: ' + error.message);
       setMessageType('error');
       setUnites([]);
     }
-  }, [tarificationService]);
+  }, [tarifActions, log]);
   
+  /**
+   * Charge les unités pour un service spécifique
+   */
   const loadUnitesByService = useCallback(async (idService) => {
-    if (!tarificationService) return;
-    
     try {
-      console.log('📡 Chargement des unités pour service:', idService);
-      const unitesForService = await tarificationService.chargerUnites(idService);
+      log.debug('📡 Chargement des unités pour service:', idService);
+      const unitesForService = await tarifActions.charger('unite', idService);
       
       setServiceUnites(prev => ({
         ...prev,
@@ -161,170 +109,208 @@ export const useTarifGestionState = () => {
         }));
       }
     } catch (error) {
-      console.error('❌ Erreur chargement unités service:', error);
+      log.error('❌ Erreur chargement unités service:', error);
       setMessage('Erreur lors du chargement des unités pour le service: ' + error.message);
       setMessageType('error');
     }
-  }, [tarificationService]);
-  
-  const loadTypesTarifs = useCallback(async (service = tarificationService) => {
-    if (!service) return;
-    
+  }, [tarifActions, log]);
+
+  /**
+   * Charge toutes les liaisons service-unité
+   */
+  const loadAllServicesUnites = useCallback(async () => {
     try {
-      console.log('📡 Chargement des types de tarifs...');
-      const typesTarifsData = await service.chargerTypesTarifs();
-      console.log('✅ Types tarifs chargés:', typesTarifsData?.length || 0);
-      setTypesTarifs(Array.isArray(typesTarifsData) ? typesTarifsData : []);
+      log.debug('📡 Chargement de toutes les liaisons service-unité...');
+      const relationsData = await tarifActions.chargerServicesUnites();
+      
+      const servicesUnitesObject = {};
+    
+      relationsData.forEach(relation => {
+        log.debug('loadAllServicesUnites - résultat ligne par ligne :', relation);
+        if (!servicesUnitesObject[relation.idService]) {
+          servicesUnitesObject[relation.idService] = [];
+        }
+        servicesUnitesObject[relation.idService].push({
+          idService: relation.idService,
+          idUnite: relation.idUnite
+        });
+      });
+
+      log.debug('✅ Toutes les liaisons service-unité chargées');
+      log.debug('dans cette variable : ', servicesUnitesObject);
+      setServicesUnites(servicesUnitesObject);
     } catch (error) {
-      console.error('❌ Erreur chargement types tarifs:', error);
+      log.error('❌ Erreur chargement liaisons:', error);
+    }
+  }, [tarifActions, log]);
+  
+  /**
+   * Charge tous les types de tarifs
+   */
+  const loadTypesTarifs = useCallback(async () => {
+    try {
+      log.debug('📡 Chargement des types de tarifs...');
+      const typesTarifsData = await tarifActions.charger('typeTarif');
+      log.debug('✅ Types tarifs chargés:', typesTarifsData?.length || 0);
+      setTypesTarifs(typesTarifsData || []);
+    } catch (error) {
+      log.error('❌ Erreur chargement types tarifs:', error);
       setMessage('Erreur lors du chargement des types de tarifs: ' + error.message);
       setMessageType('error');
       setTypesTarifs([]);
     }
-  }, [tarificationService]);
+  }, [tarifActions, log]);
   
-  // 🔧 FONCTION CORRIGÉE POUR TARIFS - AVEC PARAMÈTRE SERVICE
-  const loadTarifs = useCallback(async (service = tarificationService) => {
-    const serviceToUse = service || tarificationService;
-    
-    if (!serviceToUse) {
-      console.warn('⚠️ loadTarifs: aucun service disponible');
-      return;
-    }
-    
+  /**
+   * Charge tous les tarifs
+   */
+  const loadTarifs = useCallback(async () => {
     try {
-      console.log('📡 Chargement des tarifs...');
-      console.log('🔍 Service utilisé:', !!serviceToUse);
-      
-      const tarifsData = await serviceToUse.getAllTarifs();
-      console.log('✅ Tarifs chargés:', tarifsData?.length || 0);
-      
-      if (Array.isArray(tarifsData)) {
-        setTarifs(tarifsData);
-      } else if (tarifsData && typeof tarifsData === 'object') {
-        // Gestion des formats d'objet alternatifs
-        if (tarifsData.data && Array.isArray(tarifsData.data)) {
-          setTarifs(tarifsData.data);
-        } else if (tarifsData.tarifs && Array.isArray(tarifsData.tarifs)) {
-          setTarifs(tarifsData.tarifs);
-        } else {
-          console.warn('⚠️ Structure de tarifs inconnue:', tarifsData);
-          setTarifs([]);
-        }
-      } else {
-        console.warn('⚠️ Format de tarifs invalide:', typeof tarifsData);
-        setTarifs([]);
-      }
-      
+      log.debug('📡 Chargement des tarifs...');
+      const tarifsData = await tarifActions.charger('tarif');
+      log.debug('✅ Tarifs chargés:', tarifsData?.length || 0);
+      setTarifs(tarifsData || []);
     } catch (error) {
-      console.error('❌ Erreur chargement tarifs:', error);
+      log.error('❌ Erreur chargement tarifs:', error);
       setMessage('Erreur lors du chargement des tarifs: ' + error.message);
       setMessageType('error');
       setTarifs([]);
     }
-  }, [tarificationService]);
+  }, [tarifActions, log]);
   
-  const loadTarifsSpeciaux = useCallback(async (service = tarificationService) => {
-    const serviceToUse = service || tarificationService;
-    
-    if (!serviceToUse) return;
-    
+  /**
+   * Charge tous les tarifs spéciaux
+   */
+  const loadTarifsSpeciaux = useCallback(async () => {
     try {
-      console.log('📡 Chargement des tarifs spéciaux...');
-      const tarifsSpeciauxData = await serviceToUse.getAllTarifsSpeciaux();
-      console.log('✅ Tarifs spéciaux chargés:', tarifsSpeciauxData?.length || 0);
-      setTarifsSpeciaux(Array.isArray(tarifsSpeciauxData) ? tarifsSpeciauxData : []);
+      log.debug('📡 Chargement des tarifs spéciaux...');
+      const tarifsSpeciauxData = await tarifActions.charger('tarifSpecial');
+      log.debug('✅ Tarifs spéciaux chargés:', tarifsSpeciauxData?.length || 0);
+      setTarifsSpeciaux(tarifsSpeciauxData || []);
     } catch (error) {
-      console.error('❌ Erreur chargement tarifs spéciaux:', error);
+      log.error('❌ Erreur chargement tarifs spéciaux:', error);
       setMessage('Erreur lors du chargement des tarifs spéciaux: ' + error.message);
       setMessageType('error');
       setTarifsSpeciaux([]);
     }
-  }, [tarificationService]);
+  }, [tarifActions, log]);
   
+  /**
+   * Charge tous les clients
+   * ✅ MODIFIÉ : Utilise useClientActions au lieu de ClientService
+   */
   const loadClients = useCallback(async () => {
+    if (isLoadingClientsRef.current) {
+      log.debug('⏳ Chargement des clients déjà en cours, ignoré');
+      return;
+    }
+    
+    isLoadingClientsRef.current = true;
     try {
-      if (!clientService) return;
-      console.log('📡 useTarifGestionState - Chargement des clients...');
-      const clientsData = await clientService.chargerClients();
-      console.log('✅ useTarifGestionState - Clients chargés:', clientsData?.length || 0);
-      console.log('useTarifGestionState - clientsData :', clientsData)
+      log.debug('📡 useTarifGestionState - Chargement des clients via useClientActions...');
+      const clientsData = await chargerClientsApi();
+      log.debug('✅ useTarifGestionState - Clients chargés:', clientsData?.length || 0);
+      log.debug('useTarifGestionState - clientsData :', clientsData);
       
       if (Array.isArray(clientsData)) {
         setClients(clientsData);
       } else {
-        console.warn('Format de données clients incorrect:', clientsData);
+        log.warn('Format de données clients incorrect:', clientsData);
         setClients([]);
         setMessage('Aucun client chargé ou format de données incorrect');
         setMessageType('warning');
       }
     } catch (error) {
-      console.error('❌ Erreur chargement clients:', error);
+      log.error('❌ Erreur chargement clients:', error);
       setMessage('Erreur lors du chargement des clients: ' + error.message);
       setMessageType('error');
       setClients([]);
+    } finally {
+      isLoadingClientsRef.current = false;
     }
-  }, [clientService]);
+  }, [chargerClientsApi, log]);
   
-  // 🔧 FONCTION CORRIGÉE pour charger toutes les données - AVEC PASSAGE DU SERVICE
-  const loadAllData = useCallback(async (service) => {
-    if (!isAuthorized || !service) {
-      console.log('⚠️ loadAllData: non autorisé ou service manquant');
+  /**
+   * Charge toutes les données
+   */
+  const loadAllData = useCallback(async () => {
+    if (!isAuthorized) {
+      log.debug('⚠️ loadAllData: non autorisé');
       return;
     }
     
-    console.log('🔄 Début du chargement de toutes les données...');
+    // ✅ Protection contre les appels multiples
+    if (isLoadingAllDataRef.current) {
+      log.debug('⏳ Chargement de toutes les données déjà en cours, ignoré');
+      return;
+    }
+    
+    isLoadingAllDataRef.current = true;
+    log.debug('🔄 Début du chargement de toutes les données...');
     setIsLoading(true);
     
     try {
-      // ✅ Chargement séquentiel en passant le service explicitement
-      await loadServices(service);
-      await loadUnites(service);
-      await loadTypesTarifs(service);
-      await loadTarifs(service); // ✅ IMPORTANT: Passage explicite du service
-      await loadTarifsSpeciaux(service);
+      // ✅ Chargement séquentiel
+      await loadServices();
+      await loadUnites();
+      await loadAllServicesUnites();
+      await loadTypesTarifs();
+      await loadTarifs();
+      await loadTarifsSpeciaux();
       await loadClients();
       
-      console.log('✅ Chargement de toutes les données terminé');
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 100);
+      log.debug('✅ Chargement de toutes les données terminé');
 
     } catch (error) {
-      console.error('❌ Erreur lors du chargement des données:', error);
+      log.error('❌ Erreur lors du chargement des données:', error);
       setMessage('Erreur lors du chargement des données: ' + error.message);
       setMessageType('error');
     } finally {
       setIsLoading(false);
+      isLoadingAllDataRef.current = false;
     }
-  }, [isAuthorized, loadServices, loadUnites, loadTypesTarifs, loadTarifs, loadTarifsSpeciaux, loadClients]);
+  }, [isAuthorized, loadServices, loadUnites, loadTypesTarifs, loadTarifs, loadTarifsSpeciaux, loadClients, loadAllServicesUnites, log]);
   
 
+  /**
+   * Initialisation via useTarifActions
+   */
   useEffect(() => {
-    if (isInitialized || tarificationService) return;
+    if (isInitialized || initializationRef.current) return;
     
-    const initTarificationService = async () => {
+    const initializeService = async () => {
+      initializationRef.current = true;
       try {
-        console.log('Initialisation du service de tarification...');
-        const service = new TarificationService();
-        await service.initialiser();
-        setTarificationService(service);
+        log.debug('🔧 Initialisation du service de tarification via useTarifActions...');
+        await tarifActions.initialiser();
         setIsInitialized(true);
-        console.log('Service de tarification initialisé');
-        
-        // ✅ Charger APRÈS l'initialisation, mais le composant est déjà rendu
-        loadAllData(service);
+        log.debug('✅ Service de tarification initialisé');
       } catch (error) {
-        console.error('Erreur:', error);
+        log.error('❌ Erreur initialisation:', error);
         setMessage('Erreur: ' + error.message);
         setMessageType('error');
+        initializationRef.current = false;
       }
     };
 
-    initTarificationService();
+    initializeService();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /**
+   * Chargement des données une fois le service initialisé
+   */
+  useEffect(() => {
+    if (isInitialized) {
+      loadAllData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isInitialized]);
     
-  // Gestion des messages
+  // ========================================
+  // GESTIONNAIRES
+  // ========================================
+  
   const handleDismissMessage = useCallback(() => {
     setMessage('');
     setMessageType('');
@@ -336,8 +322,8 @@ export const useTarifGestionState = () => {
     setMessageType('');
     // Reset des refs pour permettre une nouvelle initialisation
     initializationRef.current = false;
+    isLoadingClientsRef.current = false;
     setIsInitialized(false);
-    setTarificationService(null);
     
     setTimeout(() => {
       window.location.reload();
@@ -370,9 +356,11 @@ export const useTarifGestionState = () => {
     confirmModal,
     isInitialized,
     
-    // Services
-    tarificationService,
-    clientService,
+    // ✅ MODIFIÉ : Plus de services exposés directement
+    // Les composants doivent utiliser tarifActions
+    
+    // ✅ Exposer tarifActions pour les composants enfants
+    tarifActions,
     
     // Données
     services,
@@ -391,11 +379,14 @@ export const useTarifGestionState = () => {
     setServiceUnites,
     defaultUnites,
     setDefaultUnites,
+    servicesUnites,
+    setServicesUnites,
     
     // Fonctions de chargement
     loadServices,
     loadUnites,
     loadUnitesByService,
+    loadAllServicesUnites,
     loadTypesTarifs,
     loadTarifs,
     loadTarifsSpeciaux,

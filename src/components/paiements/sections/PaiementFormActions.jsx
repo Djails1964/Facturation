@@ -7,16 +7,21 @@ const PaiementFormActions = ({
     isPaiementAnnule, 
     isSubmitting, 
     onCancel,
-    isCreate 
+    isCreate,
+    isFormValid = true
 }) => {
+    
+    // Le bouton est désactivé si en cours de soumission OU si le formulaire n'est pas valide
+    const isSubmitDisabled = isSubmitting || !isFormValid;
     
     return (
         <div className="form-actions">
             {!isReadOnly && !isPaiementAnnule && (
                 <button 
                     type="submit" 
-                    disabled={isSubmitting}
-                    className="btn-primary"
+                    disabled={isSubmitDisabled}
+                    className={`btn-primary ${!isFormValid ? 'btn-disabled' : ''}`}
+                    title={!isFormValid ? 'Veuillez remplir tous les champs obligatoires' : ''}
                 >
                     {isSubmitting ? LOADING_MESSAGES.SAVING : 
                      isCreate ? BUTTON_TEXTS.CREATE : 

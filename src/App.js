@@ -24,11 +24,14 @@ import {
   configureUrlHelperForEnvironment,
   setUrlLogging
 } from './utils/urlHelper';
+import { createLogger } from './utils/createLogger';
 
 // ✅ IMPORT pour l'initialisation des field mappings
 import { initializeFieldMappings } from './constants/fieldMappings';
 
-console.log('🚀 Application React démarrée avec protection navigation globale');
+const log = createLogger('App');
+
+log.debug('🚀 Application React démarrée avec protection navigation globale');
 
 // Contexte pour partager le guard global
 const NavigationGuardContext = React.createContext();
@@ -62,9 +65,9 @@ function App() {
   useEffect(() => {
     try {
       initializeFieldMappings();
-      console.log('✅ Field mappings initialisés');
+      log.debug('✅ Field mappings initialisés');
     } catch (error) {
-      console.error('❌ Erreur initialisation field mappings:', error);
+      log.error('❌ Erreur initialisation field mappings:', error);
     }
   }, []);
 
@@ -78,7 +81,7 @@ function App() {
         setUrlLogging(true, ['backendUrl', 'apiUrl']);
       }
     } catch (error) {
-      console.error('❌ Erreur configuration URL Helper:', error);
+      log.error('❌ Erreur configuration URL Helper:', error);
     }
   }, []);
 
@@ -86,39 +89,39 @@ function App() {
   useEffect(() => {
     const checkAuthentication = async () => {
       try {
-        console.log('🔐 Vérification de l\'authentification...');
+        log.debug('🔐 Vérification de l\'authentification...');
         
         // ✅ Vérifier si utilisateur existe en localStorage
         if (authService.isAuthenticated()) {
-          console.log('✅ Utilisateur trouvé en localStorage');
+          log.debug('✅ Utilisateur trouvé en localStorage');
           const currentUser = authService.getCurrentUser();
           
           // ✅ Vérifier la session côté serveur (checkAuth)
           try {
             const authData = await authService.checkAuth();
             if (authData && authData.success) {
-              console.log('✅ Session valide côté serveur:', authData.user);
+              log.debug('✅ Session valide côté serveur:', authData.user);
               setUser(authData.user);
               setAuthenticated(true);
             } else {
-              console.log('❌ Session invalide côté serveur');
+              log.debug('❌ Session invalide côté serveur');
               setAuthenticated(false);
               setUser(null);
               authService.logout();
             }
           } catch (checkError) {
-            console.error('❌ Erreur vérification session:', checkError);
+            log.error('❌ Erreur vérification session:', checkError);
             // Gardez l'utilisateur du localStorage si erreur serveur
             setUser(currentUser);
             setAuthenticated(true);
           }
         } else {
-          console.log('❌ Aucun utilisateur trouvé');
+          log.debug('❌ Aucun utilisateur trouvé');
           setAuthenticated(false);
           setUser(null);
         }
       } catch (error) {
-        console.error('❌ Erreur d\'authentification:', error);
+        log.error('❌ Erreur d\'authentification:', error);
         setAuthenticated(false);
         setUser(null);
       } finally {
@@ -130,7 +133,7 @@ function App() {
 
     // ✅ Gestionnaire d'événement auth-expired
     const handleAuthExpired = () => {
-      console.log('🚨 Session expirée détectée - Déconnexion');
+      log.debug('🚨 Session expirée détectée - Déconnexion');
       setAuthenticated(false);
       setUser(null);
       localStorage.removeItem('user');
@@ -150,14 +153,14 @@ function App() {
     const handleLogout = () => {
       interceptNavigation(
         async () => {
-          console.log('🚪 Déconnexion...');
+          log.debug('🚪 Déconnexion...');
           try {
             await authService.logout();
             setUser(null);
             setAuthenticated(false);
-            console.log('✅ Déconnexion réussie');
+            log.debug('✅ Déconnexion réussie');
           } catch (error) {
-            console.error('❌ Erreur de déconnexion:', error);
+            log.error('❌ Erreur de déconnexion:', error);
             setUser(null);
             setAuthenticated(false);
           }
@@ -189,32 +192,32 @@ function App() {
   // ✅ GESTION DE LA CONNEXION CORRIGÉE
   const handleLogin = async (username, password) => {
     try {
-      console.log('🔐 Début handleLogin');
+      log.debug('🔐 Début handleLogin');
       setLoading(true);
       
       // ✅ Reçoit directement username et password (comme avant)
       const result = await authService.login(username, password);
-      console.log('📊 Réponse login complète:', result);
+      log.debug('📊 Réponse login complète:', result);
       
       if (result && result.success && result.user) {
-        console.log('✅ Login success détecté, mise à jour des états...');
+        log.debug('✅ Login success détecté, mise à jour des états...');
         setUser(result.user);
         setAuthenticated(true);
-        console.log('🎯 États mis à jour - User:', result.user);
+        log.debug('🎯 États mis à jour - User:', result.user);
         
         // Attendre un peu pour que le state se mette à jour
         await new Promise(resolve => setTimeout(resolve, 100));
-        console.log('✅ Connexion terminée avec succès');
+        log.debug('✅ Connexion terminée avec succès');
         
         // ✅ REDIRECTION MANUELLE VERS LA PAGE PRINCIPALE
         window.location.hash = '#/';
         
       } else {
-        console.error('❌ Login failed - réponse:', result);
+        log.error('❌ Login failed - réponse:', result);
         throw new Error(result?.message || 'Erreur de connexion');
       }
     } catch (error) {
-      console.error('❌ Erreur de connexion dans handleLogin:', error);
+      log.error('❌ Erreur de connexion dans handleLogin:', error);
       setAuthenticated(false);
       setUser(null);
       throw error;

@@ -1,0 +1,54 @@
+da67f1533db212437c2bffc5bff23030
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.all = exports.VERSION = exports.HttpStatusCode = exports.CanceledError = exports.CancelToken = exports.Cancel = exports.AxiosHeaders = exports.AxiosError = exports.Axios = void 0;
+Object.defineProperty(exports, "default", {
+  enumerable: true,
+  get: function () {
+    return _axios.default;
+  }
+});
+exports.toFormData = exports.spread = exports.mergeConfig = exports.isCancel = exports.isAxiosError = exports.getAdapter = exports.formToJSON = void 0;
+var _axios = _interopRequireDefault(require("./lib/axios.js"));
+function _interopRequireDefault(e) { return e && e.__esModule ? e : { default: e }; }
+// This module is intended to unwrap Axios default export as named.
+// Keep top-level export same with static properties
+// so that it can keep same with es module or cjs
+const {
+  Axios,
+  AxiosError,
+  CanceledError,
+  isCancel,
+  CancelToken,
+  VERSION,
+  all,
+  Cancel,
+  isAxiosError,
+  spread,
+  toFormData,
+  AxiosHeaders,
+  HttpStatusCode,
+  formToJSON,
+  getAdapter,
+  mergeConfig
+} = _axios.default;
+exports.mergeConfig = mergeConfig;
+exports.getAdapter = getAdapter;
+exports.formToJSON = formToJSON;
+exports.HttpStatusCode = HttpStatusCode;
+exports.AxiosHeaders = AxiosHeaders;
+exports.toFormData = toFormData;
+exports.spread = spread;
+exports.isAxiosError = isAxiosError;
+exports.Cancel = Cancel;
+exports.all = all;
+exports.VERSION = VERSION;
+exports.CancelToken = CancelToken;
+exports.isCancel = isCancel;
+exports.CanceledError = CanceledError;
+exports.AxiosError = AxiosError;
+exports.Axios = Axios;
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJuYW1lcyI6WyJfYXhpb3MiLCJfaW50ZXJvcFJlcXVpcmVEZWZhdWx0IiwicmVxdWlyZSIsImUiLCJfX2VzTW9kdWxlIiwiZGVmYXVsdCIsIkF4aW9zIiwiQXhpb3NFcnJvciIsIkNhbmNlbGVkRXJyb3IiLCJpc0NhbmNlbCIsIkNhbmNlbFRva2VuIiwiVkVSU0lPTiIsImFsbCIsIkNhbmNlbCIsImlzQXhpb3NFcnJvciIsInNwcmVhZCIsInRvRm9ybURhdGEiLCJBeGlvc0hlYWRlcnMiLCJIdHRwU3RhdHVzQ29kZSIsImZvcm1Ub0pTT04iLCJnZXRBZGFwdGVyIiwibWVyZ2VDb25maWciLCJheGlvcyIsImV4cG9ydHMiXSwic291cmNlcyI6WyJpbmRleC5qcyJdLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgYXhpb3MgZnJvbSAnLi9saWIvYXhpb3MuanMnO1xuXG4vLyBUaGlzIG1vZHVsZSBpcyBpbnRlbmRlZCB0byB1bndyYXAgQXhpb3MgZGVmYXVsdCBleHBvcnQgYXMgbmFtZWQuXG4vLyBLZWVwIHRvcC1sZXZlbCBleHBvcnQgc2FtZSB3aXRoIHN0YXRpYyBwcm9wZXJ0aWVzXG4vLyBzbyB0aGF0IGl0IGNhbiBrZWVwIHNhbWUgd2l0aCBlcyBtb2R1bGUgb3IgY2pzXG5jb25zdCB7XG4gIEF4aW9zLFxuICBBeGlvc0Vycm9yLFxuICBDYW5jZWxlZEVycm9yLFxuICBpc0NhbmNlbCxcbiAgQ2FuY2VsVG9rZW4sXG4gIFZFUlNJT04sXG4gIGFsbCxcbiAgQ2FuY2VsLFxuICBpc0F4aW9zRXJyb3IsXG4gIHNwcmVhZCxcbiAgdG9Gb3JtRGF0YSxcbiAgQXhpb3NIZWFkZXJzLFxuICBIdHRwU3RhdHVzQ29kZSxcbiAgZm9ybVRvSlNPTixcbiAgZ2V0QWRhcHRlcixcbiAgbWVyZ2VDb25maWdcbn0gPSBheGlvcztcblxuZXhwb3J0IHtcbiAgYXhpb3MgYXMgZGVmYXVsdCxcbiAgQXhpb3MsXG4gIEF4aW9zRXJyb3IsXG4gIENhbmNlbGVkRXJyb3IsXG4gIGlzQ2FuY2VsLFxuICBDYW5jZWxUb2tlbixcbiAgVkVSU0lPTixcbiAgYWxsLFxuICBDYW5jZWwsXG4gIGlzQXhpb3NFcnJvcixcbiAgc3ByZWFkLFxuICB0b0Zvcm1EYXRhLFxuICBBeGlvc0hlYWRlcnMsXG4gIEh0dHBTdGF0dXNDb2RlLFxuICBmb3JtVG9KU09OLFxuICBnZXRBZGFwdGVyLFxuICBtZXJnZUNvbmZpZ1xufVxuIl0sIm1hcHBpbmdzIjoiOzs7Ozs7Ozs7Ozs7O0FBQUEsSUFBQUEsTUFBQSxHQUFBQyxzQkFBQSxDQUFBQyxPQUFBO0FBQW1DLFNBQUFELHVCQUFBRSxDQUFBLFdBQUFBLENBQUEsSUFBQUEsQ0FBQSxDQUFBQyxVQUFBLEdBQUFELENBQUEsS0FBQUUsT0FBQSxFQUFBRixDQUFBO0FBRW5DO0FBQ0E7QUFDQTtBQUNBLE1BQU07RUFDSkcsS0FBSztFQUNMQyxVQUFVO0VBQ1ZDLGFBQWE7RUFDYkMsUUFBUTtFQUNSQyxXQUFXO0VBQ1hDLE9BQU87RUFDUEMsR0FBRztFQUNIQyxNQUFNO0VBQ05DLFlBQVk7RUFDWkMsTUFBTTtFQUNOQyxVQUFVO0VBQ1ZDLFlBQVk7RUFDWkMsY0FBYztFQUNkQyxVQUFVO0VBQ1ZDLFVBQVU7RUFDVkM7QUFDRixDQUFDLEdBQUdDLGNBQUs7QUFBQ0MsT0FBQSxDQUFBRixXQUFBLEdBQUFBLFdBQUE7QUFBQUUsT0FBQSxDQUFBSCxVQUFBLEdBQUFBLFVBQUE7QUFBQUcsT0FBQSxDQUFBSixVQUFBLEdBQUFBLFVBQUE7QUFBQUksT0FBQSxDQUFBTCxjQUFBLEdBQUFBLGNBQUE7QUFBQUssT0FBQSxDQUFBTixZQUFBLEdBQUFBLFlBQUE7QUFBQU0sT0FBQSxDQUFBUCxVQUFBLEdBQUFBLFVBQUE7QUFBQU8sT0FBQSxDQUFBUixNQUFBLEdBQUFBLE1BQUE7QUFBQVEsT0FBQSxDQUFBVCxZQUFBLEdBQUFBLFlBQUE7QUFBQVMsT0FBQSxDQUFBVixNQUFBLEdBQUFBLE1BQUE7QUFBQVUsT0FBQSxDQUFBWCxHQUFBLEdBQUFBLEdBQUE7QUFBQVcsT0FBQSxDQUFBWixPQUFBLEdBQUFBLE9BQUE7QUFBQVksT0FBQSxDQUFBYixXQUFBLEdBQUFBLFdBQUE7QUFBQWEsT0FBQSxDQUFBZCxRQUFBLEdBQUFBLFFBQUE7QUFBQWMsT0FBQSxDQUFBZixhQUFBLEdBQUFBLGFBQUE7QUFBQWUsT0FBQSxDQUFBaEIsVUFBQSxHQUFBQSxVQUFBO0FBQUFnQixPQUFBLENBQUFqQixLQUFBLEdBQUFBLEtBQUEiLCJpZ25vcmVMaXN0IjpbXX0=

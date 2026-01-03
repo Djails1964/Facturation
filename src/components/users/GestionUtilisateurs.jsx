@@ -1,18 +1,16 @@
 // src/components/users/GestionUtilisateurs.jsx
 /**
  * Composant principal de gestion des utilisateurs
- * ✅ Passe le logger aux hooks de modales
- * Gère la navigation entre la vue liste et la vue formulaire
- * Coordonne les opérations CRUD sur les utilisateurs
+ * ✅ Navigation liste ↔ formulaire
+ * ✅ Bouton FAB (Floating Action Button) en bas de page
  */
 
 import React, { useState, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { FiUserPlus } from 'react-icons/fi';
 import '../../styles/components/users/GestionUtilisateurs.css';
 
 // Hooks personnalisés
-import { useLogger } from '../../hooks/useLogger';
+import { createLogger } from '../../utils/createLogger';
 import { useUsers } from './hooks/useUsers';
 import { useNotifications } from '../../services/NotificationService';
 import { useUserModals } from './hooks/useUserModals';
@@ -42,10 +40,11 @@ import {
  * ✅ Navigation liste ↔ formulaire
  * ✅ UserForm s'affiche dans la section principale
  * ✅ DeleteUserHandler pour la suppression via modal
+ * ✅ FAB button pour créer nouvel utilisateur
  */
 function GestionUtilisateurs() {
   // Logger pour ce composant
-  const { log } = useLogger('GestionUtilisateurs');
+  const log = createLogger('GestionUtilisateurs');
 
   const userContext = useOutletContext();
   const user = userContext?.user;
@@ -58,7 +57,6 @@ function GestionUtilisateurs() {
   } = useUsers();
 
   const { showSuccess, showError, showWarning } = useNotifications();
-  const addButtonRef = useRef(null);
 
   // Gestion de l'affichage : 'liste' ou 'formulaire'
   const [activeView, setActiveView] = useState('liste');
@@ -68,13 +66,12 @@ function GestionUtilisateurs() {
 
   const canManage = canManageUsers(user);
 
-  // ✅ Configuration des dépendances pour les handlers de suppression
-  // Inclut maintenant le logger
+  // Configuration des dépendances pour les handlers de suppression
   const modalDependencies = {
     authService,
     showCustom,
     showLoading,
-    log,  // ✅ Passer le logger ici
+    log,
     onSetNotification: (message, type) => {
       if (type === 'success') showSuccess(message);
       else if (type === 'error') showError(message);
@@ -89,6 +86,8 @@ function GestionUtilisateurs() {
 
   // Hook pour gérer la suppression d'utilisateurs
   const { handleSupprimerUtilisateur } = useUserModals(modalDependencies);
+
+  // ========== HANDLERS DE NAVIGATION ==========
 
   /**
    * Ouvre le formulaire de création d'un nouvel utilisateur
@@ -165,8 +164,40 @@ function GestionUtilisateurs() {
   /**
    * Revenir à la liste
    */
-  const handleRetourListe = () => {
-    log.debug('Retour à la liste');
+  const handleRetourListe = (userId = null, success = false, message = '', type = '') => {
+    log.debug('Retour à la liste', { userId, success, message, type });
+    
+    setActiveView('liste');
+    setCurrentMode(USER_FORM_MODES.VIEW);
+    setCurrentUserId(null);
+    setCurrentUserData(null);
+
+    if (message) {
+      if (type === 'success') showSuccess(message);
+      else if (type === 'error') showError(message);
+      else if (type === 'warning') showWarning(message);
+    }
+
+    if (success) {
+      fetchUsers();
+    }
+  };
+
+  /**
+   * Callback appelé après création réussie d'un utilisateur
+   * @param {number} userId - ID du nouvel utilisateur créé
+   * @param {string} message - Message de succès
+   */
+  const handleUserCreated = (userId, message) => {
+    log.info('✅ Utilisateur créé avec succès:', userId);
+    
+    // Afficher la notification de succès
+    showSuccess(message || USER_SUCCESS_MESSAGES.CREATE);
+    
+    // Recharger la liste
+    fetchUsers();
+    
+    // Retourner à la liste
     setActiveView('liste');
     setCurrentMode(USER_FORM_MODES.VIEW);
     setCurrentUserId(null);
@@ -185,11 +216,9 @@ function GestionUtilisateurs() {
     try {
       if (currentMode === USER_FORM_MODES.CREATE) {
         log.debug('Création nouvel utilisateur');
-        // Appel API création
         showSuccess(USER_SUCCESS_MESSAGES.USER_CREATED);
       } else if (currentMode === USER_FORM_MODES.EDIT) {
         log.debug('Modification utilisateur', { userId: currentUserId });
-        // Appel API modification
         showSuccess(USER_SUCCESS_MESSAGES.USER_UPDATED);
       }
 
@@ -202,6 +231,8 @@ function GestionUtilisateurs() {
     }
   };
 
+  // ========== RENDU ==========
+
   return (
     <div className="gestion-utilisateurs-container">
       {activeView === 'liste' ? (
@@ -209,16 +240,6 @@ function GestionUtilisateurs() {
         <div className="users-list-section">
           <div className="users-header">
             <h2>Gestion des utilisateurs</h2>
-            {canManage && (
-              <button 
-                ref={addButtonRef}
-                className="btn-primary"
-                onClick={handleNouvelUtilisateur}
-              >
-                <FiUserPlus size={18} />
-                <span>Nouvel utilisateur</span>
-              </button>
-            )}
           </div>
 
           <UserListTable
@@ -230,6 +251,14 @@ function GestionUtilisateurs() {
             onEdit={handleModifier}
             onDelete={handleSupprimer}
           />
+
+          {/* ✅ BOUTON FLOTTANT - Nouveau utilisateur (comme PaiementGestion) */}
+          {canManage && activeView === 'liste' && (
+            <div className="floating-button" onClick={handleNouvelUtilisateur}>
+              <span>+</span>
+              <div className="floating-tooltip">Nouvel utilisateur</div>
+            </div>
+          )}
         </div>
       ) : (
         // VUE FORMULAIRE
@@ -237,9 +266,9 @@ function GestionUtilisateurs() {
           <UserForm
             mode={currentMode}
             userData={currentUserData}
-            userId={currentUserId}
-            onSave={handleSauvegarder}
-            onCancel={handleRetourListe}
+            idUser={currentUserId}           // ✅ Corrigé
+            onRetourListe={handleRetourListe} // ✅ Corrigé
+            onUserCreated={handleUserCreated}
           />
         </div>
       )}

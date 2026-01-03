@@ -5,22 +5,37 @@ import { useFacturePricing } from './useFacturePricing';
 import { useFactureUI } from './useFactureUI';
 import { formatMontant } from '../../../utils/formatters';
 import DateService from '../../../utils/DateService';
+import { createLogger } from '../../../utils/createLogger';
 
 /**
- * Hook principal pour la gestion des détails de facture - VERSION SIMPLIFIÉE
- * Utilise la nouvelle architecture unifiée de useFacturePricing
+ * Hook principal pour la gestion des détails de facture
+ * ✅ REFACTORISÉ : Utilise tarifData passé depuis FactureGestion
+ * ✅ Plus d'appels API dans useFactureConfiguration
+ * 
+ * @param {Object} client - Client sélectionné
+ * @param {boolean} readOnly - Mode lecture seule
+ * @param {Array} lignesInitiales - Lignes existantes
+ * @param {Function} onLignesChange - Callback de changement
+ * @param {Function} onResetRistourne - Callback reset ristourne
+ * @param {Object} tarifData - Données de tarification depuis FactureGestion
  */
 export function useFactureDetailsForm(
     client,
     readOnly,
     lignesInitiales = null,
     onLignesChange,
-    onResetRistourne
+    onResetRistourne,
+    tarifData = null  // ✅ NOUVEAU : Données de tarification pré-chargées
 ) {
-    console.log('useFactureDetailsForm - Initialisation', {
+
+    const log = createLogger("useFactureDetailsForm");
+
+    log.debug('useFactureDetailsForm - Initialisation', {
         idClient: client?.id,
         readOnly,
-        lignesCount: lignesInitiales?.length || 0
+        lignesCount: lignesInitiales?.length || 0,
+        hasTarifData: !!tarifData,
+        tarifDataLoaded: tarifData?.isLoaded
     });
 
     // États pour contrôler l'initialisation
@@ -58,30 +73,20 @@ export function useFactureDetailsForm(
         hasProcessedLines: false
     });
     
-    // Configuration avec le hook optimisé
-    const configuration = useFactureConfiguration(client, readOnly);
-    console.log('Configuration chargée:', {
+    // ✅ Configuration avec tarifData (plus d'appels API)
+    log.debug(`Initialisation de la configuration avec tarifData:`, {
+        hasTarifData: !!tarifData,
+        servicesCount: tarifData?.services?.length || 0
+    });
+    
+    const configuration = useFactureConfiguration(client, readOnly, tarifData);
+    
+    log.debug('Configuration chargée:', {
         isLoading: configuration.isLoading,
         servicesCount: configuration.services?.length || 0,
         unitesCount: configuration.unites?.length || 0,
-        defaultService: configuration.defaultService,
-        defaultUnites: configuration.defaultUnites,
-        services: configuration.services,
-        unites: configuration.unites,
-        tarifInfo: configuration.tarifInfo,
-        message: configuration.message,
-        messageType: configuration.messageType,
-        unitesByServiceKeys: Object.keys(configuration.unitesByService || {}).length,
-        idClient: client?.id,
-        readOnly,
-        lignesInitialesLength: lignesInitiales?.length || 0,
-        isInitialized,
-        initializationState: initializationRef.current,
-        stableOnLignesChangeExists: !!stableOnLignesChange,
-        stableOnResetRistourneExists: !!stableOnResetRistourne,
-        lignesInitialesData: lignesInitiales,
-        onLignesChangeExists: !!onLignesChange,
-        onResetRistourneExists: !!onResetRistourne  
+        defaultService: configuration.defaultService?.nomService,
+        tarifInfo: configuration.tarifInfo
     });
 
     // Gestion des lignes avec callbacks stables
@@ -93,7 +98,8 @@ export function useFactureDetailsForm(
         configuration.services,
         configuration.unites
     );
-    console.log('État initial des lignes:', {
+    
+    log.debug('État initial des lignes:', {
         lignesLength: lignesManager?.lignes?.length,
         lignes: lignesManager?.lignes
     });
@@ -101,7 +107,7 @@ export function useFactureDetailsForm(
     // Pricing avec dépendances stables - NOUVELLE ARCHITECTURE
     const pricing = useFacturePricing(
         client,
-        configuration.tarificationService,
+        configuration.tarifActions,
         configuration.services,
         configuration.unites,
         lignesManager.lignes,
@@ -123,7 +129,7 @@ export function useFactureDetailsForm(
             return;
         }
 
-        console.log('Initialisation des valeurs des selects');
+        log.debug('Initialisation des valeurs des selects');
 
         // Traitement synchrone sans promises
         const lignesAvecValeursCorrectes = lignesManager.lignes.map((ligne, index) => {
@@ -158,7 +164,7 @@ export function useFactureDetailsForm(
 
         ui.setFocusedFields(nouveauFocusedFields);
 
-        console.log('Valeurs des selects initialisées');
+        log.debug('Valeurs des selects initialisées');
     }, [
         lignesManager.lignes?.length,
         configuration.services?.length,
@@ -170,7 +176,7 @@ export function useFactureDetailsForm(
      * Effet d'initialisation UNIQUE et SIMPLE
      */
     useEffect(() => {
-        console.log('Effet d\'initialisation - État complet:', {
+        log.debug('Effet d\'initialisation - État complet:', {
             isComplete: initializationRef.current.isComplete,
             hasProcessedLines: initializationRef.current.hasProcessedLines,
             idClient: initializationRef.current.idClient,
@@ -180,44 +186,51 @@ export function useFactureDetailsForm(
             defaultService: !!configuration.defaultService,
             currentClientId: client?.id,
             lignesInitialesLength: lignesInitiales?.length,
-            readOnly
+            readOnly,
+            tarifDataLoaded: tarifData?.isLoaded
         });
 
         // Protection absolue contre les réinitialisations
         if (initializationRef.current.isComplete) {
-            console.log('Initialisation déjà complète, arrêt');
+            log.debug('Initialisation déjà complète, arrêt');
+            return;
+        }
+
+        // ✅ Attendre que tarifData soit chargé
+        if (!tarifData?.isLoaded) {
+            log.debug('tarifData pas encore chargé');
             return;
         }
 
         // Attendre que la configuration soit prête
         if (configuration.isLoading || !configuration.services?.length) {
-            console.log('Configuration pas encore prête');
+            log.debug('Configuration pas encore prête');
             return;
         }
 
         // Vérifier le changement de client
         if (client?.id !== initializationRef.current.idClient) {
-            console.log('Nouveau client détecté:', client?.id);
+            log.debug('Nouveau client détecté:', client?.id);
             initializationRef.current.idClient = client?.id;
             initializationRef.current.hasProcessedLines = false;
         }
 
-        console.log('Début de l\'initialisation finale');
+        log.debug('Début de l\'initialisation finale');
         
         if (!lignesManager) {
-            console.error('lignesManager est undefined au moment de l\'initialisation');
+            log.error('lignesManager est undefined au moment de l\'initialisation');
             return;
         }
 
         // Si on a des lignes initiales ET qu'elles n'ont pas été traitées
         if (lignesInitiales?.length > 0 && !initializationRef.current.hasProcessedLines) {
-            console.log('Traitement des lignes initiales:', lignesInitiales.length);
+            log.debug('Traitement des lignes initiales:', lignesInitiales.length);
             
             // Marquer immédiatement comme traitée
             initializationRef.current.hasProcessedLines = true;
             
             if (typeof lignesManager.initialiserLignes === 'function') {
-                console.log('Appel de lignesManager.initialiserLignes');
+                log.debug('Appel de lignesManager.initialiserLignes');
 
                 const isModification = lignesInitiales?.length > 0;
                 
@@ -232,21 +245,21 @@ export function useFactureDetailsForm(
 
                 // Vérifier le résultat après initialisation
                 setTimeout(() => {
-                    console.log('État après initialiserLignes:', {
+                    log.debug('État après initialiserLignes:', {
                         lignesLength: lignesManager?.lignes?.length
                     });
                     
                     initialiserValeursSelects();
                 }, 50);
             } else {
-                console.error('lignesManager.initialiserLignes n\'est pas une fonction:', typeof lignesManager.initialiserLignes);
+                log.error('lignesManager.initialiserLignes n\'est pas une fonction:', typeof lignesManager.initialiserLignes);
             }
             
         } else if (!readOnly && configuration.defaultService && !lignesInitiales?.length) {
-            console.log('Création ligne par défaut');
+            log.debug('Création ligne par défaut');
             
             if (typeof lignesManager.ajouterLigne === 'function') {
-                console.log('Appel de lignesManager.ajouterLigne');
+                log.debug('Appel de lignesManager.ajouterLigne');
                 
                 lignesManager.ajouterLigne(
                     configuration.defaultService,
@@ -254,19 +267,19 @@ export function useFactureDetailsForm(
                 );
                 
                 setTimeout(() => {
-                    console.log('État après ajouterLigne:', {
+                    log.debug('État après ajouterLigne:', {
                         lignesLength: lignesManager?.lignes?.length
                     });
                 }, 50);
             } else {
-                console.error('lignesManager.ajouterLigne n\'est pas une fonction:', typeof lignesManager.ajouterLigne);
+                log.error('lignesManager.ajouterLigne n\'est pas une fonction:', typeof lignesManager.ajouterLigne);
             }
         }
 
         // Marquer comme complètement initialisé
         initializationRef.current.isComplete = true;
         setIsInitialized(true);
-        console.log('Initialisation complète terminée');
+        log.debug('Initialisation complète terminée');
 
     }, [
         configuration.isLoading,
@@ -277,19 +290,19 @@ export function useFactureDetailsForm(
         lignesInitiales?.length,
         readOnly,
         initialiserValeursSelects,
-        lignesManager
+        lignesManager,
+        tarifData?.isLoaded  // ✅ NOUVEAU : Dépendance sur tarifData
     ]);
 
     /**
      * FONCTION SIMPLIFIÉE: Initialiser le prix d'une ligne par défaut
-     * Utilise la nouvelle architecture unifiée
      */
     const initialiserPrixLigneDefaut = useCallback(async (index) => {
         if (!client || readOnly) {
             return;
         }
 
-        console.log('Initialisation prix ligne par défaut:', index);
+        log.debug('Initialisation prix ligne par défaut:', index);
         
         // Utiliser la nouvelle fonction unifiée
         return pricing.recalculerPrixLigne(index);
@@ -297,19 +310,18 @@ export function useFactureDetailsForm(
 
     /**
      * FONCTION SIMPLIFIÉE: Modifie une ligne avec recalcul automatique des prix
-     * Utilise la nouvelle architecture unifiée
      */
     const modifierLigneAvecPrix = useCallback(async (index, champ, valeur) => {
-        console.log(`Modification ligne ${index}, champ: ${champ}, valeur:`, valeur);
+        log.debug(`Modification ligne ${index}, champ: ${champ}, valeur:`, valeur);
         
         if (champ === 'prixUnitaire') {
             lignesManager.prixModifiesManuel.current[index] = true;
-            console.log('Prix marqué comme modifié manuellement pour ligne', index);
+            log.debug('Prix marqué comme modifié manuellement pour ligne', index);
         }
         
         lignesManager.modifierLigne(index, champ, valeur);
         
-        // ✅ CORRECTION: Étendre la détection des changements
+        // ✅ Détection des changements nécessitant un recalcul
         const champsRecalcul = [
             'serviceType', 'idService', 'service',  // Service
             'unite', 'uniteCode', 'idUnite',       // Unité
@@ -317,19 +329,17 @@ export function useFactureDetailsForm(
         ];
         
         if (champsRecalcul.includes(champ) && client) {
-            console.log(`Changement de ${champ} détecté pour ligne ${index}`);
+            log.debug(`Changement de ${champ} détecté pour ligne ${index}`);
             
             if (!lignesManager.prixModifiesManuel.current[index]) {
-                console.log('Déclenchement du recalcul automatique du prix');
+                log.debug('Déclenchement du recalcul automatique du prix');
                 
-                // ✅ AJOUT: Forcer le recalcul pour les changements de service
                 const forceRecalcul = ['serviceType', 'idService', 'service', '_forceRecalculPrix'].includes(champ);
                 
                 setTimeout(() => {
                     if (forceRecalcul) {
-                        // Vider le cache pour cette combinaison
                         pricing.clearCache();
-                        console.log('Cache vidé pour forcer le recalcul');
+                        log.debug('Cache vidé pour forcer le recalcul');
                     }
                     
                     pricing.recalculerPrixLigne(index, { 
@@ -338,7 +348,7 @@ export function useFactureDetailsForm(
                     });
                 }, forceRecalcul ? 200 : 100);
             } else {
-                console.log('Prix modifié manuellement, pas de recalcul automatique');
+                log.debug('Prix modifié manuellement, pas de recalcul automatique');
             }
         }
     }, [
@@ -346,7 +356,7 @@ export function useFactureDetailsForm(
         lignesManager.modifierLigne,
         lignesManager.prixModifiesManuel,
         pricing.recalculerPrixLigne,
-        pricing.clearCache  // ✅ AJOUT
+        pricing.clearCache
     ]);
 
     /**
@@ -355,7 +365,7 @@ export function useFactureDetailsForm(
     const ajouterLigneAvecPrix = useCallback(() => {
         if (readOnly) return;
         
-        console.log('Ajout d\'une nouvelle ligne');
+        log.debug('Ajout d\'une nouvelle ligne');
         
         lignesManager.ajouterLigne(
             configuration.defaultService,
@@ -374,39 +384,39 @@ export function useFactureDetailsForm(
     const insertUniteNameInDescription = useCallback((index) => {
         if (readOnly) return;
         
-        console.log('Insertion nom unité dans description pour ligne', index);
+        log.debug('Insertion nom unité dans description pour ligne', index);
         
         const ligne = lignesManager.lignes[index];
-        console.log('État actuel de la ligne:', ligne);
+        log.debug('État actuel de la ligne:', ligne);
         
         if (!ligne || !ligne.unite) {
-            console.log('❌ Pas d\'unité disponible pour la ligne', index);
+            log.debug('❌ Pas d\'unité disponible pour la ligne', index);
             return;
         }
         
         let uniteName = null;
         
-        // ✅ CORRECTION PRINCIPALE : Gérer les deux formats d'unité
+        // ✅ Gérer les deux formats d'unité
         if (typeof ligne.unite === 'object') {
             // Nouveau format : objet enrichi
             uniteName = ligne.unite.nomUnite || ligne.unite.nom || ligne.unite.code;
-            console.log('✅ Nom unité extrait de l\'objet enrichi:', uniteName);
+            log.debug('✅ Nom unité extrait de l\'objet enrichi:', uniteName);
         } else if (typeof ligne.unite === 'string') {
             // Ancien format : chercher dans la configuration
-            console.log('Liste des unités disponibles:', configuration.unites);
+            log.debug('Liste des unités disponibles:', configuration.unites);
             const uniteObj = configuration.unites?.find(u => 
                 u && (u.code === ligne.unite || u.codeUnite === ligne.unite)
             );
-            console.log('Unité trouvée dans configuration:', uniteObj);
+            log.debug('Unité trouvée dans configuration:', uniteObj);
             
             if (uniteObj) {
                 uniteName = uniteObj.nomUnite || uniteObj.nom || uniteObj.code;
-                console.log('✅ Nom unité extrait de la configuration:', uniteName);
+                log.debug('✅ Nom unité extrait de la configuration:', uniteName);
             }
         }
         
         if (!uniteName) {
-            console.log('❌ Impossible d\'extraire le nom de l\'unité');
+            log.debug('❌ Impossible d\'extraire le nom de l\'unité');
             return;
         }
         
@@ -418,7 +428,7 @@ export function useFactureDetailsForm(
         
         // Vérifier si le nom de l'unité n'est pas déjà présent au début
         if (currentDescription.startsWith(unitePrefix)) {
-            console.log('ℹ️ Le nom de l\'unité est déjà présent au début de la description');
+            log.debug('ℹ️ Le nom de l\'unité est déjà présent au début de la description');
             return;
         }
         
@@ -426,11 +436,11 @@ export function useFactureDetailsForm(
         const unitePattern = /^[^.]+\.\s*/;
         if (unitePattern.test(currentDescription)) {
             newDescription = currentDescription.replace(unitePattern, unitePrefix);
-            console.log('🔄 Remplacement du nom d\'unité existant');
+            log.debug('🔄 Remplacement du nom d\'unité existant');
         } else {
             // Ajouter le nom de l'unité au début
             newDescription = unitePrefix + currentDescription;
-            console.log('➕ Ajout du nom d\'unité au début');
+            log.debug('➕ Ajout du nom d\'unité au début');
         }
         
         // Vérifier la limite de caractères
@@ -439,13 +449,13 @@ export function useFactureDetailsForm(
             const maxDescriptionLength = 200 - unitePrefix.length;
             const remainingDescription = currentDescription.substring(0, maxDescriptionLength);
             newDescription = unitePrefix + remainingDescription;
-            console.log('✂️ Description tronquée pour respecter la limite');
+            log.debug('✂️ Description tronquée pour respecter la limite');
         }
         
         // Mettre à jour la description
         lignesManager.modifierLigne(index, 'description', newDescription);
         
-        console.log('✅ Description mise à jour:', {
+        log.debug('✅ Description mise à jour:', {
             ancienne: currentDescription,
             nouvelle: newDescription,
             uniteName: uniteName
@@ -459,59 +469,33 @@ export function useFactureDetailsForm(
     ]);
 
     /**
-     * FONCTION HELPER : Vérifie si le clipboard est activable pour une ligne
-     */
-    const isClipboardEnabled = useCallback((ligne) => {
-        if (!ligne.unite) return false;
-        
-        // Nouveau format : objet enrichi
-        if (typeof ligne.unite === 'object') {
-            return !!(ligne.unite.nomUnite || ligne.unite.nom || ligne.unite.code);
-        }
-        
-        // Ancien format : string
-        if (typeof ligne.unite === 'string') {
-            return !!ligne.unite;
-        }
-        
-        return false;
-    }, []);
-
-    /**
      * Gestion du toggle de ligne avec mise à jour de l'UI
      */
     const toggleLigneOuverte = useCallback((index) => {
-        console.log('Toggle ligne ouverte appelé pour index', index);
+        log.debug('Toggle ligne ouverte appelé pour index', index);
         
         // Vérifications de sécurité étendues
         if (typeof index !== 'number' || index < 0) {
-            console.warn('Index invalide pour toggle:', index);
+            log.warn('Index invalide pour toggle:', index);
             return;
         }
 
         if (!lignesManager) {
-            console.error('lignesManager est undefined dans toggleLigneOuverte');
+            log.error('lignesManager est undefined dans toggleLigneOuverte');
             return;
         }
 
         if (!lignesManager.lignes || !Array.isArray(lignesManager.lignes)) {
-            console.warn('Lignes non définies ou non valides:', {
-                lignes: lignesManager.lignes,
-                type: typeof lignesManager.lignes,
-                isArray: Array.isArray(lignesManager.lignes)
-            });
+            log.warn('Lignes non définies ou non valides');
             
             if (typeof lignesManager.toggleLigneOuverte === 'function') {
-                console.log('Appel de toggleLigneOuverte malgré lignes undefined');
                 lignesManager.toggleLigneOuverte(index);
-            } else {
-                console.error('toggleLigneOuverte n\'est pas disponible');
             }
             return;
         }
 
         if (index >= lignesManager.lignes.length) {
-            console.warn('Index hors limites:', { index, length: lignesManager.lignes.length });
+            log.warn('Index hors limites:', { index, length: lignesManager.lignes.length });
             return;
         }
 
@@ -519,13 +503,13 @@ export function useFactureDetailsForm(
         const isCurrentlyOpen = lignesOuvertes[index] === true;
         const isGoingToOpen = !isCurrentlyOpen;
         
-        console.log(`${isGoingToOpen ? 'Ouverture' : 'Fermeture'} de la ligne ${index}`, lignesManager.lignes[index]);
+        log.debug(`${isGoingToOpen ? 'Ouverture' : 'Fermeture'} de la ligne ${index}`, lignesManager.lignes[index]);
         
         if (isGoingToOpen) {
             const ligne = lignesManager.lignes[index];
             
             if (!ligne || typeof ligne !== 'object') {
-                console.warn('Ligne invalide à l\'index:', index, ligne);
+                log.warn('Ligne invalide à l\'index:', index, ligne);
                 lignesManager.toggleLigneOuverte(index);
                 return;
             }
@@ -535,7 +519,7 @@ export function useFactureDetailsForm(
             
             try {
                 const keys = Object.keys(ligne);
-                console.log('Clés de la ligne:', keys);
+                log.debug('Clés de la ligne:', keys);
                 
                 keys.forEach(key => {
                     const value = ligne[key];
@@ -548,10 +532,10 @@ export function useFactureDetailsForm(
                 if (ui && typeof ui.setFocusedFields === 'function') {
                     ui.setFocusedFields(newFocusedFields);
                 } else {
-                    console.warn('ui.setFocusedFields non disponible');
+                    log.warn('ui.setFocusedFields non disponible');
                 }
             } catch (error) {
-                console.error('Erreur lors du traitement des champs de la ligne:', {
+                log.error('Erreur lors du traitement des champs de la ligne:', {
                     error,
                     ligne,
                     index,
@@ -563,9 +547,9 @@ export function useFactureDetailsForm(
         // Appeler la fonction toggle
         if (typeof lignesManager.toggleLigneOuverte === 'function') {
             lignesManager.toggleLigneOuverte(index);
-            console.log('toggleLigneOuverte appelé avec succès');
+            log.debug('toggleLigneOuverte appelé avec succès');
         } else {
-            console.error('lignesManager.toggleLigneOuverte n\'est pas une fonction:', typeof lignesManager.toggleLigneOuverte);
+            log.error('lignesManager.toggleLigneOuverte n\'est pas une fonction:', typeof lignesManager.toggleLigneOuverte);
         }
     }, [lignesManager, ui]);
 
@@ -589,7 +573,7 @@ export function useFactureDetailsForm(
         }
     }), [lignesManager.validationErrors]);
 
-    // Interface publique stable - SIMPLIFIÉE avec nouvelle architecture
+    // Interface publique stable
     return useMemo(() => ({
         // États principaux
         lignes: lignesManager.lignes || [],
@@ -605,7 +589,12 @@ export function useFactureDetailsForm(
         unitesByService: configuration.unitesByService,
         defaultService: configuration.defaultService,
         defaultUnites: configuration.defaultUnites,
-        tarificationService: configuration.tarificationService,
+        tarifActions: configuration.tarifActions,
+        
+        // ✅ NOUVEAU : Fonctions d'accès aux données enrichies
+        getUnitesPourService: configuration.getUnitesPourService,
+        getUniteDefautPourService: configuration.getUniteDefautPourService,
+        getIdUniteDefautPourService: configuration.getIdUniteDefautPourService,
         
         // États de gestion des lignes
         lignesOuvertes: lignesManager.lignesOuvertes,
@@ -682,7 +671,10 @@ export function useFactureDetailsForm(
         configuration.unitesByService,
         configuration.defaultService,
         configuration.defaultUnites,
-        configuration.tarificationService,
+        configuration.tarifActions,
+        configuration.getUnitesPourService,
+        configuration.getUniteDefautPourService,
+        configuration.getIdUniteDefautPourService,
         ui.focusedFields,
         isInitialized,
         helpers,
