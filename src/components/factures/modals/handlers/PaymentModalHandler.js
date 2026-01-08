@@ -200,7 +200,7 @@ export class PaymentModalHandler {
         this.log.debug("createPaymentModalContent - factureData : ", factureData);
         // Affichage de l'état des paiements
         const montantPaye = factureData.montantPayeTotal || 0;
-        const montantRestant = factureData.montantRestantDu || 0;
+        const montantRestant = factureData.montantRestant || 0;
         const nbPaiements = factureData.nbPaiements || 0;
         this.log.debug("createPaymentModalContent - montants payés : ", montantPaye);
         this.log.debug("createPaymentModalContent - montant restant : ", montantRestant);

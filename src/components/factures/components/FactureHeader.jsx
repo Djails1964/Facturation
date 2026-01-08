@@ -214,7 +214,31 @@ function FactureHeader({
             <button 
               type="button"
               className="facture-document-button"
-              onClick={() => window.open(documentPath, '_blank')}
+              onClick={async () => {
+                try {
+                  const response = await fetch(documentPath, {
+                    method: 'GET',
+                    credentials: 'include'
+                  });
+                  
+                  if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    if (errorData.session_expired) {
+                      window.location.href = '/login';
+                      return;
+                    }
+                    throw new Error(errorData.message || 'Erreur lors du chargement');
+                  }
+                  
+                  const blob = await response.blob();
+                  const blobUrl = window.URL.createObjectURL(blob);
+                  window.open(blobUrl, '_blank');
+                  setTimeout(() => window.URL.revokeObjectURL(blobUrl), 60000);
+                } catch (error) {
+                  console.error('Erreur ouverture document:', error);
+                  alert('Impossible d\'ouvrir le document: ' + error.message);
+                }
+              }}
               title="Ouvrir le document joint"
             >
               <FiFile size={20} color="#800000" />

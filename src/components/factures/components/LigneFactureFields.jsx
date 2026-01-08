@@ -345,106 +345,108 @@ function ServiceTypeSelect({
             
             // Mettre à jour le service
             onModify(index, 'service', serviceObj);
-            onModify(index, 'serviceType', serviceCode);
-            onModify(index, 'idService', serviceObj.idService);
             
              log.debug('🔍 DEBUG MAPPING:', unitesByService);
              log.debug('🔍 DEBUG SITEWEB:', unitesByService?.SiteWeb);
              log.debug('🔍 DEBUG UNITES ARRAY:', unites?.map(u => u.codeUnite));
             // ✅ CORRECTION: Vérifier que unites existe avant de l'utiliser
             if (unites && Array.isArray(unites) && unites.length > 0) {
-                await selectDefaultUniteForService(serviceObj, serviceCode);
+                setTimeout(() => { selectDefaultUniteForService(serviceObj, serviceCode, serviceObj.idService); }, 150);
             } else {
                  log.warn('⚠️ Aucune unité disponible pour la sélection automatique');
                 // Nettoyer l'unité actuelle
                 onModify(index, 'unite', null);
-                onModify(index, 'uniteCode', '');
-                onModify(index, 'idUnite', null);
             }
         } else {
             // Nettoyer si pas de service trouvé
             onModify(index, 'service', null);
-            onModify(index, 'serviceType', serviceCode);
-            onModify(index, 'idService', null);
             
             // Nettoyer aussi l'unité
             onModify(index, 'unite', null);
-            onModify(index, 'uniteCode', '');
-            onModify(index, 'idUnite', null);
         }
     };
     
     /**
      * ✅ FONCTION CORRIGÉE: Sélectionne automatiquement l'unité par défaut pour un service
      */
-    const selectDefaultUniteForService = async (serviceObj, serviceCode) => {
-        log.debug('🔍 Recherche unité par défaut pour service:', serviceCode);
-        log.debug('🔍 Service enrichi:', serviceObj);
+    const selectDefaultUniteForService = async (serviceObj, serviceCode, newIdService = null) => {
+         log.debug('🔍 Recherche unité par défaut pour service:', serviceCode);
+         log.debug('🔍 Service object:', serviceObj);
+         log.debug('🔍 Unités disponibles:', unites?.length || 0);
         
-        // ✅ Vérifications de sécurité
-        if (!serviceObj) {
-            log.warn('⚠️ Service invalide');
+        // Vérifications de sécurité
+        if (!unites || !Array.isArray(unites) || unites.length === 0) {
+             log.warn('⚠️ Pas d\'unités disponibles');
             return;
         }
         
-        let uniteObj = null;
-        let uniteDefautCode = null;
-
-        // ✅ MÉTHODE 1 : Utiliser uniteDefaut directement depuis le service enrichi
-        if (serviceObj.uniteDefaut) {
-            uniteObj = serviceObj.uniteDefaut;
-            uniteDefautCode = uniteObj.codeUnite || uniteObj.code;
-            log.debug('✅ Unité par défaut depuis service.uniteDefaut:', uniteDefautCode);
+        if (!serviceObj || !serviceObj.idService) {
+             log.warn('⚠️ Service invalide');
+            return;
         }
-
-        // ✅ MÉTHODE 2 : Chercher dans unitesLiees celle marquée isDefaultPourService
-        if (!uniteObj && serviceObj.unitesLiees?.length > 0) {
-            const uniteMarqueeDefaut = serviceObj.unitesLiees.find(u => u.isDefaultPourService === true);
-            if (uniteMarqueeDefaut) {
-                uniteObj = uniteMarqueeDefaut;
-                uniteDefautCode = uniteObj.codeUnite || uniteObj.code;
-                log.debug('✅ Unité par défaut depuis unitesLiees (isDefaultPourService):', uniteDefautCode);
+        
+        // ✅ MÉTHODE 1 (PRIORITAIRE): Chercher via idUniteDefaut du service
+        if (serviceObj.idUniteDefaut) {
+             log.debug('🔍 Recherche unité par défaut via idUniteDefaut:', serviceObj.idUniteDefaut);
+            const uniteDefaut = unites.find(u => 
+                u && (u.idUnite === serviceObj.idUniteDefaut || u.id === serviceObj.idUniteDefaut)
+            );
+            
+            if (uniteDefaut) {
+                 log.debug('✅ Unité par défaut trouvée via idUniteDefaut:', uniteDefaut);
+                applyUniteSelection(uniteDefaut, newIdService);
+                return;
             }
         }
-
-        // ✅ MÉTHODE 3 : Utiliser idUniteDefaut pour trouver l'unité dans unitesLiees
-        if (!uniteObj && serviceObj.idUniteDefaut && serviceObj.unitesLiees?.length > 0) {
-            const uniteParId = serviceObj.unitesLiees.find(u => u.idUnite === serviceObj.idUniteDefaut);
-            if (uniteParId) {
-                uniteObj = uniteParId;
-                uniteDefautCode = uniteObj.codeUnite || uniteObj.code;
-                log.debug('✅ Unité par défaut depuis idUniteDefaut:', uniteDefautCode);
+        
+        // ✅ MÉTHODE 2: Chercher dans les unités avec isDefault = true pour ce service
+        const uniteParDefaut = unites.find(u => 
+            u && u.idService === serviceObj.idService && u.isDefault === true
+        );
+        
+        if (uniteParDefaut) {
+             log.debug('✅ Unité par défaut trouvée via isDefault:', uniteParDefaut);
+            applyUniteSelection(uniteParDefaut, newIdService);
+            return;
+        }
+        
+        // ✅ MÉTHODE 3: Utiliser le mapping unitesByService (première de la liste)
+        if (unitesByService && unitesByService[serviceCode]?.length > 0) {
+            const premierCodeUnite = unitesByService[serviceCode][0];
+             log.debug('🔍 Code unité depuis mapping:', premierCodeUnite);
+            
+            const uniteObj = unites.find(u => 
+                u && (u.codeUnite === premierCodeUnite || u.code === premierCodeUnite)
+            );
+            
+            if (uniteObj) {
+                 log.debug('✅ Première unité trouvée via mapping:', uniteObj);
+                applyUniteSelection(uniteObj, newIdService);
+                return;
             }
         }
-
-        // ✅ MÉTHODE 4 (Fallback) : Prendre la première unité liée au service
-        if (!uniteObj && serviceObj.unitesLiees?.length > 0) {
-            uniteObj = serviceObj.unitesLiees[0];
-            uniteDefautCode = uniteObj.codeUnite || uniteObj.code;
-            log.debug('⚠️ Pas d\'unité par défaut, utilisation de la première:', uniteDefautCode);
+        
+        // ✅ MÉTHODE 4 (FALLBACK): Prendre la première unité disponible pour ce service
+        const unitesDisponibles = unites.filter(u => 
+            u && u.idService === serviceObj.idService
+        );
+        
+        if (unitesDisponibles.length > 0) {
+             log.debug('✅ Première unité disponible trouvée:', unitesDisponibles[0]);
+            applyUniteSelection(unitesDisponibles[0], newIdService);
+            return;
         }
-
-        // Appliquer l'unité trouvée
-        if (uniteObj) {
-            log.debug('🎯 Application de l\'unité par défaut:', {
-                code: uniteDefautCode,
-                nom: uniteObj.nomUnite || uniteObj.nom,
-                id: uniteObj.idUnite
-            });
-            applyUniteSelection(uniteObj);
-        } else {
-            log.warn('⚠️ Aucune unité trouvée pour le service:', serviceCode);
-            // Nettoyer l'unité si aucune trouvée
-            onModify(index, 'unite', null);
-            onModify(index, 'uniteCode', '');
-            onModify(index, 'idUnite', null);
-        }
+        
+         log.warn('⚠️ Aucune unité trouvée pour le service:', serviceCode);
+        
+        // Nettoyer l'unité si aucune trouvée
+        onModify(index, 'unite', null);
     };
     
     /**
      * ✅ FONCTION CORRIGÉE: Applique la sélection d'une unité
      */
-    const applyUniteSelection = (uniteObj) => {
+    const applyUniteSelection = (uniteObj, newIdService = null) => {
         if (!uniteObj) {
              log.warn('⚠️ Objet unité invalide');
             return;
@@ -453,9 +455,9 @@ function ServiceTypeSelect({
          log.debug('🎯 Application de l\'unité:', uniteObj);
         
         // Mettre à jour l'objet unité enrichi
-        onModify(index, 'unite', uniteObj);
-        onModify(index, 'uniteCode', uniteObj.codeUnite || uniteObj.code);
-        onModify(index, 'idUnite', uniteObj.idUnite || uniteObj.id);
+        // ✅ CORRECTION: Enrichir unité avec newIdService pour le calcul du prix
+        const uniteEnrichie = newIdService ? { ...uniteObj, _newIdService: newIdService } : uniteObj;
+        onModify(index, 'unite', uniteEnrichie);
         
         // Forcer la mise à jour de l'UI
         setTimeout(() => {
@@ -464,9 +466,6 @@ function ServiceTypeSelect({
                 const codeUnite = uniteObj.codeUnite || uniteObj.code;
                 uniteSelect.value = codeUnite;
                 
-                // Déclencher l'événement change pour mettre à jour l'état du label
-                const event = new Event('change', { bubbles: true });
-                uniteSelect.dispatchEvent(event);
                 
                 // Marquer le champ comme ayant une valeur
                 if (uniteSelect.parentElement) {
@@ -561,10 +560,6 @@ function UniteSelect({
             // 1. Mettre à jour l'objet unité enrichi
             onModify(index, 'unite', uniteObj);
             
-            // 2. Mettre à jour immédiatement le code et l'ID
-            onModify(index, 'uniteCode', uniteObj.codeUnite || uniteObj.code);
-            onModify(index, 'idUnite', uniteObj.idUnite);
-            
              log.debug('✅ Unité mise à jour:', {
                 code: uniteObj.codeUnite || uniteObj.code,
                 id: uniteObj.idUnite,
@@ -574,8 +569,6 @@ function UniteSelect({
              log.warn('❌ Unité non trouvée pour le code:', uniteValue);
             // Nettoyer si pas d'unité trouvée
             onModify(index, 'unite', null);
-            onModify(index, 'uniteCode', null);
-            onModify(index, 'idUnite', null);
         }
     };
     

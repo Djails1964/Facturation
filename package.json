@@ -1,5 +1,6 @@
 {
   "name": "fact-front",
+  "proxy": "http://facturation.local",
   "version": "1.1.0",
   "private": true,
   "dependencies": {
@@ -20,6 +21,7 @@
     "@testing-library/user-event": "^14.6.1",
     "babel-plugin-module-resolver": "^5.0.2",
     "cross-env": "^7.0.3",
+    "env-cmd": "^11.0.0",
     "identity-obj-proxy": "^3.0.0"
   },
   "scripts": {
@@ -32,8 +34,10 @@
     "eject": "react-scripts eject",
     "validate": "node src/scripts/validate-config.js",
     "validate:dev": "cross-env REACT_APP_ENV=development npm run validate",
+    "validate:pre-prod": "env-cmd -f .env.pre-production cross-env REACT_APP_ENV=pre-production node src/scripts/validate-config.js",
     "validate:prod": "cross-env REACT_APP_ENV=production npm run validate",
     "build:dev": "npm run validate:dev && cross-env REACT_APP_ENV=development npm run build",
+    "build:pre-prod": "npm run validate:pre-prod && env-cmd -f .env.pre-production cross-env REACT_APP_ENV=pre-production npm run build",
     "build:prod": "npm run validate:prod && cross-env REACT_APP_ENV=production npm run build",
     "build:staging": "cross-env REACT_APP_ENV=staging npm run build",
     "debug:urls": "cross-env REACT_APP_DEBUG_URLS=true npm start",
@@ -43,7 +47,8 @@
     "env:list": "cross-env-shell \"set\"",
     "url:test": "echo Ouvrez la console et tapez: window.urlHelperDebug.testBackend()",
     "predeploy": "npm run validate:prod",
-    "deploy": "npm run build:prod && echo Build prêt pour déploiement",
+    "deploy:pre-prod": "npm run build:pre-prod && echo 'Build PP terminé - À déployer sur pp-facturation'",
+    "deploy:prod": "npm run build:prod && echo 'Build PROD terminé - À déployer sur facturation'",
     "postdeploy": "echo Testez avec: window.urlHelperDebug.testBackend()"
   },
   "eslintConfig": {

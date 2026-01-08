@@ -309,53 +309,140 @@ export function useFactureDetailsForm(
     }, [client, readOnly, pricing.recalculerPrixLigne]);
 
     /**
-     * FONCTION SIMPLIFIÉE: Modifie une ligne avec recalcul automatique des prix
+     * ✅ FONCTION CORRIGÉE: Modifie une ligne avec recalcul automatique des prix
+     * Utilise modifierLigneMultiple pour faire une seule mise à jour atomique
      */
     const modifierLigneAvecPrix = useCallback(async (index, champ, valeur) => {
         log.debug(`Modification ligne ${index}, champ: ${champ}, valeur:`, valeur);
         
+        // Cas spécial: modification manuelle du prix
         if (champ === 'prixUnitaire') {
             lignesManager.prixModifiesManuel.current[index] = true;
             log.debug('Prix marqué comme modifié manuellement pour ligne', index);
+            lignesManager.modifierLigne(index, champ, valeur);
+            return;
         }
         
-        lignesManager.modifierLigne(index, champ, valeur);
+        // ✅ CORRECTION: Lors du changement de SERVICE, ne PAS calculer le prix
+        // car l'unité va changer juste après (via selectDefaultUniteForService)
+        // C'est le changement d'unité qui déclenchera le calcul du prix
+        if (champ === 'service' || champ === 'serviceType' || champ === 'idService') {
+            log.debug(`Changement de service détecté - pas de calcul de prix (l'unité va changer)`);
+            
+            // Construire les modifications pour le service
+            const modifications = { [champ]: valeur };
+            
+            if (champ === 'service' && valeur && typeof valeur === 'object') {
+                modifications.serviceType = valeur.codeService || valeur.code;
+                modifications.idService = valeur.idService || valeur.id;
+            } else if (champ === 'serviceType') {
+                const serviceObj = configuration.services?.find(s => s.codeService === valeur);
+                if (serviceObj) {
+                    modifications.service = serviceObj;
+                    modifications.idService = serviceObj.idService;
+                }
+            }
+            
+            // Appliquer les modifications du service SANS calculer le prix
+            if (typeof lignesManager.modifierLigneMultiple === 'function') {
+                lignesManager.modifierLigneMultiple(index, modifications);
+            } else {
+                lignesManager.modifierLigne(index, champ, valeur);
+            }
+            return;
+        }
         
-        // ✅ Détection des changements nécessitant un recalcul
+        // ✅ Détection des changements nécessitant un recalcul (uniquement unité maintenant)
         const champsRecalcul = [
-            'serviceType', 'idService', 'service',  // Service
             'unite', 'uniteCode', 'idUnite',       // Unité
             '_forceRecalculPrix'                   // Signal force
         ];
         
-        if (champsRecalcul.includes(champ) && client) {
-            log.debug(`Changement de ${champ} détecté pour ligne ${index}`);
+        const needsRecalcul = champsRecalcul.includes(champ) && client && !lignesManager.prixModifiesManuel.current[index];
+        
+        if (!needsRecalcul) {
+            // Pas de recalcul nécessaire, modification simple
+            lignesManager.modifierLigne(index, champ, valeur);
+            return;
+        }
+        
+        log.debug(`Changement de ${champ} détecté pour ligne ${index} - recalcul nécessaire`);
+        
+        // ✅ CORRECTION: Capturer la ligne AVANT modification
+        const ligneActuelle = lignesManager.lignes[index];
+        
+        // ✅ Construire les modifications à appliquer
+        const modifications = { [champ]: valeur };
+        
+        // Préparer les IDs pour le calcul du prix
+        let idService = ligneActuelle.idService;
+        let idUnite = ligneActuelle.idUnite;
+        
+        // Extraire les IDs selon le type de modification
+        if (champ === 'unite' && valeur && typeof valeur === 'object') {
+            modifications.uniteCode = valeur.codeUnite || valeur.code;
+            modifications.idUnite = valeur.idUnite || valeur.id;
+            idUnite = modifications.idUnite;
             
-            if (!lignesManager.prixModifiesManuel.current[index]) {
-                log.debug('Déclenchement du recalcul automatique du prix');
-                
-                const forceRecalcul = ['serviceType', 'idService', 'service', '_forceRecalculPrix'].includes(champ);
-                
-                setTimeout(() => {
-                    if (forceRecalcul) {
-                        pricing.clearCache();
-                        log.debug('Cache vidé pour forcer le recalcul');
-                    }
-                    
-                    pricing.recalculerPrixLigne(index, { 
-                        [champ]: valeur,
-                        forceRecalcul: forceRecalcul 
-                    });
-                }, forceRecalcul ? 200 : 100);
-            } else {
-                log.debug('Prix modifié manuellement, pas de recalcul automatique');
+            // ✅ CORRECTION: Utiliser _newIdService si présent (lors d'un changement de service)
+            if (valeur._newIdService) {
+                idService = valeur._newIdService;
+                log.debug('Utilisation du nouveau idService depuis _newIdService:', idService);
+                // Nettoyer la propriété temporaire
+                delete modifications[champ]._newIdService;
             }
         }
+        
+        log.debug('IDs pour calcul prix:', { idService, idUnite, ligneIdService: ligneActuelle.idService });
+        
+        // ✅ CORRECTION MAJEURE: Calculer le prix AVANT de modifier la ligne
+        if (idService && idUnite) {
+            try {
+                // Vider le cache pour avoir un prix frais
+                pricing.clearCache();
+                
+                const nouveauPrix = await pricing.calculerPrixPourClient({
+                    idClient: client.id,
+                    idService: idService,
+                    idUnite: idUnite,
+                    forceRecalcul: true
+                });
+                
+                log.debug(`Prix calculé pour ligne ${index}:`, nouveauPrix);
+                
+                if (nouveauPrix >= 0) {
+                    // ✅ Ajouter le prix aux modifications
+                    modifications.prixUnitaire = nouveauPrix;
+                }
+            } catch (error) {
+                log.error('Erreur lors du calcul du prix:', error);
+            }
+        } else {
+            log.warn('IDs manquants pour calcul prix:', { idService, idUnite });
+        }
+        
+        // ✅ CORRECTION: Une seule mise à jour atomique avec toutes les modifications
+        if (typeof lignesManager.modifierLigneMultiple === 'function') {
+            log.debug('Utilisation de modifierLigneMultiple:', modifications);
+            lignesManager.modifierLigneMultiple(index, modifications);
+        } else {
+            // Fallback si modifierLigneMultiple n'existe pas
+            log.warn('modifierLigneMultiple non disponible, utilisation de modifierLigne');
+            Object.entries(modifications).forEach(([key, value]) => {
+                lignesManager.modifierLigne(index, key, value);
+            });
+        }
+        
+        log.debug(`Ligne ${index} mise à jour avec succès`);
+        
     }, [
         client,
+        lignesManager.lignes,
         lignesManager.modifierLigne,
+        lignesManager.modifierLigneMultiple,
         lignesManager.prixModifiesManuel,
-        pricing.recalculerPrixLigne,
+        configuration.services,
+        pricing.calculerPrixPourClient,
         pricing.clearCache
     ]);
 

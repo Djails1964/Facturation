@@ -45,6 +45,13 @@
     display: flex;
     flex-direction: column;
   }
+
+  /* Structure de l'application */
+  .app-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
   
   /* En-tête de l'application */
   .app-header {
@@ -153,6 +160,36 @@
     margin-left: 0.5rem;
     font-size: 0.9rem;
   }
+
+  /* ==========================================
+   FOOTER
+   ========================================== */
+  .app-footer {
+    background-color: white;
+    border-top: 1px solid var(--border-color);
+    padding: 12px 20px;
+    margin-top: auto;
+    width: 100%;
+  }
+
+  .app-footer-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1400px;
+    margin: 0 auto;
+    font-size: 13px;
+    color: var(--text-light);
+  }
+
+  .app-footer-copyright {
+    font-weight: 400;
+  }
+
+  .app-footer-version {
+    font-weight: 500;
+    color: var(--text-color);
+  }
   
   /* Menu mobile */
   .menu-toggle {
@@ -195,5 +232,12 @@
     .header-actions {
       width: 100%;
       justify-content: space-between;
+    }
+    @media (max-width: 576px) {
+      .app-footer-content {
+        flex-direction: column;
+        gap: 5px;
+        text-align: center;
+      }
     }
   }

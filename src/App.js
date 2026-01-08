@@ -16,6 +16,8 @@ import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
 import LoadingSpinner from './components/LoadingSpinner';
 import SessionAlert from './components/SessionAlert';
+import EnvironmentBadge from './components/EnvironmentBadge';
+import AppFooter from './components/AppFooter';
 import Header from './components/Header';
 import GlobalDatePicker from './context/GlobalDatePicker';
 import { useGlobalNavigationGuard } from './hooks/useGlobalNavigationGuard';
@@ -172,7 +174,6 @@ function App() {
     return (
       <Header
         appName="Facturation"
-        appVersion="1.0.0"
         user={user}
         onLogout={handleLogout}
       />
@@ -245,32 +246,18 @@ function App() {
   // Layout principal pour les pages authentifiées avec protection globale
   const AuthenticatedLayout = () => (
     <NavigationGuardProvider>
-      <SessionAlert
-        sessionExpire={user?.sessionExpire}
-        onRefresh={refreshSession}
-      />
-      <ProtectedHeader />
-      <main className="app-main">
-        <Outlet context={userContext} />
-      </main>
-      <GlobalDatePicker />
-      
-      {/* ✅ INDICATEUR de configuration */}
-      {process.env.NODE_ENV === 'development' && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          right: 0,
-          background: process.env.REACT_APP_API_BASE_URL ? '#28a745' : '#007bff',
-          color: 'white',
-          padding: '5px 10px',
-          fontSize: '12px',
-          zIndex: 9999,
-          borderBottomLeftRadius: '5px'
-        }}>
-          {process.env.REACT_APP_API_BASE_URL ? 'REACT SÉPARÉ + MAPPINGS' : 'REACT DEV + MAPPINGS'}
-        </div>
-      )}
+      <div className="app-container">
+        <SessionAlert
+          sessionExpire={user?.sessionExpire}
+          onRefresh={refreshSession}
+        />
+        <ProtectedHeader />
+        <main className="app-main">
+          <Outlet context={userContext} />
+        </main>
+        <AppFooter />
+        <GlobalDatePicker />
+      </div>
     </NavigationGuardProvider>
   );
 
@@ -378,6 +365,7 @@ function App() {
   return (
     <NotificationProvider>
       <DateProvider>
+        <EnvironmentBadge />
         <RouterProvider router={router} />
       </DateProvider>
     </NotificationProvider>

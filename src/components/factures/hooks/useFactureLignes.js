@@ -686,6 +686,100 @@ export function useFactureLignes(
     }, [modifierLigne]);
 
     /**
+     * ✅ NOUVELLE FONCTION: Modifie plusieurs champs d'une ligne en UNE SEULE opération
+     * Évite les race conditions en appliquant toutes les modifications atomiquement
+     * @param {number} index - Index de la ligne
+     * @param {Object} modifications - Objet avec les champs à modifier { champ1: valeur1, champ2: valeur2, ... }
+     */
+    const modifierLigneMultiple = useCallback((index, modifications) => {
+        if (!modifications || typeof modifications !== 'object') {
+            log.warn('modifierLigneMultiple: modifications invalides');
+            return;
+        }
+
+        log.debug('✅ Modification multiple ligne ' + index + ':', Object.keys(modifications));
+
+        setLignes(prevLignes => {
+            const nouvelleLignes = [...prevLignes];
+            if (index >= 0 && index < nouvelleLignes.length) {
+                const ligneActuelle = nouvelleLignes[index];
+                let ligneUpdated = { ...ligneActuelle };
+
+                // Appliquer chaque modification
+                Object.entries(modifications).forEach(([champ, valeur]) => {
+                    // Mise à jour standard
+                    ligneUpdated[champ] = valeur;
+
+                    // Gestion spéciale pour les services
+                    if (champ === 'serviceType' || champ === 'service') {
+                        if (champ === 'serviceType') {
+                            const serviceObj = services?.find(s => s.codeService === valeur);
+                            if (serviceObj) {
+                                ligneUpdated.service = serviceObj;
+                                ligneUpdated.serviceEnrichi = serviceObj;
+                                ligneUpdated.idService = serviceObj.idService;
+                            } else {
+                                ligneUpdated.service = null;
+                                ligneUpdated.serviceEnrichi = null;
+                                ligneUpdated.idService = null;
+                            }
+                        } else if (champ === 'service' && valeur && typeof valeur === 'object') {
+                            ligneUpdated.serviceEnrichi = valeur;
+                            ligneUpdated.serviceType = valeur.codeService || valeur.code;
+                            ligneUpdated.idService = valeur.idService || valeur.id;
+                        }
+                    }
+
+                    // Gestion spéciale pour les unités
+                    if (champ === 'unite') {
+                        if (typeof valeur === 'string') {
+                            const uniteObj = unites?.find(u => u.code === valeur || u.codeUnite === valeur);
+                            if (uniteObj) {
+                                ligneUpdated.unite = { ...uniteObj };
+                                ligneUpdated.uniteEnrichie = { ...uniteObj };
+                                ligneUpdated.uniteCode = uniteObj.code || uniteObj.codeUnite;
+                                ligneUpdated.idUnite = uniteObj.idUnite || uniteObj.id;
+                            } else {
+                                ligneUpdated.unite = { code: valeur, nom: valeur };
+                                ligneUpdated.uniteEnrichie = { code: valeur, nom: valeur };
+                                ligneUpdated.uniteCode = valeur;
+                                ligneUpdated.idUnite = null;
+                            }
+                        } else if (valeur && typeof valeur === 'object') {
+                            ligneUpdated.unite = { ...valeur };
+                            ligneUpdated.uniteEnrichie = { ...valeur };
+                            ligneUpdated.uniteCode = valeur.code || valeur.codeUnite;
+                            ligneUpdated.idUnite = valeur.idUnite || valeur.id;
+                        } else if (valeur === null) {
+                            ligneUpdated.unite = null;
+                            ligneUpdated.uniteEnrichie = null;
+                            ligneUpdated.uniteCode = null;
+                            ligneUpdated.idUnite = null;
+                        }
+                    }
+                });
+
+                // Recalcul du totalLigne si quantité ou prix ont changé
+                if ('quantite' in modifications || 'prixUnitaire' in modifications) {
+                    const quantite = parseFloat(ligneUpdated.quantite) || 0;
+                    const prix = parseFloat(ligneUpdated.prixUnitaire) || 0;
+                    ligneUpdated.totalLigne = quantite * prix;
+                }
+
+                nouvelleLignes[index] = ligneUpdated;
+                
+                log.debug('✅ Ligne mise à jour (atomique):', {
+                    index,
+                    modifications: Object.keys(modifications),
+                    prixUnitaire: ligneUpdated.prixUnitaire,
+                    totalLigne: ligneUpdated.totalLigne
+                });
+            }
+            return nouvelleLignes;
+        });
+    }, [services, unites]);
+
+    /**
      * Effet pour notifier les changements
      */
     useEffect(() => {
@@ -699,7 +793,7 @@ export function useFactureLignes(
         }
         
         lastLignesLength.current = lignes.length;
-    }, [lignes, onLignesChange, totalGeneral]); // ← Déclencher sur tout changement de lignes
+    }, [lignes, onLignesChange, totalGeneral]);
 
     return {
         // États
@@ -720,6 +814,7 @@ export function useFactureLignes(
         initialiserLignes,
         ajouterLigne,
         modifierLigne,
+        modifierLigneMultiple,  // ✅ NOUVEAU
         supprimerLigne,
         copierLigne,
         toggleLigneOuverte,

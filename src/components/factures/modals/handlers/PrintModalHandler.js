@@ -3,6 +3,7 @@
 import React from 'react';
 import ModalComponents from '../../../shared/ModalComponents';
 import { createLogger } from '../../../../utils/createLogger';
+import { openFacturePdf } from '../../../../utils/pdfUtils';
 
 /**
  * Gestionnaire pour l'impression de factures
@@ -126,45 +127,67 @@ export class PrintModalHandler {
         return modalResult;
     }
 
+
     /**
-     * ✅ NOUVEAU: Gestionnaire de téléchargement séparé
+     * ✅ CORRIGÉ: Gestionnaire de téléchargement utilisant l'API sécurisée
      */
     async handlePdfDownload(pdfUrl, idFacture) {
         try {
-            let finalPdfUrl = pdfUrl;
-            this.log.debug('📥 Début téléchargement PDF:', finalPdfUrl);
+            this.log.debug('📥 Début téléchargement PDF:', pdfUrl);
 
-            // Vérification et récupération d'URL si nécessaire
-            if (!finalPdfUrl) {
-                this.log.debug('🔄 URL manquante, récupération via service...');
+            // Extraire le nom de fichier de l'URL ou récupérer via service
+            let filename = null;
+            
+            if (pdfUrl) {
+                // pdfUrl peut être:
+                // - URL directe: /storage/factures/facture_xxx.pdf
+                // - URL API: /api/document-api.php?facture=facture_xxx.pdf
+                if (pdfUrl.includes('facture=')) {
+                    // URL API: extraire le paramètre facture
+                    const urlParams = new URLSearchParams(pdfUrl.split('?')[1]);
+                    filename = urlParams.get('facture');
+                } else {
+                    // URL directe: extraire le nom de fichier
+                    filename = pdfUrl.split('/').pop();
+                    if (filename.includes('?')) {
+                        filename = filename.split('?')[0];
+                    }
+                }
+            }
+            
+            // Si pas de filename, récupérer via service
+            if (!filename) {
+                this.log.debug('🔄 Filename manquant, récupération via service...');
                 const urlResult = await this.factureActions.getFactureUrl(idFacture);
                 this.log.debug('🔄 Résultat getFactureUrl:', urlResult);
                 
                 if (urlResult.success && urlResult.pdfUrl) {
-                    finalPdfUrl = urlResult.pdfUrl;
-                    this.log.debug('✅ URL récupérée via service:', finalPdfUrl);
+                    const resultUrl = urlResult.pdfUrl;
+                    if (resultUrl.includes('facture=')) {
+                        const urlParams = new URLSearchParams(resultUrl.split('?')[1]);
+                        filename = urlParams.get('facture');
+                    } else {
+                        filename = resultUrl.split('/').pop();
+                        if (filename.includes('?')) {
+                            filename = filename.split('?')[0];
+                        }
+                    }
+                    this.log.debug('✅ Filename récupéré via service:', filename);
                 } else {
-                    throw new Error('Impossible de récupérer l\'URL du PDF');
+                    throw new Error('Impossible de récupérer le nom du fichier PDF');
                 }
             }
 
-            this.log.debug('📥 URL finale pour téléchargement:', finalPdfUrl);
+            this.log.debug('📥 Ouverture sécurisée du PDF:', filename);
             
-            // ✅ MÉTHODE PRINCIPALE: Ouverture dans un nouvel onglet (fonctionne mieux que le téléchargement forcé)
-            const newWindow = window.open(finalPdfUrl, '_blank');
+            // ✅ Utiliser openFacturePdf pour ouvrir via l'API sécurisée
+            const result = await openFacturePdf(filename);
             
-            if (newWindow) {
-                this.log.debug('✅ PDF ouvert dans un nouvel onglet');
+            if (result.success) {
+                this.log.debug('✅ PDF ouvert avec succès');
                 this.onSetNotification('PDF ouvert dans un nouvel onglet', 'success');
             } else {
-                // Fallback: essayer le téléchargement direct
-                this.log.debug('🔄 Pop-up bloqué, essai téléchargement direct...');
-                if (this.tryDirectDownload(finalPdfUrl)) {
-                    this.log.debug('✅ Téléchargement direct lancé');
-                    this.onSetNotification('Téléchargement du PDF lancé', 'success');
-                } else {
-                    throw new Error('Impossible d\'ouvrir ou de télécharger le PDF. Veuillez autoriser les pop-ups pour ce site.');
-                }
+                throw new Error(result.error || 'Impossible d\'ouvrir le PDF');
             }
 
         } catch (error) {

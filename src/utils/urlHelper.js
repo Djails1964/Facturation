@@ -1,55 +1,19 @@
-// src/utils/urlHelper.js - VERSION CORRIGÉE POUR PRODUCTION
-
-// 🔧 CORRECTION: Accès direct aux variables d'environnement injectées par webpack
-const getEnvVar = (varName) => {
-  console.log(`🔗 UrlHelper - Recherche de la variable d'environnement: ${varName}`);
-  
-  // React injecte automatiquement les variables REACT_APP_* dans process.env
-  const value = process.env[varName];
-  
-  if (value !== undefined) {
-    console.log(`🔗 UrlHelper - ${varName} trouvé:`, value);
-    return value;
-  }
-  
-  console.log(`🔗 UrlHelper - ${varName} non trouvé`);
-  return undefined;
-};
-
+// src/utils/urlHelper.js - VERSION SIMPLIFIÉE POUR ARCHITECTURE PROXY (même domaine)
 
 // Configuration des logs
-const getInitialLogConfig = () => {
-  const isDevelopment = getEnvVar('NODE_ENV') === 'development';
-  const debugUrlsEnv = getEnvVar('REACT_APP_DEBUG_URLS');
-  
-  let enabled = false;
-  
-  if (debugUrlsEnv !== undefined) {
-    enabled = debugUrlsEnv === 'true';
-    console.log('🔗 UrlHelper - Configuration logs depuis REACT_APP_DEBUG_URLS:', enabled);
-  } else {
-    enabled = isDevelopment;
-    console.log('🔗 UrlHelper - Configuration logs depuis NODE_ENV (development):', enabled);
-  }
-  
-  return {
-    enabled,
-    prefix: '🔗 UrlHelper',
-    methods: {
-      constructor: true,
-      detectBackendConfig: true,
-      getBackendBaseUrl: true,
-      backendUrl: true,
-      exports: true
-    }
-  };
+const getEnvVar = (varName) => {
+  const value = process.env[varName];
+  return value !== undefined ? value : undefined;
 };
 
-const LOG_CONFIG = getInitialLogConfig();
+const isDevelopment = getEnvVar('NODE_ENV') === 'development';
+const debugUrls = getEnvVar('REACT_APP_DEBUG_URLS') === 'true';
+
+const LOG_ENABLED = isDevelopment || debugUrls;
 
 const log = (method, ...args) => {
-  if (LOG_CONFIG.enabled && LOG_CONFIG.methods[method]) {
-    console.log(`${LOG_CONFIG.prefix}.${method} -`, ...args);
+  if (LOG_ENABLED) {
+    console.log(`🔗 UrlHelper.${method} -`, ...args);
   }
 };
 
@@ -60,123 +24,83 @@ class UrlHelper {
     this.currentUrl = new URL(window.location.href);
     this.protocol = this.currentUrl.protocol;
     this.host = this.currentUrl.host;
+    this.origin = this.currentUrl.origin;
     
-    log('constructor', 'URL actuelle:', this.currentUrl.href);
-    log('constructor', 'Protocole détecté:', this.protocol);
-    log('constructor', 'Host détecté:', this.host);
-    
-    // Configuration backend
+    // Configuration pour l'architecture proxy
     this.backendConfig = this.detectBackendConfig();
-    
-    log('constructor', 'Configuration backend finale:', this.backendConfig);
-    
     this.appBasePath = this.detectAppBasePath();
     
-    log('constructor', 'Initialisation terminée');
+    log('constructor', 'Configuration finale:', {
+      origin: this.origin,
+      backendConfig: this.backendConfig,
+      appBasePath: this.appBasePath
+    });
   }
 
   detectBackendConfig() {
     log('detectBackendConfig', 'Détection de la configuration backend');
     
-    // 🚨 DEBUG TEMPORAIRE - À ajouter au début de detectBackendConfig()
-    console.log('🚨 DEBUG DIRECT - Test variables:');
-    console.log('🚨 process available:', typeof process !== 'undefined');
-    console.log('🚨 process.env available:', typeof process !== 'undefined' && process.env);
-    
-    // Test direct des variables webpack
-    try {
-        // eslint-disable-next-line no-undef
-        console.log('🚨 REACT_APP_BACKEND_URL direct:', typeof REACT_APP_BACKEND_URL !== 'undefined' ? REACT_APP_BACKEND_URL : 'UNDEFINED');
-    } catch (e) {
-        console.log('🚨 REACT_APP_BACKEND_URL ERROR:', e.message);
-    }
-    
-    try {
-        // eslint-disable-next-line no-undef
-        console.log('🚨 REACT_APP_API_BASE_URL direct:', typeof REACT_APP_API_BASE_URL !== 'undefined' ? REACT_APP_API_BASE_URL : 'UNDEFINED');
-    } catch (e) {
-        console.log('🚨 REACT_APP_API_BASE_URL ERROR:', e.message);
-    }
-    
-    if (typeof process !== 'undefined' && process.env) {
-        console.log('🚨 process.env.REACT_APP_BACKEND_URL:', process.env.REACT_APP_BACKEND_URL);
-        console.log('🚨 process.env.REACT_APP_API_BASE_URL:', process.env.REACT_APP_API_BASE_URL);
-    }
-    // 🚨 FIN DEBUG TEMPORAIRE
-    
-    // Variables d'environnement avec méthode améliorée
+    // PRIORITÉ 1: Variable d'environnement REACT_APP_BACKEND_URL (URL complète)
     const envBackendUrl = getEnvVar('REACT_APP_BACKEND_URL');
-    const isDevelopment = getEnvVar('NODE_ENV') === 'development';
-    const isLocalhost = this.host.includes('localhost') || this.host.includes('127.0.0.1');
-    
-    log('detectBackendConfig', 'Variables détectées:', {
-      envBackendUrl,
-      isDevelopment,
-      isLocalhost,
-      host: this.host
-    });
-    
-    // PRIORITÉ ABSOLUE: Si REACT_APP_BACKEND_URL est défini, l'utiliser TOUJOURS
     if (envBackendUrl) {
-      console.log('✅ UrlHelper - REACT_APP_BACKEND_URL trouvé, utilisation prioritaire:', envBackendUrl);
-      try {
-        const backendUrl = new URL(envBackendUrl);
-        const config = {
-          protocol: backendUrl.protocol.replace(':', ''),
-          host: backendUrl.host,
-          basePath: backendUrl.pathname.replace(/\/$/, '')
-        };
-        
-        console.log('✅ UrlHelper - Configuration extraite:', config);
-        return config;
-      } catch (error) {
-        console.error('❌ UrlHelper - Erreur parsing REACT_APP_BACKEND_URL:', envBackendUrl, error);
-      }
-    }
-    
-    // FALLBACK AMÉLIORÉ: Si pas de REACT_APP_BACKEND_URL, essayer d'utiliser REACT_APP_API_BASE_URL
-    const apiBaseUrl = getEnvVar('REACT_APP_API_BASE_URL');
-    if (apiBaseUrl) {
-      console.log('⚠️ UrlHelper - REACT_APP_BACKEND_URL non trouvé, utilisation de REACT_APP_API_BASE_URL:', apiBaseUrl);
-      try {
-        const apiUrl = new URL(apiBaseUrl);
-        // Retirer /api de la fin pour obtenir l'URL de base
-        let basePath = apiUrl.pathname.replace(/\/api\/?$/, '');
-        
-        const config = {
-          protocol: apiUrl.protocol.replace(':', ''),
-          host: apiUrl.host,
-          basePath: basePath
-        };
-        
-        console.log('✅ UrlHelper - Configuration extraite de REACT_APP_API_BASE_URL:', config);
-        return config;
-      } catch (error) {
-        console.error('❌ UrlHelper - Erreur parsing REACT_APP_API_BASE_URL:', apiBaseUrl, error);
-      }
-    }
-    
-    // Fallback final
-    console.warn('🚨 UrlHelper: Aucune variable d\'environnement backend trouvée');
-    
-    if (isDevelopment || isLocalhost) {
-      console.log('UrlHelper - Mode développement détecté');
-      return {
-        protocol: 'https',
-        host: 'localhost',
-        basePath: '/fact-back'
-      };
-    } else {
-      console.log('UrlHelper - Mode production par défaut');
-      const currentHost = this.host;
-      const currentProtocol = this.protocol.replace(':', '');
+      log('detectBackendConfig', 'REACT_APP_BACKEND_URL trouvé:', envBackendUrl);
       
-      return {
-        protocol: currentProtocol,
-        host: currentHost,
-        basePath: ''
-      };
+      // Si c'est une URL relative (commence par /), utiliser l'origin actuel
+      if (envBackendUrl.startsWith('/')) {
+        return {
+          baseUrl: this.origin,
+          apiPath: envBackendUrl.replace(/\/$/, ''),
+          isRelative: true
+        };
+      }
+      
+      // URL absolue
+      try {
+        const url = new URL(envBackendUrl);
+        return {
+          baseUrl: url.origin,
+          apiPath: url.pathname.replace(/\/$/, ''),
+          isRelative: false
+        };
+      } catch (e) {
+        log('detectBackendConfig', 'Erreur parsing URL:', e.message);
+      }
     }
+    
+    // PRIORITÉ 2: Variable d'environnement REACT_APP_API_BASE_URL
+    const envApiBaseUrl = getEnvVar('REACT_APP_API_BASE_URL');
+    if (envApiBaseUrl) {
+      log('detectBackendConfig', 'REACT_APP_API_BASE_URL trouvé:', envApiBaseUrl);
+      
+      // URL relative (recommandée pour architecture proxy)
+      if (envApiBaseUrl.startsWith('/')) {
+        return {
+          baseUrl: this.origin,
+          apiPath: envApiBaseUrl.replace(/\/$/, ''),
+          isRelative: true
+        };
+      }
+      
+      // URL absolue
+      try {
+        const url = new URL(envApiBaseUrl);
+        return {
+          baseUrl: url.origin,
+          apiPath: url.pathname.replace(/\/$/, ''),
+          isRelative: false
+        };
+      } catch (e) {
+        log('detectBackendConfig', 'Erreur parsing URL:', e.message);
+      }
+    }
+    
+    // FALLBACK: Utiliser le même domaine avec /api
+    log('detectBackendConfig', 'Fallback: même domaine avec /api');
+    return {
+      baseUrl: this.origin,
+      apiPath: '/api',
+      isRelative: true
+    };
   }
 
   detectAppBasePath() {
@@ -184,116 +108,105 @@ class UrlHelper {
     if (envBasePath) {
       return envBasePath;
     }
-    
-    const pathname = this.currentUrl.pathname;
-    const pathParts = pathname.split('/').filter(part => part.length > 0);
-    
-    if (pathParts.length > 0 && pathParts[0] !== 'static') {
-      return '/' + pathParts[0];
-    }
-    
     return '';
   }
 
+  /**
+   * Construit l'URL de base du backend
+   */
   getBackendBaseUrl() {
-    log('getBackendBaseUrl', 'Construction de l\'URL backend');
-    log('getBackendBaseUrl', 'Configuration backend:', this.backendConfig);
+    const { baseUrl, apiPath, isRelative } = this.backendConfig;
     
-    const { protocol, host, basePath } = this.backendConfig;
-    const backendBaseUrl = `${protocol}://${host}${basePath}`;
+    if (isRelative) {
+      // Architecture proxy: même domaine
+      return this.origin;
+    }
     
-    log('getBackendBaseUrl', 'URL backend finale:', backendBaseUrl);
-    
-    return backendBaseUrl;
+    return baseUrl;
   }
 
+  /**
+   * Construit une URL vers le backend
+   * @param {string} path - Chemin relatif (ex: 'api/client-api.php')
+   * @param {object} params - Paramètres query string
+   */
+  backendUrl(path = '', params = {}) {
+    log('backendUrl', 'Construction URL pour:', path);
+    
+    // Normaliser le path
+    if (path && !path.startsWith('/')) {
+      path = '/' + path;
+    }
+    
+    const { baseUrl, isRelative } = this.backendConfig;
+    let fullUrl;
+    
+    if (isRelative) {
+      // Architecture proxy: URL relative au même domaine
+      fullUrl = `${this.origin}${path}`;
+    } else {
+      // Cross-domain: URL absolue
+      fullUrl = `${baseUrl}${path}`;
+    }
+    
+    // Ajouter les paramètres query string
+    if (Object.keys(params).length > 0) {
+      const queryString = new URLSearchParams(params).toString();
+      fullUrl = `${fullUrl}?${queryString}`;
+    }
+    
+    log('backendUrl', 'URL finale:', fullUrl);
+    return fullUrl;
+  }
+
+  /**
+   * Construit une URL vers l'API
+   * @param {string} endpoint - Endpoint API (ex: 'client-api.php')
+   * @param {object} params - Paramètres query string
+   */
+  apiUrl(endpoint, params = {}) {
+    const { apiPath } = this.backendConfig;
+    const path = `${apiPath}/${endpoint}`.replace(/\/+/g, '/');
+    return this.backendUrl(path, params);
+  }
+
+  /**
+   * Construit une URL vers l'application frontend
+   */
   appUrl(path = '') {
     if (path && !path.startsWith('/')) {
       path = '/' + path;
     }
-    
-    return `${this.protocol}//${this.host}${this.appBasePath}${path}`;
+    return `${this.origin}${this.appBasePath}${path}`;
   }
 
-  backendUrl(path = '', params = {}) {
-    console.log('🔍 backendUrl INPUT - path:', path);
-    console.log('🔍 backendUrl INPUT - params:', params);
-    console.log('🔍 path contains %3F?', path.includes('%3F'));
-    log('backendUrl', 'Début Construction de l\'URL backend');
-    log('backendUrl', 'Construction URL backend');
-    log('backendUrl', 'Path d\'entrée:', path);
-    log('backendUrl', 'Paramètres:', params);
-    
-    // 🚨 DEBUG TEMPORAIRE - À ajouter dans backendUrl()
-    console.log('🚨 DEBUG DANS BACKENDURL - Variables disponibles:');
-    console.log('🚨 process available:', typeof process !== 'undefined');
-    console.log('🚨 process.env available:', typeof process !== 'undefined' && process.env);
-    
-    // Test direct des variables webpack
-    try {
-        // eslint-disable-next-line no-undef
-        console.log('🚨 REACT_APP_BACKEND_URL direct:', typeof REACT_APP_BACKEND_URL !== 'undefined' ? REACT_APP_BACKEND_URL : 'UNDEFINED');
-    } catch (e) {
-        console.log('🚨 REACT_APP_BACKEND_URL ERROR:', e.message);
+  /**
+   * Construit une URL vers un fichier facture
+   */
+  facturesUrl(filename) {
+    if (!filename) {
+      console.warn('⚠️ facturesUrl: filename manquant');
+      return this.backendUrl('/storage/factures/');
     }
     
-    try {
-        // eslint-disable-next-line no-undef
-        console.log('🚨 REACT_APP_API_BASE_URL direct:', typeof REACT_APP_API_BASE_URL !== 'undefined' ? REACT_APP_API_BASE_URL : 'UNDEFINED');
-    } catch (e) {
-        console.log('🚨 REACT_APP_API_BASE_URL ERROR:', e.message);
-    }
-    
-    if (typeof process !== 'undefined' && process.env) {
-        console.log('🚨 process.env.REACT_APP_BACKEND_URL:', process.env.REACT_APP_BACKEND_URL);
-        console.log('🚨 process.env.REACT_APP_API_BASE_URL:', process.env.REACT_APP_API_BASE_URL);
-    }
-    
-    // Test de getEnvVar
-    console.log('🚨 getEnvVar(REACT_APP_BACKEND_URL):', getEnvVar('REACT_APP_BACKEND_URL'));
-    console.log('🚨 getEnvVar(REACT_APP_API_BASE_URL):', getEnvVar('REACT_APP_API_BASE_URL'));
-    
-    console.log('🚨 Configuration backend actuelle:', this.backendConfig);
-    // 🚨 FIN DEBUG TEMPORAIRE
-    
-    if (path && !path.startsWith('/')) {
-      path = '/' + path;
-      log('backendUrl', 'Path ajusté avec /:', path);
-    }
-    
-    const baseUrl = this.getBackendBaseUrl() + path;
-    log('backendUrl', 'URL de base construite:', baseUrl);
-    
-    if (Object.keys(params).length > 0) {
-      const queryString = new URLSearchParams(params).toString();
-      console.log('🔍 queryString generated:', queryString);
-      log('backendUrl', 'Query string construite:', queryString);
-      const finalUrl = `${baseUrl}?${queryString}`;
-      console.log('🔍 finalUrl before return:', finalUrl);
-      console.log('🔍 finalUrl contains %3F?', finalUrl.includes('%3F'));
-      log('backendUrl', 'URL finale avec paramètres:', finalUrl);
-      return finalUrl;
-    }
-    
-    console.log('🔍 baseUrl without params:', baseUrl);
-    log('backendUrl', 'URL finale sans paramètres:', baseUrl);
-    return baseUrl;
+    const encodedFilename = encodeURIComponent(filename);
+    return this.backendUrl(`/storage/factures/${encodedFilename}`);
   }
 
-  emailClientSenderUrlWithSession(requestIdOrResult, additionalParams = {}) {
-    console.log('🔍 emailClientSenderUrlWithSession INPUT:', requestIdOrResult);
+  /**
+   * Construit l'URL pour l'envoi d'email via client
+   */
+  emailClientSenderUrl(requestIdOrResult, additionalParams = {}) {
+    // Si c'est un objet avec newWindowUrl, l'utiliser directement
     if (typeof requestIdOrResult === 'object' && requestIdOrResult.newWindowUrl) {
-      console.log('🔍 newWindowUrl detected:', requestIdOrResult.newWindowUrl);
-      if (requestIdOrResult.newWindowUrl.startsWith('http')) {
-          return requestIdOrResult.newWindowUrl;
+      const newWindowUrl = requestIdOrResult.newWindowUrl;
+      if (newWindowUrl.startsWith('http')) {
+        return newWindowUrl;
       }
-        
-        const completeUrl = this.getBackendBaseUrl() + '/' + requestIdOrResult.newWindowUrl.replace(/^\//, '');
-        console.log('🔍 URL construite:', completeUrl);
-        console.log('🔍 Contains %3F?', completeUrl.includes('%3F'));
-        return completeUrl;
+      return this.apiUrl(newWindowUrl.replace(/^\//, '')); // CORRECTION: apiUrl
     }
     
+    // Sinon, construire l'URL avec le requestId
     let requestId;
     let params = { ...additionalParams };
     
@@ -301,166 +214,64 @@ class UrlHelper {
       requestId = requestIdOrResult;
     } else if (typeof requestIdOrResult === 'object' && requestIdOrResult.requestId) {
       requestId = requestIdOrResult.requestId;
-      if (requestIdOrResult.debug) {
-        params.debug = true;
-        params.session_transmitted = requestIdOrResult.debug.session_id ? 'yes' : 'no';
-      }
     } else {
-      console.error('emailClientSenderUrlWithSession: paramètre invalide', requestIdOrResult);
-      return this.backendUrl('email_client_sender.php');
+      console.error('emailClientSenderUrl: paramètre invalide', requestIdOrResult);
+      return this.apiUrl('email_client_sender.php'); // CORRECTION: apiUrl
     }
     
-    if (!requestId) {
-      console.error('emailClientSenderUrlWithSession: requestId manquant');
-      return this.backendUrl('email_client_sender.php');
+    if (requestId) {
+      params.request_id = requestId;
     }
     
-    params.request_id = requestId;
-    return this.backendUrl('email_client_sender.php', params);
+    return this.apiUrl('email_client_sender.php', params); // CORRECTION: apiUrl
   }
 
-  emailClientSenderUrl(requestId, additionalParams = {}) {
-    return this.emailClientSenderUrlWithSession(requestId, additionalParams);
+  emailClientSenderUrlWithSession(requestIdOrResult, additionalParams = {}) {
+    return this.emailClientSenderUrl(requestIdOrResult, additionalParams);
   }
 
-  apiUrl(endpoint, params = {}) {
-    return this.backendUrl(`api/${endpoint}`, params);
-  }
-
-  // 🔧 AJOUT DE LA MÉTHODE MANQUANTE
-  facturesUrl(filename) {
-    log('facturesUrl', 'Construction URL facture pour:', filename);
-    
-    if (!filename) {
-      console.warn('⚠️ facturesUrl: filename manquant');
-      return this.backendUrl('storage/factures/');
-    }
-    
-    // Encoder le nom de fichier pour gérer les caractères spéciaux
-    const encodedFilename = encodeURIComponent(filename);
-    const factureUrl = this.backendUrl(`storage/factures/${encodedFilename}`);
-    
-    log('facturesUrl', 'URL facture construite:', factureUrl);
-    return factureUrl;
-  }
-
-  static setLogging(enabled, methods = null) {
-    LOG_CONFIG.enabled = enabled;
-    if (methods && Array.isArray(methods)) {
-      Object.keys(LOG_CONFIG.methods).forEach(method => {
-        LOG_CONFIG.methods[method] = false;
-      });
-      methods.forEach(method => {
-        if (LOG_CONFIG.methods.hasOwnProperty(method)) {
-          LOG_CONFIG.methods[method] = true;
-        }
-      });
-    } else if (methods === null) {
-      Object.keys(LOG_CONFIG.methods).forEach(method => {
-        LOG_CONFIG.methods[method] = enabled;
-      });
-    }
-    
-    console.log('🔗 UrlHelper - Configuration des logs mise à jour:', LOG_CONFIG);
-  }
-
+  /**
+   * Retourne les informations de debug
+   */
   getDebugInfo() {
     return {
       currentUrl: this.currentUrl.href,
-      protocol: this.protocol,
-      host: this.host,
-      appBasePath: this.appBasePath,
-      backendBaseUrl: this.getBackendBaseUrl(),
+      origin: this.origin,
       backendConfig: this.backendConfig,
+      appBasePath: this.appBasePath,
       envVars: {
         NODE_ENV: getEnvVar('NODE_ENV'),
         REACT_APP_BACKEND_URL: getEnvVar('REACT_APP_BACKEND_URL'),
         REACT_APP_API_BASE_URL: getEnvVar('REACT_APP_API_BASE_URL'),
         REACT_APP_DEBUG_URLS: getEnvVar('REACT_APP_DEBUG_URLS')
-      },
-      logConfig: LOG_CONFIG
+      }
     };
+  }
+
+  /**
+   * Configure le niveau de log
+   */
+  static setLogging(enabled) {
+    // Note: Dans cette version simplifiée, on ne peut pas changer dynamiquement
+    console.log(`🔗 UrlHelper - Logging ${enabled ? 'activé' : 'désactivé'}`);
   }
 }
 
-// Créer une instance singleton
-log('exports', 'Création de l\'instance singleton');
+// Instance singleton
 const urlHelper = new UrlHelper();
-log('exports', 'Instance singleton créée');
 
 // Exports
-export const appUrl = (path) => {
-  const result = urlHelper.appUrl(path);
-  return result;
-};
-
-export const backendUrl = (path, params) => {
-  // Encoder automatiquement les segments de chemin problématiques
-  if (path) {
-    const parts = path.split('/');
-    const encodedParts = parts.map((part, index) => {
-      // Ne pas encoder les premiers segments (dossiers API standards)
-      if (index === 0 && (part === 'api' || part === 'storage')) {
-        return part;
-      }
-      
-      // Encoder les noms de fichiers et tout contenu non-ASCII
-      if (part.includes('.') || /[^\x00-\x7F]/.test(part) || part.includes(' ')) {
-        return encodeURIComponent(part);
-      }
-      
-      return part;
-    });
-    path = encodedParts.join('/');
-  }
-  
-  const result = urlHelper.backendUrl(path, params);
-  return result;
-};
-
-export const facturesUrl = (filename) => {
-  const result = urlHelper.facturesUrl(filename);
-  return result;
-};
-
-export const emailClientSenderUrl = (requestId, params) => {
-  const result = urlHelper.emailClientSenderUrl(requestId, params);
-  return result;
-};
-
-export const emailClientSenderUrlWithSession = (requestIdOrResult, params) => {
-  const result = urlHelper.emailClientSenderUrlWithSession(requestIdOrResult, params);
-  return result;
-};
-
-export const apiUrl = (endpoint, params) => {
-  const result = urlHelper.apiUrl(endpoint, params);
-  return result;
-};
-
-export const setUrlLogging = (enabled, methods = null) => {
-  UrlHelper.setLogging(enabled, methods);
-};
+export const appUrl = (path) => urlHelper.appUrl(path);
+export const backendUrl = (path, params) => urlHelper.backendUrl(path, params);
+export const apiUrl = (endpoint, params) => urlHelper.apiUrl(endpoint, params);
+export const facturesUrl = (filename) => urlHelper.facturesUrl(filename);
+export const emailClientSenderUrl = (requestId, params) => urlHelper.emailClientSenderUrl(requestId, params);
+export const emailClientSenderUrlWithSession = (requestIdOrResult, params) => urlHelper.emailClientSenderUrlWithSession(requestIdOrResult, params);
+export const setUrlLogging = (enabled) => UrlHelper.setLogging(enabled);
 
 export const configureUrlHelperForEnvironment = () => {
-  const isDevelopment = getEnvVar('NODE_ENV') === 'development';
-  const isLocalhost = window.location.hostname === 'localhost' || 
-                     window.location.hostname === '127.0.0.1';
-  const debugUrlsEnv = getEnvVar('REACT_APP_DEBUG_URLS');
-  
-  if (debugUrlsEnv !== undefined) {
-    const enableLogs = debugUrlsEnv === 'true';
-    setUrlLogging(enableLogs);
-    console.log(`🔗 UrlHelper configuré selon REACT_APP_DEBUG_URLS=${debugUrlsEnv} -> logs=${enableLogs}`);
-  } else {
-    if (isDevelopment || isLocalhost) {
-      setUrlLogging(true);
-      console.log('🔗 UrlHelper configuré en mode développement avec logs détaillés');
-    } else {
-      setUrlLogging(false);
-      console.log('🔗 UrlHelper configuré en mode production sans logs');
-    }
-  }
+  const debugInfo = urlHelper.getDebugInfo();
+  console.log('🔗 UrlHelper configuration:', debugInfo);
 };
 
 export { UrlHelper };

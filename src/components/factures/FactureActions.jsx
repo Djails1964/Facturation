@@ -31,6 +31,7 @@ const FactureActions = ({
     const canPay = ['Envoyée', 'Retard', 'Partiellement payée'].includes(etat);
     const canDelete = etat === 'En attente';
     const canCancel = ['Envoyée', 'Éditée', 'Retard'].includes(etat);
+    const canPrint = ['En attente', 'Éditée'].includes(etat);
 
     // Gestion du tooltip collé au curseur
     const handleMouseEnter = (event, text) => {
@@ -122,17 +123,22 @@ const FactureActions = ({
                 
                 {/* Bouton Imprimer */}
                 <button 
-                    className="bouton-action"
+                    className={`bouton-action ${!canPrint ? 'bouton-desactive' : ''}`}
                     aria-label="Imprimer la facture"
-                    onMouseEnter={(e) => handleMouseEnter(e, 'Imprimer la facture')}
-                    onMouseMove={(e) => handleMouseMove(e, 'Imprimer la facture')}
+                    disabled={!canPrint}
+                    onMouseEnter={(e) => handleMouseEnter(e, canPrint ? 'Imprimer la facture' : 'Impression impossible')}
+                    onMouseMove={(e) => handleMouseMove(e, canPrint ? 'Imprimer la facture' : 'Impression impossible')}
                     onMouseLeave={handleMouseLeave}
                     onClick={(e) => {
                         e.stopPropagation();
-                        onImprimerFacture(id, e);
+                        if (canPrint) {
+                            onImprimerFacture(id, e);
+                        } else {
+                            onSetNotification('Seules les factures en attente et éditée peuvent être imprimées', 'error');
+                        }
                     }}
                 >
-                    <FiPrinter size={16} color="#800020" />
+                    <FiPrinter size={16} color={canPrint ? "#800020" : "#ccc"} />
                 </button>
                 
                 {/* Bouton Copier */}

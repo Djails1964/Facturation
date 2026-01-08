@@ -24,6 +24,16 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
 
     const log = createLogger('usePaiementFormHandlers');
 
+    log.debug('🔧 usePaiementFormHandlers - Initialisation avec état:', {
+        mode,
+        isReadOnly,
+        isPaiementAnnule,
+        isCreate
+    });
+    log.debug('🎨 formState:', formState);
+    log.debug('🧠 formLogic:', formLogic);
+    log.debug('✅ formValidation:', formValidation);
+
     // DatePicker handler
     const datePickerHandler = new DatePickerModalHandler({
         showCustom: modalSystem.custom.bind(modalSystem),
@@ -152,12 +162,43 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
     /**
      * Fonction pour gérer une sauvegarde réussie
      */
-    const handleSuccessfulSave = useCallback((idPaiement, message) => {
+    const handleSuccessfulSave = useCallback((result, message) => {
         log.debug('✅ Sauvegarde réussie PaiementForm - nettoyage des modifications');
+
+        // 1. Extraire les infos depuis formState (déjà dispo dans le scope du hook)
+        const numFacture = formState.factureSelectionnee?.numeroFacture || 'N/A';
+        const clientData = formState.factureSelectionnee?.client;
+        log.debug(' formState.factureSelectionnee:', formState.factureSelectionnee);
+        log.debug(' clientData:', clientData);
+        let nomClient = 'Client inconnu';
+
+        if (clientData && clientData.nom) {
+            // Construction : Prénom Nom (ou juste Nom si pas de prénom)
+            nomClient = `${clientData.prenom ? clientData.prenom + ' ' : ''}${clientData.nom}`.trim();
+        }
+
+        log.debug(' result.numeroPaiement:', result.numeroPaiement);
+
+        const montant = formState.paiement?.montantPaye || 0;
+        
+        // 2. Récupérer le numéro de paiement depuis le résultat de l'API
+        // Note: On vérifie plusieurs clés possibles selon votre API (numeroPaiement ou idPaiement)
+        log.debug(' idPaiement reçu:', result.id);
+        log.debug(' typeOf idPaiement:', typeof result.id);
+        const numPaiement = result.numeroPaiement || result.idPaiement || 'N/A'; 
+
+        // 3. Construction du message enrichi
+        const messageEnrichi = `Paiement n° ${numPaiement} (Facture ${numFacture} - ${nomClient}) d'un montant de ${montant} CHF enregistré avec succès`;
+
+        log.debug('✅ Sauvegarde réussie, message:', messageEnrichi);
+        log.debug(' factureSelectionnee avant reset:', formState.factureSelectionnee);
         
         markAsSaved();
         resetChanges();
-        
+
+        log.debug(' factureSelectionnee après reset:', formState.factureSelectionnee);
+
+
         const newFormData = getFormData();
         setInitialFormData(newFormData);
 
@@ -169,10 +210,10 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
 
         if (mode === FORM_MODES.CREATE && onPaiementCreated) {
             log.debug('📤 Mode CREATE - Appel onPaiementCreated');
-            onPaiementCreated(idPaiement, message);
+            onPaiementCreated(idPaiement, messageEnrichi);
         } else if (mode === FORM_MODES.EDIT && onRetourListe) {
             log.debug('🔙 Mode EDIT - Retour à la liste avec message de succès');
-            onRetourListe(idPaiement, true, message, 'success');
+            onRetourListe(idPaiement, true, messageEnrichi, 'success');
         }
     }, [mode, onPaiementCreated, onRetourListe, markAsSaved, resetChanges, getFormData, 
         setInitialFormData, unregisterGuard, guardId, setShowGlobalModal, 
@@ -227,13 +268,14 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
             let result;
             if (mode === FORM_MODES.CREATE) {
                 result = await paiementActions.creerPaiement(paiementData);
+                log.debug('✅ Résultat création paiement:', result);
                 if (result.success) {
-                    handleSuccessfulSave(result.idPaiement, NOTIFICATIONS.CREATE_SUCCESS);
+                    handleSuccessfulSave(result, NOTIFICATIONS.CREATE_SUCCESS);
                 }
             } else if (mode === FORM_MODES.EDIT) {
                 result = await paiementActions.modifierPaiement(idPaiement, paiementData);
                 if (result.success) {
-                    handleSuccessfulSave(idPaiement, NOTIFICATIONS.UPDATE_SUCCESS);
+                    handleSuccessfulSave(result, NOTIFICATIONS.UPDATE_SUCCESS);
                 }
             }
             

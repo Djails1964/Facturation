@@ -29,6 +29,7 @@ export function useFacturePricing(
     // Références pour éviter les calculs multiples
     const calculationCache = useRef(new Map());
     const calculationPromises = useRef(new Map());
+    const initialPriceCalculationDone = useRef(null); // Stocke l'ID client
     
     /**
      * FONCTION PRINCIPALE UNIFIÉE: Calcul du prix pour un client
@@ -306,12 +307,21 @@ export function useFacturePricing(
                         forceRecalcul: shouldForceRecalcul
                     });
 
-                    // MISE À JOUR SI NÉCESSAIRE
-                    if (nouveauPrix >= 0 && nouveauPrix !== ligne.prixUnitaire) {
+
+                    // MISE À JOUR PROTÉGÉE
+                    // Ne pas mettre à jour si le nouveau prix est 0 et l'ancien est > 0 en mode missing
+                    const ancienPrix = parseFloat(ligne.prixUnitaire) || 0;
+                    const doitMettreAJour = nouveauPrix >= 0 && 
+                                           nouveauPrix !== ancienPrix &&
+                                           !(nouveauPrix === 0 && ancienPrix > 0 && mode === 'missing');
+                    
+                    if (doitMettreAJour) {
                         if (modifierLigne && typeof modifierLigne === 'function') {
                             modifierLigne(index, 'prixUnitaire', nouveauPrix);
-                            log.debug(`Prix mis à jour ligne ${index}: ${ligne.prixUnitaire} → ${nouveauPrix} CHF`);
+                            log.debug(`Prix mis à jour ligne ${index}: ${ancienPrix} → ${nouveauPrix} CHF`);
                         }
+                    } else if (nouveauPrix === 0 && ancienPrix > 0) {
+                        log.debug(`Prix NON mis à jour ligne ${index}: protection (${ancienPrix} → ${nouveauPrix})`);
                     }
 
                 } catch (error) {
@@ -488,12 +498,24 @@ export function useFacturePricing(
             return;
         }
 
+        // Vérifier s'il y a des lignes avec prix manquant et service+unité définis
+        const lignesAvecPrixManquant = lignes.filter(ligne => {
+            const prixVide = ligne.prixUnitaire === '' || ligne.prixUnitaire === null || ligne.prixUnitaire === undefined;
+            const hasServiceEtUnite = ligne.idService && ligne.idUnite;
+            return prixVide && hasServiceEtUnite;
+        });
+
+        // Ne rien faire s'il n'y a pas de prix manquant
+        if (lignesAvecPrixManquant.length === 0) {
+            return;
+        }
+
         const timer = setTimeout(() => {
             calculerPrixManquants();
         }, 300);
 
         return () => clearTimeout(timer);
-    }, [client?.id, lignes?.length, tarifActions, calculerPrixManquants]);
+    }, [client?.id, lignes?.length, lignes, tarifActions]);
 
     /**
      * Nettoyage lors du démontage

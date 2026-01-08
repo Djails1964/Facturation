@@ -1,9 +1,10 @@
 // src/components/factures/modals/handlers/EmailModalHandler.js
 
 import React from 'react';
-import { emailClientSenderUrlWithSession } from '../../../../utils/urlHelper';
+import { emailClientSenderUrlWithSession, apiUrl } from '../../../../utils/urlHelper';
 import ModalComponents from '../../../shared/ModalComponents';
 import { createLogger } from '../../../../utils/createLogger';
+import { openFacturePdf } from '../../../../utils/pdfUtils';
 
 /**
  * Gestionnaire pour la modal d'envoi d'email - VERSION FINALE NETTOYÉE
@@ -290,9 +291,36 @@ export class EmailModalHandler {
                 e.stopPropagation();
                 
                 try {
-                    window.open(pdfUrl, '_blank');
+                    // Extraire le nom de fichier de pdfUrl
+                    // pdfUrl peut être:
+                    // - URL directe: /storage/factures/facture_xxx.pdf
+                    // - URL API: /api/document-api.php?facture=facture_xxx.pdf
+                    let filename = null;
+                    
+                    if (pdfUrl.includes('facture=')) {
+                        // URL API: extraire le paramètre facture
+                        const urlParams = new URLSearchParams(pdfUrl.split('?')[1]);
+                        filename = urlParams.get('facture');
+                    } else {
+                        // URL directe: extraire le nom de fichier
+                        filename = pdfUrl.split('/').pop();
+                        if (filename.includes('?')) {
+                            filename = filename.split('?')[0];
+                        }
+                    }
+                    
+                    if (!filename) {
+                        throw new Error('Nom de fichier non trouvé');
+                    }
+                    
+                    // Utiliser openFacturePdf pour ouvrir via l'API sécurisée
+                    const result = await openFacturePdf(filename);
+                    
+                    if (!result.success) {
+                        throw new Error(result.error || 'Impossible d\'ouvrir le PDF');
+                    }
                 } catch (error) {
-                    await this.showError('Erreur lors de l\'ouverture du PDF.', anchorRef);
+                    await this.showError('Erreur lors de l\'ouverture du PDF: ' + error.message, anchorRef);
                 }
             });
         }
@@ -405,29 +433,110 @@ export class EmailModalHandler {
     }
 
     /**
-     * Popup client - VERSION FINALE AVEC AUTO-FERMETURE
+
+    /**
+     * Popup client - VERSION CORRIGÉE AVEC FETCH POUR LE PROXY
      */
     async openEmailClientPopup(clientPageUrl, sendResult, formData, anchorRef) {
         try {
-            const popup = window.open(
-                clientPageUrl, 
-                'emailClientSender', 
-                'width=1000,height=700,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no'
-            );
+            this.log.debug('📧 Ouverture page email:', clientPageUrl);
+            this.log.debug('sendResult : ', sendResult);
+            this.log.debug('formData : ', formData);
+            this.log.debug('anchorRef : ', anchorRef);
             
-            if (popup && !popup.closed) {
-                this.log.debug('✅ Popup ouverte avec succès');
-                
-                // ✅ AMÉLIORATION: Surveiller la fermeture de la popup
-                this.monitorPopupClosure(popup, formData);
-                
-                // // ✅ Notification discrète
-                // this.onSetNotification('Interface email moderne préparée', 'success');
-                
-            } else {
-                this.log.warn('❌ Popup bloquée par le navigateur');
-                await this.handleBlockedPopup(clientPageUrl, sendResult, formData, anchorRef);
+            // ✅ CORRECTION: Utiliser fetch avec credentials pour passer par le proxy
+            const response = await fetch(clientPageUrl, {
+                method: 'GET',
+                credentials: 'include'
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                if (errorData.session_expired) {
+                    window.location.href = '/login';
+                    return;
+                }
+                throw new Error(errorData.message || `Erreur HTTP: ${response.status}`);
             }
+            
+            // Vérifier le type de contenu
+            const contentType = response.headers.get('content-type') || '';
+            
+            if (contentType.includes('message/rfc822') || contentType.includes('application/octet-stream')) {
+                // C'est un fichier .eml à télécharger
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                
+                // Extraire le nom de fichier du header Content-Disposition ou générer un nom
+                const disposition = response.headers.get('content-disposition') || '';
+                let filename = 'email.eml';
+                const filenameMatch = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                if (filenameMatch && filenameMatch[1]) {
+                    filename = filenameMatch[1].replace(/['"]/g, '');
+                }
+                
+                // Télécharger le fichier
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                setTimeout(() => window.URL.revokeObjectURL(blobUrl), 60000);
+                
+                this.log.debug('✅ Fichier .eml téléchargé:', filename);
+                this.onSetNotification(`Email préparé pour ${formData.to}`, 'success');
+                
+            } else if (contentType.includes('text/html')) {
+                // --- DÉBUT DE LA CORRECTION POUR LE BLOB ---
+                let html = await response.text();
+                
+                // ✅ UTILISATION DE apiUrl POUR LE BACKEND
+                // On construit l'URL vers le fichier JS situé dans le dossier api
+                const absoluteJsPath = apiUrl('EmailClientSender.js'); 
+                
+                this.log.debug('🔗 Chemin JS résolu via apiUrl:', absoluteJsPath);
+
+                // On remplace le chemin relatif par l'URL absolue de l'API
+                html = html.replace(
+                    'src="EmailClientSender.js"', 
+                    `src="${absoluteJsPath}"`
+                );
+
+                // Création du Blob avec le HTML modifié
+                const blob = new Blob([html], { type: 'text/html' });
+                const blobUrl = window.URL.createObjectURL(blob);
+                // --- FIN DE LA CORRECTION ---
+                
+                const popup = window.open(
+                    blobUrl, 
+                    'emailClientSender', 
+                    'width=1000,height=700,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no'
+                );
+                
+                if (popup && !popup.closed) {
+                    this.log.debug('✅ Popup ouverte avec succès');
+                    this.monitorPopupClosure(popup, formData);
+                } else {
+                    this.log.warn('❌ Popup bloquée, téléchargement du fichier HTML');
+                    const link = document.createElement('a');
+                    link.href = blobUrl;
+                    link.download = 'email_preview.html';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+                
+                setTimeout(() => window.URL.revokeObjectURL(blobUrl), 60000);
+            } else {
+                // Contenu inconnu, essayer d'ouvrir comme blob
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                window.open(blobUrl, '_blank');
+                setTimeout(() => window.URL.revokeObjectURL(blobUrl), 60000);
+            }
+            
         } catch (error) {
             this.log.error('❌ Erreur ouverture popup:', error);
             await this.handlePopupError(clientPageUrl, sendResult, formData, anchorRef);

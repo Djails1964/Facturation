@@ -4,7 +4,7 @@
  * @description Gère l'accès aux données des factures via l'API facture-api.php
  */
 import api from './api';
-import { backendUrl } from '../utils/urlHelper';
+import { backendUrl, apiUrl } from '../utils/urlHelper';
 import { toBoolean, normalizeBooleanFields, normalizeBooleanFieldsArray } from '../utils/booleanHelper';
 import ParametreService from './ParametreService';
 import { formatMontant } from '../utils/formatters';
@@ -323,19 +323,10 @@ class FactureService {
           // Gestion du chemin du document avec URL correcte
           let documentPath = null;
           if (factureNormalisee.factfilename) {
-              try {
-                  const outputDirResponse = await api.get('parametre-api.php?nomParametre=OutputDir&groupe=Facture&sGroupe=Chemin');
-                  
-                  let outputDir = 'storage/factures';
-                  if (outputDirResponse && outputDirResponse.success) {
-                      outputDir = outputDirResponse.parametre?.valeurParametre || outputDir;
-                  }
-                  
-                  documentPath = backendUrl(`${outputDir}/${factureNormalisee.factfilename}`);
-                  this.log.debug('Chemin du document de facture:', documentPath);
-              } catch (e) {
-                  this.log.warn('Erreur lors de la récupération du chemin du document:', e);
-              }
+              // ✅ CORRECTION: Utiliser l'endpoint API dédié pour servir les PDF
+              // Cela garantit que l'authentification est vérifiée
+              documentPath = apiUrl('document-api.php', { facture: factureNormalisee.factfilename });
+              this.log.debug('Chemin du document de facture (via API):', documentPath);
           }
 
           this.log.debug('🔍 Données normalisées de la facture:', factureNormalisee);

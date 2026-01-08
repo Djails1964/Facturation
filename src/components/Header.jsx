@@ -31,7 +31,7 @@ function Header({ appName, appVersion, user, onLogout }) {
   return (
     <header className="app-header">
       {/* Indicateur de mode développement */}
-      {process.env.NODE_ENV === 'development' && (
+{/*      {process.env.NODE_ENV === 'development' && (
         <div 
           style={{ 
             backgroundColor: '#ff7700', 
@@ -46,6 +46,7 @@ function Header({ appName, appVersion, user, onLogout }) {
           MODE DÉVELOPPEMENT - Utiliser uniquement http://localhost:3007
         </div>
       )}
+*/}
       
       <div className="header-container">
         {/* Logo et nom de l'application */}
@@ -69,13 +70,12 @@ function Header({ appName, appVersion, user, onLogout }) {
               <User size={20} />
             </div>
             <div className="user-details">
-              <span className="user-name">{user.nomComplet}</span>
-              <span className="user-role">{user.role}</span>
-              {process.env.NODE_ENV === 'development' && (
-                <span style={{ fontSize: '10px', backgroundColor: '#ff7700', color: 'white', padding: '2px 5px', borderRadius: '3px' }}>
-                  DEV
-                </span>
-              )}
+              <span className="user-name">
+                {user?.prenom && user?.nom 
+                  ? `${user.prenom} ${user.nom}` 
+                  : user?.username || 'Utilisateur'}
+              </span>
+              <span className="user-role">{user?.role}</span>
             </div>
           </div>
           

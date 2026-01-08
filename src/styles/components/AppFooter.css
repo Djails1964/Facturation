@@ -1,0 +1,36 @@
+/* src/components/AppFooter.css */
+.app-footer {
+  background-color: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+  padding: 12px 20px;
+  margin-top: auto;
+  width: 100%;
+}
+
+.app-footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1400px;
+  margin: 0 auto;
+  font-size: 13px;
+  color: #6c757d;
+}
+
+.app-footer-copyright {
+  font-weight: 400;
+}
+
+.app-footer-version {
+  font-weight: 500;
+  color: #495057;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+  .app-footer-content {
+    flex-direction: column;
+    gap: 5px;
+    text-align: center;
+  }
+}
