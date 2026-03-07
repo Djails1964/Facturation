@@ -206,7 +206,79 @@ const CLIENT_MAPPINGS = {
   delaiPaiement: 'delai_paiement',
   modePaiementPrefere: 'mode_paiement_prefere',
   languePrefere: 'langue_prefere',
-  deviseDefaut: 'devise_defaut'
+  deviseDefaut: 'devise_defaut',
+  aLoyer: 'a_loyer',
+  loyerEtatPaiement: 'loyer_etat_paiement',
+};
+
+// ================================
+// MAPPINGS LOYERS (Table loyer séparée)
+// ================================
+
+/**
+ * ✅ Mappings pour la table loyer (séparée de facture)
+ * Structure: table loyer + table loyer_detail
+ * Numérotation: LOY-{id_client}-{seq} (gérée en PHP)
+ */
+const LOYER_MAPPINGS = {
+  // ✅ Identifiants (table loyer)
+  idLoyer: 'id_loyer',
+  numeroLoyer: 'numero_loyer',
+  numeroSequence: 'numero_sequence',
+  
+  // ✅ Relation client
+  idClient: 'id_client',
+  prenomClient: 'prenom_client',
+  nomClient: 'nom_client',
+  nomCompletClient: 'nom_complet_client',
+  emailClient: 'email_client',
+  telephoneClient: 'telephone_client',
+  rueClient: 'rue_client',
+  numeroClient: 'numero_client',
+  codePostalClient: 'code_postal_client',
+  localiteClient: 'localite_client',
+  
+  // ✅ Dates
+  dateCreationLoyer: 'date_creation_loyer',
+  periodeDebut: 'periode_debut',
+  periodeFin: 'periode_fin',
+  
+  // ✅ Durée et description
+  dureeMois: 'duree_mois',
+  motif: 'motif',
+  afficherDatesPaiement: 'afficher_dates_paiement',
+  description: 'description',
+  
+  // ✅ Montants
+  loyerMontantTotal: 'loyer_montant_total',
+  montantMensuelMoyen: 'montant_mensuel_moyen',
+  loyerMontantPaye: 'loyer_montant_paye',
+  montantRestant: 'montant_restant',
+  pourcentagePaye: 'pourcentage_paye',
+  
+  // ✅ États
+  loyerStatut: 'loyer_statut',  // actif, termine, suspendu, annule
+  etatPaiement: 'etat_paiement',  // non_paye, partiellement_paye, paye
+  moisPayes: 'mois_payes',
+  totalMois: 'total_mois',
+  
+  // ✅ Détails mensuels (table loyer_detail)
+  idLoyerDetail: 'id_loyer_detail',
+  loyerMois: 'loyer_mois',
+  loyerNumeroMois: 'loyer_numero_mois',
+  loyerAnnee: 'loyer_annee',
+  loyerDetailMontant: 'loyer_detail_montant',
+  loyerDetailPaye: 'loyer_detail_paye',
+  montantMensuel: 'montant',  // Alias
+  montantsMensuels: 'montants_mensuels',  // Array côté frontend
+  estPaye: 'est_paye',
+  datePaiement: 'date_paiement',
+  
+  // ✅ Métadonnées
+  dateCreation: 'date_creation',
+  dateModification: 'date_modification',
+  createurId: 'createur_id',
+  modificateurId: 'modificateur_id'
 };
 
 // ================================
@@ -359,6 +431,7 @@ const ALL_MAPPINGS = {
   ...FACTURATION_MAPPINGS,
   ...TARIFICATION_MAPPINGS,
   ...PAIEMENT_MAPPINGS,
+  ...LOYER_MAPPINGS,
   ...CLIENT_MAPPINGS,
   ...USER_MAPPINGS,
   ...PARAMETRES_MAPPINGS
@@ -394,7 +467,16 @@ const CONTEXT_MAPPINGS = {
     ...GENERIC_MAPPINGS,
     ...PAIEMENT_MAPPINGS,
     ...FACTURATION_MAPPINGS,
-    ...CLIENT_MAPPINGS
+    ...CLIENT_MAPPINGS,
+    ...LOYER_MAPPINGS
+  },
+
+  // Contexte loyer
+  loyer: {
+    ...GENERIC_MAPPINGS,
+    ...LOYER_MAPPINGS,
+    ...CLIENT_MAPPINGS,
+    ...FACTURATION_MAPPINGS
   },
   
   // Contexte administration
@@ -531,6 +613,7 @@ const API_ENDPOINTS_MAPPING = {
     'client-api.php', 
     'facture-api.php',
     'paiement-api.php',
+    'loyer-api.php',
     'user-api.php',
     'parametre-api.php'
   ],
@@ -546,6 +629,7 @@ const API_ENDPOINTS_MAPPING = {
     'client-api.php': 'client',
     'facture-api.php': 'facturation',
     'paiement-api.php': 'paiement',
+    'loyer-api.php': 'loyer',
     'user-api.php': 'admin',
     'parametre-api.php': 'parametres'
   },
@@ -611,6 +695,7 @@ export {
   FACTURATION_MAPPINGS,
   TARIFICATION_MAPPINGS,
   PAIEMENT_MAPPINGS,
+  LOYER_MAPPINGS,
   CLIENT_MAPPINGS,
   USER_MAPPINGS,
   DATE_FIELDS,
@@ -650,6 +735,7 @@ export default {
   FACTURATION_MAPPINGS,
   TARIFICATION_MAPPINGS,
   PAIEMENT_MAPPINGS,
+  LOYER_MAPPINGS,
   CLIENT_MAPPINGS,
   USER_MAPPINGS,
   DATE_FIELDS

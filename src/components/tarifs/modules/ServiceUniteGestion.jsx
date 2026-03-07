@@ -155,6 +155,10 @@ const ServiceUniteGestion = ({
 
   // Associer une unité au service
   const handleLinkServiceUnite = async (idUnite) => {
+    console.log('🔍 normalizedUnites:', normalizedUnites);
+    console.log('🔍 normalizedServices:', normalizedServices);
+    console.log('🔍 idUnite reçu:', idUnite, 'Type:', typeof idUnite);
+    console.log('🔍 selectedidService:', selectedidService, 'Type:', typeof selectedidService);
     if (!selectedidService || !idUnite) return;
     
     setLoading(true);
@@ -162,7 +166,29 @@ const ServiceUniteGestion = ({
     try {
       await tarifActions.linkServiceUnite(selectedidService, idUnite);
       
-      setMessage("Unité associée avec succès au service");
+      // Récupérer le nom de l'unité
+      const unite = normalizedUnites.find(u => u.idUnite === idUnite);
+      const uniteName = unite?.nomUnite || `Unité #${idUnite}`;
+      log.debug(' uniteName trouvé:', uniteName);
+
+      // Récupérer le nom du service
+      const service = normalizedServices.find(s => {
+        const serviceId = Number(s.idService || s.id_service || s.id);
+        const targetId = Number(selectedidService);
+        return serviceId === targetId;
+      });
+      const serviceName = service?.nomService || `Service #${selectedidService}`;
+      log.debug(' serviceName trouvé:', serviceName);
+
+      log.debug(' normalizedServices:', normalizedServices);
+      log.debug(' selectedidService:', selectedidService);
+      log.debug(' service trouvé:', service);
+      log.debug(' normalizedUnites:', normalizedUnites);
+      log.debug(' idUnite à associer:', idUnite);
+      log.debug(' unité trouvée:', unite);  
+
+      // Message enrichi avec les noms
+      setMessage(`Unité "${uniteName}" associée avec succès au service "${serviceName}"`);
       setMessageType("success");
       
       if (typeof loadAllServicesUnites === "function") {

@@ -1,0 +1,306 @@
+/* ====================================================================
+   LoyerForm.css - Styles spécifiques au formulaire de loyer
+   Utilise les styles globaux de forms.css, layout.css, variables.css
+   ==================================================================== */
+
+/* ===================================================================
+   TITRE - Utilise .content-section-title de layout.css
+   Le markup doit être : <div class="content-section-title"><h2>Nouveau loyer</h2></div>
+   =================================================================== */
+
+/* Pas de styles supplémentaires nécessaires, layout.css gère tout */
+
+/* ===================================================================
+   CONTENEUR - Utilise .content-section-container de layout.css
+   =================================================================== */
+
+/* Formulaire avec carte blanche et ombre */
+.loyer-form {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 30px;
+  margin-top: 20px;
+}
+
+/* ===================================================================
+   SECTIONS DU FORMULAIRE
+   =================================================================== */
+
+.loyer-form-section {
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.loyer-form-section:last-of-type {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.loyer-form-section h3 {
+  margin: 0 0 20px 0;
+  color: var(--color-text);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* ===================================================================
+   CHAMPS DE FORMULAIRE - Utilise .input-group de forms.css
+   Les labels flottants sont gérés automatiquement par forms.css
+   =================================================================== */
+
+/* Ligne avec plusieurs champs côte à côte */
+.form-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.form-row .input-group {
+  flex: 1;
+}
+
+/* ===================================================================
+   MONTANTS MENSUELS - Labels toujours en position haute
+   =================================================================== */
+
+.montants-mensuels-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+/* Item de montant mensuel avec label fixe en haut */
+.montant-mensuel-item {
+  position: relative;
+  padding-top: 18px; /* Espace pour le label fixe */
+}
+
+/* Label TOUJOURS en position haute pour les mois */
+.montant-mensuel-item label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: 12px;
+  color: var(--color-primary);
+  font-weight: 500;
+  pointer-events: none;
+  /* PAS de transition - toujours en haut */
+}
+
+/* Input avec currency CHF */
+.input-with-currency {
+  position: relative;
+  width: 100%;
+}
+
+.input-with-currency input {
+  width: 100%;
+  padding: 10px 45px 10px 0;
+  border: none;
+  border-bottom: 1px solid #ccc;
+  background-color: transparent;
+  font-size: 14px;
+  transition: border-color 0.3s;
+  outline: none;
+}
+
+.input-with-currency input::placeholder {
+  color: transparent;
+}
+
+.input-with-currency input:focus {
+  border-bottom: 2px solid var(--color-primary);
+}
+
+.input-with-currency .currency {
+  position: absolute;
+  right: 0;
+  top: 10px;
+  color: #666;
+  font-size: 13px;
+  font-weight: 500;
+  pointer-events: none;
+}
+
+/* ============================================================
+   LoyerForm — Section historique des paiements
+   À intégrer dans styles/components/loyers/LoyerForm.css
+   ============================================================ */
+
+.loyer-paiements-section {
+  margin-top: 8px;
+}
+
+.loyer-paiements-vide {
+  color: var(--color-text-muted, #888);
+  font-style: italic;
+  font-size: 0.9rem;
+  padding: 8px 0;
+}
+
+.loyer-paiements-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  margin-top: 8px;
+}
+
+.loyer-paiements-table th {
+  background-color: var(--color-primary, #8b1a1a);
+  color: #fff;
+  padding: 8px 10px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.82rem;
+}
+
+.loyer-paiements-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+.loyer-paiements-table tbody tr:hover {
+  background-color: #fafafa;
+}
+
+.loyer-paiements-table .montant-cell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.loyer-paiements-table tfoot tr.loyer-paiements-total td {
+  border-top: 2px solid var(--color-primary, #8b1a1a);
+  background-color: #f9f9f9;
+  padding: 9px 10px;
+}
+
+.loyer-solde-restant {
+  color: var(--badge-attente-text, #856404);
+  font-weight: 600;
+}
+
+.loyer-solde-ok {
+  color: var(--badge-payee-text, #155724);
+  font-weight: 600;
+}
+
+/* ===================================================================
+   TOTAL
+   =================================================================== */
+
+.loyer-total {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 15px;
+  padding: 15px 20px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+  font-size: 16px;
+  margin-bottom: 20px; /* ✅ ESPACE AVANT LES BOUTONS */
+}
+
+.loyer-total strong {
+  color: var(--color-text);
+}
+
+.montant-total {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+/* ===================================================================
+   MONTANT FIXE - Ligne avec champ + bouton alignés en bas
+   =================================================================== */
+
+.loyer-montant-fixe-row {
+  align-items: flex-end;
+  gap: 10px;
+  margin-bottom: 25px;
+}
+
+.loyer-montant-fixe-row .input-group {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+/* Bouton "Appliquer à tous" aligné avec le bas du champ */
+.loyer-btn-appliquer {
+  white-space: nowrap;
+  height: 37px;
+  flex-shrink: 0;
+  margin-bottom: 0;
+}
+
+/* ===================================================================
+   ACTIONS - Utilise les boutons de buttons.css
+   =================================================================== */
+
+.loyer-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  padding-top: 20px;
+  border-top: 1px solid #e0e0e0;
+}
+
+/* Les boutons utilisent .btn-primary et .btn-secondary de buttons.css */
+/* Pas de styles supplémentaires nécessaires */
+
+/* ===================================================================
+   ERREURS - Utilise les styles globaux
+   =================================================================== */
+
+.loyer-form-error {
+  padding: 12px 15px;
+  margin-bottom: 20px;
+  background-color: var(--color-error-bg);
+  color: var(--color-error-text);
+  border: 1px solid var(--color-error-border);
+  border-radius: var(--border-radius-sm);
+}
+
+/* ===================================================================
+   LOADING
+   =================================================================== */
+
+.loyer-form-loading {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+
+/* ===================================================================
+   RESPONSIVE
+   =================================================================== */
+
+@media (max-width: 768px) {
+  .loyer-form {
+    padding: 20px 15px;
+  }
+  
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+  
+  .montants-mensuels-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+  
+  .loyer-form-actions {
+    flex-direction: column-reverse;
+  }
+  
+  .loyer-form-actions button {
+    width: 100%;
+  }
+}

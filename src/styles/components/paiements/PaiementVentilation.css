@@ -1,0 +1,291 @@
+/*
+ * PaiementVentilation.css
+ * Styles pour le composant PaiementVentilation (Vue 1 — détail ventilation d'un paiement libre)
+ *
+ * Utilise au maximum :
+ *   - variables.css  : couleurs, espacements, bordures
+ *   - layout.css     : .notification, .etat-badge
+ *   - modals.css     : .modal-loading, .modal-spinner, .modal-error
+ *   - PaiementForm.css : .form-section, .facture-details, .details-row
+ * Aucune valeur codée en dur si une variable CSS existe.
+ */
+
+/* ========== SECTION PRINCIPALE ========== */
+
+/* Reprend exactement la même structure que les autres form-section du formulaire */
+.pv-section {
+    margin-top: var(--spacing-lg);
+}
+
+/* Titre identique à PaiementForm.css .form-section h3 */
+.pv-section h3 {
+    padding-top: var(--spacing-lg);
+    padding-bottom: var(--spacing-lg);
+    margin: 0;
+    color: #495057;
+    font-size: 18px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--color-border);
+}
+
+/* ========== GRILLE DES 3 CARTES MONTANTS ========== */
+
+.pv-montants-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    margin-top: var(--spacing-lg);
+}
+
+/* Carte individuelle : reprend le style de .facture-details de PaiementForm.css */
+.pv-montant-card {
+    background-color: var(--color-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-md);
+    padding: var(--spacing-sm) var(--spacing-md);
+}
+
+.pv-montant-label {
+    font-size: 11px;
+    color: var(--color-text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.pv-montant-valeur {
+    font-size: 15px;
+    font-weight: 700;
+}
+
+/* Couleurs sémantiques via les variables d'état de variables.css */
+.pv-montant-valeur--initial  { color: var(--color-text); }
+.pv-montant-valeur--attribue { color: var(--color-warning-text); }   /* orange */
+.pv-montant-valeur--solde    { color: var(--color-success-text); }   /* vert */
+
+/* ========== BARRE DE PROGRESSION ========== */
+
+.pv-progress {
+    height: 8px;
+    background-color: var(--color-border);
+    border-radius: var(--border-radius-lg);
+    margin-bottom: var(--spacing-lg);
+    overflow: hidden;
+}
+
+.pv-progress-fill {
+    height: 100%;
+    border-radius: var(--border-radius-lg);
+    transition: width 0.3s var(--transition-ease);
+    background-color: var(--color-warning-text);   /* orange — partiellement attribué */
+}
+
+.pv-progress-fill--complet {
+    background-color: var(--color-success-text);   /* vert — totalement attribué */
+}
+
+/* ========== ÉTATS CHARGEMENT ET ERREUR ========== */
+
+/*
+ * On réutilise .modal-loading et .modal-spinner de modals.css directement dans le JSX.
+ * On réutilise .notification.error de layout.css pour les erreurs.
+ * Ce bloc n'ajoute que les ajustements spécifiques au contexte (pas de surcharge).
+ */
+
+.pv-empty {
+    /* Reprend le style .loading-message de PaiementForm.css */
+    text-align: center;
+    padding: var(--spacing-xl) var(--spacing-lg);
+    color: var(--color-text-light);
+    font-size: 14px;
+    font-style: italic;
+}
+
+/* ========== TABLEAU DES ATTRIBUTIONS ========== */
+
+.pv-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    color: var(--color-text);
+}
+
+/* En-tête : même style que .paiements-table-header de PaiementsListe.css */
+.pv-table thead tr {
+    background-color: var(--color-secondary);
+    border-bottom: 2px solid var(--color-border);
+}
+
+.pv-table th {
+    padding: var(--spacing-sm) var(--spacing-md);
+    text-align: left;
+    font-size: 11px;
+    color: var(--color-text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.pv-table th.pv-th-right {
+    text-align: right;
+}
+
+/* Lignes corps : même séparation que .details-row de PaiementForm.css */
+.pv-table tbody tr {
+    border-bottom: 1px solid var(--color-border);
+    transition: background-color var(--transition-speed) var(--transition-ease);
+}
+
+.pv-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.pv-table tbody tr:hover {
+    background-color: var(--color-secondary);
+}
+
+.pv-table td {
+    padding: var(--spacing-sm) var(--spacing-md);
+    vertical-align: middle;
+}
+
+.pv-table td.pv-td-right {
+    text-align: right;
+    font-weight: 600;
+}
+
+.pv-table td.pv-td-muted {
+    color: var(--color-text-light);
+}
+
+/* ========== BADGE TYPE ATTRIBUTION (Loyer / Facture) ========== */
+
+/*
+ * On réutilise la base .etat-badge de layout.css.
+ * On ajoute seulement les variantes de couleurs spécifiques au contexte.
+ */
+
+.pv-badge-loyer {
+    background-color: var(--color-info-bg);
+    color: var(--color-info-text);
+    border-color: var(--color-info-border);
+}
+
+.pv-badge-facture {
+    background-color: var(--color-neutral-bg);
+    color: var(--color-neutral-text);
+    border-color: var(--color-neutral-border);
+}
+
+/* ========== PIED DE TABLEAU (totaux) ========== */
+
+/* Reprend le style de .details-row:last-child de PaiementForm.css */
+.pv-table tfoot tr {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.pv-table tfoot tr:first-child {
+    background-color: var(--color-secondary);
+    border-top: 2px solid var(--color-border);
+}
+
+.pv-table tfoot tr:last-child {
+    background-color: var(--color-success-bg);
+}
+
+.pv-table tfoot td {
+    padding: var(--spacing-sm) var(--spacing-md);
+    text-align: right;
+}
+
+.pv-tfoot-label {
+    text-align: right !important;
+    color: var(--color-text-light);
+    font-weight: 500;
+}
+
+.pv-tfoot-attribue {
+    color: var(--color-warning-text);
+}
+
+.pv-tfoot-solde {
+    color: var(--color-success-text);
+}
+
+/* ========== RESPONSIVE ========== */
+
+@media (max-width: 768px) {
+    .pv-montants-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-sm);
+    }
+
+    .pv-table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .pv-montant-card {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .pv-montant-label {
+        margin-bottom: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .pv-section h3 {
+        font-size: 16px;
+        padding-top: var(--spacing-md);
+        padding-bottom: var(--spacing-md);
+    }
+}
+
+/* ========== ACCESSIBILITÉ ========== */
+
+@media (prefers-reduced-motion: reduce) {
+    .pv-progress-fill {
+        transition: none;
+    }
+}
+
+@media (prefers-contrast: high) {
+    .pv-table th,
+    .pv-table td {
+        border: 1px solid var(--color-text);
+    }
+
+    .pv-badge-loyer,
+    .pv-badge-facture {
+        border-width: 2px;
+        font-weight: 700;
+    }
+}
+
+/* ========== PRINT ========== */
+
+@media print {
+    .pv-progress {
+        display: none;
+    }
+
+    .pv-table {
+        border: 1px solid #000;
+    }
+
+    .pv-table th,
+    .pv-table td {
+        border: 1px solid #000;
+    }
+
+    .pv-montant-valeur--attribue,
+    .pv-montant-valeur--solde {
+        color: #000 !important;
+    }
+}

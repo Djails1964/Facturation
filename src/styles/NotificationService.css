@@ -391,4 +391,55 @@
     background: #2d2d2d;
     color: #e0e0e0;
   }
+
+  /* =============================================================================
+   PATCH - Augmenter la spécificité du NotificationService
+   À ajouter à la FIN de NotificationService.css
+   ============================================================================= */
+
+  /* Force les styles du NotificationService à prendre le dessus sur layout.css */
+  .notifications-container .notification {
+    /* Réappliquer tous les styles importants */
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 16px 20px !important;
+    background: var(--color-background, white) !important;
+    border-radius: var(--border-radius, 8px) !important;
+    box-shadow: var(--box-shadow, 0 4px 12px rgba(0, 0, 0, 0.15)) !important;
+    cursor: pointer !important;
+    pointer-events: auto !important;
+    position: relative !important;
+    overflow: hidden !important;
+    min-height: 60px !important;
+    transition: all var(--transition-speed, 0.3s) var(--transition-ease, ease) !important;
+    animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    border-left: 4px solid !important;
+    margin: 0 !important; /* Supprimer la marge de layout.css */
+  }
+
+  .notifications-container .notification-success {
+    border-left-color: var(--success-color, #28a745) !important;
+    background: linear-gradient(to right, rgba(40, 167, 69, 0.05), var(--color-background, white)) !important;
+  }
+
+  .notifications-container .notification-error {
+    border-left-color: var(--danger-color, #dc3545) !important;
+    background: linear-gradient(to right, rgba(220, 53, 69, 0.05), var(--color-background, white)) !important;
+  }
+
+  .notifications-container .notification-warning {
+    border-left-color: var(--warning-color, #ffc107) !important;
+    background: linear-gradient(to right, rgba(255, 193, 7, 0.05), var(--color-background, white)) !important;
+  }
+
+  .notifications-container .notification-info {
+    border-left-color: var(--info-color, #17a2b8) !important;
+    background: linear-gradient(to right, rgba(23, 162, 184, 0.05), var(--color-background, white)) !important;
+  }
+
+  .notifications-container .notification:hover {
+    transform: translateX(-4px) !important;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2) !important;
+  }
 }

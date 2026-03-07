@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigationGuard } from '../../App';
+import { useNotifications } from '../../services/NotificationService';
 
 // Hooks personnalisés
 import { useTarifGestionState } from './hooks/useTarifGestionState';
@@ -11,7 +12,6 @@ import { useTarifModals } from './hooks/useTarifModals';
 // Composants modulaires
 import TarifTabs from './components/TarifTabs';
 import TarifContent from './components/TarifContent';
-import TarifNotifications from './components/TarifNotifications';
 import TarifAuthorization from './components/TarifAuthorization';
 import { createLogger } from '../../utils/createLogger';
 
@@ -52,6 +52,27 @@ const TarifGestion = ({
 
   // Hooks personnalisés pour la logique métier
   const { notifications, addNotification, removeNotification } = useTarifNotifications();
+  const { showSuccess, showError, showInfo } = useNotifications();
+  
+  // Transformer les messages de gestionState en notifications du NotificationService
+  useEffect(() => {
+    if (gestionState.message) {
+      const type = gestionState.messageType || 'info';
+      
+      if (type === 'success') {
+        showSuccess(gestionState.message);
+      } else if (type === 'error' || type === 'danger') {
+        showError(gestionState.message);
+      } else {
+        showInfo(gestionState.message);
+      }
+      
+      // Effacer le message après l'avoir affiché
+      setTimeout(() => {
+        gestionState.handleDismissMessage?.();
+      }, 100);
+    }
+  }, [gestionState.message, gestionState.messageType]);
   
   const { 
     handleCreateItem,
@@ -141,26 +162,9 @@ const TarifGestion = ({
           </div>
         )}
         
-        {gestionState.message && (
-          <div className={`alert ${gestionState.messageType === 'success' ? 'alert-success' : gestionState.messageType === 'info' ? 'alert-info' : 'alert-danger'}`}>
-            {gestionState.message}
-            <button 
-              type="button" 
-              className="close-message" 
-              onClick={gestionState.handleDismissMessage}
-              aria-label="Fermer"
-            >
-              &times;
-            </button>
-          </div>
-        )}
+        {/* Les messages sont maintenant gérés par NotificationService via useEffect */}
       </div>
       
-      {/* Notifications */}
-      <TarifNotifications 
-        notifications={notifications}
-        onRemoveNotification={removeNotification}
-      />
       <div className="tarif-gestion-container">
       {/* Afficher le loader seulement si pas de données */}
         {gestionState.services.length === 0 ? (

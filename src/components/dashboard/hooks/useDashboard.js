@@ -4,12 +4,14 @@
  * ✅ Normalisation des données API (snake_case → camelCase)
  * ✅ Agrégation et calcul des statistiques
  * ✅ Gestion du cache et des mises à jour
+ * ✅ Utilise DateService pour le formatage des dates
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import FactureService from '../../../services/FactureService';
 import { FieldConverter } from '../../../utils/FieldConverter';
-import { formatMontant, formatDate } from '../../../utils/formatters';
+import { formatMontant } from '../../../utils/formatters';
+import DateService from '../../../utils/DateService';
 
 export const useDashboard = (selectedYear) => {
   const [stats, setStats] = useState(null);
@@ -134,8 +136,9 @@ export const useDashboard = (selectedYear) => {
       };
 
       facturesData.forEach(facture => {
-        const factureMonth = new Date(facture.dateFacture).getMonth();
-        if (factureMonth === i) {
+        // ✅ Utilisation de DateService.getMonthFromDate() au lieu de new Date().getMonth()
+        const factureMonth = DateService.getMonthFromDate(facture.dateFacture);
+        if (factureMonth === i + 1) { // getMonthFromDate retourne 1-12, pas 0-11
           monthData.facturé += facture.montantTotal || 0;
           
           if (facture.etatAffichage === 'Payée') {
@@ -213,8 +216,8 @@ export const useDashboard = (selectedYear) => {
     loading,
     error,
     refresh,
-    // Utilitaires
+    // Utilitaires - ✅ Utilise DateService.formatSingleDate au lieu de formatters.formatDate
     formatMontant,
-    formatDate
+    formatDate: DateService.formatSingleDate
   };
 };

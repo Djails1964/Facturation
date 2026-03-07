@@ -676,6 +676,7 @@ export class PaymentModalHandler {
                     // ✅ MODIFIÉ : Utiliser executeApi pour créer le paiement
                     return await this.executeApi(
                         () => this.paiementActions.creerPaiement({
+                            idClient: factureData.idClient,
                             idFacture: idFacture,
                             datePaiement: formData.datePaiement,
                             montantPaye: montantPayeNum,

@@ -18,6 +18,7 @@ export {
   MailActionButton,
   PrintActionButton,
   PayActionButton,
+  PdfActionButton,
   MoveActionButton,
   
   // Boutons de formulaire

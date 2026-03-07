@@ -45,7 +45,7 @@ class ClientService {
       return client;
     }
     
-    return normalizeBooleanFields(client, ['estTherapeute']);
+    return normalizeBooleanFields(client, ['estTherapeute', 'aLoyer']);
   }
 
   /**
@@ -58,7 +58,7 @@ class ClientService {
       return clients;
     }
     
-    return normalizeBooleanFieldsArray(clients, ['estTherapeute']);
+    return normalizeBooleanFieldsArray(clients, ['estTherapeute', 'aLoyer']);
   }
 
   /**
@@ -69,6 +69,7 @@ class ClientService {
     try {
       const response = await api.get('client-api.php');
       
+      this.log.debug('📥 Chargement des clients depuis API:', response);
       if (Array.isArray(response)) {
         this.clients = this.normalizeClients(response);
         return this.clients;
@@ -87,18 +88,18 @@ class ClientService {
 
   /**
    * Récupère un client par son ID
-   * @param {string|number} id ID du client à récupérer
+   * @param {string|number} idClient ID du client à récupérer
    * @returns {Promise<Object|null>} Client récupéré ou null si non trouvé
    */
-  async getClient(id) {
+  async getClient(idClient) {
     try {
       // Vérifier le cache
-      if (this._cacheClient[id]) {
-        this.log.debug(`Client ${id} trouvé dans le cache`);
-        return this._cacheClient[id];
+      if (this._cacheClient[idClient]) {
+        this.log.debug(`Client ${idClient} trouvé dans le cache`);
+        return this._cacheClient[idClient];
       }
 
-      const response = await api.get(`client-api.php?id=${id}`);
+      const response = await api.get(`client-api.php?idClient=${idClient}`);
       
       if (response && response.success && response.client) {
         // ✅ Normalisation du client
@@ -108,7 +109,7 @@ class ClientService {
         this.log.debug('Client après normalisation:', normalizedClient);
         
         // Mettre en cache
-        this._cacheClient[id] = normalizedClient;
+        this._cacheClient[idClient] = normalizedClient;
         
         // ✅ Retourner directement le client (pas d'objet wrappé)
         return normalizedClient;
@@ -116,7 +117,7 @@ class ClientService {
       
       return null;
     } catch (error) {
-      this.log.error(`Erreur lors de la récupération du client ${id}:`, error);
+      this.log.error(`Erreur lors de la récupération du client ${idClient}:`, error);
       throw error;
     }
   }
@@ -133,7 +134,8 @@ class ClientService {
       // Normaliser les booléens avant envoi
       const dataToSend = {
         ...clientData,
-        estTherapeute: toBooleanInt(clientData.estTherapeute)
+        estTherapeute: toBooleanInt(clientData.estTherapeute),
+        aLoyer: toBooleanInt(clientData.aLoyer)
       };
       
       const response = await api.post('client-api.php', dataToSend);
@@ -152,48 +154,49 @@ class ClientService {
 
   /**
    * Met à jour un client existant
-   * @param {string|number} id ID du client à mettre à jour
+   * @param {string|number} idClient ID du client à mettre à jour
    * @param {Object} clientData Nouvelles données du client
    * @returns {Promise<Object>} Résultat de la mise à jour
    */
-  async updateClient(id, clientData) {
+  async updateClient(idClient, clientData) {
     try {
-      this.log.debug(`Mise à jour du client ${id}:`, clientData);
+      this.log.debug(`Mise à jour du client ${idClient}:`, clientData);
       
       // Normaliser les booléens avant envoi
       const dataToSend = {
         ...clientData,
-        estTherapeute: toBooleanInt(clientData.estTherapeute)
+        estTherapeute: toBooleanInt(clientData.estTherapeute),
+        aLoyer: toBooleanInt(clientData.aLoyer)
       };
       
-      const response = await api.put(`client-api.php?id=${id}`, dataToSend);
+      const response = await api.put(`client-api.php?idClient=${idClient}`, dataToSend);
       
       if (response && response.success) {
         // Invalider le cache pour ce client
-        delete this._cacheClient[id];
+        delete this._cacheClient[idClient];
       }
       
       return response;
     } catch (error) {
-      this.log.error(`Erreur lors de la mise à jour du client ${id}:`, error);
+      this.log.error(`Erreur lors de la mise à jour du client ${idClient}:`, error);
       throw error;
     }
   }
 
   /**
    * Supprime un client
-   * @param {string|number} id ID du client à supprimer
+   * @param {string|number} idClient ID du client à supprimer
    * @returns {Promise<Object>} Résultat de la suppression
    */
-  async deleteClient(id) {
+  async deleteClient(idClient) {
     try {
-      this.log.debug(`Suppression du client ${id}`);
+      this.log.debug(`Suppression du client ${idClient}`);
       
-      const response = await api.delete(`client-api.php?id=${id}`);
+      const response = await api.delete(`client-api.php?idClient=${idClient}`);
       
       if (response && (response.success || response.status === 'success')) {
         // Invalider le cache
-        delete this._cacheClient[id];
+        delete this._cacheClient[idClient];
         
         return {
           success: true,
@@ -203,20 +206,20 @@ class ClientService {
         throw new Error(response?.message || 'Erreur lors de la suppression du client');
       }
     } catch (error) {
-      this.log.error(`Erreur lors de la suppression du client ${id}:`, error);
+      this.log.error(`Erreur lors de la suppression du client ${idClient}:`, error);
       throw error;
     }
   }
 
   /**
    * Vérifie si un client peut être supprimé (n'a pas de factures associées)
-   * @param {string|number} id ID du client à vérifier
+   * @param {string|number} idClient ID du client à vérifier
    * @returns {Promise<Object>} Résultat de la vérification
    */
-  async checkClientDeletable(id) {
+  async checkClientDeletable(idClient) {
     try {
-      this.log.debug('DEBUG - checkClientDeletable appelé pour:', id);
-      const response = await api.get(`client-api.php?id=${id}&checkFactures=true`);
+      this.log.debug('DEBUG - checkClientDeletable appelé pour:', idClient);
+      const response = await api.get(`client-api.php?idClient=${idClient}&checkFactures=true`);
       
       return {
         success: response.success,
@@ -225,26 +228,26 @@ class ClientService {
         message: response.message
       };
     } catch (error) {
-      this.log.error(`Erreur lors de la vérification des factures du client ${id}:`, error);
+      this.log.error(`Erreur lors de la vérification des factures du client ${idClient}:`, error);
       throw error;
     }
   }
 
   /**
    * Vérifie si un client est thérapeute
-   * @param {Object|number} clientOrId - Client ou ID du client
+   * @param {Object|number} idClient - Client ou ID du client
    * @returns {Promise<boolean>|boolean} True si le client est thérapeute
    */
-  async estTherapeute(clientOrId) {
+  async estTherapeute(idClient) {
     // Si c'est déjà un objet client
-    if (clientOrId && typeof clientOrId === 'object' && 'estTherapeute' in clientOrId) {
-      return toBoolean(clientOrId.estTherapeute);
+    if (idClient && typeof idClient === 'object' && 'estTherapeute' in idClient) {
+      return toBoolean(idClient.estTherapeute);
     }
 
     // Si c'est un ID, charger le client
-    if (clientOrId) {
+    if (idClient) {
       try {
-        const result = await this.getClient(clientOrId);
+        const result = await this.getClient(idClient);
         if (result && result.success && result.client) {
           return toBoolean(result.client.estTherapeute);
         }

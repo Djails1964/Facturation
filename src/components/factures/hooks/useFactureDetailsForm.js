@@ -31,7 +31,7 @@ export function useFactureDetailsForm(
     const log = createLogger("useFactureDetailsForm");
 
     log.debug('useFactureDetailsForm - Initialisation', {
-        idClient: client?.id,
+        idClient: client?.idClient,
         readOnly,
         lignesCount: lignesInitiales?.length || 0,
         hasTarifData: !!tarifData,
@@ -184,7 +184,7 @@ export function useFactureDetailsForm(
             servicesLength: configuration.services?.length,
             unitesLength: configuration.unites?.length,
             defaultService: !!configuration.defaultService,
-            currentClientId: client?.id,
+            currentClientId: client?.idClient,
             lignesInitialesLength: lignesInitiales?.length,
             readOnly,
             tarifDataLoaded: tarifData?.isLoaded
@@ -209,9 +209,9 @@ export function useFactureDetailsForm(
         }
 
         // Vérifier le changement de client
-        if (client?.id !== initializationRef.current.idClient) {
-            log.debug('Nouveau client détecté:', client?.id);
-            initializationRef.current.idClient = client?.id;
+        if (client?.idClient !== initializationRef.current.idClient) {
+            log.debug('Nouveau client détecté:', client?.idClient);
+            initializationRef.current.idClient = client?.idClient;
             initializationRef.current.hasProcessedLines = false;
         }
 
@@ -286,7 +286,7 @@ export function useFactureDetailsForm(
         configuration.services?.length,
         configuration.defaultService,
         configuration.defaultUnites,
-        client?.id,
+        client?.idClient,
         lignesInitiales?.length,
         readOnly,
         initialiserValeursSelects,
@@ -402,7 +402,7 @@ export function useFactureDetailsForm(
                 pricing.clearCache();
                 
                 const nouveauPrix = await pricing.calculerPrixPourClient({
-                    idClient: client.id,
+                    idClient: client.idClient,
                     idService: idService,
                     idUnite: idUnite,
                     forceRecalcul: true

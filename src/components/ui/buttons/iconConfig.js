@@ -4,7 +4,7 @@ import {
   FiEdit, FiEye, FiMail, FiPhone, FiMapPin, FiSlack, FiX, FiUserPlus,
   FiCheck, FiUser, FiShield, FiPrinter, FiDollarSign, FiFile,
   FiCalendar, FiCreditCard, FiClock, FiAlertCircle, FiCheckCircle,
-  FiPlus, FiFilter, FiAlertTriangle, FiSave
+  FiPlus, FiFilter, FiAlertTriangle, FiSave, FiFileText
 } from 'react-icons/fi';
 
 import { Link, X, Heart } from 'react-feather';
@@ -50,6 +50,7 @@ export const ICONS = {
 
   // Documents et temps
   FILE: FiFile,
+  FILE_TEXT: FiFileText,
   CALENDAR: FiCalendar,
   CLOCK: FiClock,
 

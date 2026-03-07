@@ -468,7 +468,7 @@ export function validateAllClientFields(client, requiredFields = null) {
   // Champs requis par défaut
   const defaultRequired = [
     'titre', 'nom', 'prenom', 'rue', 
-    'numero', 'code_postal', 'localite'
+    'numero', 'codePostal', 'localite'
   ];
   const required = requiredFields || defaultRequired;
 
@@ -479,7 +479,7 @@ export function validateAllClientFields(client, requiredFields = null) {
     prenom: () => validateNomPrenom(client.prenom, 'prenom', required.includes('prenom')),
     rue: () => validateRue(client.rue, required.includes('rue')),
     numero: () => validateNumero(client.numero, required.includes('numero')),
-    code_postal: () => validateCodePostal(client.code_postal, required.includes('code_postal')),
+    codePostal: () => validateCodePostal(client.codePostal, required.includes('codePostal')),
     localite: () => validateLocalite(client.localite, required.includes('localite')),
     telephone: () => validatePhone(client.telephone, required.includes('telephone')),
     email: () => validateEmail(client.email, required.includes('email'))
@@ -525,7 +525,7 @@ export function getFieldHelpText(fieldName, fieldValue, validationResult) {
     case 'email':
       return HELP_TEXTS.EMAIL_FORMAT;
       
-    case 'code_postal':
+    case 'codePostal':
       return HELP_TEXTS.CODE_POSTAL_FORMAT;
       
     default:

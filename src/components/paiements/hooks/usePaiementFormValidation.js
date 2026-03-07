@@ -4,7 +4,17 @@ import DateService from '../../../utils/DateService';
 import { VALIDATION_MESSAGES } from '../../../constants/paiementConstants';
 
 export const usePaiementFormValidation = (formState) => {
-    const { paiement, factureSelectionnee, isCreate } = formState;
+    const { paiement, factureSelectionnee, isCreate, clientSelectionne } = formState;
+
+    /**
+     * Valider le client (obligatoire en mode CREATE)
+     */
+    const validateClient = useCallback((idClient) => {
+        if (!idClient) {
+            return { isValid: false, error: VALIDATION_MESSAGES.CLIENT_REQUIRED || 'Le client est obligatoire' };
+        }
+        return { isValid: true };
+    }, []);
 
     /**
      * Valider la date de paiement
@@ -22,7 +32,7 @@ export const usePaiementFormValidation = (formState) => {
         if (DateService.isStrictlyFuture(dateObj)) {
             return { 
                 isValid: false, 
-                error: 'Les dates futures ne sont pas autorisÃ©es pour les paiements' 
+                error: 'Les dates futures ne sont pas autorisées pour les paiements' 
             };
         }
         
@@ -34,7 +44,7 @@ export const usePaiementFormValidation = (formState) => {
         if (daysAgo > 365) {
             return { 
                 isValid: false, 
-                error: 'La date de paiement ne peut pas Ãªtre antÃ©rieure Ã  un an' 
+                error: 'La date de paiement ne peut pas être antérieure à un an' 
             };
         }
         
@@ -43,6 +53,7 @@ export const usePaiementFormValidation = (formState) => {
 
     /**
      * Valider le montant
+     * La vérification montant vs montant restant ne s'effectue QUE si une facture est sélectionnée
      */
     const validateMontant = useCallback((montantPaye) => {
         const montant = parseFloat(montantPaye);
@@ -50,7 +61,7 @@ export const usePaiementFormValidation = (formState) => {
             return { isValid: false, error: VALIDATION_MESSAGES.MONTANT_REQUIRED };
         }
 
-        // VÃ©rifier que le montant ne dÃ©passe pas ce qui reste Ã  payer
+        // Vérifier que le montant ne dépasse pas ce qui reste à payer — seulement si facture liée
         if (factureSelectionnee && isCreate) {
             const montantRestant = factureSelectionnee.montantRestant || 
                 (factureSelectionnee.totalAvecRistourne - (factureSelectionnee.montantPayeTotal || 0));
@@ -64,14 +75,14 @@ export const usePaiementFormValidation = (formState) => {
     }, [factureSelectionnee, isCreate]);
 
     /**
-     * âœ… AJOUT: Valider la mÃ©thode de paiement
+     * Valider la méthode de paiement
      */
     const validateMethodePaiement = useCallback((methodePaiement) => {
         if (!methodePaiement || methodePaiement.trim() === '') {
             return { isValid: false, error: VALIDATION_MESSAGES.METHODE_REQUIRED };
         }
 
-        // Liste des mÃ©thodes valides
+        // Liste des méthodes valides
         const methodesValides = [
             'virement',
             'especes',
@@ -83,7 +94,7 @@ export const usePaiementFormValidation = (formState) => {
         ];
 
         if (!methodesValides.includes(methodePaiement)) {
-            return { isValid: false, error: 'MÃ©thode de paiement non valide' };
+            return { isValid: false, error: 'Méthode de paiement non valide' };
         }
 
         return { isValid: true };
@@ -91,13 +102,18 @@ export const usePaiementFormValidation = (formState) => {
 
     /**
      * Valider tous les champs du formulaire
+     * En CREATE : client obligatoire, facture optionnelle
+     * En EDIT/VIEW : pas de validation client (déjà fixé)
      */
     const validateForm = useCallback(() => {
-        // Validation de la facture
-        if (!paiement.idFacture) {
-            return { isValid: false, error: VALIDATION_MESSAGES.FACTURE_REQUIRED };
+        // Validation du client — obligatoire en mode CREATE
+        if (isCreate) {
+            const clientValidation = validateClient(paiement.idClient);
+            if (!clientValidation.isValid) {
+                return clientValidation;
+            }
         }
-        
+
         // Validation de la date
         const dateValidation = validateDatePaiement(paiement.datePaiement);
         if (!dateValidation.isValid) {
@@ -117,22 +133,25 @@ export const usePaiementFormValidation = (formState) => {
         }
         
         return { isValid: true };
-    }, [paiement, validateDatePaiement, validateMontant, validateMethodePaiement]);
+    }, [paiement, isCreate, validateClient, validateDatePaiement, validateMontant, validateMethodePaiement]);
 
     /**
      * Vérifier si le formulaire est valide (booléen simple pour désactiver le bouton)
+     * En CREATE : client obligatoire, facture n'est pas requise
      */
     const isFormValid = useCallback(() => {
-        // Vérification rapide des champs obligatoires
-        if (!paiement.idFacture) return false;
+        // En CREATE : client + facture obligatoires (plus de paiement libre)
+        if (isCreate && !paiement.idClient) return false;
+        if (isCreate && !paiement.idFacture) return false;
+        // Champs toujours obligatoires
         if (!paiement.datePaiement) return false;
         if (!paiement.montantPaye || parseFloat(paiement.montantPaye) <= 0) return false;
         if (!paiement.methodePaiement || paiement.methodePaiement.trim() === '') return false;
-        
         return true;
-    }, [paiement]);
+    }, [paiement, isCreate]);
 
     return {
+        validateClient,
         validateDatePaiement,
         validateMontant,
         validateMethodePaiement,

@@ -1,0 +1,229 @@
+/* src/components/shared/tables/UnifiedTable.css */
+/* ✅ VERSION MINIMALE : Utilise au maximum les styles communs de l'application */
+
+/* Import des styles communs (déjà dans l'app) */
+/* main.css, variables.css, layout.css, forms.css, buttons.css, actionButtons.css */
+
+/* ========== STRUCTURE DE BASE SEULEMENT ========== */
+
+.unified-table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.unified-table {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+  background-color: var(--color-background);
+}
+
+/* ========== EN-TÊTE ========== */
+.unified-table-header {
+  display: flex;
+  background-color: var(--header-bg, #f5f5f5);
+  border-bottom: 2px solid var(--border-color);
+  font-weight: 600;
+  color: var(--header-text);
+  min-height: 48px;
+}
+
+.unified-table-header .table-cell {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+}
+
+/* ========== CORPS ========== */
+.unified-table-body {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch; /* chaque enfant (direct ou via Fragment) prend 100% */
+}
+
+.table-row {
+  display: flex;
+  width: 100%;          /* force la pleine largeur même hors flux flex direct */
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color var(--transition-speed) var(--transition-ease);
+  cursor: pointer;
+  min-height: 56px;
+}
+
+.table-row:hover {
+  background-color: var(--row-hover-bg, rgba(0, 0, 0, 0.02));
+}
+
+.table-row:last-child {
+  border-bottom: none;
+}
+
+.table-row.selected {
+  background-color: var(--row-selected-bg, rgba(128, 0, 32, 0.08));
+}
+
+.table-row .table-cell {
+  padding: var(--spacing-md);
+  font-size: var(--font-size-base);
+  color: var(--text-color);
+  display: flex;
+  align-items: center;
+}
+
+/* Groupe de lignes quand renderRow retourne un Fragment (ligne + sous-lignes) */
+.unified-table-row-group {
+  display: contents; /* transparent pour le layout flex — les enfants directs deviennent membres du flex */
+}
+
+/* ========== CELLULES ========== */
+.table-cell {
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ========== CELLULE D'ACTIONS ========== */
+.table-cell.actions-cell {
+  display: flex !important;
+  gap: 6px;
+  justify-content: flex-end !important;
+  padding-right: var(--spacing-sm) !important;
+  flex-shrink: 0;       /* la colonne ne se compresse jamais */
+}
+
+/* ✅ Les boutons utilisent directement les styles de buttons.css et actionButtons.css */
+/* Taille fixe pour maintenir la forme ronde dans le contexte table */
+.table-cell.actions-cell .bouton-action {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;      /* empêche l'écrasement en ovale */
+  flex-shrink: 0;
+}
+
+.table-cell.actions-cell .bouton-action svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+/* ========== LIGNE ANNULÉE ========== */
+.table-row.annule {
+  opacity: 0.6;
+  text-decoration: line-through;
+}
+
+/* ========== LIGNE MISE EN ÉVIDENCE ========== */
+.table-row.highlight {
+  animation: highlight 2s ease-in-out;
+}
+
+@keyframes highlight {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: var(--highlight-color, #fff3cd); }
+}
+
+/* ========== ÉTATS (Loading, Error, Empty) ========== */
+.unified-table-loading,
+.unified-table-error,
+.unified-table-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl) var(--spacing-md);
+  color: var(--muted-text);
+}
+
+.unified-table-loading .spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--border-color);
+  border-top-color: var(--color-primary);
+  border-radius: var(--border-radius-circle);
+  animation: spin 0.8s linear infinite;
+  margin-bottom: var(--spacing-md);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.unified-table-error {
+  color: var(--color-danger);
+}
+
+.unified-table-error i {
+  font-size: 48px;
+  margin-bottom: var(--spacing-md);
+}
+
+.unified-table-empty {
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  background-color: var(--color-background);
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+  .unified-table-header .table-cell,
+  .table-row .table-cell {
+    padding: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+  }
+  
+  .table-row {
+    min-height: 48px;
+  }
+  
+  .table-cell.actions-cell .bouton-action {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .table-cell.actions-cell .bouton-action svg {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .table-cell.actions-cell {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .table-cell.actions-cell .bouton-action {
+    width: 22px;
+    height: 22px;
+  }
+  
+  .table-cell.actions-cell .bouton-action svg {
+    width: 11px;
+    height: 11px;
+  }
+}
+
+/* ========== ACCESSIBILITÉ ========== */
+@media (prefers-reduced-motion: reduce) {
+  .table-row,
+  .table-cell.actions-cell .bouton-action,
+  .table-row.highlight {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* ========== PRINT ========== */
+@media print {
+  .table-cell.actions-cell {
+    display: none !important;
+  }
+}

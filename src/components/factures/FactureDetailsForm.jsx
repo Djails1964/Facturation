@@ -74,7 +74,7 @@ function FactureDetailsForm({
     log.debug('🔍 Props reçues dans FactureDetailsForm:', {
         lignesInitiales: lignesInitiales?.length || 0,
         lignesInitialesData: lignesInitiales,
-        idClient: client?.id,
+        idClient: client?.idClient,
         readOnly,
         isModification,
         hasTarifData: !!tarifData,

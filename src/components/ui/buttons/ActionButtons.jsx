@@ -149,6 +149,17 @@ export const PayActionButton = ({ onClick, disabled, ...props }) => (
   />
 );
 
+export const PdfActionButton = ({ onClick, disabled, ...props }) => (
+  <ActionButton
+    icon={ICONS.FILE_TEXT}
+    iconClass="action-print-icon"
+    onClick={onClick}
+    disabled={disabled}
+    tooltip="Confirmation PDF"
+    {...props}
+  />
+);
+
 export const MoveActionButton = ({ onClick, disabled, ...props }) => (
   <ActionButton 
     icon={ICONS.MOVE}

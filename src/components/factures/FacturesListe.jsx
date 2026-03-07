@@ -19,7 +19,8 @@ import { useFactures } from './hooks/useFactures';
 import { useFactureFilters } from './hooks/useFactureFilters';
 import { useTemplates } from './hooks/useTemplates';
 import { useFactureModals } from './hooks/useFactureModals';
-import { formatMontant, formatDate } from '../../utils/formatters';
+import { formatMontant } from '../../utils/formatters';
+import DateService from '../../utils/DateService';
 import { createLogger } from '../../utils/createLogger';
 
 function FacturesListe({ 
@@ -116,7 +117,7 @@ function FacturesListe({
         // Afficher les IDs des factures pour détecter les doublons
         if (facturesNonFiltrees.length > 0) {
             const ids = facturesNonFiltrees.map(f => f.idFacture);
-            const doublons = ids.filter((id, index) => ids.indexOf(id) !== index);
+            const doublons = ids.filter((idFacture, index) => ids.indexOf(idFacture) !== index);
             
             log.debug('📋 IDs facturesNonFiltrees:', ids);
             if (doublons.length > 0) {
@@ -126,7 +127,7 @@ function FacturesListe({
         
         if (filteredFactures.length > 0) {
             const ids = filteredFactures.map(f => f.idFacture);
-            const doublons = ids.filter((id, index) => ids.indexOf(id) !== index);
+            const doublons = ids.filter((idFacture, index) => ids.indexOf(idFacture) !== index);
             
             log.debug('📋 IDs filteredFactures:', ids);
             if (doublons.length > 0) {
@@ -152,7 +153,7 @@ function FacturesListe({
         showCustom,
         showLoading,
         formatMontant: (montant) => formatMontant(montant),
-        formatDate: (dateStr) => formatDate(dateStr),
+        formatDate: (dateStr) => DateService.formatSingleDate(dateStr),
         formatEmailMessage: (template, facture) => {
             if (!template) {
                 log.warn("Template vide ou non défini");
@@ -175,7 +176,7 @@ function FacturesListe({
                 }
                 
                 if (facture.dateEcheance) {
-                    const dateFormatee = formatDate(facture.dateEcheance);
+                    const dateFormatee = DateService.formatSingleDate(facture.dateEcheance);
                     message = message.replace(/\[Date d'échéance\]/g, dateFormatee);
                 }
                 
@@ -208,7 +209,7 @@ function FacturesListe({
     const filterOptions = useMemo(() => ({
     annee: anneesOptions, // Déjà un tableau de nombres
     client: clients.map(c => ({ 
-        value: c.id, 
+        value: c.idClient, 
         label: `${c.prenom} ${c.nom}` 
     })),
     etat: etats // Déjà un tableau de strings

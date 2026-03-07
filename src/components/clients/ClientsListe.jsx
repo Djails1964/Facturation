@@ -1,22 +1,63 @@
 // src/components/clients/ClientsListe.jsx
-// ✅ VERSION REFACTORISÉE avec useClientActions au lieu de ClientService direct
+// ✅ VERSION avec bouton Payer intégré
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { FiEdit, FiEye, FiTrash2, FiMail, FiPhone, FiMapPin } from 'react-icons/fi';
+import { FiEdit, FiEye, FiTrash2, FiMail, FiPhone, FiMapPin, FiDollarSign, FiHome, FiKey } from 'react-icons/fi';
 import '../../styles/components/clients/ClientsListe.css';
 
 // ✅ Système modal unifié
 import { showConfirm, showLoading, showCustom } from '../../utils/modalSystem';
 import ModalComponents from '../shared/ModalComponents';
 
-// ✅ MODIFICATION: Import de useClientActions au lieu de ClientService
+// ✅ Hooks actions
 import { useClientActions } from './hooks/useClientActions';
-import { toBoolean, normalizeBooleanFieldsArray } from '../../utils/booleanHelper';
-// ✅ Import de createLogger
-import { createLogger } from '../../utils/createLogger';
+import { useFactureActions } from '../factures/hooks/useFactureActions';
+import { usePaiementActions } from '../paiements/hooks/usePaiementActions';
 
-// ✅ Logger créé une seule fois en dehors du composant pour éviter les re-renders
+// ✅ Utilitaires
+import { toBoolean, normalizeBooleanFieldsArray } from '../../utils/booleanHelper';
+import { createLogger } from '../../utils/createLogger';
+import { formatMontant } from '../../utils/formatters';
+
+// ✅ Handler de paiement générique
+import { GenericPaymentModalHandler } from '../shared/modals/handlers/GenericPaymentModalHandler';
+import { PAYMENT_MODES } from '../../constants/paiementConstants';
+
+// ✅ Logger créé une seule fois en dehors du composant
 const logger = createLogger('ClientsListe');
+
+/**
+ * Icône composite pour indiquer qu'un client a un loyer
+ * Colorée selon l'état de paiement agrégé des loyers du client
+ */
+function RentalIcon({ size = 18, etatPaiement = null }) {
+  const etatClass = etatPaiement === 'paye'
+    ? 'rental-etat-paye'
+    : etatPaiement === 'partiellement_paye'
+      ? 'rental-etat-partiel'
+      : etatPaiement === 'non_paye'
+        ? 'rental-etat-non-paye'
+        : '';
+
+  const titre = etatPaiement === 'paye'
+    ? 'Loyer(s) entièrement payé(s)'
+    : etatPaiement === 'partiellement_paye'
+      ? 'Loyer(s) partiellement payé(s)'
+      : etatPaiement === 'non_paye'
+        ? 'Loyer(s) non payé(s)'
+        : 'Client avec loyer';
+
+  return (
+    <span
+      className={`cl-rental-icon ${etatClass}`}
+      title={titre}
+      aria-label={titre}
+    >
+      <FiHome size={size} className="rental-icon-home" />
+      <FiKey size={size * 0.55} className="rental-icon-key" />
+    </span>
+  );
+}
 
 function ClientsListe({ 
     nouveauClientId = null, 
@@ -27,7 +68,11 @@ function ClientsListe({
     notification = { message: '', type: '' }, 
     onClearNotification 
 }) {
-    // ✅ Utilisation de useClientActions pour toutes les opérations API
+    // ============================================================
+    // HOOKS & STATE
+    // ============================================================
+    
+    // ✅ Hooks actions clients
     const {
         chargerClients: chargerClientsApi,
         checkClientDeletable,
@@ -36,6 +81,11 @@ function ClientsListe({
         error: actionError
     } = useClientActions();
 
+    // ✅ Hooks actions paiements
+    const factureActions = useFactureActions();
+    const paiementActions = usePaiementActions();
+
+    // States
     const [clients, setClients] = useState([]);
     const [clientsNonFiltres, setClientsNonFiltres] = useState([]);
     const [clientSelectionne, setClientSelectionne] = useState(null);
@@ -43,31 +93,39 @@ function ClientsListe({
     const [error, setError] = useState(null);
     const [termeRecherche, setTermeRecherche] = useState('');
 
-    // ✅ Ref pour stocker la fonction chargerClientsApi (évite les dépendances instables)
+    // ✅ Refs pour les fonctions de useClientActions (évite les dépendances instables)
     const chargerClientsApiRef = React.useRef(chargerClientsApi);
     chargerClientsApiRef.current = chargerClientsApi;
     
-    // ✅ Refs pour les autres fonctions de useClientActions
     const checkClientDeletableRef = React.useRef(checkClientDeletable);
     checkClientDeletableRef.current = checkClientDeletable;
     
     const deleteClientRef = React.useRef(deleteClient);
     deleteClientRef.current = deleteClient;
 
+    // ============================================================
+    // FONCTIONS DE BASE (Chargement, recherche, navigation)
+    // ============================================================
+
     // Fonction de normalisation des clients
     const normalizeClientsData = React.useCallback((clientsData) => {
         if (!Array.isArray(clientsData)) return clientsData;
-        return normalizeBooleanFieldsArray(clientsData, ['estTherapeute']);
+        // Normaliser les booléens et mapper loyer_etat_paiement → loyerEtatPaiement
+        const normalized = normalizeBooleanFieldsArray(clientsData, ['estTherapeute', 'aLoyer']);
+        return normalized.map(cl => ({
+            ...cl,
+            loyerEtatPaiement: cl.loyerEtatPaiement || null
+        }));
     }, []);
     
-    // ✅ Charger les clients avec useClientActions - SANS dépendances instables
+    // ✅ Charger les clients
     const chargerClients = useCallback(async () => {
         setIsLoading(true);
         try {
-            logger.info('🔄 Chargement des clients...');
-            // Utiliser la ref pour accéder à la fonction la plus récente
+            logger.info('📄 Chargement des clients...');
             const data = await chargerClientsApiRef.current();
-            const normalizedData = normalizeBooleanFieldsArray(data || [], ['estTherapeute']);
+            const normalizedData = normalizeClientsData(data || []);
+            logger.debug('🔍 CLIENTS:', normalizedData.map(c => ({nom: c.nom, aLoyer: c.aLoyer, type: typeof c.aLoyer})));
             setClientsNonFiltres(normalizedData);
             setClients(normalizedData);
             setError(null);
@@ -78,9 +136,9 @@ function ClientsListe({
         } finally {
             setIsLoading(false);
         }
-    }, []); // ✅ Pas de dépendances instables!
+    }, []);
 
-    // ✅ Charger les clients une seule fois au montage
+    // ✅ Charger les clients au montage
     useEffect(() => {
         chargerClients();
     }, [chargerClients]);
@@ -103,9 +161,17 @@ function ClientsListe({
         }
     };
 
+    // Vider la recherche
     const viderRecherche = () => {
         setTermeRecherche('');
         setClients(clientsNonFiltres);
+    };
+
+    // Navigation
+    const afficherClient = (idClient) => {
+        if (onAfficherClient) {
+            onAfficherClient(idClient);
+        }
     };
 
     const modifierClient = (idClient) => {
@@ -114,89 +180,83 @@ function ClientsListe({
         }
     };
 
-    const afficherClient = (idClient) => {
-        if (onAfficherClient) {
-            onAfficherClient(idClient);
-        }
-    };
+    // ============================================================
+    // SUPPRESSION CLIENT
+    // ============================================================
 
-    // ✅ Suppression client avec useClientActions et système modal unifié
     const handleSupprimerClient = async (idClient, event) => {
         if (event) {
             event.stopPropagation();
         }
 
-        const client = clients.find(c => c.id === idClient);
-        if (!client) return;
-
-        // Créer anchorRef pour le positionnement
         const anchorRef = React.createRef();
         if (event && event.currentTarget) {
             anchorRef.current = event.currentTarget;
         }
 
         try {
-            // 1. Vérifier si le client a des factures avec useClientActions
-            logger.info(`🔍 Vérification de la supprimabilité du client #${idClient}`);
+            logger.info(`🗑️ Tentative de suppression du client #${idClient}`);
+
+            // 1. Vérifier si le client a des factures
             const checkResult = await showLoading(
                 {
                     title: "Vérification...",
-                    content: ModalComponents.createLoadingContent("Vérification des factures associées..."),
+                    content: ModalComponents.createLoadingContent("Vérification des factures..."),
                     anchorRef,
                     size: 'small',
                     position: 'smart'
                 },
                 async () => {
-                    // ✅ Utilisation de la ref pour checkClientDeletable
                     return await checkClientDeletableRef.current(idClient);
                 }
             );
 
-            logger.debug('✅ checkResult:', checkResult);
+            logger.debug('Résultat vérification:', checkResult);
 
-            // 2. Si le client a des factures, afficher l'erreur
-            if (checkResult.aUneFacture === true) {
-                logger.warn(`⚠️ Client #${idClient} a des factures, suppression impossible`);
+            // 2. Si le client a des factures, bloquer la suppression
+            if (checkResult.aUneFacture) {
+                logger.warn(`⚠️ Client #${idClient} a des factures, suppression bloquée`);
+                
                 await showCustom({
                     title: "Suppression impossible",
-                    content: ModalComponents.createWarningSection(
-                        "⚠️ Client lié à des factures",
-                        `Le client "${client.prenom} ${client.nom}" ne peut pas être supprimé car il possède une ou plusieurs facture(s) associée(s).<br><br>Veuillez d'abord supprimer ou réassigner les factures avant de supprimer ce client.`,
-                        "error"
-                    ),
+                    content: ModalComponents.createSimpleModalContent({
+                        intro: "Ce client ne peut pas être supprimé car il possède des factures.",
+                        warningMessage: "Veuillez d'abord supprimer toutes les factures associées à ce client.",
+                        warningType: "warning"
+                    }),
+                    buttons: ModalComponents.createModalButtons({
+                        submitText: "OK",
+                        showCancel: false
+                    }),
                     anchorRef,
-                    size: 'medium',
-                    position: 'smart',
-                    buttons: [
-                        {
-                            text: "Compris",
-                            action: "close",
-                            className: "primary"
-                        }
-                    ]
+                    position: 'smart'
                 });
                 return;
             }
 
-            // 3. Demander confirmation de suppression
-            const confirmResult = await showConfirm({
+            // 3. Demander confirmation
+            const confirmed = await showConfirm({
                 title: "Confirmer la suppression",
-                message: `Êtes-vous sûr de vouloir supprimer le client "${client.prenom} ${client.nom}" ?\n\n⚠️ Cette action est irréversible.`,
-                confirmText: "Supprimer définitivement",
-                cancelText: "Annuler",
-                type: 'danger',
+                content: ModalComponents.createSimpleModalContent({
+                    intro: `Êtes-vous sûr de vouloir supprimer ce client ?`,
+                    warningMessage: "Cette action est irréversible.",
+                    warningType: "error"
+                }),
+                buttons: ModalComponents.createModalButtons({
+                    cancelText: "Annuler",
+                    submitText: "Supprimer",
+                    submitClass: "danger"
+                }),
                 anchorRef,
-                position: 'smart',
-                size: 'medium'
+                position: 'smart'
             });
 
-            if (confirmResult.action !== 'confirm') {
-                logger.debug('❌ Suppression annulée par l\'utilisateur');
+            if (!confirmed) {
+                logger.info('❌ Suppression annulée par l\'utilisateur');
                 return;
             }
 
-            // 4. Effectuer la suppression avec useClientActions
-            logger.info(`🗑️ Suppression du client #${idClient}`);
+            // 4. Supprimer le client
             const deleteResult = await showLoading(
                 {
                     title: "Suppression en cours...",
@@ -206,7 +266,6 @@ function ClientsListe({
                     position: 'smart'
                 },
                 async () => {
-                    // ✅ Utilisation de la ref pour deleteClient
                     return await deleteClientRef.current(idClient);
                 }
             );
@@ -215,12 +274,10 @@ function ClientsListe({
             if (deleteResult.success) {
                 logger.info(`✅ Client #${idClient} supprimé avec succès`);
                 
-                // Notifier le succès
                 if (onClientSupprime) {
                     onClientSupprime(deleteResult.message || 'Client supprimé avec succès');
                 }
 
-                // Recharger la liste
                 await chargerClients();
                 setClientSelectionne(null);
             } else {
@@ -238,11 +295,50 @@ function ClientsListe({
         }
     };
 
+    // ============================================================
+    // 💰 PAIEMENT CLIENT
+    // ============================================================
+
+    const handlePayerClient = useCallback((idClient, client, event) => {
+        if (event) {
+            event.stopPropagation();
+        }
+
+        logger.info(`💰 Ouverture modal de paiement pour client #${idClient}`);
+
+        // Créer le handler de paiement
+        const paymentHandler = new GenericPaymentModalHandler({
+            factureActions,
+            paiementActions,
+            clientActions: {
+                chargerClients: chargerClientsApiRef.current
+            },
+            showCustom,
+            showLoading,
+            formatMontant,
+            formatDate: (date) => new Date(date).toLocaleDateString('fr-CH'),
+            onSetNotification,
+            chargerFactures: null // Pas besoin de recharger les factures ici
+        });
+
+        // Appeler le handler en mode FROM_CLIENT
+        paymentHandler.handle({
+            mode: PAYMENT_MODES.FROM_CLIENT,
+            idClient,
+            nomClient: `${client.prenom} ${client.nom}`,
+            event
+        });
+    }, [factureActions, paiementActions, onSetNotification]);
+
+    // ============================================================
+    // UTILITAIRES
+    // ============================================================
+
     // Formater l'adresse complète
     const formaterAdresse = (client) => {
         const rue = client.rue || '';
         const numero = client.numero || '';
-        const codePostal = client.code_postal || '';
+        const codePostal = client.codePostal || '';
         const localite = client.localite || '';
     
         const adresseParts = [
@@ -274,6 +370,10 @@ function ClientsListe({
         );
     };
 
+    // ============================================================
+    // RENDER
+    // ============================================================
+
     return (
         <div className="content-section-container">
             <div className="content-section-title">
@@ -298,33 +398,37 @@ function ClientsListe({
                             <button 
                                 onClick={viderRecherche} 
                                 className="cl-clear-search"
-                                title="Effacer la recherche"
+                                aria-label="Effacer la recherche"
                             >
                                 ×
                             </button>
                         )}
                     </div>
                 </div>
-                
-                {/* Contenu principal - Affichage en grille */}
+
+                {/* Liste des clients */}
                 {isLoading ? (
                     <div className="cl-loading-message">Chargement des clients...</div>
                 ) : error ? (
                     <div className="cl-error-message">{error}</div>
                 ) : clients.length === 0 ? (
-                    <div className="cl-empty-message">Aucun client trouvé</div>
+                    <div className="cl-empty-message">
+                        {termeRecherche ? 'Aucun client ne correspond à votre recherche.' : 'Aucun client enregistré.'}
+                    </div>
                 ) : (
                     <div className="cl-grid-container">
                         {clients.map(client => (
                             <div 
-                                key={client.id}
-                                className={`cl-client-card ${clientSelectionne === client.id ? 'selected' : ''}`}
-                                onClick={() => setClientSelectionne(client.id)}
+                                key={client.idClient}
+                                className={`cl-client-card ${clientSelectionne === client.idClient ? 'selected' : ''}`}
+                                onClick={() => setClientSelectionne(client.idClient)}
+                                data-therapist={toBoolean(client.estTherapeute)}
                             >
                                 <div className="cl-client-header">
                                     <div className="cl-client-name-section">
                                         <h3 className="cl-client-name">
                                             {client.prenom} {client.nom}
+                                            {toBoolean(client.aLoyer) && <RentalIcon etatPaiement={client.loyerEtatPaiement} />}
                                         </h3>
                                         <div className="cl-client-badge">
                                             {toBoolean(client.estTherapeute) ? 'Thérapeute' : 'Client'}
@@ -351,33 +455,47 @@ function ClientsListe({
                                     </div>
                                 </div>
                                 
+                                {/* ✅ BOUTONS D'ACTION avec Payer */}
                                 <div className="cl-card-actions">
+                                    {/* 💰 Bouton Payer - Utilise les styles standards */}
+                                    <button 
+                                        className="bouton-action"
+                                        aria-label="Payer"
+                                        title="Enregistrer un paiement"
+                                        onClick={(e) => handlePayerClient(client.idClient, client, e)}
+                                    >
+                                        <FiDollarSign className="action-pay-icon" />
+                                    </button>
+
+                                    {/* Bouton Afficher */}
                                     <button 
                                         className="bouton-action"
                                         aria-label="Afficher le client"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            afficherClient(client.id);
+                                            afficherClient(client.idClient);
                                         }}
                                     >
                                         <FiEye className="action-view-icon" />
                                     </button>
 
+                                    {/* Bouton Modifier */}
                                     <button 
                                         className="bouton-action"
                                         aria-label="Modifier le client"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            modifierClient(client.id);
+                                            modifierClient(client.idClient);
                                         }}
                                     >
                                         <FiEdit className="action-edit-icon" />
                                     </button>
 
+                                    {/* Bouton Supprimer */}
                                     <button 
                                         className="bouton-action bouton-supprimer"
                                         aria-label="Supprimer le client"
-                                        onClick={(e) => handleSupprimerClient(client.id, e)}
+                                        onClick={(e) => handleSupprimerClient(client.idClient, e)}
                                     >
                                         <FiTrash2 className="action-delete-icon" />
                                     </button>
@@ -387,8 +505,6 @@ function ClientsListe({
                     </div>
                 )}
             </div>
-
-            {/* ✅ SUPPRESSION: Plus de <ConfirmationModal /> ici */}
         </div>
     );
 }

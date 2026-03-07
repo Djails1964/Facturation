@@ -1,13 +1,14 @@
 // src/components/paiements/hooks/usePaiementForm.js
-// ✅ VERSION REFACTORISÉE - Utilise usePaiementActions et useFactureActions
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigationGuard } from '../../../App';
 import { useUnsavedChanges } from '../../../hooks/useUnsavedChanges';
 import { useAutoNavigationGuard } from '../../../hooks/useAutoNavigationGuard';
 import { showConfirm } from '../../../utils/modalSystem';
-import { usePaiementActions } from './usePaiementActions'; // ✅ NOUVEAU
-import { useFactureActions } from '../../factures/hooks/useFactureActions'; // ✅ NOUVEAU
+import { usePaiementActions } from './usePaiementActions';
+import { useFactureActions } from '../../factures/hooks/useFactureActions';
+import { useClientActions } from '../../clients/hooks/useClientActions';
+import { useLoyerActions } from '../../loyers/hooks/useLoyerActions';
 import DateService from '../../../utils/DateService';
 import { createLogger } from '../../../utils/createLogger';
 import { 
@@ -15,7 +16,8 @@ import {
     VALIDATION_MESSAGES, 
     NOTIFICATIONS,
     PAIEMENT_ETATS,
-    LOG_ACTIONS 
+    LOG_ACTIONS,
+    DEFAULT_VALUES
 } from '../../../constants/paiementConstants';
 
 export const usePaiementForm = ({ mode, idPaiement, onRetourListe, onPaiementCreated }) => {
@@ -25,6 +27,8 @@ export const usePaiementForm = ({ mode, idPaiement, onRetourListe, onPaiementCre
     // ✅ Services via hooks d'actions
     const paiementActions = usePaiementActions();
     const factureActions = useFactureActions();
+    const clientActions = useClientActions();
+    const loyerActions  = useLoyerActions();
     
     // Navigation protection
     const { registerGuard, unregisterGuard } = useNavigationGuard();
@@ -32,15 +36,39 @@ export const usePaiementForm = ({ mode, idPaiement, onRetourListe, onPaiementCre
     
     // États de base
     const [paiement, setPaiement] = useState({
+        // IDs
+        idPaiement: '',
         idFacture: '',
+        idClient: '',
+        
+        // Numéros
+        numeroPaiement: '',
+        numeroFacture: '',
+        
+        // Client
+        nomClient: '',  // ✅ IMPORTANT : Permet d'afficher le nom du client
+        
+        // Détails du paiement
         datePaiement: DateService.getTodayInputFormat(),
         montantPaye: '',
-        methodePaiement: '',
+        methodePaiement: DEFAULT_VALUES.METHODE_PAIEMENT,
         commentaire: '',
+        
+        // État
         etat: '',
+        statut: '',
+        
+        // Dates système
         dateCreation: '',
         dateModification: '',
-        dateAnnulation: ''
+        dateAnnulation: '',
+        
+        // Annulation
+        motifAnnulation: '',
+        
+        // Infos facture (optionnelles)
+        montantTotalFacture: '',
+        ristourneFacture: ''
     });
     
     const [factures, setFactures] = useState([]);
@@ -60,6 +88,20 @@ export const usePaiementForm = ({ mode, idPaiement, onRetourListe, onPaiementCre
     const [error, setError] = useState(null);
     const [logsLoading, setLogsLoading] = useState(false);
     const [facturesLoading, setFacturesLoading] = useState(false);
+    
+    // CLIENT-FIRST
+    const [clients, setClients] = useState([]);
+    const [clientsLoading, setClientsLoading] = useState(false);
+    const [clientSelectionne, setClientSelectionne] = useState(null);
+    
+    // ONGLETS Facture / Loyer (mode CREATE uniquement)
+    const [typeOnglet, setTypeOnglet] = useState("facture"); // 'facture' | 'loyer'
+    
+    // LOYER
+    const [loyers, setLoyers] = useState([]);
+    const [loyersLoading, setLoyersLoading] = useState(false);
+    const [loyerSelectionne, setLoyerSelectionne] = useState(null);
+    const [moisSelectionnes, setMoisSelectionnes] = useState({});
     
     // États pour la protection des modifications
     const [isFullyInitialized, setIsFullyInitialized] = useState(false);
@@ -84,8 +126,10 @@ export const usePaiementForm = ({ mode, idPaiement, onRetourListe, onPaiementCre
                mode !== FORM_MODES.VIEW;
     }, [isLoading, isSubmitting, isInitialLoadDone, isFullyInitialized, initialFormData, mode]);
 
+    // ✅ AJOUT : idClient dans getFormData pour la détection de modifications
     const getFormData = useCallback(() => {
         return {
+            idClient: paiement.idClient || '',
             idFacture: paiement.idFacture || '',
             datePaiement: paiement.datePaiement || '',
             montantPaye: paiement.montantPaye || '',
@@ -121,7 +165,7 @@ export const usePaiementForm = ({ mode, idPaiement, onRetourListe, onPaiementCre
         if (mode === FORM_MODES.VIEW || !hasUnsavedChanges) return;
 
         const handleNavigationBlocked = async (event) => {
-            log.debug('🌐 PAIEMENT FORM - Événement navigation-blocked reçu:', event.detail);
+            log.debug('🎯 PAIEMENT FORM - Événement navigation-blocked reçu:', event.detail);
             
             if (event.detail && event.detail.callback) {
                 setGlobalNavigationCallback(() => event.detail.callback);
@@ -169,6 +213,14 @@ export const usePaiementForm = ({ mode, idPaiement, onRetourListe, onPaiementCre
         setFactureSelectionnee,
         logsInfo,
         setLogsInfo,
+
+        // ✅ AJOUT : États clients
+        clients,
+        setClients,
+        clientsLoading,
+        setClientsLoading,
+        clientSelectionne,
+        setClientSelectionne,
         
         // États UI
         isLoading,
@@ -217,9 +269,25 @@ export const usePaiementForm = ({ mode, idPaiement, onRetourListe, onPaiementCre
         onRetourListe,
         onPaiementCreated,
         
+        // Onglets CREATE
+        typeOnglet,
+        setTypeOnglet,
+        
+        // Loyer
+        loyers,
+        setLoyers,
+        loyersLoading,
+        setLoyersLoading,
+        loyerSelectionne,
+        setLoyerSelectionne,
+        moisSelectionnes,
+        setMoisSelectionnes,
+        
         // ✅ Actions au lieu de services directs
         paiementActions,
         factureActions,
+        clientActions,
+        loyerActions,
         unregisterGuard
     };
 };

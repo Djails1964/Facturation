@@ -2,12 +2,13 @@
 /**
  * Page principale de facturation avec sections multiples
  * ✅ Intégration du nouveau Dashboard
- * ✅ Utilise DashboardWrapper depuis le nouveau répertoire
+ * ✅ Intégration de la gestion des Loyers
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import ClientGestion from './components/clients/ClientGestion';
 import FactureGestion from './components/factures/FactureGestion';
+import LoyerGestion from './components/loyers/LoyerGestion';
 import PaiementGestion from './components/paiements/PaiementGestion';
 import TarifGestion from './components/tarifs/TarifGestion';
 import DashboardWrapper from './components/dashboard/DashboardWrapper';
@@ -27,6 +28,7 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
   const [clientCreatedId, setClientCreatedId] = useState(null);
   const [factureCreatedId, setFactureCreatedId] = useState(null);
   const [paiementCreatedId, setPaiementCreatedId] = useState(null);
+  const [loyerCreatedId, setLoyerCreatedId] = useState(null);
   const [tarifIntegration, setTarifIntegration] = useState({
     selectedService: null,
     selectedTarif: null,
@@ -65,6 +67,11 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
     setActiveSection('paiements');
   };
 
+  const handleLoyerCreated = (idLoyer) => {
+    setLoyerCreatedId(idLoyer);
+    setActiveSection('loyers');
+  };
+
   // Fonction protégée pour changer de section
   const handleSectionChange = (newSection) => {
     interceptNavigation(
@@ -89,6 +96,9 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
         if (newSection !== 'paiements') {
           setPaiementCreatedId(null);
         }
+        if (newSection !== 'loyers') {
+          setLoyerCreatedId(null);
+        }
       },
       `menu-${newSection}`
     );
@@ -102,41 +112,18 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
       lastAction: action,
       ...data
     }));
-    
-    // Actions spécifiques
-    switch (action) {
-      case 'create-facture-from-tarif':
-        setActiveSection('nouvelle');
-        setFactureCreatedId(null);
-        break;
-      case 'update-client-tarifs':
-        // Rafraîchir les données clients si nécessaire
-        break;
-      default:
-        break;
+
+    if (action === 'create-facture-from-tarif') {
+      log.info('➡️ Navigation vers création facture avec tarif');
+      setActiveSection('nouvelle');
     }
   }, []);
 
-  // Fonction utilitaire pour obtenir le nom lisible d'une section
-  const getSectionName = (section) => {
-    const sectionNames = {
-      'factures': 'Factures',
-      'clients': 'Clients',
-      'paiements': 'Paiements',
-      'nouvelle': 'Nouvelle facture',
-      'nouveau-client': 'Nouveau client',
-      'nouveau-paiement': 'Nouveau paiement',
-      'tarifs': 'Tarifs',
-      'parametres': 'Paramètres',
-      'utilisateurs': 'Utilisateurs',
-      'dashboard': 'Dashboard',
-      'admin_dashboard': 'Dashboard Admin'
-    };
-    return sectionNames[section] || section;
-  };
-
   const renderContent = () => {
     switch (activeSection) {
+      case 'tarifs':
+        return null;
+      
       case 'parametres':
         return canAccessParams ? <GestionParametres /> : <div className="content-placeholder">Accès non autorisé</div>;
       
@@ -164,6 +151,19 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
           section="liste"
           idPaiement={paiementCreatedId}
           onSectionChange={() => setPaiementCreatedId(null)}
+        />;
+      
+      case 'nouveau-loyer':
+        return <LoyerGestion
+          section="nouveau"
+          onLoyerCreated={handleLoyerCreated}
+        />;
+      
+      case 'loyers':
+        return <LoyerGestion
+          section="liste"
+          idLoyer={loyerCreatedId}
+          onSectionChange={() => setLoyerCreatedId(null)}
         />;
       
       case 'clients':
@@ -205,6 +205,7 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
       <div className="facturation-body">
         <div className="facturation-menu">
           <ul>
+            {/* Factures */}
             <li
               className={activeSection === 'factures' ? 'active' : ''}
               onClick={() => handleSectionChange('factures')}
@@ -216,6 +217,19 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
               </span>
             </li>
             
+            {/* ✅ NOUVEAU: Loyers juste après Factures */}
+            <li
+              className={activeSection === 'loyers' ? 'active' : ''}
+              onClick={() => handleSectionChange('loyers')}
+              title="Gestion des loyers"
+            >
+              <span className="menu-label">
+                <span className="menu-icon">🏠</span>
+                <span>Loyers</span>
+              </span>
+            </li>
+            
+            {/* Paiements */}
             <li
               className={activeSection === 'paiements' ? 'active' : ''}
               onClick={() => handleSectionChange('paiements')}
@@ -227,6 +241,7 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
               </span>
             </li>
             
+            {/* Clients */}
             <li
               className={activeSection === 'clients' ? 'active' : ''}
               onClick={() => handleSectionChange('clients')}
@@ -238,7 +253,7 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
               </span>
             </li>
 
-            {/* ✅ NOUVEAU: Dashboard dans le menu */}
+            {/* ✅ Dashboard dans le menu */}
             <li
               className={activeSection === 'dashboard' ? 'active' : ''}
               onClick={() => handleSectionChange('dashboard')}
@@ -250,6 +265,7 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
               </span>
             </li>
             
+            {/* Section admin/gestionnaire */}
             {canAccessParams && (
               <>
                 <li style={{

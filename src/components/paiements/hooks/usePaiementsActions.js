@@ -23,6 +23,17 @@ export function usePaiementsActions(onPaiementAnnule, onSetNotification) {
      * Créer le contenu HTML de la modal d'annulation
      */
     const createAnnulationContent = (paiement) => {
+        // Détecter le type : loyer ou facture
+        log.debug('🔍 Création contenu modal pour paiement:', paiement);
+        const estLoyer     = !!paiement.idLoyer;
+        const refLabel     = estLoyer ? 'Loyer'   : 'Facture';
+        const refValeur    = estLoyer
+            ? (paiement.numeroLoyer   || 'N/A')
+            : (paiement.numeroFacture || 'N/A');
+        const warningTexte = estLoyer
+            ? "Cette action marquera le paiement comme annulé. Le montant sera déduit du total payé du loyer."
+            : "Cette action marquera le paiement comme annulé. Le montant sera déduit du total payé de la facture.";
+
         return `
             ${ModalComponents.createIntroSection(
                 `Êtes-vous sûr de vouloir annuler le paiement #${paiement.numeroPaiement} ?`
@@ -38,8 +49,8 @@ export function usePaiementsActions(onPaiementAnnule, onSetNotification) {
                     <div class="info-value">${formatMontant(paiement.montantPaye)} CHF</div>
                 </div>
                 <div class="info-row">
-                    <div class="info-label">Facture:</div>
-                    <div class="info-value">${paiement.numeroFacture || 'N/A'}</div>
+                    <div class="info-label">${refLabel}:</div>
+                    <div class="info-value">${refValeur}</div>
                 </div>
                 <div class="info-row">
                     <div class="info-label">Client:</div>
@@ -65,7 +76,7 @@ export function usePaiementsActions(onPaiementAnnule, onSetNotification) {
             
             ${ModalComponents.createWarningSection(
                 "⚠️ Attention :",
-                "Cette action marquera le paiement comme annulé. Le montant sera déduit du total payé de la facture.",
+                warningTexte,
                 "warning"
             )}
         `;
@@ -161,7 +172,12 @@ export function usePaiementsActions(onPaiementAnnule, onSetNotification) {
             
             // Construire le message de succès détaillé avec montant formaté
             const montantFormate = formatMontant(paiement.montantPaye);
-            const messageSucces = `Paiement n° ${paiement.numeroPaiement} de la facture ${paiement.numeroFacture || 'N/A'} pour ${paiement.nomClient || 'N/A'} et d'un montant de ${montantFormate} CHF annulé avec succès`;
+            const estLoyer      = !!paiement.idLoyer;
+            const refLabel      = estLoyer ? 'loyer'   : 'facture';
+            const refValeur     = estLoyer
+                ? (paiement.numeroLoyer   || 'N/A')
+                : (paiement.numeroFacture || 'N/A');
+            const messageSucces = `Paiement n° ${paiement.numeroPaiement} du ${refLabel} ${refValeur} pour ${paiement.nomClient || 'N/A'} et d'un montant de ${montantFormate} CHF annulé avec succès`;
             
             log.debug('✅ Paiement annulé avec succès');
             onSetNotification?.(messageSucces, 'success');

@@ -1,5 +1,7 @@
 // src/utils/formatters.js - Version améliorée
 
+import DateService from './DateService';
+
 /**
  * Formate un montant avec séparateur de milliers
  * @param {number|string} montant - Le montant à formater 
@@ -14,52 +16,39 @@ export const formatMontant = (montant) => {
 
 /**
  * ✅ AMÉLIORÉ: Formate une date avec options multiples
+ * * 
+ * @deprecated Depuis v7.0 - Sera supprimé en v8.0
+ * Utiliser {@link DateService.formatSingleDate} à la place.
+ * 
  * @param {string} dateStr - La date au format AAAA-MM-JJ ou ISO
  * @param {string} format - Type de format ('date', 'datetime', 'time')
  * @returns {string} Date formatée
+ * @see DateService.formatSingleDate
  */
 export const formatDate = (dateStr, format = 'date') => {
-    if (!dateStr) return '';
-    
-    try {
-        const date = new Date(dateStr);
-        
-        switch (format) {
-            case 'datetime':
-                return new Intl.DateTimeFormat('fr-CH', { 
-                    day: '2-digit', 
-                    month: '2-digit', 
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                }).format(date);
-                
-            case 'time':
-                return new Intl.DateTimeFormat('fr-CH', { 
-                    hour: '2-digit',
-                    minute: '2-digit'
-                }).format(date);
-                
-            case 'date':
-            default:
-                return new Intl.DateTimeFormat('fr-CH', { 
-                    day: '2-digit', 
-                    month: '2-digit', 
-                    year: 'numeric' 
-                }).format(date);
-        }
-    } catch (e) {
-        console.error('Erreur lors du formatage de la date:', e);
-        return dateStr;
+    if (process.env.NODE_ENV === 'development') {
+        console.warn('⚠️ DEPRECATED: formatDate() → Utiliser DateService.formatSingleDate()');
     }
+    // Déléguer à la nouvelle fonction
+    return DateService.formatSingleDate(dateStr, format);
 };
 
-// Fonction utilitaire pour formater une date au format YYYY-MM-DD pour l'input HTML
+/**
+ * Convertit une date en string au format YYYY-MM-DD pour les inputs HTML
+ * 
+ * @deprecated Depuis v7.0 - Sera supprimé en v8.0
+ * Utiliser {@link DateService.toInputFormat} à la place.
+ * 
+ * @param {Date} date - Date à convertir
+ * @returns {string} Date au format YYYY-MM-DD
+ * @see DateService.toInputFormat
+ */
 export const formatDateToYYYYMMDD = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    if (process.env.NODE_ENV === 'development') {
+        console.warn('⚠️ DEPRECATED: formatDateToYYYYMMDD() → Utiliser DateService.toInputFormat()');
+    }
+    // Déléguer à la nouvelle fonction
+    return DateService.toInputFormat(date);
 };
 
 /**
@@ -190,7 +179,20 @@ export const getEtatClass = (etat) => {
         case 'confirme':
         case 'confirmé':
             return 'etat-confirme';
-        
+
+        // ========== ÉTATS DE PAIEMENT LOYER ==========
+        case 'payé':
+        case 'paye':
+            return 'etat-payee';
+        case 'partiellement payé':
+        case 'partiellement paye':
+        case 'partiellement_paye':
+            return 'etat-partiellement-payee';
+        case 'non payé':
+        case 'non paye':
+        case 'non_paye':
+            return 'etat-attente';
+
         // ========== STATUTS UTILISATEURS ==========
         case 'actif':
         case 'active':

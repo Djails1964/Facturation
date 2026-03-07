@@ -199,7 +199,7 @@ const EnrichedObjectManager = {
                     log.debug('✅ Unité par défaut assignée:', {
                         code: nouvelleLigne.uniteCode,
                         nom: uniteObj.nomUnite || uniteObj.nom,
-                        id: nouvelleLigne.idUnite
+                        idUnite: nouvelleLigne.idUnite
                     });
                 } else {
                     log.warn('⚠️ Objet unité non trouvé pour le code:', uniteDefautCode);
@@ -364,7 +364,7 @@ export function useFactureLignes(
                             log.debug('✅ Unité par défaut auto-sélectionnée:', {
                                 code: ligneUpdated.uniteCode,
                                 nom: uniteObj.nomUnite || uniteObj.nom,
-                                id: ligneUpdated.idUnite
+                                idUnite: ligneUpdated.idUnite
                             });
                         } else {
                             // Réinitialiser l'unité si pas de défaut trouvé

@@ -1,21 +1,10 @@
 /* 
  * PaiementForm.css - Styles complets pour le formulaire de paiement
- * Inclut les styles existants + intégration avec GlobalDateInputField
  */
 
-/* ========== STYLES EXISTANTS PRÉSERVÉS ========== */
+.paiement-header-etat-simple { margin-bottom: 20px; }
+.paiement-form-container { padding: 0; }
 
-/* Badge d'état harmonisé avec FactureHeader */
-.paiement-header-etat-simple {
-    margin-bottom: 20px;
-}
-
-/* Container sans padding pour ce formulaire */
-.paiement-form-container {
-    padding: 0;
-}
-
-/* Titres des sections - espacement spécialisé pour ce formulaire */
 .form-section h3 {
     padding-top: 20px;
     padding-bottom: 20px;
@@ -25,407 +14,331 @@
     font-weight: 600;
     border-bottom: 1px solid #dee2e6;
 }
-
-.form-section h3 + .form-row {
-    margin-top: 25px;  /* ✅ Espace entre la ligne du titre et le premier champ */
-}
+.form-section h3 + .form-row { margin-top: 25px; }
 
 /* ========== MESSAGES ET NOTIFICATIONS ========== */
 
-.loading-message {
-    text-align: center;
-    padding: 40px 20px;
-    color: #6c757d;
-    font-size: 16px;
-}
+.loading-message { text-align: center; padding: 40px 20px; color: #6c757d; font-size: 16px; }
 
 .error-message {
-    background-color: #f8d7da;
-    color: #721c24;
-    padding: 15px 20px;
-    border-radius: 6px;
-    margin-bottom: 20px;
-    border: 1px solid #f5c6cb;
+    background-color: #f8d7da; color: #721c24;
+    padding: 15px 20px; border-radius: 6px;
+    margin-bottom: 20px; border: 1px solid #f5c6cb;
 }
 
 .notification {
-    padding: 12px 15px;
-    margin: 0 0 15px 0;
-    border-radius: 4px;
+    padding: 12px 15px; margin: 0 0 15px 0;
+    border-radius: 4px; display: flex;
+    justify-content: space-between; align-items: center;
+}
+.notification.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+.notification.error   { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+.notification.info    { background-color: #d1ecf1; color: #0c5460; border: 1px solid #b8daff; }
+
+/* =========================================================
+   AJOUT À PaiementForm.css — Header méta (client + référence)
+   ========================================================= */
+
+/* Ligne méta sous le titre : client | référence */
+.paiement-header-meta {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
+    font-size: 14px;
+    color: var(--color-text-light);
 }
 
-.notification.success {
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
+.paiement-header-meta__item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
-.notification.error {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
+.paiement-header-meta__label {
+    font-weight: 500;
+    color: var(--color-text);
 }
 
-.notification.info {
-    background-color: #d1ecf1;
-    color: #0c5460;
-    border: 1px solid #b8daff;
+.paiement-header-meta__val {
+    color: var(--color-text);
+}
+
+/* Référence en couleur primaire pour attirer l'attention */
+.paiement-header-meta__val--ref {
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+.paiement-header-meta__complement {
+    font-style: italic;
+    color: var(--color-text-light);
+    margin-left: 4px;
+}
+
+.paiement-header-meta__sep {
+    color: var(--color-border);
+    padding: 0 4px;
 }
 
 /* ========== SECTION DES DÉTAILS DE FACTURE ========== */
 
 .facture-details {
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 6px;
-    padding: 20px;
-    margin-top: 20px; /* Plus d'espace après le nouveau layout */
+    background: #f8f9fa; border: 1px solid #dee2e6;
+    border-radius: 6px; padding: 20px; margin-top: 20px;
 }
-
 .facture-details h4 {
-    margin: 0 0 15px 0;
-    color: #495057;
-    font-size: 16px;
-    font-weight: 600;
-    border-bottom: 1px solid #dee2e6;
-    padding-bottom: 8px;
+    margin: 0 0 15px 0; color: #495057; font-size: 16px;
+    font-weight: 600; border-bottom: 1px solid #dee2e6; padding-bottom: 8px;
 }
-
 .details-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid #e9ecef;
-    font-size: 14px;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid #e9ecef; font-size: 14px;
 }
+.details-row:last-child      { border-bottom: none; font-weight: 600; }
+.details-row span:first-child { color: #6c757d; font-weight: 500; }
+.details-row span:last-child  { color: #212529; font-weight: 600; }
+.montant-restant { color: #28a745 !important; font-weight: 700 !important; font-size: 15px !important; }
 
-.details-row:last-child {
-    border-bottom: none;
-    font-weight: 600;
-}
-
-.details-row span:first-child {
-    color: #6c757d;
-    font-weight: 500;
-}
-
-.details-row span:last-child {
-    color: #212529;
-    font-weight: 600;
-}
-
-.montant-restant {
-    color: #28a745 !important;
-    font-weight: 700 !important;
-    font-size: 15px !important;
-}
-
-/* ========== BADGE D'ÉTAT PAIEMENT DANS LE FORMULAIRE ========== */
+/* ========== BADGE D'ÉTAT ========== */
 
 .paiement-etat-badge-container {
-    display: flex;
-    justify-content: flex-start;
-    align-items: center;
-    margin-bottom: 25px;
-    padding: 0;
+    display: flex; justify-content: flex-start;
+    align-items: center; margin-bottom: 25px; padding: 0;
 }
-
 .paiement-etat-badge-container span {
-    /* Le badge utilisera automatiquement les styles définis dans getBadgeClasses avec size='normal' */
-    font-size: 14px;
-    font-weight: 500;
-    padding: 8px 16px;
-    border-radius: 20px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    line-height: 1;
-    background-color: #6c757d;
-    color: white;
+    font-size: 14px; font-weight: 500; padding: 8px 16px;
+    border-radius: 20px; display: inline-flex; align-items: center;
+    justify-content: center; text-transform: uppercase; letter-spacing: 0.5px;
+    line-height: 1; background-color: #6c757d; color: white;
 }
 
-/* ========== ESPACEMENT AVEC LA SECTION FACTURE ========== */
+/* ========== ESPACEMENT SECTIONS ========== */
 
-.form-section:first-of-type {
-    margin-top: 0;
-}
-
-/* Si le badge est présent, ajouter de l'espace avec la première section */
+.form-section:first-of-type { margin-top: 0; }
 .paiement-etat-badge-container + .notification,
-.paiement-etat-badge-container + .form-section {
-    margin-top: 15px;
-}
-
-/* Espacement entre les notifications et les sections */
-.notification + .form-section {
-    margin-top: 20px;
-}
+.paiement-etat-badge-container + .form-section { margin-top: 15px; }
+.notification + .form-section { margin-top: 20px; }
 
 /* ========== ACTIONS DU FORMULAIRE ========== */
-
-.form-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 15px;
-    padding-top: 30px;
-    margin-top: 30px;
+/* buttons.css gère l'affichage des boutons et le layout .form-actions.
+   On ajoute seulement la séparation visuelle propre à ce formulaire. */
+.paiement-form-container .form-actions {
     border-top: 1px solid #dee2e6;
+    margin-top: 24px;
+    padding-top: 20px;
+    /* justify-content, gap, display héritent de buttons.css */
 }
 
-.form-actions .btn {
-    min-width: 120px;
-    padding: 10px 20px;
-    border-radius: 4px;
-    font-weight: 500;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
+/* ========== ONGLETS FACTURE / LOYER ========== */
+
+.pf-onglets {
+    display: flex;
+    border-bottom: 2px solid var(--border-color, #dee2e6);
+    margin: var(--spacing-md, 16px) 0 0 0;
 }
 
-.form-actions .btn-primary {
-    background-color: #800000;
-    color: white;
-    border: 1px solid #800000;
+.pf-onglet {
+    display: flex; align-items: center; gap: 6px;
+    padding: 10px 24px; background: none; border: none;
+    border-bottom: 3px solid transparent; margin-bottom: -2px;
+    cursor: pointer; font-size: 14px; font-weight: 500;
+    color: var(--color-text-light, #6c757d);
+    transition: color 0.15s, border-color 0.15s;
 }
-
-.form-actions .btn-primary:hover:not(:disabled) {
-    background-color: #600000;
-    border-color: #600000;
-}
-
-.form-actions .btn-primary:disabled {
-    background-color: #cccccc;
-    border-color: #cccccc;
-    cursor: not-allowed;
-}
-
-.form-actions .btn-secondary {
-    background-color: #6c757d;
-    color: white;
-    border: 1px solid #6c757d;
-}
-
-.form-actions .btn-secondary:hover {
-    background-color: #5a6268;
-    border-color: #545b62;
-}
-
-.form-actions .btn-danger {
-    background-color: #dc3545;
-    color: white;
-    border: 1px solid #dc3545;
-}
-
-.form-actions .btn-danger:hover {
-    background-color: #c82333;
-    border-color: #bd2130;
-}
-
-/* ========== INTÉGRATION AVEC GlobalDateInputField ========== */
-
-/* Permet à GlobalDateInputField de s'intégrer dans les form-row */
-.form-row .gdf-field-container {
-    margin-bottom: 0; /* forms.css gère l'espacement via form-row */
-    width: 100%;
-    flex: 1; /* Prend l'espace disponible dans la form-row */
-}
-
-.form-row .gdf-floating-label-input {
-    margin-bottom: 0; /* Aligne avec les autres input-group */
-    margin-top: 0;
-}
-
-/* Harmonise la hauteur avec les autres champs du formulaire */
-.form-row .gdf-form-control {
-    height: auto; /* Même hauteur que les inputs de forms.css */
-    line-height: normal;
-    box-sizing: border-box;
-}
-
-/* Harmonisation des labels required */
-.paiement-form-container .gdf-required {
-    color: var(--color-primary, #800000) !important;
-    font-weight: normal;
-}
-
-/* Aligner le style des labels required avec forms.css */
-.paiement-form-container .gdf-floating-label-input.gdf-focused .gdf-required,
-.paiement-form-container .gdf-floating-label-input.gdf-filled .gdf-required {
-    color: var(--color-primary, #800000) !important;
-}
-
-/* Ajustements pour l'icône calendrier */
-.paiement-form-container .gdf-calendar-icon {
-    z-index: 10; /* Au-dessus des autres éléments */
-    transition: color 0.2s ease;
-    font-size: 16px;
-}
-
-.paiement-form-container .gdf-calendar-icon:hover {
+.pf-onglet:hover { color: var(--color-primary, #800000); }
+.pf-onglet--actif {
     color: var(--color-primary, #800000);
-    opacity: 0.8;
-}
-
-/* States et focus harmonisés avec le reste du formulaire */
-.paiement-form-container .gdf-floating-label-input.gdf-focused .gdf-form-control {
     border-bottom-color: var(--color-primary, #800000);
+    font-weight: 600;
 }
 
-/* État d'erreur cohérent avec forms.css */
-.paiement-form-container .gdf-form-control.gdf-error {
-    border-bottom-color: #d32f2f;
+/* ✅ Espace entre barre d'onglets et premier champ de saisie
+   - pf-loyer-section  : form-row direct enfant (select loyer en premier)
+   - pf-facture-section : form-row est dans form-section (enfant indirect) */
+.pf-loyer-section   > .form-row:first-child,
+.pf-facture-section .form-section > .form-row:first-child,
+.pf-facture-section > .form-row:first-child {
+    margin-top: 24px;
 }
 
-.paiement-form-container .gdf-error-message {
-    color: #d32f2f;
+/* ========== SECTION LOYER — grille unifiée ========== */
+
+.pf-loyer-grid {
+    border: 1px solid var(--border-color, #dee2e6);
+    border-radius: var(--border-radius, 6px);
+    overflow: hidden;
+    margin-top: 16px;
+}
+
+.pf-grid-row { display: flex; align-items: stretch; }
+
+.pf-col { display: flex; align-items: center; padding: 0 4px; box-sizing: border-box; }
+
+/* ── Bandeau récap ── */
+
+.pf-recap-row { background: var(--color-secondary, #f5f5f5); padding: 4px 12px; align-items: center; }
+.pf-recap-row--labels { padding-top: 10px; padding-bottom: 2px; }
+.pf-recap-row--values { padding-top: 2px; padding-bottom: 10px; border-bottom: 2px solid var(--color-primary); }
+
+.pf-recap-cell { display: flex; align-items: center; gap: 0; padding-right: 8px; }
+.pf-col--mois .pf-recap-cell { gap: 0; }
+
+.pf-recap-sub { display: flex; flex-direction: column; gap: 2px; }
+.pf-recap-sub--numero  { flex: 0 0 140px; min-width: 140px; }
+.pf-recap-sub--periode { flex: 1; padding-left: 16px; }
+
+.pf-recap-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--color-text-light); }
+.pf-recap-val   { font-size: 14px; font-weight: 700; color: var(--color-text); }
+.pf-recap-val--sm { font-size: 12px; font-weight: 600; }
+
+.pf-montant--ok    { color: var(--color-success-text, #1a7a3c); }
+.pf-solde--impaye  { color: var(--color-primary); }
+.pf-solde--partiel { color: var(--color-warning-text, #c47a00); }
+
+/* ── En-tête table ── */
+
+.pf-header-row { background: var(--header-bg, #f0f0f0); border-bottom: 1px solid var(--border-color); padding: 7px 12px; min-height: 36px; }
+.pf-header-cell { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--color-text-light); display: flex; align-items: center; gap: 6px; }
+.pf-header-saisie { display: flex; gap: 0; padding: 0; }
+
+/* ── Lignes mois ── */
+
+.pf-mois-row { border-bottom: 1px solid var(--border-color); min-height: 46px; transition: background-color .1s; align-items: center; }
+.pf-mois-row:last-of-type { border-bottom: none; }
+.pf-mois-row:hover        { background: var(--row-hover-bg, rgba(0,0,0,.02)); }
+.pf-mois-row--solde       { background: var(--color-success-bg, #f0fbf4); }
+.pf-mois-row--partiel     { background: var(--color-warning-bg, #fffbf0); }
+.pf-mois-row--selectionne { background: #eef2ff; }
+
+.pf-versement-row {
+    background: var(--color-secondary, #fafafa);
+    border-bottom: 1px solid var(--border-color);
+    min-height: 36px;
+    border-left: 3px solid var(--color-primary-light, #c08080);
     font-size: 12px;
-    margin-top: 4px;
 }
+
+.pf-saisie-row {
+    background: var(--color-info-bg, #eef2ff);
+    border-bottom: 1px solid var(--border-color);
+    border-left: 3px solid var(--color-primary);
+    min-height: 52px;
+    padding: 4px 12px;
+}
+
+/* ── Colonnes ── */
+
+.pf-col--mois   { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding-right: 8px; overflow: hidden; }
+.pf-col--du     { flex: 0 0 110px; min-width: 110px; justify-content: flex-end; text-align: right; padding-right: 8px;  color: var(--color-text-light); font-size: 13px; }
+.pf-col--paye   { flex: 0 0 110px; min-width: 110px; justify-content: flex-end; text-align: right; padding-right: 8px;  font-size: 13px; }
+.pf-col--solde  { flex: 0 0 110px; min-width: 110px; justify-content: flex-end; text-align: right; padding-right: 12px; font-weight: 600; font-size: 13px; }
+
+.pf-col--saisie { flex: 0 0 420px; min-width: 420px; display: flex; align-items: center; gap: 0; padding-left: 0; }
+.pf-col--date   { flex: 0 0 140px; min-width: 140px; padding: 0 6px; }
+.pf-col--montant { flex: 0 0 115px; min-width: 115px; padding: 0 6px; text-align: right; justify-content: flex-end; }
+.pf-col--montant input[type="number"] { text-align: right; }
+.pf-col--methode { flex: 1; min-width: 0; padding: 0 6px; overflow: hidden; }
+
+/* Dans le bandeau récap, pf-col--date sert juste à aligner — pas de padding saisie */
+.pf-recap-cell > .pf-col--date {
+    padding: 0;
+    min-width: 0;
+}
+
+/* Spacer dans le bandeau récap pour compenser expand(26px) + check(26px) de la table */
+.pf-recap-indent {
+    flex-shrink: 0;
+    width: 52px;
+}
+
+/* ── Inputs de saisie : même font-size que les cellules readonly (13px) ── */
+.pf-saisie-row .input-group input,
+.pf-saisie-row .input-group select,
+.pf-saisie-row .input-group label {
+    font-size: 13px;
+}
+.pf-col--vide   { color: var(--color-text-light); }
+
+/* ── Cellules expand / check ── */
+
+.pf-col-expand-btn    { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 26px; }
+.pf-col-check-box     { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 26px; }
+.pf-col-check-expand  { display: flex; align-items: center; gap: 0; flex-shrink: 0; width: 52px; }
+.pf-col-check-expand--indent { width: 52px; }
+
+.pf-btn-expand { display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 3px; color: var(--color-text-light); flex-shrink: 0; transition: color .12s, background .12s; }
+.pf-btn-expand:hover   { color: var(--color-primary); background: var(--color-primary-bg, #fff0f0); }
+.pf-btn-expand--hidden { visibility: hidden; pointer-events: none; }
+/* Neutralise bouton-action (40px) hérité de buttons.css sur le bouton expand */
+.pf-col-expand-btn .bouton-action { width: 20px; height: 20px; box-shadow: none; }
+.pf-col-expand-btn .bouton-action:hover { transform: none; box-shadow: none; }
+
+.pf-check-placeholder { display: inline-block; width: 16px; flex-shrink: 0; }
+.pf-mois-label { font-weight: 500; font-size: 13px; white-space: nowrap; }
+.pf-hint { font-size: 11px; color: var(--color-text-light); font-style: italic; white-space: nowrap; padding: 0 6px; }
+
+.pf-versement-mois        { color: var(--color-text-light); }
+.pf-versement-arrow       { color: var(--color-text-light); flex-shrink: 0; }
+.pf-versement-label       { font-style: italic; }
+.pf-versement-val         { color: var(--color-text); }
+.pf-versement-val--right  { text-align: right; justify-content: flex-end; }
+
+/* ── Badges état ── */
+
+.pf-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 5px; border-radius: 3px; text-transform: uppercase; letter-spacing: .3px; white-space: nowrap; flex-shrink: 0; }
+.pf-badge--solde   { background: var(--color-success-bg, #e6f4ea); color: var(--color-success-text, #1a7a3c); }
+.pf-badge--partiel { background: var(--color-warning-bg, #fff3e0); color: var(--color-warning-text, #c47a00); }
+.pf-badge--impaye  { background: #fde8e8; color: var(--color-primary); }
+
+.pf-mois-field { margin-bottom: 0; }
+
+/* ── Barre actions loyer ── */
+
+.pf-loyer-actions { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--color-secondary); border-top: 2px solid var(--color-primary); padding: 12px 16px; }
+.pf-loyer-actions__recap { display: flex; align-items: baseline; gap: 12px; }
+.pf-loyer-actions__recap span   { font-size: 12px; color: var(--color-text-light); }
+.pf-loyer-actions__recap strong { font-size: 15px; font-weight: 600; color: var(--color-primary); }
+
+/* ========== INTÉGRATION GlobalDateInputField ========== */
+
+.form-row .gdf-field-container       { margin-bottom: 0; width: 100%; flex: 1; }
+.form-row .gdf-floating-label-input  { margin-bottom: 0; margin-top: 0; }
+.form-row .gdf-form-control          { height: auto; line-height: normal; box-sizing: border-box; }
+
+.paiement-form-container .gdf-required { color: var(--color-primary, #800000) !important; font-weight: normal; }
+.paiement-form-container .gdf-floating-label-input.gdf-focused .gdf-required,
+.paiement-form-container .gdf-floating-label-input.gdf-filled  .gdf-required { color: var(--color-primary, #800000) !important; }
+.paiement-form-container .gdf-calendar-icon         { z-index: 10; transition: color 0.2s ease; font-size: 16px; }
+.paiement-form-container .gdf-calendar-icon:hover   { color: var(--color-primary, #800000); opacity: 0.8; }
+.paiement-form-container .gdf-floating-label-input.gdf-focused .gdf-form-control { border-bottom-color: var(--color-primary, #800000); }
+.paiement-form-container .gdf-form-control.gdf-error { border-bottom-color: #d32f2f; }
+.paiement-form-container .gdf-error-message          { color: #d32f2f; font-size: 12px; margin-top: 4px; }
 
 /* ========== RESPONSIVE ========== */
 
+@media (max-width: 900px) {
+    .pf-col--saisie  { flex: 0 0 280px; min-width: 280px; }
+    .pf-col--methode { display: none; }
+}
+
 @media (max-width: 768px) {
-    /* Badge d'état centré sur mobile */
-    .paiement-etat-badge-container {
-        justify-content: center;
-        margin-bottom: 20px;
-    }
-    
-    .paiement-etat-badge-container span {
-        font-size: 13px;
-        padding: 7px 14px;
-    }
-    
-    /* Détails de facture adaptés pour mobile */
-    .facture-details {
-        padding: 15px;
-        margin-top: 15px;
-    }
-    
-    .details-row {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 5px;
-        padding: 10px 0;
-    }
-    
-    .details-row span:first-child {
-        font-size: 13px;
-        color: #6c757d;
-    }
-    
-    .details-row span:last-child {
-        font-size: 14px;
-        color: #212529;
-    }
-    
-    /* GlobalDateInputField responsive dans form-row */
-    .form-row .gdf-field-container {
-        margin-bottom: 15px; /* Espacement sur mobile comme les autres input-group */
-    }
-    
-    .form-row .gdf-field-container:last-child {
-        margin-bottom: 0;
-    }
-    
-    /* Ajustement de l'icône calendrier sur petit écran */
-    .paiement-form-container .gdf-calendar-icon {
-        font-size: 14px;
-        right: 6px;
-    }
-    
-    /* Actions du formulaire en colonne sur mobile */
-    .form-actions {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 10px;
-    }
-    
-    .form-actions .btn {
-        min-width: auto;
-        width: 100%;
-    }
+    .paiement-etat-badge-container { justify-content: center; margin-bottom: 20px; }
+    .paiement-etat-badge-container span { font-size: 13px; padding: 7px 14px; }
+    .facture-details { padding: 15px; margin-top: 15px; }
+    .details-row { flex-direction: column; align-items: flex-start; gap: 5px; padding: 10px 0; }
+    .details-row span:first-child { font-size: 13px; }
+    .details-row span:last-child  { font-size: 14px; }
+    .form-row .gdf-field-container { margin-bottom: 15px; }
+    .form-row .gdf-field-container:last-child { margin-bottom: 0; }
+    .paiement-form-container .gdf-calendar-icon { font-size: 14px; right: 6px; }
+    .pf-loyer-section   > .form-row:first-child,
+    .pf-facture-section > .form-row:first-child { margin-top: 16px; }
 }
 
-@media (max-width: 480px) {
-    /* Très petit écran */
-    .paiement-etat-badge-container {
-        margin-bottom: 18px;
-    }
-    
-    .paiement-etat-badge-container span {
-        font-size: 12px;
-        padding: 6px 12px;
-    }
-    
-    .form-row .gdf-field-container {
-        margin-bottom: 12px;
-    }
-    
-    .paiement-form-container .gdf-calendar-icon {
-        font-size: 13px;
-    }
-    
-    .form-section h3 {
-        font-size: 16px;
-        padding-top: 15px;
-        padding-bottom: 15px;
-    }
-    
-    .paiement-form-container {
-        padding: 10px;
-    }
-}
-
-/* ========== ACCESSIBILITÉ ========== */
-
-/* Focus visible pour les éléments interactifs */
-.form-actions .btn:focus,
-.paiement-form-container .gdf-calendar-icon:focus {
-    outline: 2px solid #800000;
-    outline-offset: 2px;
-}
-
-/* États désactivés clairement visibles */
-.form-actions .btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-/* Contraste suffisant pour les messages d'erreur */
-.error-message {
-    font-weight: 500;
-}
-
-/* ========== PRINT STYLES ========== */
-
-@media print {
-    .paiement-form-container {
-        box-shadow: none;
-        border: 1px solid #000;
-    }
-    
-    .form-actions {
-        display: none;
-    }
-    
-    .paiement-etat-badge-container span {
-        background-color: #fff !important;
-        color: #000 !important;
-        border: 1px solid #000;
-    }
-    
-    .notification {
-        border: 1px solid #000;
-        background-color: #fff !important;
-        color: #000 !important;
-    }
+@media (max-width: 700px) {
+    .pf-col--paye, .pf-col--du { display: none; }
+    .pf-col--saisie { flex: 0 0 220px; min-width: 220px; }
+    .pf-loyer-actions { flex-direction: column; align-items: stretch; }
 }

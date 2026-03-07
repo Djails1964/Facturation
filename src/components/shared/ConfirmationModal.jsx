@@ -1,6 +1,7 @@
 import React from 'react';
 import '../../styles/shared/ConfirmationModal.css';
-import { formatMontant, formatDate } from '../../utils/formatters';
+import { formatMontant } from '../../utils/formatters';
+import DateService from '../../utils/DateService';
 
 /**
  * Composant de modal de confirmation personnalisé
@@ -88,7 +89,7 @@ function ConfirmationModal({
                                 {details.date && (
                                     <span className="detail-item">
                                         <span className="detail-label">Date:</span> 
-                                        <span className="detail-value">{formatDate(details.date)}</span>
+                                        <span className="detail-value">{DateService.formatSingleDate(details.date)}</span>
                                     </span>
                                 )}
                             </div>

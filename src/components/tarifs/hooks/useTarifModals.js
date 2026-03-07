@@ -21,7 +21,7 @@ export const useTarifModals = ({
   const { showSuccess, showError: showErrorNotif, showWarning } = useNotifications();
   const { openDatePicker } = useDateContext();
 
-  // ✅ MÉTHODE UTILITAIRE pour récupérer les données existantes (DÉCLARÉE EN PREMIER)
+  //  MÉTHODE UTILITAIRE pour récupérer les données existantes (DÉCLARÉE EN PREMIER)
   const getExistingItemsForValidation = useCallback((formType, gestionState) => {
     switch (formType) {
       case FORM_TYPES.SERVICE:
@@ -42,9 +42,9 @@ export const useTarifModals = ({
   // Fonction générique pour traiter les soumissions avec validation d'unicité
   const processFormSubmission = useCallback(async (formType, formData, isEdit = false, itemId = null) => {
     try {
-      log.debug(`📄 Début ${isEdit ? 'modification' : 'création'} ${formType}:`, formData);
+      log.debug(` Début ${isEdit ? 'modification' : 'création'} ${formType}:`, formData);
       
-      // ✅ Pour les services inactifs : fusionner avec les données originales
+      //  Pour les services inactifs : fusionner avec les données originales
       let finalFormData = { ...formData };
       let wasInactive = false;
       
@@ -61,7 +61,7 @@ export const useTarifModals = ({
             isDefault: originalService.isDefault,
             actif: formData.actif // Seul ce champ vient du formulaire
           };
-          log.debug('✅ Service inactif - Fusion des données:', {
+          log.debug(' Service inactif - Fusion des données:', {
             original: originalService,
             formData: formData,
             merged: finalFormData
@@ -69,23 +69,23 @@ export const useTarifModals = ({
         }
       }
 
-      // ✅ VALIDATION FINALE CÔTÉ CLIENT avec données existantes
+      //  VALIDATION FINALE CÃ”TÉ CLIENT avec données existantes
       const existingItems = getExistingItemsForValidation(formType, gestionState);
       
-      log.debug('📋 Éléments existants pour validation:', existingItems);
-      log.debug('📋 Données du formulaire pour validation:', formData);
-      log.debug('📋 ID de l\'élément pour validation:', itemId);
+      log.debug(' Éléments existants pour validation:', existingItems);
+      log.debug(' Données du formulaire pour validation:', formData);
+      log.debug(' ID de l\'élément pour validation:', itemId);
       
       const validationResult = TarifValidationService.validateFormData(formType, finalFormData, existingItems, itemId);
 
-      log.debug('📋 Résultat de la validation:', validationResult);
+      log.debug(' Résultat de la validation:', validationResult);
 
       if (!validationResult.isValid) {
         const errorMessages = Object.values(validationResult.errors);
-        throw new Error(`Erreurs de validation:\n• ${errorMessages.join('\n• ')}`);
+        throw new Error(`Erreurs de validation:\n ${errorMessages.join('\n ')}`);
       }
       
-      // ✅ VÉRIFICATION SPÉCIFIQUE D'UNICITÉ POUR LES CODES
+      //  VÉRIFICATION SPÉCIFIQUE D'UNICITÉ POUR LES CODES
       if ((formType === FORM_TYPES.SERVICE || formType === FORM_TYPES.UNITE) && finalFormData.code) {
         const codeExists = existingItems.find(item => 
           item.code && 
@@ -95,11 +95,11 @@ export const useTarifModals = ({
         
         if (codeExists) {
           const typeLabel = TarifFormService.getFormTypeDisplayName(formType).toLowerCase();
-          throw new Error(`Le code "${finalFormData.code}" existe déjà pour un autre ${typeLabel} (${codeExists.nom})`);
+          throw new Error(`Le code "${finalFormData.code}" existe déjÃ  pour un autre ${typeLabel} (${codeExists.nom})`);
         }
       }
       
-      // ✅ VÉRIFICATION SPÉCIFIQUE D'UNICITÉ POUR LES NOMS
+      //  VÉRIFICATION SPÉCIFIQUE D'UNICITÉ POUR LES NOMS
       if (finalFormData.nom) {
         const nomExists = existingItems.find(item => 
           item.nom && 
@@ -109,33 +109,33 @@ export const useTarifModals = ({
         
         if (nomExists) {
           const typeLabel = TarifFormService.getFormTypeDisplayName(formType).toLowerCase();
-          throw new Error(`Le nom "${finalFormData.nom}" existe déjà pour un autre ${typeLabel} (${nomExists.code || nomExists.id})`);
+          throw new Error(`Le nom "${finalFormData.nom}" existe déjÃ  pour un autre ${typeLabel} (${nomExists.code || nomExists.id})`);
         }
       }
       
-      log.debug(`✅ Validation réussie, soumission ${formType}`);
+      log.debug(` Validation réussie, soumission ${formType}`);
       
       // Afficher modal de chargement
       const result = await showLoading(
         {
           title: isEdit ? 'Modification en cours...' : 'Création en cours...',
           content: ModalComponents.createLoadingContent(
-            isEdit ? 'Mise à jour des données...' : 'Enregistrement des données...'
+            isEdit ? 'Mise Ã  jour des données...' : 'Enregistrement des données...'
           ),
           size: MODAL_SIZES.SMALL
         },
         async () => {
-          return await TarifFormService.submitForm(formType, finalFormData, isEdit, itemId, gestionState.tarificationService);
+          return await TarifFormService.submitForm(formType, finalFormData, isEdit, itemId, gestionState.tarifActions);
         }
       );
       
       if (result && result.success) {
-        log.debug(`✅ Succès ${formType}:`, result);
+        log.debug(` Succès ${formType}:`, result);
         
-        // Mise à jour des données locales
-        await TarifFormService.refreshDataAfterSave(formType, gestionState);
+        // Mise Ã  jour des données locales
+        await TarifFormService.refreshDataAfterSave(formType, gestionState, false);
         
-        // Mise à jour des IDs créés pour highlighting
+        // Mise Ã  jour des IDs créés pour highlighting
         if (!isEdit) {
           setCreatedIds(prev => ({
             ...prev,
@@ -175,7 +175,7 @@ export const useTarifModals = ({
       }
       
     } catch (error) {
-      log.error(`💥 Erreur critique ${formType}:`, error);
+      log.error(` Erreur critique ${formType}:`, error);
       await showError(`Erreur : ${error.message}`, `Erreur ${isEdit ? 'modification' : 'création'} ${formType}`);
       showErrorNotif(error.message || 'Erreur lors de la sauvegarde');
       return false;
@@ -183,102 +183,123 @@ export const useTarifModals = ({
   }, [gestionState, setCreatedIds, onTarifAction, getExistingItemsForValidation, showSuccess, showErrorNotif]);
 
   const prepareFormData = useCallback(async (formType, itemData = null) => {
-    // 1. S'assurer que toutes les données sont chargées
+    // 1. TOUJOURS recharger les donnees pour les tarifs
+    // Car les donnees peuvent avoir change dans d'autres onglets
+    let freshServices = gestionState.services || [];
+    let freshUnites = gestionState.unites || [];
+    let freshTypesTarifs = gestionState.typesTarifs || [];
+    let freshClients = gestionState.clients || [];
+    let freshServicesUnites = gestionState.servicesUnites || {};
+    
     if (formType === FORM_TYPES.TARIF || formType === FORM_TYPES.TARIF_SPECIAL) {
-      log.debug('📄 Vérification du chargement des données...');
+      log.debug('Rechargement FORCE des donnees dependantes pour formulaire tarif...');
       
-      if (!gestionState.services || gestionState.services.length === 0) {
-        await gestionState.loadServices?.();
+      try {
+        // CRITIQUE: Vider le cache AVANT de charger pour obtenir les donnees fraiches
+        if (gestionState.tarifActions?.clearCache) {
+          log.debug('Vidage du cache avant rechargement...');
+          gestionState.tarifActions.clearCache();
+        }
+        
+        // IMPORTANT: Utiliser directement tarifActions.charger pour obtenir les donnees fraiches
+        // Car gestionState.xxx n'est pas mis a jour de facon synchrone
+        const [servicesData, unitesData, typesTarifsData, servicesUnitesData] = await Promise.all([
+          gestionState.tarifActions?.charger('service'),
+          gestionState.tarifActions?.charger('unite'),
+          gestionState.tarifActions?.charger('typeTarif'),
+          gestionState.tarifActions?.chargerServicesUnites()
+        ]);
+        
+        freshServices = servicesData || [];
+        freshUnites = unitesData || [];
+        freshTypesTarifs = typesTarifsData || [];
+        
+        // Transformer servicesUnitesData en map
+        if (Array.isArray(servicesUnitesData)) {
+          freshServicesUnites = {};
+          servicesUnitesData.forEach(relation => {
+            if (!freshServicesUnites[relation.idService]) {
+              freshServicesUnites[relation.idService] = [];
+            }
+            freshServicesUnites[relation.idService].push({
+              idService: relation.idService,
+              idUnite: relation.idUnite
+            });
+          });
+        }
+        
+        // Mettre a jour le state en parallele (pour les autres composants)
+        gestionState.setServices?.(freshServices);
+        gestionState.setUnites?.(freshUnites);
+        gestionState.setTypesTarifs?.(freshTypesTarifs);
+        gestionState.setServicesUnites?.(freshServicesUnites);
+        
+        // Pour les tarifs speciaux, charger aussi les clients
+        if (formType === FORM_TYPES.TARIF_SPECIAL) {
+          // Utiliser loadClients du gestionState (qui utilise useClientActions)
+          await gestionState.loadClients?.();
+          freshClients = gestionState.clients || [];
+        }
+        
+        log.debug('Donnees FRAICHES chargees - Services:', freshServices.length, 
+                  'Unites:', freshUnites.length, 
+                  'TypesTarifs:', freshTypesTarifs.length);
+      } catch (error) {
+        log.error('Erreur rechargement donnees:', error);
+        // Fallback sur les donnees du state
       }
-      
-      if (!gestionState.unites || gestionState.unites.length === 0) {
-        await gestionState.loadUnites?.();
-      }
-      
-      if (!gestionState.typesTarifs || gestionState.typesTarifs.length === 0) {
-        await gestionState.loadTypesTarifs?.();
-      }
-      
-      if (formType === FORM_TYPES.TARIF_SPECIAL && (!gestionState.clients || gestionState.clients.length === 0)) {
-        await gestionState.loadClients?.();
-      }
-
-      // 2. Charger les liaisons service-unité (CRUCIAL !)
-      log.debug('🔄 Rechargement des associations service-unité...');
-      await gestionState.loadAllServicesUnites?.();
-
-      log.debug("🔄 Rechargement des unités après mise à jour des associations...");
-      await gestionState.loadUnites?.();
     }
     
-    // 3. Enrichir les unités avec leurs idServices (many-to-many)
-    let unitesEnrichies = gestionState.unites || [];
-    let servicesUnitesMap = {};  // Map pour le filtrage côté validation
+    // 2. Enrichir les unites avec leurs idServices (many-to-many)
+    let unitesEnrichies = freshUnites;
+    let servicesUnitesMap = {};
     
     if (formType === FORM_TYPES.TARIF || formType === FORM_TYPES.TARIF_SPECIAL) {
-      log.debug('🔍 DEBUG enrichissement - servicesUnites brut:', gestionState.servicesUnites);
+      log.debug('DEBUG enrichissement - servicesUnites:', freshServicesUnites);
       
-      // ✅ NOUVEAU : Créer une map uniteId -> [idServices]
+      // Creer une map uniteId -> [idServices]
       const uniteToServicesMap = new Map();
       
-      Object.entries(gestionState.servicesUnites || {}).forEach(([idService, unites]) => {
-        unites.forEach(unite => {
-          const uniteId = unite.id || unite.idUnite;
-          if (!uniteToServicesMap.has(uniteId)) {
-            uniteToServicesMap.set(uniteId, []);
-          }
-          uniteToServicesMap.get(uniteId).push(parseInt(idService));
-        });
+      Object.entries(freshServicesUnites || {}).forEach(([idService, unites]) => {
+        if (Array.isArray(unites)) {
+          unites.forEach(unite => {
+            const uniteId = unite.id || unite.idUnite;
+            if (!uniteToServicesMap.has(uniteId)) {
+              uniteToServicesMap.set(uniteId, []);
+            }
+            uniteToServicesMap.get(uniteId).push(parseInt(idService));
+          });
+        }
       });
       
-      log.debug('🔍 DEBUG enrichissement - uniteToServicesMap:', Object.fromEntries(uniteToServicesMap));
+      log.debug('DEBUG enrichissement - uniteToServicesMap:', Object.fromEntries(uniteToServicesMap));
       
-      // ✅ NOUVEAU : Enrichir avec TOUS les services associés
-      unitesEnrichies = (gestionState.unites || []).map(unite => {
+      // Enrichir avec TOUS les services associes
+      unitesEnrichies = freshUnites.map(unite => {
         const uniteId = unite.id || unite.idUnite;
         const servicesIds = uniteToServicesMap.get(uniteId) || [];
         
-        if (unite.nomUnite === 'asdf' || unite.codeUnite === 'TEST1') {
-          log.debug(`🔍 DEBUG enrichissement ASDF - uniteId: ${uniteId}, services:`, servicesIds);
-        }
-        
         return {
           ...unite,
-          servicesIds: servicesIds  // ✅ Liste d'IDs au lieu d'un seul
+          servicesIds: servicesIds
         };
       });
       
-      // Créer la map pour la validation (format attendu par TarifValidationService)
       servicesUnitesMap = Object.fromEntries(uniteToServicesMap);
       
-      log.debug('✅ Unités enrichies:', unitesEnrichies.filter(u => u.servicesIds.length > 0).length, '/', unitesEnrichies.length);
-      
-      // Log spécifique pour l'unité asdf
-      const uniteAsdf = unitesEnrichies.find(u => u.nomUnite === 'asdf' || u.codeUnite === 'TEST1');
-      if (uniteAsdf) {
-        log.debug('🔍 DEBUG enrichissement - Unité ASDF finale:', uniteAsdf);
-      }
+      log.debug('Unites enrichies:', unitesEnrichies.filter(u => u.servicesIds.length > 0).length, '/', unitesEnrichies.length);
     }
     
-    
-    // 4. Normaliser les données du tarif (si édition)
-    // let normalizedItemData = itemData;
-    // if (itemData) {
-    //   normalizedItemData = TarifFormService.normalizeItemDataForForm(itemData, formType);
-    //   log.debug('✅ Données normalisées:', normalizedItemData);
-    // }
-    
-    // 5. Préparer les données additionnelles
+    // 3. Preparer les donnees additionnelles
     const additionalData = {
-      services: Array.isArray(gestionState.services) ? gestionState.services : [],
-      unites: unitesEnrichies,  // ✅ Enrichies avec servicesIds
-      typesTarifs: Array.isArray(gestionState.typesTarifs) ? gestionState.typesTarifs : [],
-      clients: Array.isArray(gestionState.clients) ? gestionState.clients : [],
-      servicesUnitesMap: servicesUnitesMap  // ✅ NOUVEAU : Map pour le filtrage
+      services: freshServices,
+      unites: unitesEnrichies,
+      typesTarifs: freshTypesTarifs,
+      clients: freshClients,
+      servicesUnitesMap: servicesUnitesMap
     };
         
     return {
-      // normalizedItemData,
       additionalData
     };
   }, [gestionState, log]);
@@ -288,41 +309,41 @@ export const useTarifModals = ({
     try {
 
       const { additionalData } = await prepareFormData(formType, null);
-      // ✅ S'ASSURER QUE LES DONNÉES SONT CHARGÉES avant d'ouvrir le formulaire
+      //  S'ASSURER QUE LES DONNÉES SONT CHARGÉES avant d'ouvrir le formulaire
       // if (formType === FORM_TYPES.TARIF || formType === FORM_TYPES.TARIF_SPECIAL) {
-      //   log.debug('📄 Vérification du chargement des données...');
+      //   log.debug(' Vérification du chargement des données...');
         
       //   // Charger les données si nécessaire
       //   if (!gestionState.services || gestionState.services.length === 0) {
-      //     log.debug('⚠️ Services non chargés, chargement en cours...');
+      //     log.debug(' ï¸ Services non chargés, chargement en cours...');
       //     await gestionState.loadServices?.();
       //   }
         
       //   if (!gestionState.unites || gestionState.unites.length === 0) {
-      //     log.debug('⚠️ Unités non chargées, chargement en cours...');
+      //     log.debug(' ï¸ Unités non chargées, chargement en cours...');
       //     await gestionState.loadUnites?.();
       //   }
         
       //   if (!gestionState.typesTarifs || gestionState.typesTarifs.length === 0) {
-      //     log.debug('⚠️ Types tarifs non chargés, chargement en cours...');
+      //     log.debug(' ï¸ Types tarifs non chargés, chargement en cours...');
       //     await gestionState.loadTypesTarifs?.();
       //   }
         
       //   if (formType === FORM_TYPES.TARIF_SPECIAL && (!gestionState.clients || gestionState.clients.length === 0)) {
-      //     log.debug('⚠️ Clients non chargés, chargement en cours...');
+      //     log.debug(' ï¸ Clients non chargés, chargement en cours...');
       //     await gestionState.loadClients?.();
       //   }
 
       //   // Charger les liaisons service-unité si nécessaire
       //   if ((formType === FORM_TYPES.TARIF || formType === FORM_TYPES.TARIF_SPECIAL) && 
       //       (!gestionState.servicesUnites || gestionState.servicesUnites.length === 0)) {
-      //       log.debug('⚠️ Service-Unités non chargés, chargement en cours...');
+      //       log.debug(' ï¸ Service-Unités non chargés, chargement en cours...');
       //       await gestionState.loadAllServicesUnites?.();
       //   }
       // }
       
-      // // ✅ DEBUG : Vérifier les données disponibles APRÈS chargement
-      // log.debug(`📋 Debug création ${formType} APRÈS chargement:`, {
+      // //  DEBUG : Vérifier les données disponibles APRÈS chargement
+      // log.debug(` Debug création ${formType} APRÈS chargement:`, {
       //   services: gestionState.services?.length || 0,
       //   unites: gestionState.unites?.length || 0,
       //   typesTarifs: gestionState.typesTarifs?.length || 0,
@@ -346,7 +367,7 @@ export const useTarifModals = ({
       //             }))
       //         );
       //     }
-      //     log.debug('📊 ServiceUnites transformés:', servicesUnitesArray.length);
+      //     log.debug(' ServiceUnites transformés:', servicesUnitesArray.length);
       //     log.debug('ServicesUnites transformés array:' , servicesUnitesArray);
       // }
 
@@ -359,18 +380,18 @@ export const useTarifModals = ({
       //     };
       // });
 
-      // log.debug('✅ Unités enrichies:', unitesEnrichies.filter(u => u.idService !== null).length, '/', unitesEnrichies.length);
-      // log.debug('✅ Unités enrichies:', unitesEnrichies);
+      // log.debug(' Unités enrichies:', unitesEnrichies.filter(u => u.idService !== null).length, '/', unitesEnrichies.length);
+      // log.debug(' Unités enrichies:', unitesEnrichies);
 
       // // Préparer les données additionnelles
       // const additionalData = {
       //     services: Array.isArray(gestionState.services) ? gestionState.services : [],
-      //     unites: unitesEnrichies,  // ✅ Unités enrichies
+      //     unites: unitesEnrichies,  //  Unités enrichies
       //     typesTarifs: Array.isArray(gestionState.typesTarifs) ? gestionState.typesTarifs : [],
       //     clients: Array.isArray(gestionState.clients) ? gestionState.clients : []
       // };
 
-      // // ✅ VÉRIFICATION FINALE - Alerter si des données sont manquantes
+      // //  VÉRIFICATION FINALE - Alerter si des données sont manquantes
       // if (formType === FORM_TYPES.TARIF || formType === FORM_TYPES.TARIF_SPECIAL) {
       //   const missingData = [];
       //   if (additionalData.services.length === 0) missingData.push('services');
@@ -379,12 +400,12 @@ export const useTarifModals = ({
       //   if (formType === FORM_TYPES.TARIF_SPECIAL && additionalData.clients.length === 0) missingData.push('clients');
         
       //   if (missingData.length > 0) {
-      //     log.warn(`⚠️ Données manquantes pour ${formType}:`, missingData);
+      //     log.warn(` ï¸ Données manquantes pour ${formType}:`, missingData);
       //     showWarning(`Attention: Certaines données ne sont pas disponibles (${missingData.join(', ')})`);
       //   }
       // }
       
-      // log.debug(`📊 Données additionnelles préparées:`, {
+      // log.debug(` Données additionnelles préparées:`, {
       //   servicesCount: additionalData.services.length,
       //   unitesCount: additionalData.unites.length,
       //   typesTarifsCount: additionalData.typesTarifs.length,
@@ -407,7 +428,7 @@ export const useTarifModals = ({
           container.dataset.unites = JSON.stringify(additionalData.unites || []);
           
           const existingItems = getExistingItemsForValidation(formType, gestionState);
-          log.debug(`📊 Données existantes pour validation ${formType}:`, existingItems.length);
+          log.debug(` Données existantes pour validation ${formType}:`, existingItems.length);
           TarifValidationService.setupFormValidation(container, formType, null, existingItems);
 
           // Initialiser le handler du DatePicker
@@ -417,9 +438,9 @@ export const useTarifModals = ({
           //   showLoading: showLoading
           // });
 
-          // ✅ NOUVEAU : Gestion des dates via DateContext
+          //  NOUVEAU : Gestion des dates via DateContext
           const dateIcons = container.querySelectorAll('[data-date-trigger]');
-          log.debug(`📅 Initialisation de ${dateIcons.length} champs date`);
+          log.debug(` Initialisation de ${dateIcons.length} champs date`);
           
           dateIcons.forEach(icon => {
               icon.addEventListener('click', (e) => {
@@ -430,7 +451,7 @@ export const useTarifModals = ({
                   const input = container.querySelector(`#${inputId}`);
                   
                   if (!input) {
-                      log.warn(`⚠️ Champ ${inputId} introuvable`);
+                      log.warn(` ï¸ Champ ${inputId} introuvable`);
                       return;
                   }
                   
@@ -440,7 +461,7 @@ export const useTarifModals = ({
                       const configAttr = input.getAttribute('data-date-config');
                       if (configAttr) config = JSON.parse(configAttr);
                   } catch (err) {
-                      log.warn('⚠️ Erreur parsing config:', err);
+                      log.warn(' ï¸ Erreur parsing config:', err);
                   }
                   
                   // Parser la date actuelle
@@ -465,7 +486,7 @@ export const useTarifModals = ({
                   const callback = (dates) => {
                       if (dates && dates.length > 0) {
                           const dateString = DateService.formatSingleDate(dates[0], 'date');
-                          log.debug(`✅ Date sélectionnée: ${dateString}`);
+                          log.debug(` Date sélectionnée: ${dateString}`);
                           
                           input.value = dateString;
                           input.dispatchEvent(new Event('change', { bubbles: true }));
@@ -473,7 +494,7 @@ export const useTarifModals = ({
                       }
                   };
                   
-                  // ✅ Ouvrir le DatePicker via DateContext
+                  //  Ouvrir le DatePicker via DateContext
                   openDatePicker(datePickerConfig, callback, initialDates);
               });
           });          
@@ -494,7 +515,7 @@ export const useTarifModals = ({
       return false;
       
     } catch (error) {
-      log.error(`❌ Erreur création ${formType}:`, error);
+      log.error(` Erreur création ${formType}:`, error);
       showErrorNotif(error.message || 'Erreur lors de la création');
       return false;
     }
@@ -507,9 +528,9 @@ export const useTarifModals = ({
       const itemData = TarifFormService.getItemData(formType, itemId, gestionState);
       log.debug('handleEditItem - getItemData - données retournées : ', itemData);
     
-      // ✅ 2. Utiliser la fonction commune pour préparer TOUT
+      //  2. Utiliser la fonction commune pour préparer TOUT
       const { additionalData } = await prepareFormData(formType, itemData);
-      // ✅ S'ASSURER QUE LES DONNÉES SONT CHARGÉES avant d'ouvrir le formulaire
+      //  S'ASSURER QUE LES DONNÉES SONT CHARGÉES avant d'ouvrir le formulaire
       // if (formType === FORM_TYPES.TARIF || formType === FORM_TYPES.TARIF_SPECIAL) {
       //   if (!gestionState.services || gestionState.services.length === 0) {
       //     await gestionState.loadServices?.();
@@ -527,7 +548,7 @@ export const useTarifModals = ({
       
       // const itemData = TarifFormService.getItemData(formType, itemId, gestionState);
       
-      // // ✅ PRÉPARER LES DONNÉES ADDITIONNELLES de manière sécurisée
+      // //  PRÉPARER LES DONNÉES ADDITIONNELLES de manière sécurisée
       // const additionalData = {
       //   services: Array.isArray(gestionState.services) ? gestionState.services : [],
       //   unites: Array.isArray(gestionState.unites) ? gestionState.unites : [],
@@ -550,7 +571,7 @@ export const useTarifModals = ({
           container.dataset.unites = JSON.stringify(additionalData.unites || []);
 
           const existingItems = getExistingItemsForValidation(formType, gestionState);
-          log.debug(`📊 
+          log.debug(` 
              ${formType}:`, existingItems);
           TarifValidationService.setupFormValidation(container, formType, itemId, existingItems);
 
@@ -561,9 +582,9 @@ export const useTarifModals = ({
           //   showLoading: showLoading
           // });
           
-          // ✅ NOUVEAU : Gestion des dates via DateContext
+          //  NOUVEAU : Gestion des dates via DateContext
           const dateIcons = container.querySelectorAll('[data-date-trigger]');
-          log.debug(`📅 Initialisation de ${dateIcons.length} champs date`);
+          log.debug(` Initialisation de ${dateIcons.length} champs date`);
           
           dateIcons.forEach(icon => {
               icon.addEventListener('click', (e) => {
@@ -574,7 +595,7 @@ export const useTarifModals = ({
                   const input = container.querySelector(`#${inputId}`);
                   
                   if (!input) {
-                      log.warn(`⚠️ Champ ${inputId} introuvable`);
+                      log.warn(` ï¸ Champ ${inputId} introuvable`);
                       return;
                   }
                   
@@ -584,7 +605,7 @@ export const useTarifModals = ({
                       const configAttr = input.getAttribute('data-date-config');
                       if (configAttr) config = JSON.parse(configAttr);
                   } catch (err) {
-                      log.warn('⚠️ Erreur parsing config:', err);
+                      log.warn(' ï¸ Erreur parsing config:', err);
                   }
                   
                   // Parser la date actuelle
@@ -609,7 +630,7 @@ export const useTarifModals = ({
                   const callback = (dates) => {
                       if (dates && dates.length > 0) {
                           const dateString = DateService.formatSingleDate(dates[0], 'date');
-                          log.debug(`✅ Date sélectionnée: ${dateString}`);
+                          log.debug(` Date sélectionnée: ${dateString}`);
                           
                           input.value = dateString;
                           input.dispatchEvent(new Event('change', { bubbles: true }));
@@ -617,7 +638,7 @@ export const useTarifModals = ({
                       }
                   };
                   
-                  // ✅ Ouvrir le DatePicker via DateContext
+                  //  Ouvrir le DatePicker via DateContext
                   openDatePicker(datePickerConfig, callback, initialDates);
               });
           });
@@ -638,40 +659,31 @@ export const useTarifModals = ({
       return false;
       
     } catch (error) {
-      log.error(`❌ Erreur modification ${formType}:`, error);
+      log.error(` Erreur modification ${formType}:`, error);
       showErrorNotif(error.message || 'Erreur lors de la modification');
       return false;
     }
   }, [prepareFormData, processFormSubmission, gestionState, getExistingItemsForValidation, showErrorNotif]);
 
-  /**
+/**
    * RÈGLES MÉTIER:
    * 1. Service: Ne peut pas être supprimé s'il est référencé dans une facture
    * 2. Unité: Ne peut pas être supprimée si:
    *    - Elle est référencée dans une facture
-   *    - Elle est associée à  un service
+   *    - Elle est associée à un service
    * 3. TypeTarif: Ne peut pas être supprimé si des tarifs lui sont liés
-   * 4. Tarif: NE PEUT JAMAIS ÊTRE SUPPRIMÉ - supprimé via unité
+   * 4. Tarif/TarifSpecial: Ne peut pas être supprimé si utilisé dans une ligne de facture
    */
   
   const handleDeleteItem = useCallback(async (formType, itemId, itemName, anchorRef = null) => {
     try {
       const typeLabel = TarifFormService.getFormTypeDisplayName(formType).toLowerCase();
       
-      log.debug(`🗑️ Tentative de suppression ${formType}:`, { itemId, itemName });
+      log.debug(` Tentative de suppression ${formType}:`, { itemId, itemName });
       
-      // 🚫 RÈGLE 0: Les tarifs ne peuvent JAMAIS être supprimés manuellement
-      if (formType === FORM_TYPES.TARIF || formType === FORM_TYPES.TARIF_SPECIAL) {
-        log.debug(`❌ Les tarifs ne peuvent pas être supprimés manuellement`);
-        await showError(
-          `Les tarifs ne peuvent pas être supprimés directement.\n\nSupprimez plutôt l'unité à  laquelle le tarif est lié.`,
-          'Suppression non autorisée'
-        );
-        return false;
-      }
-      
-      // 📋 VÉRIFICATION: Appeler l'API pour vérifier les contraintes métier
-      log.debug(`📋 Vérification des contraintes métier...`);
+      // Les tarifs peuvent etre supprimes s'ils ne sont pas utilises dans des factures
+      //  VÉRIFICATION: Appeler l'API pour vérifier les contraintes métier
+      log.debug(` Vérification des contraintes métier...`);
       
       let usageCheck;
       try {
@@ -682,14 +694,14 @@ export const useTarifModals = ({
             size: MODAL_SIZES.SMALL
           },
           async () => {
-            return await TarifFormService.checkItemUsage(formType, itemId, gestionState.tarificationService);
+            return await TarifFormService.checkItemUsage(formType, itemId, gestionState.tarifActions);
           }
         );
         
-        log.debug(`📊 Résultat de la vérification:`, usageCheck);
+        log.debug(` Résultat de la vérification:`, usageCheck);
         
       } catch (checkError) {
-        log.error(`❌ Erreur lors de la vérification:`, checkError);
+        log.error(` Erreur lors de la vérification:`, checkError);
         await showError(
           `Impossible de vérifier les contraintes.\n\nLa suppression peut échouer.`,
           'Vérification impossible'
@@ -697,53 +709,63 @@ export const useTarifModals = ({
         return false;
       }
       
-      // 🚫 APPLIQUER LES RÈGLES MÉTIER
+      //  APPLIQUER LES RÈGLES MÉTIER
       let canDelete = true;
       let errorMessage = '';
       
       if (usageCheck && usageCheck.used === true) {
         canDelete = false;
+
+        // Construire le message d'erreur avec le nombre de lignes de facture
+        const count = usageCheck.count || 0;
         
         // Construire le message d'erreur spécifique au type
         switch (formType) {
           case FORM_TYPES.SERVICE:
-            // RÈGLE 1: Service ne peut pas être supprimé s'il est référencé dans une facture
-            errorMessage = usageCheck.message || 
-              `Ce service ne peut pas être supprimé car il est référencé dans une ou plusieurs factures.`;
+            errorMessage = count > 0
+              ? `Ce service ne peut pas être supprimé car il est utilisé dans ${count} ligne(s) de facture.`
+              : `Ce service ne peut pas être supprimé car il est utilisé.`;
             break;
             
           case FORM_TYPES.UNITE:
-            // RÈGLE 2: Unité ne peut pas être supprimée si:
-            // - Elle est référencée dans une facture
-            // - Elle est associée à  un service
-            errorMessage = usageCheck.message || 
-              `Cette unité ne peut pas être supprimée car:\n` +
-              `• Elle est référencée dans une ou plusieurs factures, OU\n` +
-              `• Elle est associée à  un service.`;
+            errorMessage = count > 0
+              ? `Cette unité ne peut pas être supprimée car elle est utilisée dans ${count} ligne(s) de facture.`
+              : `Cette unité ne peut pas être supprimée car elle est associée à un ou plusieurs services.`;
             break;
             
           case FORM_TYPES.TYPE_TARIF:
-            // RÈGLE 3: TypeTarif ne peut pas être supprimé si des tarifs lui sont liés
-            errorMessage = usageCheck.message || 
-              `Ce type de tarif ne peut pas être supprimé car ${usageCheck.usedCount || 'des'} tarif(s) lui sont lié(s).`;
+            errorMessage = count > 0
+              ? `Ce type de tarif ne peut pas être supprimé car il est utilisé dans ${count} tarif(s).`
+              : `Ce type de tarif ne peut pas être supprimé car il est utilisé.`;
+            break;
+          
+          case FORM_TYPES.TARIF:
+            errorMessage = count > 0
+              ? `Ce tarif ne peut pas être supprimé car il est utilisé dans ${count} ligne(s) de facture.`
+              : `Ce tarif ne peut pas être supprimé car il est utilisé.`;
+            break;
+            
+          case FORM_TYPES.TARIF_SPECIAL:
+            errorMessage = count > 0
+              ? `Ce tarif special ne peut pas être supprimé car il est utilisé dans ${count} ligne(s) de facture.`
+              : `Ce tarif special ne peut pas être supprimé car il est utilisé.`;
             break;
             
           default:
-            errorMessage = usageCheck.message || 
-              `Cet élément ne peut pas être supprimé (contrainte métier).`;
+            errorMessage = `Cet élément ne peut pas être supprimé (contrainte métier).`;
         }
       }
       
-      // 🛑 Si contrainte métier détectée, bloquer
+      //  Si contrainte métier détectée, bloquer
       if (!canDelete) {
-        log.debug(`🛑 Suppression bloquée - contrainte métier`);
+        log.debug(` Suppression bloquée - contrainte métier`);
         await showError(errorMessage, 'Suppression impossible');
         return false;
       }
       
-      log.debug(`✅ Aucune contrainte métier - affichage de la confirmation`);
+      log.debug(` Aucune contrainte métier - affichage de la confirmation`);
       
-      // 📋 ÉTAPE 2: Demander confirmation à  l'utilisateur
+      //  ÉTAPE 2: Demander confirmation à l'utilisateur
       const confirmationResult = await showConfirm({
         title: `Supprimer ${typeLabel}`,
         message: `Êtes-vous sûr de vouloir supprimer ce ${typeLabel} ?\n\n"${itemName || 'Élément'}"\n\n⚠️ Cette action est irréversible.`,
@@ -755,7 +777,7 @@ export const useTarifModals = ({
       });
       
       if (confirmationResult.action === 'confirm') {
-        log.debug(`✅ Suppression confirmée par l'utilisateur pour ${formType}:`, itemId);
+        log.debug(` Suppression confirmée par l'utilisateur pour ${formType}:`, itemId);
         
         // Exécuter la suppression
         const result = await showLoading(
@@ -765,15 +787,15 @@ export const useTarifModals = ({
             size: MODAL_SIZES.SMALL
           },
           async () => {
-            return await TarifFormService.deleteItem(formType, itemId, gestionState.tarificationService);
+            return await TarifFormService.deleteItem(formType, itemId, gestionState.tarifActions);
           }
         );
         
         if (result && result.success) {
-          log.debug(`✅ ${typeLabel} supprimé avec succès`);
+          log.debug(` ${typeLabel} supprimé avec succès`);
           
           // Rafraîchir les données
-          await TarifFormService.refreshDataAfterSave(formType, gestionState);
+          await TarifFormService.refreshDataAfterSave(formType, gestionState, true);
           
           // Notification succès
           showSuccess(`${TarifFormService.getFormTypeDisplayName(formType)} "${itemName}" supprimé avec succès`);
@@ -791,18 +813,18 @@ export const useTarifModals = ({
         } else {
           // Erreur lors de la suppression
           const errorMsg = result?.message || 'Erreur lors de la suppression';
-          log.error(`❌ Erreur suppression ${formType}:`, errorMsg);
+          log.error(` Erreur suppression ${formType}:`, errorMsg);
           await showError(`Erreur lors de la suppression : ${errorMsg}`, 'Erreur suppression');
           showErrorNotif(errorMsg);
           return false;
         }
       } else {
-        log.debug(`❌ Suppression annulée par l'utilisateur`);
+        log.debug(` Suppression annulée par l'utilisateur`);
         return false;
       }
       
     } catch (error) {
-      log.error(`💥 Erreur critique suppression ${formType}:`, error);
+      log.error(` Erreur critique suppression ${formType}:`, error);
       await showError(`Erreur critique : ${error.message}`, `Erreur suppression ${formType}`);
       showErrorNotif(error.message || 'Erreur lors de la suppression');
       return false;
@@ -810,7 +832,7 @@ export const useTarifModals = ({
   }, [gestionState, onTarifAction, showSuccess, showErrorNotif]);
 
   /**
-   * 🆕 NOUVELLE FONCTIONNALITÉ: Gestion de la dissociation d'une unité d'un service
+   *  NOUVELLE FONCTIONNALITÉ: Gestion de la dissociation d'une unité d'un service
    * 
    * RÈGLES MÉTIER:
    * - Une unité ne peut pas être dissociée si elle est utilisée dans des factures
@@ -819,9 +841,9 @@ export const useTarifModals = ({
    */
   const handleUnlinkServiceUnite = useCallback(async (idService, idUnite, uniteName, anchorRef = null) => {
     try {
-      log.debug('🔗 Tentative de dissociation unité:', { idService, idUnite, uniteName });
+      log.debug(' Tentative de dissociation unité:', { idService, idUnite, uniteName });
       
-      // 📋 ÉTAPE 1: Vérifier si l'unité est utilisée dans des factures
+      //  ÉTAPE 1: Vérifier si l'unité est utilisée dans des factures
       let usageCheck;
       try {
         usageCheck = await showLoading(
@@ -835,10 +857,10 @@ export const useTarifModals = ({
           }
         );
         
-        log.debug('📊 Résultat vérification usage:', usageCheck);
+        log.debug(' Résultat vérification usage:', usageCheck);
         
       } catch (checkError) {
-        log.error('❌ Erreur vérification usage:', checkError);
+        log.error(' Erreur vérification usage:', checkError);
         await showError(
           'Impossible de vérifier l\'utilisation de cette unité.\n\nLa dissociation peut échouer.',
           'Vérification impossible'
@@ -846,9 +868,9 @@ export const useTarifModals = ({
         return false;
       }
       
-      // 🚫 Si l'unité est utilisée, afficher un message d'erreur (non bloquant)
+      //  Si l'unité est utilisée, afficher un message d'erreur (non bloquant)
       if (usageCheck && usageCheck.isUsed) {
-        log.debug('🛑 Unité utilisée dans des factures - dissociation impossible');
+        log.debug(' Unité utilisée dans des factures - dissociation impossible');
         
         await showError(
           `Cette liaison est utilisée dans ${usageCheck.count} ligne(s) de facture et ne peut pas être dissociée.\n\n` +
@@ -859,8 +881,8 @@ export const useTarifModals = ({
         return false;
       }
       
-      // ✅ ÉTAPE 2: L'unité n'est pas utilisée, demander confirmation
-      log.debug('✅ Unité non utilisée - affichage de la confirmation');
+      //  ÉTAPE 2: L'unité n'est pas utilisée, demander confirmation
+      log.debug(' Unité non utilisée - affichage de la confirmation');
       
       const confirmationResult = await showConfirm({
         title: 'Confirmer la dissociation',
@@ -874,7 +896,7 @@ export const useTarifModals = ({
       });
       
       if (confirmationResult.action === 'confirm') {
-        log.debug('✅ Dissociation confirmée par l\'utilisateur');
+        log.debug(' Dissociation confirmée par l\'utilisateur');
         
         // ÉTAPE 3: Exécuter la dissociation
         const result = await showLoading(
@@ -889,7 +911,7 @@ export const useTarifModals = ({
         );
         
         if (result && result.success) {
-          log.debug('✅ Unité dissociée avec succès');
+          log.debug(' Unité dissociée avec succès');
           
           // Rafraîchir les données
           if (gestionState.loadUnites) {
@@ -915,18 +937,18 @@ export const useTarifModals = ({
         } else {
           // Erreur lors de la dissociation
           const errorMsg = result?.message || 'Erreur lors de la dissociation';
-          log.error('❌ Erreur dissociation:', errorMsg);
+          log.error(' Erreur dissociation:', errorMsg);
           await showError(`Erreur lors de la dissociation : ${errorMsg}`, 'Erreur dissociation');
           showErrorNotif(errorMsg);
           return false;
         }
       } else {
-        log.debug('❌ Dissociation annulée par l\'utilisateur');
+        log.debug(' Dissociation annulée par l\'utilisateur');
         return false;
       }
       
     } catch (error) {
-      log.error('💥 Erreur critique dissociation:', error);
+      log.error(' Erreur critique dissociation:', error);
       await showError(`Erreur critique : ${error.message}`, 'Erreur dissociation');
       showErrorNotif(error.message || 'Erreur lors de la dissociation');
       return false;

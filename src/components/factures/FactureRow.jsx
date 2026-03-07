@@ -3,8 +3,8 @@
 import React from 'react';
 import '../../styles/components/factures/FactureRow.css';
 import FactureActions from './FactureActions';
-import { formatMontant, formatDate } from '../../utils/formatters';
-import { getBadgeClasses, formatEtatText } from '../../utils/formatters';
+import DateService from '../../utils/DateService';
+import { getBadgeClasses, formatEtatText, formatMontant } from '../../utils/formatters';
 
 const FactureRow = ({
     facture,
@@ -27,31 +27,31 @@ const FactureRow = ({
         <div className={`lf-table-row ${isSelected ? 'lf-selected' : ''}`}>
             <div 
                 className="lf-table-cell lf-numero-cell"
-                onClick={() => onSelectionFacture(facture.id)}
+                onClick={() => onSelectionFacture(facture.idFacture)}
             >
                 {facture.numeroFacture}
             </div>
             <div 
                 className="lf-table-cell lf-client-cell"
-                onClick={() => onSelectionFacture(facture.id)}
+                onClick={() => onSelectionFacture(facture.idFacture)}
             >
                 {`${facture.client.prenom} ${facture.client.nom}`}
             </div>
             <div 
                 className="lf-table-cell lf-date-cell"
-                onClick={() => onSelectionFacture(facture.id)}
+                onClick={() => onSelectionFacture(facture.idFacture)}
             >
-                {formatDate(facture.dateFacture)}
+                {DateService.formatSingleDate(facture.dateFacture)}
             </div>
             <div 
                 className="lf-table-cell lf-montant-cell"
-                onClick={() => onSelectionFacture(facture.id)}
+                onClick={() => onSelectionFacture(facture.idFacture)}
             >
                 {formatMontant(facture.montantTotal)}
             </div>
             <div 
                 className="lf-table-cell lf-etat-cell"
-                onClick={() => onSelectionFacture(facture.id)}
+                onClick={() => onSelectionFacture(facture.idFacture)}
             >
                 <span className={getBadgeClasses(etatAUtiliser)}>
                     {formatEtatText(etatAUtiliser)}

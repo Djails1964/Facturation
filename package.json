@@ -35,7 +35,7 @@
     "validate": "node src/scripts/validate-config.js",
     "validate:dev": "cross-env REACT_APP_ENV=development npm run validate",
     "validate:pre-prod": "env-cmd -f .env.pre-production cross-env REACT_APP_ENV=pre-production node src/scripts/validate-config.js",
-    "validate:prod": "cross-env REACT_APP_ENV=production npm run validate",
+    "validate:prod": "env-cmd -f .env.production cross-env REACT_APP_ENV=production npm run validate",
     "build:dev": "npm run validate:dev && cross-env REACT_APP_ENV=development npm run build",
     "build:pre-prod": "npm run validate:pre-prod && env-cmd -f .env.pre-production cross-env REACT_APP_ENV=pre-production npm run build",
     "build:prod": "npm run validate:prod && cross-env REACT_APP_ENV=production npm run build",

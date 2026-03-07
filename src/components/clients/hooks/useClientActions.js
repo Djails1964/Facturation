@@ -46,6 +46,7 @@ export function useClientActions() {
       async () => {
         const clients = await clientService.chargerClients();
         logger.debug(`✅ ${clients.length} clients chargés`);
+        logger.debug('📊 Clients chargés:', clients);
         return clients;
       },
       (result) => {
@@ -103,7 +104,8 @@ export function useClientActions() {
         // Normalisation des booléens avant envoi
         const normalizedData = {
           ...clientData,
-          estTherapeute: toBooleanInt(clientData.estTherapeute)
+          estTherapeute: toBooleanInt(clientData.estTherapeute),
+          aLoyer: toBooleanInt(clientData.aLoyer)
         };
         
         logger.debug('📤 Données normalisées:', normalizedData);
@@ -113,7 +115,7 @@ export function useClientActions() {
         return result;
       },
       (result) => {
-        logger.info(`✅ Client créé avec succès - ID: ${result?.id}`);
+        logger.info(`✅ Client créé avec succès - ID: ${result?.idClient}`);
       },
       (error) => {
         logger.error('❌ Erreur lors de la création du client:', error);
@@ -145,7 +147,8 @@ export function useClientActions() {
         // Normalisation des booléens avant envoi
         const normalizedData = {
           ...clientData,
-          estTherapeute: toBooleanInt(clientData.estTherapeute)
+          estTherapeute: toBooleanInt(clientData.estTherapeute),
+          aLoyer: toBooleanInt(clientData.aLoyer)
         };
         
         logger.debug('📤 Données normalisées pour mise à jour:', normalizedData);

@@ -9,17 +9,24 @@ import {
     FORM_MODES, 
     VALIDATION_MESSAGES, 
     NOTIFICATIONS, 
-    PAIEMENT_DATE_CONFIG 
+    PAIEMENT_DATE_CONFIG,
+    DEFAULT_VALUES  // ✅ AJOUTÉ 
 } from '../../../constants/paiementConstants';
 
 export const usePaiementFormHandlers = (formState, formLogic, formValidation) => {
     const {
         paiement, setPaiement, setError, isSubmitting, setIsSubmitting,
         isReadOnly, isPaiementAnnule, isCreate, mode, idPaiement,
-        onRetourListe, onPaiementCreated, paiementActions, factureActions,
+        onRetourListe, onPaiementCreated, paiementActions, factureActions, loyerActions,
         markAsSaved, resetChanges, getFormData, setInitialFormData,
         unregisterGuard, guardId, setShowGlobalModal, setGlobalNavigationCallback,
-        hasUnsavedChanges, canDetectChanges, requestNavigation
+        hasUnsavedChanges, canDetectChanges, requestNavigation,
+        // CLIENT-FIRST
+        clients, clientSelectionne, setClientSelectionne,
+        // Onglets / loyer
+        typeOnglet, setTypeOnglet,
+        loyerSelectionne, setLoyerSelectionne,
+        moisSelectionnes, setMoisSelectionnes
     } = formState;
 
     const log = createLogger('usePaiementFormHandlers');
@@ -43,10 +50,11 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
 
     /**
      * Charger les détails d'une facture sélectionnée
+     * Tolère idFacture null/vide (paiement libre sans facture)
      */
     const chargerDetailFacture = useCallback(async (idFacture) => {
         try {
-            log.debug('🔍 usePaiementFormHandlers - chargerDetailFacture - idFacture:', idFacture);
+            log.debug('ℹ️ usePaiementFormHandlers - chargerDetailFacture - idFacture:', idFacture);
             
             const factureData = await factureActions.chargerFacture(idFacture);
             log.debug('✅ usePaiementFormHandlers - factureData reçue:', factureData);
@@ -86,22 +94,80 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
 
     /**
      * Gestionnaire de changement des champs
+     * - Si le champ est idClient : réinitialise idFacture, factureSelectionnee et montant
+     * - Si le champ est idFacture : charge les détails de la facture (ou null si paiement libre)
      */
     const handleInputChange = useCallback((field, value) => {
         if (isReadOnly || isPaiementAnnule) return;
         
-        log.debug('📝 PaiementForm handleInputChange:', { field, value, mode });
-        
-        setPaiement(prev => ({
-            ...prev,
-            [field]: value
-        }));
-        
-        // Charger les détails de la facture quand elle est sélectionnée
-        if (field === 'idFacture' && value) {
-            chargerDetailFacture(value);
+        log.debug('🔄 PaiementForm handleInputChange:', { field, value, mode });
+
+        // Changement de client → recharger factures + loyers du client
+        if (field === 'idClient') {
+            log.debug('👤 Changement de client — réinitialisation facture + loyer');
+            setPaiement(prev => ({
+                ...prev,
+                idClient: value,
+                idFacture: '',
+                idLoyer: '',
+                montantPaye: '',
+                datePaiement: DateService.getTodayInputFormat(),
+                methodePaiement: DEFAULT_VALUES.METHODE_PAIEMENT,
+                commentaire: prev.commentaire || ''
+            }));
+            formState.setFactureSelectionnee(null);
+            setLoyerSelectionne(null);
+            setMoisSelectionnes({});
+
+            if (value) {
+                const client = clients?.find(c => String(c.idClient || c.id) === String(value));
+                setClientSelectionne(client || null);
+                // Charger factures et loyers du client sélectionné
+                formLogic.chargerFacturesDuClient(value);
+                formLogic.chargerLoyersDuClient(value);
+            } else {
+                setClientSelectionne(null);
+            }
+            return;
         }
-    }, [isReadOnly, isPaiementAnnule, mode, setPaiement, chargerDetailFacture]);
+
+        // Changement de facture (onglet Facture)
+        if (field === 'idFacture') {
+            if (value) {
+                log.debug('📋 Facture sélectionnée:', value);
+                setPaiement(prev => ({
+                    ...prev,
+                    idFacture: value,
+                    montantPaye: '',
+                    datePaiement: DateService.getTodayInputFormat(),
+                    methodePaiement: DEFAULT_VALUES.METHODE_PAIEMENT
+                }));
+                chargerDetailFacture(value);
+            }
+            return;
+        }
+
+        // Changement de loyer (onglet Loyer)
+        if (field === 'idLoyer') {
+            setMoisSelectionnes({});
+            setLoyerSelectionne(null);
+            if (value) {
+                log.debug('🏠 Loyer sélectionné:', value);
+                setPaiement(prev => ({ ...prev, idLoyer: value }));
+                // Charger le détail complet du loyer (avec montantsMensuels)
+                loyerActions.getLoyer(value)
+                    .then(l => setLoyerSelectionne(l))
+                    .catch(() => {});
+            } else {
+                setPaiement(prev => ({ ...prev, idLoyer: '' }));
+            }
+            return;
+        }
+
+        setPaiement(prev => ({ ...prev, [field]: value }));
+    }, [isReadOnly, isPaiementAnnule, mode, setPaiement, chargerDetailFacture,
+        clients, setClientSelectionne, setLoyerSelectionne, setMoisSelectionnes,
+        formState, formLogic, loyerActions]);
 
     /**
      * Gestionnaire d'ouverture du DatePicker
@@ -161,11 +227,12 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
 
     /**
      * Fonction pour gérer une sauvegarde réussie
+     * Construit un message adapté selon que la facture est présente ou non
      */
     const handleSuccessfulSave = useCallback((result, message) => {
         log.debug('✅ Sauvegarde réussie PaiementForm - nettoyage des modifications');
 
-        // 1. Extraire les infos depuis formState (déjà dispo dans le scope du hook)
+        // 1. Extraire les infos depuis formState (déjà  dispo dans le scope du hook)
         const numFacture = formState.factureSelectionnee?.numeroFacture || 'N/A';
         const clientData = formState.factureSelectionnee?.client;
         log.debug(' formState.factureSelectionnee:', formState.factureSelectionnee);
@@ -183,14 +250,14 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
         
         // 2. Récupérer le numéro de paiement depuis le résultat de l'API
         // Note: On vérifie plusieurs clés possibles selon votre API (numeroPaiement ou idPaiement)
-        log.debug(' idPaiement reçu:', result.id);
-        log.debug(' typeOf idPaiement:', typeof result.id);
+        log.debug(' idPaiement reçu:', result.idPaiement);
+        log.debug(' typeOf idPaiement:', typeof result.idPaiement);
         const numPaiement = result.numeroPaiement || result.idPaiement || 'N/A'; 
 
         // 3. Construction du message enrichi
         const messageEnrichi = `Paiement n° ${numPaiement} (Facture ${numFacture} - ${nomClient}) d'un montant de ${montant} CHF enregistré avec succès`;
 
-        log.debug('✅ Sauvegarde réussie, message:', messageEnrichi);
+        log.debug('✅ Sauvegarde réussie, message::', messageEnrichi);
         log.debug(' factureSelectionnee avant reset:', formState.factureSelectionnee);
         
         markAsSaved();
@@ -212,7 +279,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
             log.debug('📤 Mode CREATE - Appel onPaiementCreated');
             onPaiementCreated(idPaiement, messageEnrichi);
         } else if (mode === FORM_MODES.EDIT && onRetourListe) {
-            log.debug('🔙 Mode EDIT - Retour à la liste avec message de succès');
+            log.debug('📙 Mode EDIT - Retour à la liste avec message de succès');
             onRetourListe(idPaiement, true, messageEnrichi, 'success');
         }
     }, [mode, onPaiementCreated, onRetourListe, markAsSaved, resetChanges, getFormData, 
@@ -220,7 +287,70 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
         setGlobalNavigationCallback]);
 
     /**
-     * Gestionnaire de soumission du formulaire
+     * Soumission onglet Loyer : enregistre chaque mois sélectionné séquentiellement
+     */
+    const handleLoyerSubmit = useCallback(async () => {
+        if (!loyerSelectionne) return;
+        const moisAValider = Object.entries(moisSelectionnes)
+            .filter(([, m]) => m.selectionne)
+            .map(([idLoyerDetail, m]) => ({ idLoyerDetail: parseInt(idLoyerDetail), ...m }));
+
+        if (moisAValider.length === 0) {
+            const msg = 'Veuillez sélectionner au moins un mois à payer';
+            modalSystem.error(msg); return;
+        }
+        // Valider chaque mois
+        for (const m of moisAValider) {
+            const dv = formValidation.validateDatePaiement(m.datePaiement);
+            if (!dv.isValid) { modalSystem.error(`Mois ${m.label || ''} : ${dv.error}`); return; }
+            if (!m.montantPaye || parseFloat(m.montantPaye) <= 0) {
+                modalSystem.error(`Mois ${m.label || ''} : montant invalide`); return;
+            }
+            if (!m.methodePaiement) {
+                modalSystem.error(`Mois ${m.label || ''} : méthode de paiement requise`); return;
+            }
+        }
+
+        setIsSubmitting(true);
+        setError(null);
+        try {
+            let nbOK = 0;
+            for (const m of moisAValider) {
+                const detail = loyerSelectionne.montantsMensuels?.find(
+                    d => d.idLoyerDetail === m.idLoyerDetail
+                );
+                const montantDu = parseFloat(detail?.montant || 0);
+                const montantPaye = parseFloat(m.montantPaye);
+                const result = await loyerActions.enregistrerPaiementDetail(
+                    loyerSelectionne.idLoyer,
+                    {
+                        idClient:         paiement.idClient,
+                        idLoyerDetail:    m.idLoyerDetail,
+                        datePaiement:     m.datePaiement,
+                        montantPaye,
+                        methodePaiement:  m.methodePaiement,
+                        commentaire:      m.commentaire || '',
+                        estTotalementPaye: montantPaye >= montantDu - 0.005
+                    }
+                );
+                if (!result.success) throw new Error(result.message || 'Erreur paiement mois');
+                nbOK++;
+            }
+            const msg = `${nbOK} mois de loyer enregistré${nbOK > 1 ? 's' : ''} avec succès`;
+            markAsSaved();
+            if (onPaiementCreated) onPaiementCreated(null, msg);
+        } catch (err) {
+            log.error('❌ Erreur paiement loyer:', err);
+            setError(err.message);
+            modalSystem.error(err.message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, [loyerSelectionne, moisSelectionnes, paiement.idClient, loyerActions,
+        formValidation, setIsSubmitting, setError, markAsSaved, onPaiementCreated]);
+
+    /**
+     * Gestionnaire de soumission du formulaire (onglet Facture)
      */
     const handleSubmit = useCallback(async (e) => {
         e.preventDefault();
@@ -230,7 +360,18 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
         log.debug('📋 Soumission formulaire paiement:', { mode, paiement });
         setError(null);
         
-        // Validation
+        // Client obligatoire
+        if (isCreate && !paiement.idClient) {
+            const msg = 'Veuillez sélectionner un client';
+            setError(msg); modalSystem.error(msg); return;
+        }
+        // Facture obligatoire en création (plus de paiement libre)
+        if (isCreate && !paiement.idFacture) {
+            const msg = 'Veuillez sélectionner une facture';
+            setError(msg); modalSystem.error(msg); return;
+        }
+
+        // Validation de la date
         const dateValidation = formValidation.validateDatePaiement(paiement.datePaiement);
         if (!dateValidation.isValid) {
             setError(dateValidation.error);
@@ -238,6 +379,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
             return;
         }
         
+        // Validation du montant
         const montantValidation = formValidation.validateMontant(paiement.montantPaye);
         if (!montantValidation.isValid) {
             setError(montantValidation.error);
@@ -245,6 +387,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
             return;
         }
         
+        // Validation de la méthode de paiement
         const methodeValidation = formValidation.validateMethodePaiement(paiement.methodePaiement);
         if (!methodeValidation.isValid) {
             setError(methodeValidation.error);
@@ -256,6 +399,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
             setIsSubmitting(true);
             
             const paiementData = {
+                idClient: paiement.idClient,
                 idFacture: paiement.idFacture,
                 datePaiement: paiement.datePaiement,
                 montantPaye: parseFloat(paiement.montantPaye),
@@ -457,6 +601,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
         handleInputChange,
         handleOpenDateModal,
         handleSubmit,
+        handleLoyerSubmit,
         handleCancel,
         handleAnnuler,
         handleRetourListe,

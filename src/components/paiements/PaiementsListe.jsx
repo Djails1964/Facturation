@@ -84,7 +84,7 @@ function PaiementsListe({
                 label: new Date(2024, i).toLocaleDateString('fr-FR', { month: 'long' })
             })),
             client: clients.map(c => ({ 
-                value: c.id, 
+                value: c.idClient, 
                 label: `${c.prenom} ${c.nom}` 
             })),
             methode: paiementActions.getMethodesPaiement(),

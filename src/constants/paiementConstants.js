@@ -1,4 +1,3 @@
-
 // src/constants/paiementConstants.js - Constantes spécifiques aux paiements
 
 // ✅ IMPORTATIONS
@@ -14,6 +13,14 @@ import {
 export { FORM_MODES };
 
 // ✅ CONSTANTES SPÉCIFIQUES AUX PAIEMENTS
+
+// Modes de création de paiement
+export const PAYMENT_MODES = {
+    FROM_FACTURE: 'from-facture',  // Depuis la liste des factures (client + facture pré-remplis)
+    FROM_CLIENT: 'from-client',    // Depuis la liste des clients (client pré-rempli, choix de facture)
+    STANDALONE: 'standalone'        // Depuis le menu Paiements (tout à sélectionner)
+};
+
 export const PAIEMENT_ETATS = {
     VALIDE: 'confirme',
     ANNULE: 'annule'
@@ -199,6 +206,7 @@ export const DEFAULT_VALUES = {
 // ✅ EXPORT PAR DÉFAUT
 const paiementConstants = {
     FORM_MODES,
+    PAYMENT_MODES,
     PAIEMENT_ETATS,
     METHODES_PAIEMENT,
     METHODES_PAIEMENT_LABELS,

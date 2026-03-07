@@ -97,7 +97,7 @@ class FactureService {
    */
   async _estEnRetard(facture) {
     if (!facture.date_facture || facture.date_paiement || facture.date_annulation) {
-      this.log.debug(`📅 Facture ${facture.numeroFacture || facture.id} - Pas de retard: date_facture=${facture.date_facture}, date_paiement=${facture.date_paiement}, date_annulation=${facture.date_annulation}`);
+      this.log.debug(`📅 Facture ${facture.numeroFacture || facture.idFacture} - Pas de retard: date_facture=${facture.date_facture}, date_paiement=${facture.date_paiement}, date_annulation=${facture.date_annulation}`);
       return false;
     }
     
@@ -110,7 +110,7 @@ class FactureService {
     
     const estEnRetard = diffJours > delaiPaiement;
     
-    this.log.debug(`📅 Vérification retard - Facture: ${facture.numeroFacture || facture.id}, Âge: ${diffJours} jours, Délai: ${delaiPaiement} jours, En retard: ${estEnRetard}`);
+    this.log.debug(`📅 Vérification retard - Facture: ${facture.numeroFacture || facture.idFacture}, Âge: ${diffJours} jours, Délai: ${delaiPaiement} jours, En retard: ${estEnRetard}`);
     
     return estEnRetard;
   }
@@ -222,6 +222,92 @@ class FactureService {
     return normalizeBooleanFieldsArray(factures, booleanFields);
   }
 
+  /**
+   * Charge toutes les factures d'un client spécifique
+   * ✅ OPTIMISÉ : Appel API dédié (filtrage server-side)
+   * Les données snake_case du backend seront automatiquement converties en camelCase par api.js
+   * 
+   * @param {number} idClient - ID du client
+   * @returns {Promise<Array>} Liste des factures du client avec états calculés
+   */
+  async getFacturesClient(idClient) {
+    try {
+      // ⚠️ DEBUG: Logs console très détaillés
+      console.log('🔍 FactureService.getFacturesClient DÉBUT');
+      console.log('  → idClient reçu:', idClient, 'type:', typeof idClient);
+      
+      this.log.debug(`📥 FactureService - Chargement factures du client #${idClient}`);
+      
+      // Appel API : GET /api/facture-api.php?idClient=123
+      console.log('  → Appel API: facture-api.php avec params:', { idClient });
+      const response = await api.get('facture-api.php', { idClient });
+      
+      console.log('  → Réponse API brute:', response);
+      this.log.debug('FactureService - Réponse API getFacturesClient:', response);
+      
+      if (response && response.success) {
+        const facturesData = response.factures || [];
+        
+        console.log('  → Nombre de factures dans response.factures:', facturesData.length);
+        
+        // ⚠️ DEBUG: Afficher les idClient pour vérifier le filtrage backend
+        if (facturesData.length > 0) {
+          console.log('  → Vérification idClient dans les factures reçues:');
+          facturesData.forEach((f, idx) => {
+            const idClientFacture = f.idClient || f.id_client;
+            console.log(`    [${idx}] Facture ${f.numeroFacture || f.numero_facture}: idClient=${idClientFacture}, attendu=${idClient}, match=${idClientFacture == idClient ? '✅' : '❌'}`);
+          });
+        }
+        
+        this.log.debug(`✅ ${facturesData.length} factures reçues du client #${idClient}`);
+        
+        // Normalisation et adaptation des données
+        // Note: api.js a déjà converti snake_case → camelCase
+        const facturesAdaptees = facturesData.map(facture => ({
+          idFacture: facture.idFacture,
+          numeroFacture: facture.numeroFacture,
+          idClient: facture.idClient,
+          nomClient: `${facture.prenom || ''} ${facture.nom || ''}`.trim(),
+          dateFacture: facture.dateFacture,
+          dateEcheance: facture.dateEcheance,
+          montantTotal: parseFloat(facture.montantTotal),
+          montantBrut: parseFloat(facture.montantBrut),
+          ristourne: parseFloat(facture.ristourne || 0),
+          montantAvecRistourne: parseFloat(facture.montantAvecRistourne),
+          montantPayeTotal: parseFloat(facture.montantPayeTotal || 0),
+          montantRestant: parseFloat(facture.montantRestant),
+          nbPaiements: parseInt(facture.nbPaiements || 0),
+          etat: facture.etat,
+          dateCreation: facture.dateCreation,
+          dateModification: facture.dateModification,
+          client: {
+            idClient: facture.idClient,
+            nom: facture.nom,
+            prenom: facture.prenom,
+            email: facture.email,
+            telephone: facture.telephone
+          }
+        }));
+        
+        console.log('  → Factures adaptées:', facturesAdaptees.length);
+        console.log('🔍 FactureService.getFacturesClient FIN - Retour:', facturesAdaptees.length, 'factures');
+        
+        this.log.debug(`✅ ${facturesAdaptees.length} factures adaptées pour le client #${idClient}`);
+        
+        return facturesAdaptees;
+      } else {
+        console.log('  → Réponse API non successful ou vide');
+        this.log.warn('⚠️ Réponse API non successful ou vide');
+        return [];
+      }
+    } catch (error) {
+      console.error('❌ Erreur FactureService.getFacturesClient:', error);
+      this.log.error(`❌ Erreur lors du chargement des factures du client #${idClient}:`, error);
+      handleApiError(error, `getFacturesClient(${idClient})`);
+      return [];
+    }
+  }
+
   async chargerFactures(annee = null) {
     try {
       const params = {};
@@ -240,9 +326,23 @@ class FactureService {
         const facturesNormalisees = this.normalizeFactures(facturesData);
 
         const facturesTriees = facturesNormalisees.sort((a, b) => {
-          const numA = a.numeroFacture ? parseInt(a.numeroFacture.split('.')[0]) : 0;
-          const numB = b.numeroFacture ? parseInt(b.numeroFacture.split('.')[0]) : 0;
-          return numB - numA;
+          // Extraire les parties du numéro de facture (format: "001.2024")
+          const partsA = a.numeroFacture ? a.numeroFacture.split('.') : ['0', '0'];
+          const partsB = b.numeroFacture ? b.numeroFacture.split('.') : ['0', '0'];
+          
+          const numSeqA = parseInt(partsA[0]) || 0;  // Numéro séquentiel (ex: 001)
+          const anneeA = parseInt(partsA[1]) || 0;    // Année (ex: 2024)
+          
+          const numSeqB = parseInt(partsB[0]) || 0;
+          const anneeB = parseInt(partsB[1]) || 0;
+          
+          // Trier d'abord par année (décroissant = plus récent en premier)
+          if (anneeA !== anneeB) {
+            return anneeB - anneeA;
+          }
+          
+          // Puis par numéro séquentiel (décroissant = plus récent en premier)
+          return numSeqB - numSeqA;
         });
         
         // Adaptation des données avec état de base
@@ -287,18 +387,18 @@ class FactureService {
     }
   }
 
-  async getFacture(id) {
+  async getFacture(idFacture) {
     try {
-      this.log.debug('Récupération de la facture:', id);
-      if (id in this._cacheFacture) {
-          this.log.debug('Facture trouvée dans le cache:', id);
+      this.log.debug('Récupération de la facture:', idFacture);
+      if (idFacture in this._cacheFacture) {
+          this.log.debug('Facture trouvée dans le cache:', idFacture);
           // ✅ Enrichir la facture du cache avec l'état d'affichage actuel
-          const factureCache = this._cacheFacture[id];
+          const factureCache = this._cacheFacture[idFacture];
           factureCache.etatAffichage = await this._determinerEtatAffichage(factureCache);
           return factureCache;
       }
       
-      const response = await api.get(`facture-api.php?id=${id}`);
+      const response = await api.get(`facture-api.php?idFacture=${idFacture}`);
       this.log.debug('Réponse de l\'API:', response);
       
       if (response && response.success && response.facture) {
@@ -373,7 +473,7 @@ class FactureService {
               est_annulee: toBoolean(factureNormalisee.est_annulee),
               est_payee: toBoolean(factureNormalisee.est_payee),
               client: factureNormalisee.nom ? {
-                  id: factureNormalisee.idClient,
+                  idClient: factureNormalisee.idClient,
                   prenom: factureNormalisee.prenom,
                   nom: factureNormalisee.nom,
                   email: factureNormalisee.email || null,
@@ -388,12 +488,12 @@ class FactureService {
           
           this.log.debug(`🔍 Facture ${factureFormattee.numeroFacture} - État de base: ${factureFormattee.etat}, État d'affichage: ${factureFormattee.etatAffichage}`);
           
-          this._cacheFacture[id] = factureFormattee;
+          this._cacheFacture[idFacture] = factureFormattee;
           return factureFormattee;
       }
       return null;
     } catch (error) {
-      handleApiError(error, `getFacture(${id})`);
+      handleApiError(error, `getFacture(${idFacture})`);
     }
   }
 
@@ -425,7 +525,7 @@ class FactureService {
         this._clearCache();
         return {
           success: true,
-          id: response.factureId,
+          idFacture: response.factureId,
           message: response.message || 'Facture créée avec succès'
         };
       } else {
@@ -436,14 +536,14 @@ class FactureService {
     }
   }
 
-  async updateFacture(id, factureData) {
+  async updateFacture(idFacture, factureData) {
     try {
-      this.log.debug(`FactureService - updateFacture - Mise à jour de la facture ${id} avec les données:`, factureData);
-      const response = await api.put(`facture-api.php?id=${id}`, factureData);
+      this.log.debug(`FactureService - updateFacture - Mise à jour de la facture ${idFacture} avec les données:`, factureData);
+      const response = await api.put(`facture-api.php?idFacture=${idFacture}`, factureData);
       this.log.debug(`FactureService - updateFacture - Réponse de l'API:`, response);
 
       if (response && response.success) {
-        delete this._cacheFacture[id];
+        delete this._cacheFacture[idFacture];
         return {
           success: true,
           message: response.message || 'Facture modifiée avec succès'
@@ -452,16 +552,16 @@ class FactureService {
         throw new Error(response?.message || 'Erreur lors de la modification de la facture');
       }
     } catch (error) {
-      handleApiError(error, `updateFacture(${id})`);
+      handleApiError(error, `updateFacture(${idFacture})`);
     }
   }
 
-  async deleteFacture(id) {
+  async deleteFacture(idFacture) {
     try {
-      const response = await api.delete(`facture-api.php?id=${id}`);
+      const response = await api.delete(`facture-api.php?idFacture=${idFacture}`);
       
       if (response && response.success) {
-        delete this._cacheFacture[id];
+        delete this._cacheFacture[idFacture];
         return {
           success: true,
           message: response.message || 'Facture supprimée avec succès'
@@ -470,11 +570,11 @@ class FactureService {
         throw new Error(response?.message || 'Erreur lors de la suppression de la facture');
       }
     } catch (error) {
-      handleApiError(error, `deleteFacture(${id})`);
+      handleApiError(error, `deleteFacture(${idFacture})`);
     }
   }
 
-  async changerEtatFacture(id, nouvelEtat) {
+  async changerEtatFacture(idFacture, nouvelEtat) {
     try {
       // Empêcher la persistance de l'état "Retard"
       if (nouvelEtat === 'Retard') {
@@ -489,10 +589,10 @@ class FactureService {
         nouvelEtat: nouvelEtat
       };
 
-      const response = await api.post(`facture-api.php?changerEtat&id=${id}`, requestData);
+      const response = await api.post(`facture-api.php?changerEtat&idFacture=${idFacture}`, requestData);
       
       if (response && response.success) {
-        delete this._cacheFacture[id];
+        delete this._cacheFacture[idFacture];
         return {
           success: true,
           message: response.message || `Facture mise à jour avec l'état "${nouvelEtat}" avec succès`
@@ -501,27 +601,27 @@ class FactureService {
         throw new Error(response?.message || `Erreur lors du changement d'état de la facture à "${nouvelEtat}"`);
       }
     } catch (error) {
-      handleApiError(error, `changerEtatFacture(${id})`);
+      handleApiError(error, `changerEtatFacture(${idFacture})`);
     }
   }
 
   /**
    * Annule une facture en changeant son état à "Annulée"
-   * @param {number} id - ID de la facture à annuler
+   * @param {number} idFacture - ID de la facture à annuler
    * @returns {Promise<Object>} - Résultat de l'opération
    */
-  async annulerFacture(id) {
+  async annulerFacture(idFacture) {
     try {
-      this.log.debug(`🚫 Annulation de la facture ${id}`);
-      return await this.changerEtatFacture(id, 'Annulée');
+      this.log.debug(`🚫 Annulation de la facture ${idFacture}`);
+      return await this.changerEtatFacture(idFacture, 'Annulée');
     } catch (error) {
-      handleApiError(error, `annulerFacture(${id})`);
+      handleApiError(error, `annulerFacture(${idFacture})`);
     }
   }
 
   async envoyerFactureParEmail(idFacture, emailData) {
     try {
-        const response = await api.post(`facture-api.php?envoyer&id=${idFacture}`, emailData);
+        const response = await api.post(`facture-api.php?envoyer&idFacture=${idFacture}`, emailData);
         
         this.log.debug('Réponse de l\'API pour l\'envoi par email:', response);
         
@@ -553,12 +653,12 @@ class FactureService {
   /**
    * Enregistre un paiement avec le nouveau système de paiements multiples
    */
-  async enregistrerPaiement(id, data) {
+  async enregistrerPaiement(idPaiement, data) {
       try {
-          const response = await api.post(`facture-api.php?paiement&id=${id}`, data);
+          const response = await api.post(`facture-api.php?paiement&idPaiement=${idPaiement}`, data);
           
           if (response && response.success) {
-              delete this._cacheFacture[id];
+              delete this._cacheFacture[response.idFacture];
               return {
                   success: true,
                   message: response.message || 'Paiement enregistré avec succès',
@@ -569,7 +669,7 @@ class FactureService {
               throw new Error(response?.message || 'Erreur lors de l\'enregistrement du paiement');
           }
       } catch (error) {
-          handleApiError(error, `enregistrerPaiement(${id})`);
+          handleApiError(error, `enregistrerPaiement(${idPaiement})`);
       }
   }
 
@@ -578,7 +678,7 @@ class FactureService {
    */
   async getHistoriquePaiements(idFacture) {
       try {
-          const response = await api.get(`facture-api.php?historiquePaiements&id=${idFacture}`);
+          const response = await api.get(`facture-api.php?historiquePaiements&idFacture=${idFacture}`);
           
           if (response && response.success) {
               return {
@@ -598,7 +698,7 @@ class FactureService {
    */
   async supprimerPaiement(idPaiement) {
       try {
-          const response = await api.delete(`facture-api.php?supprimerPaiement&id=${idPaiement}`);
+          const response = await api.delete(`facture-api.php?supprimerPaiement&idPaiement=${idPaiement}`);
           
           if (response && response.success) {
               if (response.idFacture) {
@@ -618,16 +718,16 @@ class FactureService {
       }
   }
 
-  async getFactureUrl(id) {
+  async getFactureUrl(idFacture) {
     try {
-        if (id in this._cacheFacture && this._cacheFacture[id].documentPath) {
+        if (idFacture in this._cacheFacture && this._cacheFacture[idFacture].documentPath) {
             return {
                 success: true,
-                pdfUrl: this._cacheFacture[id].documentPath
+                pdfUrl: this._cacheFacture[idFacture].documentPath
             };
         }
         
-        const facture = await this.getFacture(id);
+        const facture = await this.getFacture(idFacture);
         
         if (facture && facture.documentPath) {
             return {
@@ -637,7 +737,7 @@ class FactureService {
         }
         
         if (facture && facture.factfilename && facture.factfilename.trim() !== '') {
-            const response = await api.get(`facture-api.php?getUrl=1&id=${id}`);
+            const response = await api.get(`facture-api.php?getUrl=1&idFacture=${idFacture}`);
             
             if (response && response.success && response.pdfUrl) {
                 let finalUrl = response.pdfUrl;
@@ -657,21 +757,21 @@ class FactureService {
             message: 'Aucun fichier PDF associé à cette facture'
         };
     } catch (error) {
-        handleApiError(error, `getFactureUrl(${id})`);
+        handleApiError(error, `getFactureUrl(${idFacture})`);
     }
   }
 
-  async imprimerFacture(id, options = {}) {
+  async imprimerFacture(idFacture, options = {}) {
     try {
-      this.log.debug(`Impression de la facture ${id} avec options:`, options);
-      const response = await api.post(`facture-api.php?imprimer=1&id=${id}`, { options });
-      this.log.debug(`Réponse de l'impression de la facture ${id}:`, response);
+      this.log.debug(`Impression de la facture ${idFacture} avec options:`, options);
+      const response = await api.post(`facture-api.php?imprimer=1&idFacture=${idFacture}`, { options });
+      this.log.debug(`Réponse de l'impression de la facture ${idFacture}:`, response);
 
       if (response && response.success) {
-        delete this._cacheFacture[id];
+        delete this._cacheFacture[idFacture];
 
         if (response.etatActuel === 'En attente') {
-          await this.changerEtatFacture(id, 'Éditée');
+          await this.changerEtatFacture(idFacture, 'Éditée');
         }
 
         let finalPdfUrl = response.pdfUrl;
@@ -688,7 +788,7 @@ class FactureService {
         throw new Error(response?.message || 'Erreur lors de l\'impression de la facture');
       }
     } catch (error) {
-      handleApiError(error, `imprimerFacture(${id})`);
+      handleApiError(error, `imprimerFacture(${idFacture})`);
     }
   }
 

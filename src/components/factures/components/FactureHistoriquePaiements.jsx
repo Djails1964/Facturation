@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { FiDollarSign, FiCreditCard } from 'react-icons/fi';
 // ✅ AJOUT: Import des formatters centralisés
-import { formatMontant, formatDate } from '../../../utils/formatters';
+import { formatMontant } from '../../../utils/formatters';
+import DateService from '../../../utils/DateService';
 import { createLogger } from '../../../utils/createLogger';
 import '../../../styles/components/factures/FactureHistoriquePaiements.css';
 import { usePaiementActions } from '../../paiements/hooks/usePaiementActions';
@@ -66,7 +67,7 @@ function FactureHistoriquePaiements({
           commentaire: paiement.commentaire,
           statut: paiement.statut || 'confirme',
           // Propriétés adaptées pour PaiementService
-          id: paiement.id || paiement.idPaiement,
+          idPaiement: paiement.id || paiement.idPaiement,
           numeroPaiement: paiement.numeroPaiement || paiement.numero_paiement,
           datePaiement: paiement.datePaiement || paiement.date_paiement,
           montantPaye: paiement.montantPaye || paiement.montant_paye,
@@ -130,7 +131,7 @@ function FactureHistoriquePaiements({
               <div key={idPaiement || index} className="facture-paiement-ligne">
                 <div className="paiement-info">
                   <FiCreditCard className="paiement-icon-inline" />
-                  Paiement #{numeroPaiement} • {formatDate(datePaiement)} • {methodePaiement}
+                  Paiement #{numeroPaiement} • {DateService.formatSingleDate(datePaiement)} • {methodePaiement}
                   {commentaire && ` • ${commentaire}`}
                   {/* ✅ NOUVEAU : Afficher le statut si annulé */}
                   {statut === 'annule' && <span style={{color: '#dc3545', fontWeight: 'bold'}}> • ANNULÉ</span>}

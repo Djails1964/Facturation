@@ -216,7 +216,7 @@ function convertRequestDataRecursively(data, context = null) {
   // Propriétés spécifiques qui contiennent des données imbriquées
   const nestedDataProperties = [
     'lignes', 'lines', 'items', 'data', 'services', 'unites', 
-    'clients', 'factures', 'paiements', 'details',
+    'clients', 'factures', 'paiements', 'details', 'loyers',
     // ✅ NOUVEAU: Propriétés pour données enrichies
     'unites_liees', 'unitesLiees', 'unite_defaut', 'uniteDefaut',
     'types_tarifs', 'typesTarifs'
@@ -541,7 +541,11 @@ function convertApiResponse(data, context = null) {
 
   const factureProperties = ['facture', 'factures'];
 
+  const clientProperties = ['client', 'clients'];
+
   const parametreProperties = ['parametres', 'parametre'];
+
+  const loyerProperties = ['loyers', 'loyer', 'montants_mensuels', 'montantsMensuels'];
 
   // ✅ AJOUT: Propriété spécifique aux lignes de facture
   const lignesProperties = ['lignes'];
@@ -556,12 +560,14 @@ function convertApiResponse(data, context = null) {
   // ✅ NOUVEAU: Propriétés spécifiques aux autres entités
   const dataProperties = [
     'services', 'unites', 'servicesUnites', 'typesTarifs', 'tarifs', 'tarifsSpeciaux',
-    'clients', 'users', 'items', 'data', 'result',
+    'users', 'items', 'data', 'result',
     ...paiementProperties,
     ...factureProperties,
     ...lignesProperties,
     ...parametreProperties,
-    ...tarifEnrichedProperties
+    ...tarifEnrichedProperties,
+    ...clientProperties,
+    ...loyerProperties
   ];
   
   // Convertir les propriétés qui contiennent des données métier
@@ -742,7 +748,8 @@ export const enableFieldConversion = () => {
     'tarif-api.php',
     'client-api.php', 
     'facture-api.php',
-    'user-api.php'
+    'user-api.php',
+    'loyer-api.php'
   ];
   log.debug('▶️ Conversion automatique réactivée');
 };

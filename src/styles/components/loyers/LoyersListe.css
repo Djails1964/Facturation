@@ -1,0 +1,25 @@
+/* 
+ * src/styles/components/loyers/LoyersListe.css
+ * Styles spécifiques aux loyers - réutilise au maximum les styles de factures
+ */
+
+/* 
+ * Les styles des factures (FacturesTable.css, FactureRow.css, etc.) 
+ * sont déjà chargés et réutilisés ici
+ * On n'ajoute que les ajustements spécifiques aux loyers
+ */
+
+/* Animation highlight pour nouveau loyer */
+@keyframes highlight-fade {
+    0%, 100% { background-color: transparent; }
+    50% { background-color: #fff9c4; }
+}
+
+.lf-table-row.highlight {
+    animation: highlight-fade 2s ease;
+}
+
+/* Ajustement spécifique pour la colonne période (plus large que date) */
+.lf-date-cell {
+    min-width: 150px; /* Plus large pour afficher "01/01/2026 - 31/12/2026" */
+}

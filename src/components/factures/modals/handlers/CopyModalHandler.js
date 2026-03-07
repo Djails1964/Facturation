@@ -208,15 +208,15 @@ export class CopyModalHandler {
             
             this.log.debug('📄 Résultat de la création:', createResult);
             
-            if (createResult && (createResult.success || createResult.id)) {
-                this.log.debug('✅ Création réussie, ID:', createResult.id);
+            if (createResult && (createResult.success || createResult.idFacture)) {
+                this.log.debug('✅ Création réussie, ID:', createResult.idFacture);
                 
                 // ✅ Récupérer les détails complets de la facture créée
                 let nouvelleFacture = null;
-                if (createResult.id) {
+                if (createResult.idFacture) {
                     try {
                         this.log.debug('📥 Récupération détails via factureActions');
-                        nouvelleFacture = await this.factureActions.chargerFacture(createResult.id);
+                        nouvelleFacture = await this.factureActions.chargerFacture(createResult.idFacture);
                         this.log.debug('✅ Détails de la nouvelle facture récupérés');
                     } catch (error) {
                         this.log.warn('⚠️ Impossible de récupérer les détails de la nouvelle facture:', error);
@@ -236,9 +236,9 @@ export class CopyModalHandler {
                 this.log.debug('📄 Rechargement des factures...');
                 this.chargerFactures();
                 
-                if (createResult.id && this.setFactureSelectionnee) {
-                    this.log.debug('📄 Sélection de la nouvelle facture:', createResult.id);
-                    this.setFactureSelectionnee(createResult.id);
+                if (createResult.idFacture && this.setFactureSelectionnee) {
+                    this.log.debug('📄 Sélection de la nouvelle facture:', createResult.idFacture);
+                    this.setFactureSelectionnee(createResult.idFacture);
                 }
             } else {
                 const errorMessage = createResult?.message || 'Erreur lors de la création de la nouvelle facture';

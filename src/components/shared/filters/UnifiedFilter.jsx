@@ -9,11 +9,11 @@ const log = createLogger('UnifiedFilter');
 
 /**
  * Composant de filtre unifiié réutilisable
- * Supporte : factures, paiements, services, unites, types-tarifs, tarifs-standards, tarifs-speciaux
+ * Supporte : factures, paiements, services, unites, types-tarifs, tarifs-standards, tarifs-speciaux, loyers
  */
 const UnifiedFilter = ({
   // Configuration
-  filterType, // 'factures', 'paiements', 'services', 'unites', 'types-tarifs', 'tarifs-standards', 'tarifs-speciaux'
+  filterType, // 'factures', 'paiements', 'services', 'unites', 'types-tarifs', 'tarifs-standards', 'tarifs-speciaux', 'loyers'
   
   // Données pour les options
   filterOptions = {},
@@ -156,6 +156,19 @@ const UnifiedFilter = ({
           }
         };
 
+      case 'loyers':
+        return {
+          fields: ['client', 'etat'],
+          labels: {
+            client: 'Client',
+            etat: 'État de paiement'
+          },
+          defaultLabels: {
+            client: 'Tous les clients',
+            etat: 'Tous les états'
+          }
+        };
+
       default:
         return { fields: [], labels: {}, defaultLabels: {} };
     }
@@ -163,14 +176,8 @@ const UnifiedFilter = ({
 
   // Vérifier filtres actifs
   const hasActiveFilters = useMemo(() => {
-    return Object.entries(filters).some(([key, value]) => {
-      // Pour l'état des factures, "Sans annulées" est la valeur par défaut, donc pas considéré comme filtre actif
-      if (filterType === 'factures' && key === 'etat' && value === 'Sans annulées') {
-        return false;
-      }
-      return value && value !== '' && value !== 'Tous';
-    });
-  }, [filters, filterType]);
+    return Object.values(filters).some(value => value && value !== '' && value !== 'Tous');
+  }, [filters]);
 
   // Gestionnaire de changement
   const handleFilterChange = useCallback((field, value) => {
@@ -182,7 +189,6 @@ const UnifiedFilter = ({
   // Rendu d'un filtre
   const renderFilter = useCallback((field) => {
     const options = filterOptions[field] || [];
-    const defaultLabel = filterConfig.defaultLabels[field];
     
     return (
       <div key={`filter-${field}`} className="input-group">
@@ -190,10 +196,7 @@ const UnifiedFilter = ({
           value={filters[field] || ''}
           onChange={(e) => handleFilterChange(field, e.target.value)}
         >
-          {/* ✅ N'afficher l'option par défaut que si elle est définie */}
-          {defaultLabel && (
-            <option value="">{defaultLabel}</option>
-          )}
+          <option value="">{filterConfig.defaultLabels[field]}</option>
           {options.map((option, index) => {
             const value = option.value !== undefined ? option.value : option;
             const label = option.label || option;
@@ -222,15 +225,10 @@ const UnifiedFilter = ({
           <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
         </svg>
         Filtres
-        
-        {hasActiveFilters && (
-          <>
-          {log.debug('Badge debug:', { filteredCount, totalCount, display: `${filteredCount} sur ${totalCount}` })}
           <span className="filter-active-badge">
             {filteredCount} sur {totalCount}
           </span>
-          </>
-        )}
+        
       </button>
       
       {/* Panel de filtres */}

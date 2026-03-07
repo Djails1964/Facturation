@@ -5,9 +5,9 @@ import {
     VALIDATION_MESSAGES, 
     NOTIFICATIONS, 
     LOG_ACTIONS,
-    METHODES_PAIEMENT_LABELS,  // ✅ AJOUT
+    METHODES_PAIEMENT_LABELS,
     LABELS,
-    DEFAULT_VALUES     // ✅ AJOUT
+    DEFAULT_VALUES
 } from '../../../constants/paiementConstants';
 import activityLogsService from '../../../services/activityLogsService';
 import authService from '../../../services/authService';
@@ -20,7 +20,10 @@ export const usePaiementFormLogic = (formState) => {
         paiement, setPaiement, factures, setFactures, factureSelectionnee, setFactureSelectionnee,
         logsInfo, setLogsInfo, isLoading, setIsLoading, error, setError, logsLoading, setLogsLoading,
         facturesLoading, setFacturesLoading, isCreate, isEdit, mode, idPaiement,
-        paiementActions, factureActions, setIsInitialLoadDone, setIsFullyInitialized,
+        paiementActions, factureActions, clientActions, loyerActions,
+        clients, setClients, clientsLoading, setClientsLoading, clientSelectionne, setClientSelectionne,
+        loyers, setLoyers, loyersLoading, setLoyersLoading, setLoyerSelectionne,
+        setIsInitialLoadDone, setIsFullyInitialized,
         getFormData, setInitialFormData
     } = formState;
     
@@ -39,11 +42,11 @@ export const usePaiementFormLogic = (formState) => {
             
             logLine.debug(`📥 DEBUG - Réponse authService.getUserById(${userId}):`, userResponse);
             
-            if (userResponse.success && userResponse.utilisateur) { // ✅ CORRECTION: utilisateur au lieu de user
+            if (userResponse.success && userResponse.utilisateur) {
                 const userDetails = {
-                    prenom: userResponse.utilisateur.prenom || '', // ✅ CORRECTION: utilisateur.prenom
-                    nom: userResponse.utilisateur.nom || '',       // ✅ CORRECTION: utilisateur.nom
-                    username: userResponse.utilisateur.username || 'Username manquant' // ✅ CORRECTION: utilisateur.username
+                    prenom: userResponse.utilisateur.prenom || '',
+                    nom: userResponse.utilisateur.nom || '',
+                    username: userResponse.utilisateur.username || 'Username manquant'
                 };
                 
                 logLine.debug(`✅ Utilisateur ${userId} mis en cache:`, userDetails);
@@ -88,17 +91,22 @@ export const usePaiementFormLogic = (formState) => {
                 await chargerPaiement();
             }
             if (isCreate) {
-                logLine.debug('📋 Mode création - chargement factures');
-                await chargerFactures();
-                setPaiement(prev => ({
-                    ...prev,
-                    idFacture: '',
-                    datePaiement: DateService.getTodayInputFormat(),
-                    montantPaye: '',
-                    // ✅ AJOUT : Initialisation par défaut avec virement bancaire
-                    methodePaiement: DEFAULT_VALUES.METHODE_PAIEMENT,
-                    commentaire: ''
-                }));
+                logLine.debug('📋 Mode création - chargement clients');
+                await chargerClients();
+                // Factures et loyers seront chargés quand le client sera sélectionné
+                setPaiement(prev => {
+                    if (prev.idClient) return prev;
+                    return {
+                        ...prev,
+                        idClient: '',
+                        idFacture: '',
+                        idLoyer: '',
+                        datePaiement: DateService.getTodayInputFormat(),
+                        montantPaye: '',
+                        methodePaiement: DEFAULT_VALUES.METHODE_PAIEMENT,
+                        commentaire: ''
+                    };
+                });
             }
             setIsInitialLoadDone(true);
         };
@@ -142,15 +150,56 @@ export const usePaiementFormLogic = (formState) => {
             logLine.debug('🔥 Données brutes reçues:', paiementData);
             if (paiementData) {
                 const newPaiement = {
+                    // IDs
+                    idPaiement: paiementData.idPaiement,
                     idFacture: paiementData.idFacture,
+                    idClient: paiementData.idClient,
+                    
+                    // Numéros
+                    numeroPaiement: paiementData.numeroPaiement,
+                    numeroFacture: paiementData.numeroFacture,
+                    
+                    // Client
+                    nomClient: paiementData.nomClient,  // ✅ AJOUTÉ
+                    
+                    // Détails du paiement
                     datePaiement: paiementData.datePaiement,
                     montantPaye: paiementData.montantPaye.toString(),
                     methodePaiement: paiementData.methodePaiement,
                     commentaire: paiementData.commentaire || '',
+                    
+                    // Loyer (si paiement lié à un loyer)
+                    idLoyer: paiementData.idLoyer || null,
+                    idLoyerDetail: paiementData.idLoyerDetail || null,
+                    numeroLoyer: paiementData.numeroLoyer || null,
+                    periodeDebut: paiementData.periodeDebut || null,
+                    periodeFin: paiementData.periodeFin || null,
+                    dureeMois: paiementData.dureeMois || null,
+                    loyerMontantTotal: paiementData.loyerMontantTotal || null,
+                    montantMensuelMoyen: paiementData.montantMensuelMoyen || null,
+                    loyerStatut: paiementData.loyerStatut || null,
+                    loyerMontantPaye: paiementData.loyerMontantPaye || null,
+                    loyerMois: paiementData.loyerMois || null,
+                    loyerNumeroMois: paiementData.loyerNumeroMois || null,
+                    loyerAnnee: paiementData.loyerAnnee || null,
+                    loyerDetailMontant: paiementData.loyerDetailMontant || null,
+                    loyerDetailPaye: paiementData.loyerDetailPaye || null,
+
+                    // État
                     etat: paiementData.statut,
+                    statut: paiementData.statut,  // Garder les deux pour compatibilité
+                    
+                    // Dates système
                     dateCreation: paiementData.dateCreation || '',
                     dateModification: paiementData.dateModification || '',
-                    dateAnnulation: paiementData.dateAnnulation || ''
+                    dateAnnulation: paiementData.dateAnnulation || '',
+                    
+                    // Annulation
+                    motifAnnulation: paiementData.motifAnnulation || '',
+                    
+                    // Infos facture (si présente)
+                    montantTotalFacture: paiementData.montantTotalFacture || 0,
+                    ristourneFacture: paiementData.ristourneFacture || 0
                 };
                 
                 logLine.debug('🎯 Nouvel état paiement:', newPaiement);
@@ -167,7 +216,7 @@ export const usePaiementFormLogic = (formState) => {
                         
                         if (factureData) {
                             logLine.debug('✅ Facture chargée avec succès:', {
-                                id: factureData.idFacture,
+                                idFacture: factureData.idFacture,
                                 numero: factureData.numeroFacture,
                                 client: factureData.client,
                                 montant: factureData.totalAvecRistourne
@@ -200,66 +249,95 @@ export const usePaiementFormLogic = (formState) => {
         }
     };
     
-    const chargerFactures = async () => {
-        if (!isCreate) return;
-        setFacturesLoading(true);
-        
+
+    // CLIENT-FIRST : Chargement de la liste des clients
+    const chargerClients = async () => {
+        setClientsLoading(true);
         try {
-            logLine.debug('🔄 Chargement des factures payables...');
-            
-            // ✅ CORRECTION: Utiliser getFacturesPayables au lieu de chargerFactures + filtrage manuel
+            logLine.debug('🔄 Chargement des clients...');
+            const clientsData = await clientActions.chargerClients();
+            logLine.debug('📥 Clients reçus:', clientsData?.length || 0);
+            setClients(clientsData || []);
+        } catch (error) {
+            logLine.error('❌ Erreur lors du chargement des clients:', error);
+            setClients([]);
+        } finally {
+            setClientsLoading(false);
+        }
+    };
+
+    // Chargement des factures impayées d'un client spécifique
+    const chargerFacturesDuClient = async (idClient) => {
+        if (!idClient) { setFactures([]); return; }
+        setFacturesLoading(true);
+        try {
+            logLine.debug('🔄 Chargement factures du client:', idClient);
             const facturesPayables = await factureActions.chargerFacturesPayables();
-            
-            logLine.debug('📋 Factures payables reçues:', facturesPayables);
-            logLine.debug('📊 Nombre de factures:', facturesPayables?.length || 0);
-            
             if (!facturesPayables || facturesPayables.length === 0) {
-                logLine.warn('⚠️ Aucune facture payable trouvée');
-                setFactures([]);
-                return;
+                setFactures([]); return;
             }
-            
-            // Enrichir chaque facture avec les détails complets
+            // Enrichir et filtrer par client
             const facturesEnrichies = await Promise.all(
                 facturesPayables.map(async (facture) => {
                     try {
                         const factureComplete = await factureActions.chargerFacture(facture.id || facture.idFacture);
-                        if (factureComplete) {
-                            return {
-                                ...facture,
-                                id: facture.id || facture.idFacture, // S'assurer qu'on a un ID
-                                idFacture: facture.id || facture.idFacture, // Compatibilité
-                                montantRestant: factureComplete.montantRestant || 
-                                    (factureComplete.totalAvecRistourne - (factureComplete.montantPayeTotal || 0)),
-                                totalAvecRistourne: factureComplete.totalAvecRistourne,
-                                montantPayeTotal: factureComplete.montantPayeTotal || 0,
-                                client: factureComplete.client // S'assurer d'avoir les infos client
-                            };
-                        }
-                        return facture;
-                    } catch (error) {
-                        logLine.error(`Erreur lors de l'enrichissement de la facture ${facture.id || facture.idFacture}:`, error);
-                        return facture;
-                    }
+                        if (!factureComplete) return null;
+                        return {
+                            ...facture,
+                            idFacture: facture.id || facture.idFacture,
+                            montantRestant: factureComplete.montantRestant ||
+                                (factureComplete.totalAvecRistourne - (factureComplete.montantPayeTotal || 0)),
+                            totalAvecRistourne: factureComplete.totalAvecRistourne,
+                            montantPayeTotal: factureComplete.montantPayeTotal || 0,
+                            client: factureComplete.client
+                        };
+                    } catch { return null; }
                 })
             );
-            
-            // Filtrer les factures avec un montant restant > 0
-            const facturesAvecMontantRestant = facturesEnrichies.filter(facture => {
-                const montantRestant = facture.montantRestant || 
-                    (facture.montantTotal - (facture.montantPayeTotal || 0));
-                return montantRestant > 0;
+            const filtrees = facturesEnrichies.filter(f => {
+                if (!f) return false;
+                const clientId = String(f.client?.id || f.client?.idClient || f.idClient || '');
+                if (clientId !== String(idClient)) return false;
+                const restant = f.montantRestant || 0;
+                return restant > 0;
             });
-            
-            logLine.debug('✅ Factures enrichies et filtrées:', facturesAvecMontantRestant);
-            setFactures(facturesAvecMontantRestant);
-            
+            logLine.debug(`✅ ${filtrees.length} facture(s) impayée(s) pour client ${idClient}`);
+            setFactures(filtrees);
         } catch (error) {
-            logLine.error('❌ Erreur lors du chargement des factures:', error);
-            setError('Impossible de charger les factures: ' + error.message);
+            logLine.error('❌ Erreur chargement factures client:', error);
             setFactures([]);
         } finally {
             setFacturesLoading(false);
+        }
+    };
+
+    // Chargement des loyers non soldés d'un client spécifique
+    const chargerLoyersDuClient = async (idClient) => {
+        if (!idClient) { setLoyers([]); return; }
+        setLoyersLoading(true);
+        try {
+            logLine.debug('🔄 Chargement loyers du client:', idClient);
+            const tous = await loyerActions.chargerLoyers({ id_client: idClient });
+            // Garder uniquement les loyers avec des mois impayés
+            const nonSoldes = (tous || []).filter(l => {
+                const statut = l.statut || l.etat || '';
+                return statut !== 'solde' && statut !== 'soldé';
+            });
+
+            logLine.debug('🔍 [chargerLoyersDuClient] tous les loyers reçus:', tous);
+            logLine.debug('🔍 [chargerLoyersDuClient] loyer[0] complet:', tous?.[0]);
+            logLine.debug('🔍 [chargerLoyersDuClient] montantsMensuels[0][0]:', 
+            tous?.[0]?.montantsMensuels?.[0]);
+            logLine.debug('🔍 [chargerLoyersDuClient] clés mois[0]:', 
+            Object.keys(tous?.[0]?.montantsMensuels?.[0] || {}));
+            
+            logLine.debug(`✅ ${nonSoldes.length} loyer(s) non soldé(s) pour client ${idClient}`);
+            setLoyers(nonSoldes);
+        } catch (error) {
+            logLine.error('❌ Erreur chargement loyers client:', error);
+            setLoyers([]);
+        } finally {
+            setLoyersLoading(false);
         }
     };
     
@@ -278,9 +356,8 @@ export const usePaiementFormLogic = (formState) => {
             
             if (logsResponse.success && logsResponse.logs) {
                 const logs = logsResponse.logs;
-                logs.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)); // ✅ CHANGEMENT: Tri chronologique (ancien -> récent)
+                logs.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
                 
-                // ✅ NOUVELLE STRUCTURE: Liste de tous les logs avec détails
                 const enrichedLogs = [];
                 
                 for (const log of logs) {
@@ -297,7 +374,7 @@ export const usePaiementFormLogic = (formState) => {
                         actionType: log.action_type
                     });
                     
-                    logLine.debug(`🔄 DEBUG - Log enrichi:`, {
+                    logLine.debug(`📄 DEBUG - Log enrichi:`, {
                         action: actionLabel,
                         userName: userName,
                         date: log.created_at,
@@ -306,7 +383,6 @@ export const usePaiementFormLogic = (formState) => {
                     });
                 }
                 
-                // ✅ NOUVELLE STRUCTURE pour les logs info
                 const newLogsInfo = {
                     allLogs: enrichedLogs // Tous les logs enrichis
                 };
@@ -370,7 +446,7 @@ export const usePaiementFormLogic = (formState) => {
         }
     };
 
-    // ✅ FONCTION pour traduire les noms de champs
+    // ✅ FONCTION pour traduire les noms de champs — ajout id_client
     const translateFieldName = (field) => {
         const translations = {
             'date_paiement': LABELS.DATE_PAIEMENT,
@@ -381,7 +457,9 @@ export const usePaiementFormLogic = (formState) => {
             'methodePaiement': LABELS.METHODE_PAIEMENT,
             'commentaire': LABELS.COMMENTAIRE,
             'facture_id': LABELS.FACTURE,
-            'idFacture': LABELS.FACTURE
+            'idFacture': LABELS.FACTURE,
+            'id_client': LABELS.CLIENT || 'Client',
+            'idClient': LABELS.CLIENT || 'Client'
         };
         return translations[field] || field;
     };
@@ -412,8 +490,7 @@ export const usePaiementFormLogic = (formState) => {
 
     // ✅ FONCTION pour formater les méthodes de paiement
     const formatMethodePaiement = (methode) => {
-        return paiementActions.formatMethodePaiement(methode); // 2705 CHANGÉ
-        return paiementActions.formatMethodePaiement(methode); // 2705 CHANGÉ
+        return paiementActions.formatMethodePaiement(methode);
     };
     
     const extractUserName = (log) => {
@@ -427,18 +504,13 @@ export const usePaiementFormLogic = (formState) => {
     
     return {
         chargerPaiement,
-        chargerFactures,
+        chargerClients,
+        chargerFacturesDuClient,
+        chargerLoyersDuClient,
         chargerLogsUtilisateur,
         extractUserName,
-        // Fonctions de cache exposées
         getCachedUserDetails,
-        clearUsersCache: () => {
-            usersCache.clear();
-            logLine.debug('🧹 Cache utilisateurs vidé');
-        },
-        getCacheStats: () => ({
-            size: usersCache.size,
-            users: Array.from(usersCache.keys())
-        })
+        clearUsersCache: () => { usersCache.clear(); },
+        getCacheStats: () => ({ size: usersCache.size, users: Array.from(usersCache.keys()) })
     };
 };

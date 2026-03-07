@@ -97,17 +97,44 @@ class TarificationService {
    */
   clearCache() {
     this._cacheResultat = {};
+    // Reinitialiser completement le cache (y compris les cles dynamiques)
     this._cache = {
       services: null,
       unites: null,
+      unites_all: null,  // AJOUT: Cle dynamique pour toutes les unites
       typesTarifs: null,
       servicesUnites: null,
-      servicesAvecUnites: null,  // NOUVEAU
-      donneesInitiales: null,     // NOUVEAU
+      servicesAvecUnites: null,
+      donneesInitiales: null,
       lastUpdate: null,
       isInitialized: false
     };
-    this.log.debug('♻️ Cache de tarification vidé complètement');
+    this.log.debug('Cache de tarification vide completement');
+  }
+
+  /**
+   * NOUVEAU: Vide uniquement le cache des unites (toutes les cles)
+   */
+  clearUniteCache() {
+    // Supprimer toutes les cles commencant par unites
+    Object.keys(this._cache).forEach(key => {
+      if (key.startsWith('unites')) {
+        this._cache[key] = null;
+      }
+    });
+    this._cache.servicesUnites = null;
+    this._cache.servicesAvecUnites = null;
+    this.log.debug('Cache des unites vide');
+  }
+
+  /**
+   * NOUVEAU: Vide uniquement le cache des services
+   */
+  clearServiceCache() {
+    this._cache.services = null;
+    this._cache.servicesUnites = null;
+    this._cache.servicesAvecUnites = null;
+    this.log.debug('Cache des services vide');
   }
 
   /**

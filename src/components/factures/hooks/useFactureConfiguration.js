@@ -17,7 +17,7 @@ export function useFactureConfiguration(client, readOnly, tarifData = null) {
 
     const log = createLogger("useFactureConfiguration");
     log.debug(`Entrée dans useFactureConfiguration avec:`, {
-        clientId: client?.id,
+        clientId: client?.idClient,
         readOnly,
         hasTarifData: !!tarifData,
         tarifDataLoaded: tarifData?.isLoaded
@@ -43,6 +43,7 @@ export function useFactureConfiguration(client, readOnly, tarifData = null) {
     const services = useMemo(() => tarifData?.services || [], [tarifData?.services]);
     const unites = useMemo(() => tarifData?.unites || [], [tarifData?.unites]);
     const tarifActions = tarifData?.tarifActions || null;
+    const unitesAvecTarif = useMemo(() => tarifData?.unitesAvecTarif || new Map(), [tarifData?.unitesAvecTarif]); // ✅ AJOUTER
 
     /**
      * Crée le mapping des unités par service
@@ -51,7 +52,8 @@ export function useFactureConfiguration(client, readOnly, tarifData = null) {
     const createUniteMappings = useCallback((servicesData) => {
         const unitesMap = {};
         
-        log.debug("📝 createUniteMappings - Services enrichis:", servicesData?.length);
+        log.debug("🔍 createUniteMappings - Services enrichis:", servicesData?.length);
+        log.debug("🔍 Tarifs disponibles (combinaisons service+unité):", unitesAvecTarif.size);
         
         if (!servicesData || servicesData.length === 0) {
             log.warn("Aucun service disponible pour le mapping");
@@ -60,25 +62,40 @@ export function useFactureConfiguration(client, readOnly, tarifData = null) {
 
         servicesData.forEach(service => {
             const codeService = service.codeService || service.code;
+            const idService = service.idService;
             
             // ✅ NOUVEAU : Utiliser directement unitesLiees depuis le service enrichi
             if (service.unitesLiees && Array.isArray(service.unitesLiees)) {
-                const codesUnites = service.unitesLiees
+                // ✅ FILTRER les unités qui ont un tarif défini
+                const unitesAvecTarifPourService = service.unitesLiees.filter(u => {
+                    const key = `${idService}-${u.idUnite || u.id}`;
+                    const hasTarif = unitesAvecTarif.has(key);
+                    
+                    if (!hasTarif) {
+                        log.debug(`⚠️ Service "${service.nomService}" - Unité "${u.nomUnite}" SANS TARIF (ignorée)`);
+                    } else {
+                        log.debug(`✅ Service "${service.nomService}" - Unité "${u.nomUnite}" AVEC TARIF`);
+                    }
+                    
+                    return hasTarif;
+                });
+                
+                const codesUnites = unitesAvecTarifPourService
                     .map(u => u.codeUnite || u.code)
                     .filter(Boolean);
                 
                 unitesMap[codeService] = [...new Set(codesUnites)]; // Éviter les doublons
                 
-                log.debug(`✅ Unités pour ${codeService}:`, unitesMap[codeService]);
+                log.debug(`📋 Unités FINALES pour "${service.nomService}":`, unitesMap[codeService].length, 'unités avec tarif');
             } else {
                 log.warn(`⚠️ Service ${codeService} sans unitesLiees`);
                 unitesMap[codeService] = [];
             }
         });
         
-        log.debug("✅ Mapping final des unités par service:", unitesMap);
+        log.debug("✅ Mapping final des unités par service (avec tarif uniquement):", Object.keys(unitesMap).length, 'services');
         return unitesMap;
-    }, [log]);
+    }, [log, unitesAvecTarif]); // ✅ AJOUTER unitesAvecTarif dans les dépendances
 
     /**
      * Crée les valeurs par défaut
@@ -156,7 +173,7 @@ export function useFactureConfiguration(client, readOnly, tarifData = null) {
         }
 
         // Éviter les rechargements inutiles
-        if (initRef.current && clientPrecedent.current === client?.id) {
+        if (initRef.current && clientPrecedent.current === client?.idClient) {
             log.debug("Déjà initialisé pour ce client");
             return;
         }
@@ -167,7 +184,7 @@ export function useFactureConfiguration(client, readOnly, tarifData = null) {
             log.debug('📥 Initialisation configuration depuis tarifData:', {
                 services: services.length,
                 unites: unites.length,
-                clientId: client?.id
+                clientId: client?.idClient
             });
 
             // ✅ Création des mappings (plus d'appels API)
@@ -189,7 +206,7 @@ export function useFactureConfiguration(client, readOnly, tarifData = null) {
             setMessageType('');
             
             initRef.current = true;
-            clientPrecedent.current = client?.id;
+            clientPrecedent.current = client?.idClient;
             
         } catch (error) {
             log.error('❌ Erreur configuration:', error);
@@ -199,7 +216,7 @@ export function useFactureConfiguration(client, readOnly, tarifData = null) {
         } finally {
             setIsLoading(false);
         }
-    }, [client?.id, tarifData?.isLoaded, services, unites, createUniteMappings, createDefaultValues, log]);
+    }, [client?.idClient, tarifData?.isLoaded, services, unites, createUniteMappings, createDefaultValues, log]);
 
     /**
      * Met à jour l'information sur le tarif appliqué
@@ -238,16 +255,16 @@ export function useFactureConfiguration(client, readOnly, tarifData = null) {
         if (!readOnly && client && tarifData?.isLoaded) {
             updateTarifInfo();
         }
-    }, [client?.id, readOnly, tarifData?.isLoaded, updateTarifInfo]);
+    }, [client?.idClient, readOnly, tarifData?.isLoaded, updateTarifInfo]);
 
     // ✅ Réinitialiser si le client change
     useEffect(() => {
-        if (client?.id !== clientPrecedent.current) {
+        if (client?.idClient !== clientPrecedent.current) {
             log.debug('🔄 Changement de client détecté, réinitialisation...');
             initRef.current = false;
             initializeConfiguration();
         }
-    }, [client?.id, initializeConfiguration, log]);
+    }, [client?.idClient, initializeConfiguration, log]);
 
     // ✅ NOUVEAU : Fonctions d'accès rapide aux données
     const getUnitesPourService = useCallback((idService) => {

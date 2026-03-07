@@ -34,6 +34,7 @@ class PaiementService {
       if (options.page) params.page = options.page;
       if (options.limit) params.limit = options.limit;
       if (options.statut) params.statut = options.statut; // ✅ Filtre par statut (confirme/annule)
+      if (options.libre)  params.libre  = 1;              // Paiements non attribués (id_facture IS NULL AND id_loyer IS NULL)
 
       console.log('PaiementService - Chargement des paiements avec options:', options);
       console.log('PaiementService - Paramètres de l\'API:', params);
@@ -62,7 +63,10 @@ class PaiementService {
           dateAnnulation: paiement.dateAnnulation || null,
           motifAnnulation: paiement.motifAnnulation || null,
           montantTotalFacture: parseFloat(paiement.montantTotal),
-          ristourneFacture: parseFloat(paiement.ristourne || 0)
+          ristourneFacture: parseFloat(paiement.ristourne || 0),
+          // Champs loyer (présents si le paiement concerne un loyer)
+          idLoyer: paiement.idLoyer || null,
+          numeroLoyer: paiement.numeroLoyer || null,
         }));
         
         this.paiements = paiementsAdaptes;
@@ -82,19 +86,17 @@ class PaiementService {
 
   /**
    * ✅ EXISTANTE : Récupère un paiement spécifique par son ID
-   * @param {number} id ID du paiement
+   * @param {number} idPaiement ID du paiement
    * @returns {Object|null} Données du paiement
    */
-  async getPaiement(id) {
+  async getPaiement(idPaiement) {
     try {
-      console.log('Récupération du paiement:', id);
+      console.log('Récupération du paiement:', idPaiement);
       
-      if (id in this._cachePaiement) {
-        console.log('Paiement trouvé dans le cache:', id);
-        return this._cachePaiement[id];
-      }
+      // Cache désactivé pour éviter de servir des données sans les champs loyer
+      // if (idPaiement in this._cachePaiement) { return this._cachePaiement[idPaiement]; }
       
-      const response = await api.get(`paiement-api.php?idPaiement=${id}`);
+      const response = await api.get(`paiement-api.php?idPaiement=${idPaiement}`);
       console.log('Réponse de l\'API:', response);
       
       if (response && response.success && response.paiement) {
@@ -117,16 +119,53 @@ class PaiementService {
           dateAnnulation: paiementData.dateAnnulation || null,
           motifAnnulation: paiementData.motifAnnulation || null,
           montantTotalFacture: parseFloat(paiementData.montantTotal),
-          ristourneFacture: parseFloat(paiementData.ristourne || 0)
+          ristourneFacture: parseFloat(paiementData.ristourne || 0),
+
+          // Données loyer (converties en camelCase par api.js via LOYER_MAPPINGS)
+          idLoyer: paiementData.idLoyer || null,
+          idLoyerDetail: paiementData.idLoyerDetail || null,
+          numeroLoyer: paiementData.numeroLoyer || null,
+          periodeDebut: paiementData.periodeDebut || null,
+          periodeFin: paiementData.periodeFin || null,
+          dureeMois: paiementData.dureeMois ? parseInt(paiementData.dureeMois) : null,
+          loyerMontantTotal: paiementData.loyerMontantTotal ? parseFloat(paiementData.loyerMontantTotal) : null,
+          montantMensuelMoyen: paiementData.montantMensuelMoyen ? parseFloat(paiementData.montantMensuelMoyen) : null,
+          loyerStatut: paiementData.loyerStatut || null,
+          loyerMontantPaye: paiementData.loyerMontantPaye ? parseFloat(paiementData.loyerMontantPaye) : null,
+          loyerMois: paiementData.loyerMois || null,
+          loyerNumeroMois: paiementData.loyerNumeroMois ? parseInt(paiementData.loyerNumeroMois) : null,
+          loyerAnnee: paiementData.loyerAnnee ? parseInt(paiementData.loyerAnnee) : null,
+          loyerDetailMontant: paiementData.loyerDetailMontant ? parseFloat(paiementData.loyerDetailMontant) : null,
+          loyerDetailPaye: paiementData.loyerDetailPaye ? parseFloat(paiementData.loyerDetailPaye) : null,
         };
         
-        this._cachePaiement[id] = paiementFormate;
+        console.log('🔍 DEBUG loyer fields in paiementData:', {
+          allKeys: Object.keys(paiementData).filter(k => 
+            k.toLowerCase().includes('loyer') || k.toLowerCase().includes('periode') || 
+            k.toLowerCase().includes('mois') || k.toLowerCase().includes('annee') ||
+            k.toLowerCase().includes('numero') || k.toLowerCase().includes('mensuel')
+          ),
+          idLoyer: paiementData.idLoyer,
+          numeroLoyer: paiementData.numeroLoyer,
+          periodeDebut: paiementData.periodeDebut,
+          periodeFin: paiementData.periodeFin,
+          loyerMontantTotal: paiementData.loyerMontantTotal,
+          loyerMontantPaye: paiementData.loyerMontantPaye,
+          loyerStatut: paiementData.loyerStatut,
+          montantMensuelMoyen: paiementData.montantMensuelMoyen,
+          loyerMois: paiementData.loyerMois,
+          loyerAnnee: paiementData.loyerAnnee,
+          loyerDetailMontant: paiementData.loyerDetailMontant,
+          dureeMois: paiementData.dureeMois,
+        });
+        
+        this._cachePaiement[idPaiement] = paiementFormate;
         return paiementFormate;
       }
       
       return null;
     } catch (error) {
-      console.error(`Erreur lors de la récupération du paiement ${id}:`, error);
+      console.error(`Erreur lors de la récupération du paiement ${idPaiement}:`, error);
       return null;
     }
   }
@@ -186,7 +225,7 @@ class PaiementService {
         this._clearCache();
         return {
           success: true,
-          id: response.idPaiement,
+          idPaiement: response.idPaiement,
           numeroPaiement: response.numeroPaiement,
           message: response.message || 'Paiement enregistré avec succès'
         };
@@ -201,17 +240,17 @@ class PaiementService {
 
   /**
    * ✅ EXISTANTE : Met à jour un paiement existant
-   * @param {number} id ID du paiement
+   * @param {number} idPaiement ID du paiement
    * @param {Object} paiementData Nouvelles données du paiement
    * @returns {Object} Résultat de l'opération
    */
-  async updatePaiement(id, paiementData) {
+  async updatePaiement(idPaiement, paiementData) {
     try {
-      console.log(`Mise à jour du paiement ${id} avec les données:`, paiementData);
-      const response = await api.put(`paiement-api.php?idPaiement=${id}`, paiementData);
+      console.log(`Mise à jour du paiement ${idPaiement} avec les données:`, paiementData);
+      const response = await api.put(`paiement-api.php?idPaiement=${idPaiement}`, paiementData);
       
       if (response && response.success) {
-        delete this._cachePaiement[id];
+        delete this._cachePaiement[idPaiement];
         return {
           success: true,
           message: response.message || 'Paiement modifié avec succès'
@@ -220,24 +259,24 @@ class PaiementService {
         throw new Error(response?.message || 'Erreur lors de la modification du paiement');
       }
     } catch (error) {
-      console.error(`Erreur lors de la mise à jour du paiement ${id}:`, error);
+      console.error(`Erreur lors de la mise à jour du paiement ${idPaiement}:`, error);
       throw error;
     }
   }
 
   /**
    * ✅ EXISTANTE : Annule un paiement (au lieu de le supprimer)
-   * @param {number} id ID du paiement
+   * @param {number} idPaiement ID du paiement
    * @param {string} motifAnnulation Motif de l'annulation
    * @returns {Object} Résultat de l'opération
    */
-  async cancelPaiement(id, motifAnnulation = null) {
+  async cancelPaiement(idPaiement, motifAnnulation = null) {
     try {
       const data = motifAnnulation ? { motif_annulation: motifAnnulation } : {};
-      const response = await api.delete(`paiement-api.php?idPaiement=${id}`, data);
+      const response = await api.delete(`paiement-api.php?idPaiement=${idPaiement}`, data);
       
       if (response && response.success) {
-        delete this._cachePaiement[id];
+        delete this._cachePaiement[idPaiement];
         return {
           success: true,
           idFacture: response.idFacture,
@@ -248,33 +287,33 @@ class PaiementService {
         throw new Error(response?.message || 'Erreur lors de l\'annulation du paiement');
       }
     } catch (error) {
-      console.error(`Erreur lors de l'annulation du paiement ${id}:`, error);
+      console.error(`Erreur lors de l'annulation du paiement ${idPaiement}:`, error);
       throw error;
     }
   }
 
   /**
    * ✅ EXISTANTE : Supprime un paiement (méthode legacy)
-   * @param {number} id ID du paiement
+   * @param {number} idPaiement ID du paiement
    * @returns {Object} Résultat de l'opération
    * @deprecated Utilisez cancelPaiement() à la place
    */
-  async deletePaiement(id) {
+  async deletePaiement(idPaiement) {
     try {
-      const response = await api.delete(`paiement-api.php?idPaiement=${id}`);
+      const response = await api.delete(`paiement-api.php?idPaiement=${idPaiement}`);
       
       if (response && response.success) {
-        delete this._cachePaiement[id];
+        delete this._cachePaiement[idPaiement];
         return {
           success: true,
-          idFacture: response.idFacture,
+          idPaiement: response.idPaiement,
           message: response.message || 'Paiement supprimé avec succès'
         };
       } else {
         throw new Error(response?.message || 'Erreur lors de la suppression du paiement');
       }
     } catch (error) {
-      console.error(`Erreur lors de la suppression du paiement ${id}:`, error);
+      console.error(`Erreur lors de la suppression du paiement ${idPaiement}:`, error);
       throw error;
     }
   }

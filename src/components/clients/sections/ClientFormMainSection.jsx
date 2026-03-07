@@ -1,16 +1,19 @@
 // src/components/clients/sections/ClientFormMainSection.jsx
-// Section principale du formulaire client avec les 4 lignes de champs
+// Section principale du formulaire client avec les 5 lignes de champs
 
 import React from 'react';
 import { PHONE_TYPES, HELP_TEXTS } from '../../../constants/clientConstants';
 import { createLogger } from '../../../utils/createLogger';
+import { toBoolean } from '../../../utils/booleanHelper';
 
 /**
- * Section principale du formulaire avec les champs organisés en 4 lignes
+ * Section principale du formulaire avec les champs organises en 5 lignes
  */
 function ClientFormMainSection({ 
   client, 
-  handleChange, 
+  handleChange,
+  toggleTherapeute,
+  toggleLoyer,
   fieldErrors = {},
   phoneType = null,
   isReadOnly = false,
@@ -18,8 +21,9 @@ function ClientFormMainSection({
   className = ''
 }) {
   
-  // ✅ Initialisation du logger
   const logger = createLogger('ClientFormMainSection');
+
+  logger.debug('Rendering ClientFormMainSection with client:', client);
 
   const sectionClasses = ['form-main-section'];
   if (className) sectionClasses.push(className);
@@ -27,12 +31,12 @@ function ClientFormMainSection({
   return (
     <div className={sectionClasses.join(' ')}>
       
-      {/* Ligne 1 : Prénom + Nom */}
+      {/* Ligne 1 : Prenom + Nom */}
       <FormRow>
         <InputField
           id="prenom"
           name="prenom"
-          label="Prénom"
+          label="Prenom"
           value={client.prenom || ''}
           onChange={handleChange}
           required={true}
@@ -56,7 +60,7 @@ function ClientFormMainSection({
         />
       </FormRow>
 
-      {/* Ligne 2 : Rue + Numéro */}
+      {/* Ligne 2 : Rue + Numero */}
       <FormRow>
         <InputField
           id="rue"
@@ -74,7 +78,7 @@ function ClientFormMainSection({
         <InputField
           id="numero"
           name="numero"
-          label="Numéro"
+          label="Numero"
           value={client.numero || ''}
           onChange={handleChange}
           required={true}
@@ -85,25 +89,25 @@ function ClientFormMainSection({
         />
       </FormRow>
 
-      {/* Ligne 3 : Code postal + Localité */}
+      {/* Ligne 3 : Code postal + Localite */}
       <FormRow>
         <InputField
-          id="code_postal"
-          name="code_postal"
+          id="codePostal"
+          name="codePostal"
           label="Code postal"
           type="text"
-          value={client.code_postal || ''}
+          value={client.codePostal || ''}
           onChange={handleChange}
           required={true}
           readOnly={isReadOnly}
-          error={fieldErrors.code_postal}
-          className={getFieldClasses?.('code_postal')}
+          error={fieldErrors.codePostal}
+          className={getFieldClasses?.('codePostal')}
         />
         
         <InputField
           id="localite"
           name="localite"
-          label="Localité"
+          label="Localite"
           value={client.localite || ''}
           onChange={handleChange}
           required={true}
@@ -114,7 +118,7 @@ function ClientFormMainSection({
         />
       </FormRow>
 
-      {/* Ligne 4 : Téléphone + Email */}
+      {/* Ligne 4 : Telephone + Email */}
       <FormRow>
         <PhoneField
           client={client}
@@ -133,14 +137,31 @@ function ClientFormMainSection({
           className={getFieldClasses?.('email')}
         />
       </FormRow>
+
+      {/* Ligne 5 : Switch Therapeute + Switch Loyer */}
+      <FormRow>
+        <SwitchInputGroup
+          id="estTherapeute"
+          name="estTherapeute"
+          label="Thérapeute"
+          checked={toBoolean(client.estTherapeute)}
+          onChange={toggleTherapeute}
+          disabled={isReadOnly}
+        />
+        <SwitchInputGroup
+          id="aLoyer"
+          name="aLoyer"
+          label="Loyer"
+          checked={toBoolean(client.aLoyer)}
+          onChange={toggleLoyer}
+          disabled={isReadOnly}
+        />
+      </FormRow>
       
     </div>
   );
 }
 
-/**
- * Composant de ligne de formulaire
- */
 function FormRow({ children, className = '' }) {
   const rowClasses = ['form-row'];
   if (className) rowClasses.push(className);
@@ -152,23 +173,10 @@ function FormRow({ children, className = '' }) {
   );
 }
 
-/**
- * Composant générique pour les champs input
- */
 function InputField({ 
-  id, 
-  name, 
-  label, 
-  type = 'text', 
-  value, 
-  onChange, 
-  required = false,
-  readOnly = false,
-  error = null,
-  maxLength = null,
-  className = '',
-  placeholder = ' ',
-  ...props 
+  id, name, label, type = 'text', value, onChange, required = false,
+  readOnly = false, error = null, maxLength = null, className = '',
+  placeholder = ' ', ...props 
 }) {
   const fieldClasses = ['input-group'];
   if (className) fieldClasses.push(className);
@@ -177,148 +185,91 @@ function InputField({
   return (
     <div className={fieldClasses.join(' ')}>
       <input
-        type={type}
-        id={id}
-        name={name}
-        value={value}
-        onChange={onChange}
-        required={required}
-        readOnly={readOnly}
-        placeholder={placeholder}
+        type={type} id={id} name={name} value={value} onChange={onChange}
+        required={required} readOnly={readOnly} placeholder={placeholder}
         maxLength={maxLength}
         aria-describedby={error ? `${id}-error` : undefined}
         aria-invalid={!!error}
         {...props}
       />
-      
-      <label htmlFor={id} className={required ? 'required' : ''}>
-        {label}
-      </label>
-      
-      {/* Message d'erreur */}
-      {error && (
-        <div id={`${id}-error`} className="error-message" role="alert">
-          {error}
-        </div>
-      )}
+      <label htmlFor={id} className={required ? 'required' : ''}>{label}</label>
+      {error && <div id={`${id}-error`} className="error-message" role="alert">{error}</div>}
     </div>
   );
 }
 
-/**
- * Composant spécialisé pour le champ téléphone
- */
-function PhoneField({ 
-  client, 
-  onChange, 
-  fieldErrors, 
-  phoneType, 
-  readOnly = false, 
-  className = '' 
-}) {
+function PhoneField({ client, onChange, fieldErrors, phoneType, readOnly = false, className = '' }) {
   const fieldClasses = ['input-group'];
   if (className) fieldClasses.push(className);
   if (fieldErrors.telephone) fieldClasses.push('has-error');
   if (phoneType) fieldClasses.push(`phone-type-${phoneType}`);
 
   const getHelpText = () => {
-    if (fieldErrors.telephone) return null; // L'erreur sera affichée
-    
+    if (fieldErrors.telephone) return null;
     switch (phoneType) {
-      case PHONE_TYPES.SWISS:
-        return HELP_TEXTS.PHONE_SWISS;
-      case PHONE_TYPES.FOREIGN:
-        return HELP_TEXTS.PHONE_FOREIGN;
-      default:
-        return HELP_TEXTS.PHONE_DEFAULT;
+      case PHONE_TYPES.SWISS: return HELP_TEXTS.PHONE_SWISS;
+      case PHONE_TYPES.FOREIGN: return HELP_TEXTS.PHONE_FOREIGN;
+      default: return HELP_TEXTS.PHONE_DEFAULT;
     }
   };
 
   return (
     <div className={fieldClasses.join(' ')}>
-      <input
-        type="tel"
-        id="telephone"
-        name="telephone"
-        value={client.telephone || ''}
-        onChange={onChange}
-        readOnly={readOnly}
-        placeholder=" "
-        maxLength={20}
-        aria-describedby={
-          fieldErrors.telephone ? 'telephone-error' : 
-          getHelpText() ? 'telephone-help' : undefined
-        }
+      <input type="tel" id="telephone" name="telephone" value={client.telephone || ''}
+        onChange={onChange} readOnly={readOnly} placeholder=" " maxLength={20}
+        aria-describedby={fieldErrors.telephone ? 'telephone-error' : getHelpText() ? 'telephone-help' : undefined}
         aria-invalid={!!fieldErrors.telephone}
       />
-      
-      <label htmlFor="telephone">Téléphone</label>
-      
-      {/* Badge de type de téléphone */}
-      {!readOnly && phoneType === PHONE_TYPES.SWISS && (
-        <div className="phone-type-badge swiss" aria-label="Téléphone suisse">
-          CH
-        </div>
-      )}
-      {!readOnly && phoneType === PHONE_TYPES.FOREIGN && (
-        <div className="phone-type-badge foreign" aria-label="Téléphone international">
-          INT
-        </div>
-      )}
-      
-      {/* Messages d'erreur ou d'aide */}
+      <label htmlFor="telephone">Telephone</label>
+      {!readOnly && phoneType === PHONE_TYPES.SWISS && <div className="phone-type-badge swiss">CH</div>}
+      {!readOnly && phoneType === PHONE_TYPES.FOREIGN && <div className="phone-type-badge foreign">INT</div>}
       {fieldErrors.telephone ? (
-        <div id="telephone-error" className="error-message" role="alert">
-          {fieldErrors.telephone}
-        </div>
-      ) : (
-        getHelpText() && !readOnly && (
-          <small id="telephone-help" className="help-text">
-            {getHelpText()}
-          </small>
-        )
-      )}
+        <div id="telephone-error" className="error-message" role="alert">{fieldErrors.telephone}</div>
+      ) : (getHelpText() && !readOnly && <small id="telephone-help" className="help-text">{getHelpText()}</small>)}
     </div>
   );
 }
 
-/**
- * Composant spécialisé pour le champ email
- */
-function EmailField({ 
-  client, 
-  onChange, 
-  fieldErrors, 
-  readOnly = false, 
-  className = '' 
-}) {
+function EmailField({ client, onChange, fieldErrors, readOnly = false, className = '' }) {
   const fieldClasses = ['input-group'];
   if (className) fieldClasses.push(className);
   if (fieldErrors.email) fieldClasses.push('has-error');
 
   return (
     <div className={fieldClasses.join(' ')}>
-      <input
-        type="email"
-        id="email"
-        name="email"
-        value={client.email || ''}
-        onChange={onChange}
-        readOnly={readOnly}
-        placeholder=" "
-        maxLength={255}
+      <input type="email" id="email" name="email" value={client.email || ''}
+        onChange={onChange} readOnly={readOnly} placeholder=" " maxLength={255}
         aria-describedby={fieldErrors.email ? 'email-error' : undefined}
         aria-invalid={!!fieldErrors.email}
       />
-      
       <label htmlFor="email">Email</label>
-      
-      {/* Message d'erreur */}
-      {fieldErrors.email && (
-        <div id="email-error" className="error-message" role="alert">
-          {fieldErrors.email}
+      {fieldErrors.email && <div id="email-error" className="error-message" role="alert">{fieldErrors.email}</div>}
+    </div>
+  );
+}
+
+/**
+ * Composant switch dans input-group
+ * Structure : input-group > (label + switch)
+ */
+function SwitchInputGroup({ id, name, label, checked, onChange, disabled = false }) {
+  return (
+    <div className="input-group-switch">
+      <div className="switch-field-content">
+        <span className="switch-field-label">{label}</span>
+        <div className="switch-container">
+          <input
+            type="checkbox"
+            id={id}
+            name={name}
+            className="switch-input"
+            checked={checked}
+            onChange={onChange}
+            disabled={disabled}
+          />
+          <label htmlFor={id} className="switch-toggle"></label>
         </div>
-      )}
+      </div>
     </div>
   );
 }

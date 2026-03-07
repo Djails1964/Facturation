@@ -148,8 +148,9 @@ input[type="date"] {
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator {
-  background: none;
-  color: var(--color-primary);
+  cursor: pointer;
+  opacity: 0.6;
+  filter: invert(10%) sepia(80%) saturate(800%) hue-rotate(320deg); /* teinte bordeaux */
 }
 
 /* ✅ STYLES POUR LES CHAMPS DE DATE AVEC ICÔNE PERSONNALISÉE */
@@ -423,6 +424,66 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   border-color: var(--color-primary);
 }
 
+
+/* ============================================================================
+   SWITCH DANS UN FORMULAIRE - LAYOUT UNIFIÉ
+   Composant : .input-group-switch
+   Styles visuels du toggle : dans buttons.css (.switch-container / .switch-toggle)
+   À utiliser partout dans l'application (LoyerForm, ClientForm, etc.)
+   
+   Principe : .input-group-switch se comporte exactement comme .input-group
+   → dans une form-row il prend flex:1, s'aligne avec les champs voisins.
+   ============================================================================ */
+
+/* Même comportement que .input-group dans une form-row */
+.input-group-switch {
+  position: relative;
+  margin-bottom: 20px;
+  flex: 1;              /* ← s'aligne avec les input-group voisins */
+}
+
+/* Reproduit exactement la zone visuelle d'un input :
+   padding-top  = espace pour le label flottant (position absolute top:-12px)
+   padding-bot  = espace sous la valeur
+   border-bottom = ligne identique aux autres champs */
+.input-group-switch .switch-field-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 15px 0 10px 0;   /* même hauteur que les autres champs */
+  border: none;
+  border-bottom: 1px solid #ccc;
+  background-color: transparent;
+  box-sizing: border-box;
+  transition: border-color 0.3s;
+}
+
+/* Label — statique dans la zone, même style que les inputs au repos */
+.input-group-switch .switch-field-label {
+  font-size: 16px;
+  color: #999;
+  font-weight: normal;
+  user-select: none;
+  pointer-events: none;
+  flex: 1;              /* prend l'espace disponible, pousse le toggle à droite */
+}
+
+/* Masquer le <label> HTML auto-généré s'il est présent */
+.input-group-switch > label {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .input-group-switch {
+    margin-bottom: 15px;
+  }
+  .input-group-switch .switch-field-label {
+    font-size: 14px;
+  }
+}
 /* ✅ STYLES POUR LES CHECKBOXES */
 .checkbox-group {
   display: flex;

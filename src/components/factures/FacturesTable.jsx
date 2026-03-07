@@ -46,9 +46,25 @@ const FacturesTable = ({
 
             switch (sortConfig.key) {
                 case 'numeroFacture':
-                    // Tri numérique sur le numéro de facture
-                    aValue = parseInt(a.numeroFacture?.replace(/\D/g, '') || '0', 10);
-                    bValue = parseInt(b.numeroFacture?.replace(/\D/g, '') || '0', 10);
+                    // Tri par année puis numéro séquentiel (format: "001.2024")
+                    const partsA = a.numeroFacture?.split('.') || ['0', '0'];
+                    const partsB = b.numeroFacture?.split('.') || ['0', '0'];
+                    
+                    const numSeqA = parseInt(partsA[0]) || 0;  // 001
+                    const anneeA = parseInt(partsA[1]) || 0;   // 2024
+                    
+                    const numSeqB = parseInt(partsB[0]) || 0;
+                    const anneeB = parseInt(partsB[1]) || 0;
+                    
+                    // Comparer d'abord par année
+                    if (anneeA !== anneeB) {
+                        aValue = anneeA;
+                        bValue = anneeB;
+                    } else {
+                        // Si même année, comparer par numéro séquentiel
+                        aValue = numSeqA;
+                        bValue = numSeqB;
+                    }
                     break;
                 case 'client':
                     // Tri alphabétique sur le nom complet du client

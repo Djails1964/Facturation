@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { LogOut, Menu, User, BarChart2 } from 'react-feather'; // Supprimer Settings et Users, garder BarChart2
+import { LogOut, Menu, User, BarChart2 } from 'react-feather';
 import { Link, useNavigate } from 'react-router-dom';
+import logoImage from '../assets/Logo_Facturation_La_Grange_4.1_640.png';
 
 /**
  * Composant d'en-tête de l'application
@@ -52,7 +53,11 @@ function Header({ appName, appVersion, user, onLogout }) {
         {/* Logo et nom de l'application */}
         <div className="header-brand">
           <Link to="/" onClick={closeMenu}>
-            <h1>{appName}</h1>
+            <img 
+              src={logoImage}
+              alt="Logo Facturation" 
+              className="header-logo"
+            />
             {appVersion && <span className="app-version">v{appVersion}</span>}
           </Link>
         </div>

@@ -2,7 +2,7 @@
 // ✅ REFACTORISÉ : Utilise useTarifActions (autonome) et useClientActions
 // ✅ Ne crée plus de services en interne (délégué aux hooks d'actions)
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createLogger } from '../../../utils/createLogger';
 import { useTarifActions } from './useTarifActions';
 import { useClientActions } from '../../clients/hooks/useClientActions';
@@ -49,6 +49,32 @@ export const useTarifGestionState = () => {
   // ✅ MODIFIÉ : Utilisation des hooks d'actions autonomes
   const tarifActions = useTarifActions();
   const { chargerClients: chargerClientsApi } = useClientActions();
+
+  // ✅ NOUVEAU : Calculer les unités avec tarif à partir des tarifs déjà chargés
+  const unitesAvecTarif = useMemo(() => {
+    const map = new Map();
+    
+    console.log('📊 DEBUT calcul unitesAvecTarif');
+    console.log('📊 Tarifs disponibles:', tarifs?.length || 0);
+    console.log('📊 Tarifs spéciaux disponibles:', tarifsSpeciaux?.length || 0);
+    
+    // Ajouter les tarifs standards
+    if (Array.isArray(tarifs) && tarifs.length > 0) {
+      tarifs.forEach(tarif => {
+        console.log('🔍 Tarif:', tarif);  // LOG IMPORTANT
+        if (tarif.idService && tarif.idUnite) {
+          const key = `${tarif.idService}-${tarif.idUnite}`;
+          map.set(key, true);
+          console.log(`✅ Ajout: ${key}`);
+        }
+      });
+    }
+    
+    console.log('📊 Map finale taille:', map.size);
+    console.log('📊 Clés dans le Map:', Array.from(map.keys()));
+    
+    return map;
+  }, [tarifs, tarifsSpeciaux]);
 
   // ========================================
   // FONCTIONS DE CHARGEMENT REFACTORISÉES
@@ -381,6 +407,7 @@ export const useTarifGestionState = () => {
     setDefaultUnites,
     servicesUnites,
     setServicesUnites,
+    unitesAvecTarif,
     
     // Fonctions de chargement
     loadServices,

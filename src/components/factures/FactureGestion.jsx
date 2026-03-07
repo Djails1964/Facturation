@@ -115,17 +115,37 @@ function FactureGestion({
             // ✅ Appel unique pour récupérer toutes les données
             const result = await tarifActions.getDonneesInitiales();
             
+            // ✅ NOUVEAU : Charger aussi les tarifs standards
+            log.debug('📥 Chargement des tarifs standards...');
+            const tarifsStandards = await tarifActions.charger('tarif');
+            log.debug('✅ Tarifs standards chargés:', tarifsStandards?.length || 0);
+            
+            // ✅ NOUVEAU : Créer le Map des unités avec tarif
+            const unitesAvecTarif = new Map();
+            if (Array.isArray(tarifsStandards)) {
+                tarifsStandards.forEach(tarif => {
+                    if (tarif.idService && tarif.idUnite) {
+                        const key = `${tarif.idService}-${tarif.idUnite}`;
+                        unitesAvecTarif.set(key, true);
+                        log.debug(`✅ Tarif trouvé: Service ${tarif.idService} - Unité ${tarif.idUnite}`);
+                    }
+                });
+            }
+            log.debug('📊 unitesAvecTarif créé:', unitesAvecTarif.size, 'combinaisons service+unité');
+            
             if (result) {
                 log.debug('✅ Données de tarification chargées:', {
                     services: result.services?.length || 0,
                     unites: result.unites?.length || 0,
-                    typesTarifs: result.typesTarifs?.length || 0
+                    typesTarifs: result.typesTarifs?.length || 0,
+                    tarifsCombinations: unitesAvecTarif.size
                 });
                 
                 setTarifData({
                     services: result.services || [],
                     unites: result.unites || [],
                     typesTarifs: result.typesTarifs || [],
+                    unitesAvecTarif: unitesAvecTarif,  // ✅ AJOUTER
                     isLoaded: true,
                     isLoading: false,
                     error: null
@@ -262,6 +282,9 @@ function FactureGestion({
         isLoading: tarifData.isLoading,
         isLoaded: tarifData.isLoaded,
         error: tarifData.error,
+
+        // ✅ NOUVEAU : Map des unités avec tarif
+        unitesAvecTarif: tarifData.unitesAvecTarif || new Map(),
         
         // Fonctions d'accès
         getUnitesPourService,

@@ -45,11 +45,12 @@ export const useClientForm = (mode, idClient) => {
     prenom: '',
     rue: '',
     numero: '',
-    code_postal: '',
+    codePostal: '',
     localite: '',
     telephone: '',
     email: '',
-    estTherapeute: false
+    estTherapeute: false,
+    aLoyer: false
   });
 
   // ✅ États locaux pour le chargement initial et les erreurs de validation
@@ -82,11 +83,12 @@ export const useClientForm = (mode, idClient) => {
       prenom: client.prenom,
       rue: client.rue,
       numero: client.numero,
-      code_postal: client.code_postal,
+      codePostal: client.codePostal,
       localite: client.localite,
       telephone: client.telephone,
       email: client.email,
-      estTherapeute: client.estTherapeute
+      estTherapeute: client.estTherapeute,
+      aLoyer: client.aLoyer
     };
   }, [client]);
 
@@ -241,7 +243,7 @@ export const useClientForm = (mode, idClient) => {
   // CHARGEMENT DU CLIENT
   // ================================
 
-  const chargerClient = async (id) => {
+  const chargerClient = async (idClient) => {
     if (hasInitialized.current) {
       logger.debug('Client déjà initialisé, skip');
       return;
@@ -253,7 +255,7 @@ export const useClientForm = (mode, idClient) => {
       hasInitialized.current = true;
 
       // ✅ Utiliser getClient de useClientActions
-      const data = await getClient(id);
+      const data = await getClient(idClient);
 
       if (data) {
         // ✅ Utiliser normalizeClient du hook
@@ -271,11 +273,12 @@ export const useClientForm = (mode, idClient) => {
           prenom: normalizedClient.prenom || '',
           rue: normalizedClient.rue || '',
           numero: normalizedClient.numero || '',
-          code_postal: normalizedClient.code_postal || '',
+          codePostal: normalizedClient.codePostal || '',
           localite: normalizedClient.localite || '',
           telephone: normalizedClient.telephone || '',
           email: normalizedClient.email || '',
-          estTherapeute: normalizedClient.estTherapeute || false
+          estTherapeute: normalizedClient.estTherapeute || false,
+          aLoyer: normalizedClient.aLoyer || false
         };
 
         setInitialFormData(formData);
@@ -313,6 +316,12 @@ export const useClientForm = (mode, idClient) => {
   const toggleTherapeute = useCallback(() => {
     if (isReadOnly) return;
     setClient(prev => ({ ...prev, estTherapeute: !prev.estTherapeute }));
+  }, [isReadOnly]);
+
+  // ✅ NOUVEAU: Toggle loyer
+  const toggleLoyer = useCallback(() => {
+    if (isReadOnly) return;
+    setClient(prev => ({ ...prev, aLoyer: !prev.aLoyer }));
   }, [isReadOnly]);
 
   // ================================
@@ -406,6 +415,7 @@ export const useClientForm = (mode, idClient) => {
     // Fonctions
     handleChange,
     toggleTherapeute,
+    toggleLoyer,
     handleSubmit,
     setClient,
     setError: setLocalError,

@@ -256,7 +256,7 @@ export function useClientValidation(client) {
   const getValidationStats = useCallback(() => {
     const allValidation = validateAllFields();
     const totalFields = Object.keys(client).filter(key => 
-      ['titre', 'nom', 'prenom', 'rue', 'numero', 'code_postal', 'localite', 'telephone', 'email']
+      ['titre', 'nom', 'prenom', 'rue', 'numero', 'codePostal', 'localite', 'telephone', 'email']
       .includes(key)
     ).length;
     

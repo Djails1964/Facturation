@@ -31,11 +31,11 @@ export const useFactureFormActions = () => {
 
   /**
    * Charge une facture par son ID avec enrichissement complet
-   * @param {number} id - ID de la facture
+   * @param {number} idFacture - ID de la facture
    * @param {Object} setters - Fonctions de mise à jour d'état
    * @returns {Promise<Object>} Facture chargée et enrichie
    */
-  const chargerFacture = useCallback(async (id, setters) => {
+  const chargerFacture = useCallback(async (idFacture, setters) => {
     const { 
       setIsLoading = () => {}, 
       setError = () => {}, 
@@ -48,10 +48,10 @@ export const useFactureFormActions = () => {
       setIsLoading(true);
       setError(null);
 
-      log.debug('Chargement facture:', id);
+      log.debug('Chargement facture:', idFacture);
       
       // Charger la facture brute via useFactureActions
-      const factureData = await factureActions.chargerFacture(id);
+      const factureData = await factureActions.chargerFacture(idFacture);
 
       if (!factureData) {
         throw new Error('Aucune donnée de facture trouvée');

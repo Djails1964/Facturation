@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { FiFile, FiCalendar, FiCreditCard, FiDollarSign, FiClock } from 'react-icons/fi';
 import { useDateContext } from '../../../context/DateContext';
-import { getBadgeClasses, formatEtatText, formatDate, formatDateToYYYYMMDD } from '../../../utils/formatters';
+import { getBadgeClasses, formatEtatText } from '../../../utils/formatters';
+import DateService from '../../../utils/DateService'; 
 import { ValidationError } from '../../shared/forms/FormField'; // ✅ AJOUT: Import du composant d'erreur unifié
 import '../../../styles/components/factures/FactureHeader.css';
 
@@ -106,7 +107,7 @@ function FactureHeader({
     const callback = (dates) => {
       if (dates && dates.length > 0) {
         const selectedDate = dates[0];
-        const formattedDateForInput = formatDateToYYYYMMDD(selectedDate);
+        const formattedDateForInput = DateService.toInputFormat(selectedDate);
         
         if (onDateFactureChange) {
           onDateFactureChange(formattedDateForInput);
@@ -179,7 +180,7 @@ function FactureHeader({
           <div className={getDateFactureInputClass()}>
             {readOnly ? (
               <div className="facture-header-readonly-field">
-                {formatDate(dateFacture)}
+                {DateService.formatSingleDate(dateFacture)}
               </div>
             ) : (
               <>
@@ -254,8 +255,8 @@ function FactureHeader({
             {readOnly ? (
               <div className="facture-header-readonly-field">
                 {idClient ? (
-                  clients && clients.length > 0 && clients.find(c => String(c.id) === String(idClient))
-                    ? `${clients.find(c => String(c.id) === String(idClient)).nom} ${clients.find(c => String(c.id) === String(idClient)).prenom || ''}`
+                  clients && clients.length > 0 && clients.find(c => String(c.idClient) === String(idClient))
+                    ? `${clients.find(c => String(c.idClient) === String(idClient)).nom} ${clients.find(c => String(c.idClient) === String(idClient)).prenom || ''}`
                     : `Client ID: ${idClient}`
                 ) : "Aucun client sélectionné"}
               </div>
@@ -273,7 +274,7 @@ function FactureHeader({
               >
                 {mode === 'create' && <option value="">Sélectionnez un client</option>}
                 {clients.map(client => (
-                  <option key={client.id} value={client.id}>
+                  <option key={client.idClient} value={client.idClient}>
                     {client.nom} {client.prenom}
                   </option>
                 ))}

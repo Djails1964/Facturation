@@ -12,13 +12,13 @@ const logger = createLogger('clientHelpers');
  */
 export function getDefaultClient() {
   return {
-    id: '',
+    idClient: '',
     titre: '',
     nom: '',
     prenom: '',
     rue: '',
     numero: '',
-    code_postal: '',
+    codePostal: '',
     localite: '',
     telephone: '',
     email: '',
@@ -84,11 +84,12 @@ export function getFormData(client) {
     prenom: client.prenom || '',
     rue: client.rue || '',
     numero: client.numero || '',
-    code_postal: client.code_postal || '',
+    codePostal: client.codePostal || '',
     localite: client.localite || '',
     telephone: client.telephone || '',
     email: client.email || '',
-    estTherapeute: Boolean(client.estTherapeute)
+    estTherapeute: Boolean(client.estTherapeute),
+    aLoyer: Boolean(client.aLoyer)
   };
 }
 
@@ -102,7 +103,7 @@ export function hasValidFormData(client) {
     client.prenom && 
     client.rue && 
     client.numero && 
-    client.code_postal && 
+    client.codePostal && 
     client.localite
   );
 }
@@ -122,7 +123,7 @@ export function normalizeClientForAPI(client) {
     localite: (client.localite || '').trim(),
     
     // Nettoyer le code postal (garder seulement les chiffres)
-    code_postal: (client.code_postal || '').toString().replace(/\D/g, ''),
+    codePostal: (client.codePostal || '').toString().replace(/\D/g, ''),
     
     // Nettoyer le téléphone (supprimer espaces superflus)
     telephone: (client.telephone || '').replace(/\s+/g, ' ').trim(),
@@ -130,8 +131,9 @@ export function normalizeClientForAPI(client) {
     // Nettoyer l'email
     email: (client.email || '').trim().toLowerCase(),
     
-    // S'assurer que estTherapeute est un booléen
-    estTherapeute: Boolean(client.estTherapeute)
+    // S'assurer que estTherapeute et aLoyer sont des booléens
+    estTherapeute: Boolean(client.estTherapeute),
+    aLoyer: Boolean(client.aLoyer)
   };
 }
 
@@ -142,7 +144,7 @@ export function formatAdresseComplete(client) {
   const parts = [
     client.rue,
     client.numero,
-    client.code_postal,
+    client.codePostal,
     client.localite
   ].filter(part => part && part.toString().trim());
   
@@ -173,7 +175,7 @@ export function getClientInitials(client) {
  * Vérifier si un client est considéré comme "complet"
  */
 export function isClientComplete(client) {
-  const requiredFields = ['titre', 'nom', 'prenom', 'rue', 'numero', 'code_postal', 'localite'];
+  const requiredFields = ['titre', 'nom', 'prenom', 'rue', 'numero', 'codePostal', 'localite'];
   return requiredFields.every(field => client[field] && client[field].toString().trim());
 }
 
@@ -187,7 +189,7 @@ export function getMissingFields(client) {
     prenom: 'Prénom',
     rue: 'Rue',
     numero: 'Numéro',
-    code_postal: 'Code postal',
+    codePostal: 'Code postal',
     localite: 'Localité'
   };
   
@@ -216,7 +218,7 @@ export function hasClientChanges(clientA, clientB) {
   
   const fieldsToCompare = [
     'titre', 'nom', 'prenom', 'rue', 'numero', 
-    'code_postal', 'localite', 'telephone', 'email', 'estTherapeute'
+    'codePostal', 'localite', 'telephone', 'email', 'estTherapeute', 'aLoyer'
   ];
   
   return fieldsToCompare.some(field => {
@@ -240,12 +242,13 @@ export function getDisplayMode(isReadOnly, hasErrors) {
  */
 export function createClientSummary(client) {
   return {
-    id: client.id || 'nouveau',
+    idClient: client.idClient || 'nouveau',
     nom: formatNomComplet(client),
     email: client.email || 'non renseigné',
     telephone: client.telephone || 'non renseigné',
     adresse: formatAdresseComplete(client) || 'non renseignée',
     estTherapeute: Boolean(client.estTherapeute),
+    aLoyer: Boolean(client.aLoyer),
     isComplete: isClientComplete(client)
   };
 }

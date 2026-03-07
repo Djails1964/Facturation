@@ -1,5 +1,11 @@
 /**
- * Service utilitaire pour gérer les dates dans l'application - VERSION NETTOYÉE
+ * Service utilitaire pour gérer les dates dans l'application - VERSION MISE À JOUR
+ * 
+ * ✅ AJOUT: getYearFromDate() - Extraction de l'année d'une date
+ * ✅ NOTE: Certaines fonctions ont des équivalents dans formatters.js
+ *         - toInputFormat() ≈ formatDateToYYYYMMDD() dans formatters.js
+ *         - formatSingleDate() ≈ formatDate() dans formatters.js
+ *         Préférer les fonctions de formatters.js pour l'affichage UI
  */
 
 // ✅ IMPORTS DES CONSTANTES (seulement celles utilisées)
@@ -14,6 +20,141 @@ import {
 
 class DateService {
     
+    // ========================================
+    // ✅ NOUVELLES MÉTHODES D'EXTRACTION
+    // ========================================
+
+    /**
+     * ✅ NOUVEAU: Extrait l'année d'une date
+     * Supporte les formats: Date object, string YYYY-MM-DD, string ISO
+     * @param {Date|string} date - La date à analyser
+     * @returns {number|null} - L'année (ex: 2024) ou null si invalide
+     */
+    static getYearFromDate(date) {
+        if (!date) return null;
+        
+        // Cas 1: Objet Date
+        if (date instanceof Date) {
+            if (isNaN(date.getTime())) return null;
+            return date.getFullYear();
+        }
+        
+        // Cas 2: String
+        if (typeof date === 'string') {
+            // Format YYYY-MM-DD ou ISO
+            const parts = date.split(/[-T]/);
+            if (parts.length >= 1) {
+                const year = parseInt(parts[0], 10);
+                if (!isNaN(year) && year > 1900 && year < 2200) {
+                    return year;
+                }
+            }
+            
+            // Fallback: essayer de parser la date
+            try {
+                const parsedDate = new Date(date);
+                if (!isNaN(parsedDate.getTime())) {
+                    return parsedDate.getFullYear();
+                }
+            } catch (e) {
+                // Ignorer l'erreur
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * ✅ NOUVEAU: Extrait le mois d'une date (1-12)
+     * @param {Date|string} date - La date à analyser
+     * @returns {number|null} - Le mois (1-12) ou null si invalide
+     */
+    static getMonthFromDate(date) {
+        if (!date) return null;
+        
+        if (date instanceof Date) {
+            if (isNaN(date.getTime())) return null;
+            return date.getMonth() + 1; // getMonth() retourne 0-11
+        }
+        
+        if (typeof date === 'string') {
+            // Format YYYY-MM-DD
+            const match = date.match(/^\d{4}-(\d{2})/);
+            if (match) {
+                const month = parseInt(match[1], 10);
+                if (month >= 1 && month <= 12) {
+                    return month;
+                }
+            }
+            
+            // Fallback
+            try {
+                const parsedDate = new Date(date);
+                if (!isNaN(parsedDate.getTime())) {
+                    return parsedDate.getMonth() + 1;
+                }
+            } catch (e) {
+                // Ignorer
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * ✅ NOUVEAU: Extrait le jour d'une date (1-31)
+     * @param {Date|string} date - La date à analyser
+     * @returns {number|null} - Le jour (1-31) ou null si invalide
+     */
+    static getDayFromDate(date) {
+        if (!date) return null;
+        
+        if (date instanceof Date) {
+            if (isNaN(date.getTime())) return null;
+            return date.getDate();
+        }
+        
+        if (typeof date === 'string') {
+            // Format YYYY-MM-DD
+            const match = date.match(/^\d{4}-\d{2}-(\d{2})/);
+            if (match) {
+                const day = parseInt(match[1], 10);
+                if (day >= 1 && day <= 31) {
+                    return day;
+                }
+            }
+            
+            // Fallback
+            try {
+                const parsedDate = new Date(date);
+                if (!isNaN(parsedDate.getTime())) {
+                    return parsedDate.getDate();
+                }
+            } catch (e) {
+                // Ignorer
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * ✅ NOUVEAU: Extrait les composants d'une date (année, mois, jour)
+     * @param {Date|string} date - La date à analyser
+     * @returns {Object|null} - {year, month, day} ou null si invalide
+     */
+    static getDateComponents(date) {
+        const year = this.getYearFromDate(date);
+        const month = this.getMonthFromDate(date);
+        const day = this.getDayFromDate(date);
+        
+        if (year === null || month === null || day === null) {
+            return null;
+        }
+        
+        return { year, month, day };
+    }
+
     // ========================================
     // ✅ MÉTHODES PRINCIPALES (dédupliquées)
     // ========================================
@@ -341,8 +482,13 @@ class DateService {
 
     /**
      * Convertit une date en string au format YYYY-MM-DD (pour inputs HTML)
+     * 
+     * ⚠️ NOTE: Cette fonction a un équivalent dans formatters.js: formatDateToYYYYMMDD()
+     * Préférer formatDateToYYYYMMDD() pour la cohérence avec le reste de l'application.
+     * 
      * @param {Date|string} date - Date à convertir
      * @returns {string} - Date au format YYYY-MM-DD
+     * @see formatDateToYYYYMMDD dans formatters.js
      */
     static toInputFormat(date) {
         if (!date) return '';
@@ -400,9 +546,14 @@ class DateService {
 
     /**
      * Formate une date simple pour l'affichage (format français suisse)
+     * 
+     * ⚠️ NOTE: Cette fonction a un équivalent dans formatters.js: formatDate()
+     * Préférer formatDate() pour l'affichage UI standard.
+     * 
      * @param {Date|string} date - Date à formater
      * @param {string} format - Type de format ('date', 'datetime', 'short', 'compact')
      * @returns {string} - Date formatée
+     * @see formatDate dans formatters.js
      */
     static formatSingleDate(date, format = 'date') {
         if (!date) return '';
@@ -425,18 +576,26 @@ class DateService {
                         month: '2-digit',
                         year: 'numeric'
                     });
-                    
+
+                case 'time':
+                    return dateObj.toLocaleTimeString(LOCALES.PRIMARY, { 
+                               hour: '2-digit', 
+                               minute: '2-digit' 
+                    });
+
                 case 'datetime':
                     return dateObj.toLocaleDateString(LOCALES.PRIMARY) + ' ' + 
                            dateObj.toLocaleTimeString(LOCALES.PRIMARY, { 
                                hour: '2-digit', 
                                minute: '2-digit' 
-                           });
+                    });
+
                 case 'short':
                     return dateObj.toLocaleDateString(LOCALES.PRIMARY, {
                         day: '2-digit',
                         month: '2-digit'
                     });
+
                 case 'long':
                     return dateObj.toLocaleDateString(LOCALES.PRIMARY, {
                         weekday: 'long',
@@ -444,6 +603,7 @@ class DateService {
                         month: 'long',
                         day: 'numeric'
                     });
+                    
                 default:
                     return dateObj.toLocaleDateString(LOCALES.PRIMARY);
             }
@@ -472,6 +632,22 @@ class DateService {
     }
 
     /**
+     * ✅ NOUVEAU: Retourne l'année courante
+     * @returns {number} - Année courante (ex: 2024)
+     */
+    static getCurrentYear() {
+        return new Date().getFullYear();
+    }
+
+    /**
+     * ✅ NOUVEAU: Retourne le mois courant (1-12)
+     * @returns {number} - Mois courant
+     */
+    static getCurrentMonth() {
+        return new Date().getMonth() + 1;
+    }
+
+    /**
      * Vérifie si deux dates sont le même jour
      * @param {Date} date1 - Première date
      * @param {Date} date2 - Deuxième date
@@ -489,6 +665,39 @@ class DateService {
             date1.getMonth() === date2.getMonth() &&
             date1.getFullYear() === date2.getFullYear()
         );
+    }
+
+    /**
+     * ✅ NOUVEAU: Vérifie si deux dates sont dans la même année
+     * @param {Date|string} date1 - Première date
+     * @param {Date|string} date2 - Deuxième date
+     * @returns {boolean} - True si même année
+     */
+    static isSameYear(date1, date2) {
+        const year1 = this.getYearFromDate(date1);
+        const year2 = this.getYearFromDate(date2);
+        
+        if (year1 === null || year2 === null) return false;
+        return year1 === year2;
+    }
+
+    /**
+     * ✅ NOUVEAU: Vérifie si deux dates sont dans le même mois (et même année)
+     * @param {Date|string} date1 - Première date
+     * @param {Date|string} date2 - Deuxième date
+     * @returns {boolean} - True si même mois et même année
+     */
+    static isSameMonth(date1, date2) {
+        const year1 = this.getYearFromDate(date1);
+        const year2 = this.getYearFromDate(date2);
+        const month1 = this.getMonthFromDate(date1);
+        const month2 = this.getMonthFromDate(date2);
+        
+        if (year1 === null || year2 === null || month1 === null || month2 === null) {
+            return false;
+        }
+        
+        return year1 === year2 && month1 === month2;
     }
 
     /**
@@ -541,6 +750,44 @@ class DateService {
         try {
             const dateObj = typeof date === 'string' ? new Date(date) : new Date(date);
             dateObj.setDate(dateObj.getDate() + days);
+            return dateObj;
+        } catch (error) {
+            console.error(DATE_ERROR_MESSAGES.CONVERSION_ERROR, error);
+            return null;
+        }
+    }
+
+    /**
+     * ✅ NOUVEAU: Ajoute ou soustrait des mois à une date
+     * @param {Date|string} date - Date de base
+     * @param {number} months - Nombre de mois (positif ou négatif)
+     * @returns {Date|null} - Nouvelle date
+     */
+    static addMonths(date, months) {
+        if (!date || typeof months !== 'number') return null;
+        
+        try {
+            const dateObj = typeof date === 'string' ? new Date(date) : new Date(date);
+            dateObj.setMonth(dateObj.getMonth() + months);
+            return dateObj;
+        } catch (error) {
+            console.error(DATE_ERROR_MESSAGES.CONVERSION_ERROR, error);
+            return null;
+        }
+    }
+
+    /**
+     * ✅ NOUVEAU: Ajoute ou soustrait des années à une date
+     * @param {Date|string} date - Date de base
+     * @param {number} years - Nombre d'années (positif ou négatif)
+     * @returns {Date|null} - Nouvelle date
+     */
+    static addYears(date, years) {
+        if (!date || typeof years !== 'number') return null;
+        
+        try {
+            const dateObj = typeof date === 'string' ? new Date(date) : new Date(date);
+            dateObj.setFullYear(dateObj.getFullYear() + years);
             return dateObj;
         } catch (error) {
             console.error(DATE_ERROR_MESSAGES.CONVERSION_ERROR, error);

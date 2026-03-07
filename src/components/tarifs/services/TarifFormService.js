@@ -9,6 +9,16 @@ import DateService from '../../../utils/DateService';
 
 const log = createLogger("TarifFormService");
 
+/**
+ * ✅ NOUVEAU: Mapping entre FORM_TYPES et les types d'entités de tarifActions
+ */
+const FORM_TYPE_TO_ENTITY = {
+  [FORM_TYPES.SERVICE]: 'service',
+  [FORM_TYPES.UNITE]: 'unite',
+  [FORM_TYPES.TYPE_TARIF]: 'typeTarif',
+  [FORM_TYPES.TARIF]: 'tarif',
+  [FORM_TYPES.TARIF_SPECIAL]: 'tarifSpecial'
+};
 
 export class TarifFormService {
   
@@ -414,8 +424,15 @@ export class TarifFormService {
     }
   }
 
-  // Soumission des formulaires
-  static async submitForm(formType, formData, isEdit, itemId, tarificationService) {
+  /**
+   * Soumission des formulaires via tarifActions (méthodes génériques)
+   * @param {string} formType - Type de formulaire (FORM_TYPES.*)
+   * @param {Object} formData - Données du formulaire
+   * @param {boolean} isEdit - Mode édition ou création
+   * @param {number|string} itemId - ID de l'élément (pour édition)
+   * @param {Object} tarifActions - Hook tarifActions avec méthodes create/update
+   */
+  static async submitForm(formType, formData, isEdit, itemId, tarifActions) {
     
     // ✅ NETTOYAGE PRÉALABLE des dates vides avant envoi
     const cleanedFormData = TarifFormService.cleanFormDataDates(formData);
@@ -425,38 +442,39 @@ export class TarifFormService {
       originalData: formData,
       cleanedData: cleanedFormData,
       isEdit,
-      itemId
+      itemId,
+      hasTarifActions: !!tarifActions
     });
-    
-    switch (formType) {
-      case FORM_TYPES.SERVICE:
-        return isEdit 
-          ? await tarificationService.updateService(itemId, cleanedFormData)
-          : await tarificationService.createService(cleanedFormData);
-          
-      case FORM_TYPES.UNITE:
-        return isEdit
-          ? await tarificationService.updateUnite(itemId, cleanedFormData)
-          : await tarificationService.createUnite(cleanedFormData);
-          
-      case FORM_TYPES.TYPE_TARIF:
-        return isEdit
-          ? await tarificationService.updateTypeTarif(itemId, cleanedFormData)
-          : await tarificationService.createTypeTarif(cleanedFormData);
-          
-      case FORM_TYPES.TARIF:
-        return isEdit
-          ? await tarificationService.updateTarif(itemId, cleanedFormData)
-          : await tarificationService.createTarif(cleanedFormData);
-          
-      case FORM_TYPES.TARIF_SPECIAL:
-        return isEdit
-          ? await tarificationService.updateTarifSpecial(itemId, cleanedFormData)
-          : await tarificationService.createTarifSpecial(cleanedFormData);
-          
-      default:
-        throw new Error(`Type de formulaire non supporté: ${formType}`);
+
+    // ✅ VÉRIFICATION que tarifActions est bien défini
+    if (!tarifActions) {
+      throw new Error('tarifActions non défini - vérifier que gestionState.tarifActions est passé correctement');
     }
+    
+    // ✅ Obtenir le type d'entité pour les méthodes génériques
+    const entityType = FORM_TYPE_TO_ENTITY[formType];
+    if (!entityType) {
+      throw new Error(`Type de formulaire non supporté: ${formType}`);
+    }
+    
+    log.debug('📤 Utilisation tarifActions:', {
+      entityType,
+      method: isEdit ? 'update' : 'create'
+    });
+
+    try {
+      if (isEdit) {
+        // ✅ Utiliser tarifActions.update(type, id, data)
+        return await tarifActions.update(entityType, itemId, cleanedFormData);
+      } else {
+        // ✅ Utiliser tarifActions.create(type, data)
+        return await tarifActions.create(entityType, cleanedFormData);
+      }
+    } catch (error) {
+      log.error('❌ Erreur submitForm:', error);
+      throw error;
+    }
+
   }
 
   /**
@@ -501,49 +519,52 @@ export class TarifFormService {
     return cleaned;
   }
 
-  // Suppression d'éléments
-  static async deleteItem(formType, itemId, tarificationService) {
-    switch (formType) {
-      case FORM_TYPES.SERVICE:
-        return await tarificationService.deleteService(itemId);
-      case FORM_TYPES.UNITE:
-        return await tarificationService.deleteUnite(itemId);
-      case FORM_TYPES.TYPE_TARIF:
-        return await tarificationService.deleteTypeTarif(itemId);
-      case FORM_TYPES.TARIF:
-        return await tarificationService.deleteTarif(itemId);
-      case FORM_TYPES.TARIF_SPECIAL:
-        return await tarificationService.deleteTarifSpecial(itemId);
-      default:
-        throw new Error(`Type de suppression non supporté: ${formType}`);
+  /**
+   * Suppression d'éléments via tarifActions
+   * @param {string} formType - Type de formulaire
+   * @param {number|string} itemId - ID de l'élément
+   * @param {Object} tarifActions - Hook tarifActions
+   */
+  static async deleteItem(formType, itemId, tarifActions) {
+    // ✅ VÉRIFICATION que tarifActions est bien défini
+    if (!tarifActions) {
+      throw new Error('tarifActions non défini - vérifier que gestionState.tarifActions est passé correctement');
     }
+    
+    const entityType = FORM_TYPE_TO_ENTITY[formType];
+    if (!entityType) {
+      throw new Error(`Type de suppression non supporté: ${formType}`);
+    }
+    
+    log.debug('🗑️ Suppression via tarifActions.delete:', { entityType, itemId });
+    
+    // ✅ Utiliser tarifActions.delete(type, id)
+    return await tarifActions.delete(entityType, itemId);
   }
+  
 
-  // Vérification d'utilisation
-  static async checkItemUsage(formType, itemId, tarificationService) {
+  /**
+   * ✅ CORRIGÉ: Vérification d'utilisation via tarifActions
+   * @param {string} formType - Type de formulaire
+   * @param {number|string} itemId - ID de l'élément
+   * @param {Object} tarifActions - Hook tarifActions
+   */
+  static async checkItemUsage(formType, itemId, tarifActions) {
     try {
-      let result;
-      log.debug("checkItemUsage - serviceId = ", itemId);
-      
-      switch (formType) {
-        case FORM_TYPES.SERVICE:
-          result = await tarificationService.checkServiceUsage(itemId);
-          break;
-        case FORM_TYPES.UNITE:
-          result = await tarificationService.checkUniteUsage(itemId);
-          break;
-        case FORM_TYPES.TYPE_TARIF:
-          result = await tarificationService.checkTypeTarifUsage(itemId);
-          break;
-        case FORM_TYPES.TARIF:
-          result = await tarificationService.checkTarifUsage(itemId);
-          break;
-        case FORM_TYPES.TARIF_SPECIAL:
-          result = await tarificationService.checkTarifSpecialUsage(itemId);
-          break;
-        default:
-          return { success: true, used: false, message: 'Type non supporté' };
+      // ✅ VÉRIFICATION que tarifActions est bien défini
+      if (!tarifActions) {
+        throw new Error('tarifActions non défini');
       }
+      
+      const entityType = FORM_TYPE_TO_ENTITY[formType];
+      if (!entityType) {
+        return { success: true, used: false, message: 'Type non supporté' };
+      }
+      
+      log.debug("checkItemUsage - entityType = ", entityType, ", itemId = ", itemId);
+      
+      // ✅ Utiliser tarifActions.checkUsage(type, id)
+      const result = await tarifActions.checkUsage(entityType, itemId);
       
       log.debug(`🔍 Résultat brut de checkUsage pour ${formType}:`, result);
       
@@ -552,30 +573,34 @@ export class TarifFormService {
         success: true,
         used: false,
         message: '',
+        count: 0,
         details: null
       };
       
       if (result) {
-        // Format 1: { success: false, message: "...utilisé..." }
+        // Format 1: { success: false, message: "...utilisé..." } - Erreur API
         if (result.success === false) {
           normalizedResult.success = false;
           normalizedResult.used = true;
           normalizedResult.message = result.message || 'Élément utilisé';
         }
-        // Format 2: { success: true, used: true }
-        else if (result.used === true || result.isUsed === true || result.inUse === true) {
-          normalizedResult.used = true;
-          normalizedResult.message = result.message || 'Élément utilisé';
+        // Format 2: { success: true, isUsed: true/false } - Format standard de l'API
+        else if (result.isUsed !== undefined) {
+          normalizedResult.used = result.isUsed === true;
+          normalizedResult.count = result.count || 0;
+          normalizedResult.message = result.message || '';
         }
-        // Format 3: Analyse du message d'erreur
-        else if (result.message && typeof result.message === 'string') {
-          const message = result.message.toLowerCase();
-          if (message.includes('utilisé') || message.includes('référencé') || 
-              message.includes('facture') || message.includes('tarif') ||
-              message.includes('impossible')) {
-            normalizedResult.used = true;
-            normalizedResult.message = result.message;
-          }
+        // Format 3: { success: true, used: true/false }
+        else if (result.used !== undefined) {
+          normalizedResult.used = result.used === true;
+          normalizedResult.count = result.count || 0;
+          normalizedResult.message = result.message || '';
+        }
+        // Format 4: { success: true, inUse: true/false }
+        else if (result.inUse !== undefined) {
+          normalizedResult.used = result.inUse === true;
+          normalizedResult.count = result.count || 0;
+          normalizedResult.message = result.message || '';
         }
         
         // Copier les détails si présents
@@ -615,26 +640,97 @@ export class TarifFormService {
     }
   }
 
+
   // Rafraîchissement des données
-  static async refreshDataAfterSave(formType, gestionState) {
-    log.debug(`🔄 Rafraîchissement données ${formType}...`);
+  // ✅ AMÉLIORÉ: Prend en compte les effets de cascade et les dépendances entre entités
+  static async refreshDataAfterSave(formType, gestionState, isDelete = false) {
+    log.debug(`🔄 Rafraîchissement données ${formType}... (isDelete: ${isDelete})`);
+    
+    // ✅ CRITIQUE: Vider le cache AVANT de recharger pour obtenir les données fraîches
+    if (gestionState.tarifActions?.clearCache) {
+      log.debug('Vidage du cache avant rechargement...');
+      gestionState.tarifActions.clearCache();
+    }
     
     switch (formType) {
       case FORM_TYPES.SERVICE:
         await gestionState.loadServices();
+        if (isDelete) {
+          // Cascade: tarifs et tarifs spéciaux supprimés
+          await gestionState.loadTarifs();
+          await gestionState.loadTarifsSpeciaux();
+          await gestionState.loadAllServicesUnites();
+        }
         break;
+        
       case FORM_TYPES.UNITE:
         await gestionState.loadUnites();
+        // ✅ AJOUT: Toujours recharger les liaisons services-unités
+        // Car une nouvelle unité peut être associée à un service
+        await gestionState.loadAllServicesUnites();
+        if (isDelete) {
+          // Cascade: tarifs et tarifs spéciaux supprimés
+          await gestionState.loadTarifs();
+          await gestionState.loadTarifsSpeciaux();
+        }
         break;
+        
       case FORM_TYPES.TYPE_TARIF:
         await gestionState.loadTypesTarifs();
         break;
+        
       case FORM_TYPES.TARIF:
         await gestionState.loadTarifs();
         break;
+        
       case FORM_TYPES.TARIF_SPECIAL:
         await gestionState.loadTarifsSpeciaux();
         break;
+        
+      default:
+        // Par sécurité, recharger toutes les données
+        log.warn(`Type inconnu ${formType}, rechargement complet`);
+        await gestionState.loadAllData();
+    }
+  }
+
+  /**
+   * ✅ NOUVEAU: Rafraîchit toutes les données dépendantes pour les formulaires de tarifs
+   * À appeler quand on ouvre un formulaire de création/édition de tarif
+   * pour s'assurer que les listes déroulantes sont à jour
+   */
+  static async refreshDependenciesForTarifForm(gestionState) {
+    log.debug('🔄 Rafraîchissement des dépendances pour formulaire tarif...');
+    
+    try {
+      await Promise.all([
+        gestionState.loadServices(),
+        gestionState.loadUnites(),
+        gestionState.loadTypesTarifs(),
+        gestionState.loadAllServicesUnites()
+      ]);
+      log.debug('✅ Dépendances rafraîchies avec succès');
+    } catch (error) {
+      log.error('❌ Erreur rafraîchissement dépendances:', error);
+    }
+  }
+
+  /**
+   * ✅ NOUVEAU: Rafraîchit les données nécessaires pour les formulaires de tarifs spéciaux
+   */
+  static async refreshDependenciesForTarifSpecialForm(gestionState) {
+    log.debug('🔄 Rafraîchissement des dépendances pour formulaire tarif spécial...');
+    
+    try {
+      await Promise.all([
+        gestionState.loadServices(),
+        gestionState.loadUnites(),
+        gestionState.loadClients(),
+        gestionState.loadAllServicesUnites()
+      ]);
+      log.debug('✅ Dépendances rafraîchies avec succès');
+    } catch (error) {
+      log.error('❌ Erreur rafraîchissement dépendances:', error);
     }
   }
 

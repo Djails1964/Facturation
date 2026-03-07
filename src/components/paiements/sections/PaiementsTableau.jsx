@@ -1,14 +1,25 @@
-// src/components/paiements/PaiementsTableau.jsx
-// ✅ VERSION REFACTORISÉE utilisant usePaiementActions et createLogger
+// src/components/paiements/sections/PaiementsTableau.jsx
 
 import React from 'react';
 import { FiEye, FiEdit, FiX } from 'react-icons/fi';
-import { formatMontant, formatDate, getBadgeClasses, formatEtatText } from '../../../utils/formatters';
-import { usePaiementActions } from '../hooks/usePaiementActions'; // ✅ NOUVEAU
-import { createLogger } from '../../../utils/createLogger'; // ✅ NOUVEAU
 
-const log = createLogger('PaiementsTableau'); // ✅ NOUVEAU
+import UnifiedTable from '../../shared/tables/UnifiedTable';
+import { formatMontant, getBadgeClasses, formatEtatText } from '../../../utils/formatters';
+import DateService from '../../../utils/DateService';
+import { createLogger } from '../../../utils/createLogger';
+import { MOIS_ANNEE } from '../../../constants/loyerConstants';
+import '../../../styles/components/paiements/PaiementsTableau.css';
 
+const log = createLogger('PaiementsTableau');
+
+const nomMois = (numero) => {
+    const m = MOIS_ANNEE.find(m => m.numero === parseInt(numero));
+    return m ? m.nom : numero;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Composant principal
+// ─────────────────────────────────────────────────────────────────────────────
 function PaiementsTableau({
     paiements,
     paiementSelectionne,
@@ -18,140 +29,108 @@ function PaiementsTableau({
     onAnnulerPaiement,
     isLoading,
     error,
-    isProcessing
+    isProcessing,
 }) {
-    if (isLoading) {
-        log.debug('Chargement des paiements...');
-        return <div className="loading">Chargement des paiements...</div>;
-    }
-
-    if (error) {
-        log.error('Erreur:', error);
-        return <div className="error-message">{error}</div>;
-    }
-
-    if (paiements.length === 0) {
-        log.debug('Aucun paiement trouvé');
-        return (
-            <div className="no-data">
-                <p>Aucun paiement trouvé.</p>
-            </div>
-        );
-    }
-
-    log.debug(`Affichage de ${paiements.length} paiements`);
-
-    return (
-        <div className="paiements-table-container">
-            <div className="paiements-table">
-                {/* Header avec structure flexbox comme avant */}
-                <div className="paiements-table-header">
-                    <div className="table-cell">N° Paiement</div>
-                    <div className="table-cell">Date</div>
-                    <div className="table-cell">Client</div>
-                    <div className="table-cell">Montant</div>
-                    <div className="table-cell">Méthode</div>
-                    <div className="table-cell">Statut</div>
-                    <div className="table-cell">Actions</div>
-                </div>
-
-                {/* Body avec structure flexbox comme avant */}
-                <div className="paiements-table-body">
-                    {paiements.map(paiement => (
-                        <PaiementLigne
-                            key={paiement.idPaiement}
-                            paiement={paiement}
-                            isSelected={paiementSelectionne === paiement.idPaiement}
-                            onSelect={() => onSelectPaiement(paiement.idPaiement)}
-                            onAfficher={() => onAfficherPaiement(paiement.idPaiement)}
-                            onModifier={() => onModifierPaiement(paiement.idPaiement)}
-                            onAnnuler={() => onAnnulerPaiement(paiement)}
-                            isProcessing={isProcessing}
-                        />
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function PaiementLigne({
-    paiement,
-    isSelected,
-    onSelect,
-    onAfficher,
-    onModifier,
-    onAnnuler,
-    isProcessing
-}) {
-    const isAnnule = paiement.statut === 'annule';
-
-    // ✅ UTILISATION DE usePaiementActions POUR FORMATER LA MÉTHODE
-    const paiementActions = usePaiementActions();
-    const methodeFormatee = paiementActions.formatMethodePaiement(paiement.methodePaiement);
-
-    return (
-        <div 
-            className={`
-                table-row
-                ${isSelected ? 'selected' : ''} 
-                ${isAnnule ? 'paiement-annule' : ''}
-            `}
-            onClick={onSelect}
-        >
-            <div className="table-cell">{paiement.numeroPaiement}</div>
-            <div className="table-cell">{formatDate(paiement.datePaiement)}</div>
-            <div className="table-cell">{paiement.nomClient}</div>
-            <div className="table-cell">{formatMontant(paiement.montantPaye)}</div>
-            {/* ✅ AFFICHAGE DU LABEL FORMATÉ AU LIEU DE LA VALEUR BRUTE */}
-            <div className="table-cell">{methodeFormatee}</div>
-            <div className="table-cell">
-                <span className={getBadgeClasses(paiement.statut)}>
-                    {formatEtatText(paiement.statut)}
+    // ── Déclaration des colonnes ─────────────────────────────────────────────
+    // column.render(item) est appelé par UnifiedTable pour chaque cellule.
+    // UnifiedTable applique lui-même flex, minWidth, maxWidth et justifyContent.
+    // On n'écrit aucun style inline ici.
+    const columns = [
+        {
+            key:      'numero',
+            label:    'Numéro',
+            flex:     '0 0 90px',
+            minWidth: '90px',
+            maxWidth: '90px',
+            render:   (p) => p.numeroPaiement,
+        },
+        {
+            key:      'date',
+            label:    'Date de paiement',
+            flex:     '0 0 10%',
+            minWidth: '90px',
+            render:   (p) => DateService.formatSingleDate(p.datePaiement),
+        },
+        {
+            key:      'client',
+            label:    'Client',
+            flex:     '1',
+            minWidth: '130px',
+            align:    'left',
+            render:   (p) => p.nomClient,
+        },
+        {
+            key:      'montant',
+            label:    'Montant payé',
+            flex:     '0 0 12%',
+            minWidth: '110px',
+            align:    'right',
+            render:   (p) => (
+                <strong>{formatMontant(parseFloat(p.montantPaye || 0))} CHF</strong>
+            ),
+        },
+        {
+            key:      'statut',
+            label:    'Statut',
+            flex:     '0 0 10%',
+            minWidth: '90px',
+            align:    'center',
+            render:   (p) => (
+                <span className={getBadgeClasses(p.statut)}>
+                    {formatEtatText(p.statut)}
                 </span>
-            </div>
-            <div className="table-cell lf-actions-cell">
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onAfficher();
-                    }}
-                    className="bouton-action"
-                    title="Voir le paiement"
-                >
-                    <FiEye className="action-view-icon" />
-                </button>
-                
-                {!isAnnule && (
+            ),
+        },
+        {
+            key:       'actions',
+            label:     '',
+            flex:      '0 0 130px',
+            minWidth:  '130px',
+            maxWidth:  '130px',
+            className: 'actions-cell',
+            render:    (p) => {
+                const isAnnule = p.statut === 'annule';
+                return (
                     <>
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onModifier();
-                            }}
-                            className="bouton-action"
-                            title="Modifier le paiement"
-                        >
-                            <FiEdit className="action-edit-icon" />
+                        <button className="bouton-action" title="Voir"
+                            onClick={(e) => { e.stopPropagation(); onAfficherPaiement(p.idPaiement); }}>
+                            <FiEye className="action-view-icon" />
                         </button>
-                        
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onAnnuler();
-                            }}
-                            className={`bouton-action ${isProcessing ? 'bouton-desactive' : ''}`}
-                            title="Annuler le paiement"
-                            disabled={isProcessing}
-                        >
-                            <FiX className="action-cancel-icon" />
-                        </button>
+                        {!isAnnule && <>
+                            <button className="bouton-action" title="Modifier"
+                                onClick={(e) => { e.stopPropagation(); onModifierPaiement(p.idPaiement); }}>
+                                <FiEdit className="action-edit-icon" />
+                            </button>
+                            <button
+                                className={`bouton-action${isProcessing ? ' bouton-desactive' : ''}`}
+                                title="Annuler" disabled={isProcessing}
+                                onClick={(e) => { e.stopPropagation(); onAnnulerPaiement(p); }}>
+                                <FiX className="action-cancel-icon" />
+                            </button>
+                        </>}
                     </>
-                )}
-            </div>
-        </div>
+                );
+            },
+        },
+    ];
+
+    // renderRow délégué à UnifiedTable (pas de sous-lignes ventilation)
+
+    log.debug(`Affichage de ${paiements?.length ?? 0} paiements`);
+
+    return (
+        <UnifiedTable
+            columns={columns}
+            data={paiements}
+            selectedId={paiementSelectionne}
+            onRowClick={(p) => onSelectPaiement(p.idPaiement)}
+            isLoading={isLoading}
+            error={error}
+            emptyMessage="Aucun paiement trouvé."
+            getRowId={(p) => p.idPaiement}
+        />
     );
 }
+
 
 export default PaiementsTableau;
-export { PaiementLigne };

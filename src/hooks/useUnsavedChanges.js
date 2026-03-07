@@ -1,6 +1,7 @@
 // src/hooks/useUnsavedChanges.js - Version avec modal système unifié
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { showConfirm } from '../utils/modalSystem';
+import { createLogger } from '../utils/createLogger';
 
 /**
  * Hook personnalisé pour détecter les modifications non sauvegardées
@@ -12,6 +13,9 @@ export const useUnsavedChanges = (
   isSaving = false,
   hasJustSaved = false
 ) => {
+
+  const log = createLogger('useUnsavedChanges');
+
   // États
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   // ✅ SUPPRIMÉ : Plus besoin de showUnsavedModal car on utilise le modal system
@@ -82,7 +86,7 @@ export const useUnsavedChanges = (
       Object.keys(initialData).length > 0;
 
     if (shouldInitialize) {
-      console.log('🔧 Initialisation données useUnsavedChanges:', {
+      log.debug('🔧 Initialisation données useUnsavedChanges:', {
         initialData,
         isEmpty: isEmptyFormData(initialData),
         keys: Object.keys(initialData)
@@ -96,7 +100,7 @@ export const useUnsavedChanges = (
 
   // Détecter les changements seulement après initialisation
   useEffect(() => {
-    console.log('🔍 useUnsavedChanges effect déclenché:', {
+    log.debug('🔍 useUnsavedChanges effect déclenché:', {
       isInitialized: isInitialized.current,
       isSaving,
       currentDataKeys: Object.keys(currentData),
@@ -104,7 +108,7 @@ export const useUnsavedChanges = (
     });
 
     if (!isInitialized.current || isSaving || !currentData) {
-      console.log('🚫 Détection bloquée - conditions non remplies');
+      log.debug('🚫 Détection bloquée - conditions non remplies');
       return;
     }
 
@@ -141,7 +145,7 @@ export const useUnsavedChanges = (
           })) || []
         };
 
-        console.log('📊 Comparaison lignes facture:', {
+        log.debug('📊 Comparaison lignes facture:', {
           currentLignes: currentFiltered.lignes,
           savedLignes: savedFiltered.lignes,
           equal: deepCompare(currentFiltered.lignes, savedFiltered.lignes)
@@ -153,7 +157,7 @@ export const useUnsavedChanges = (
         hasChanges = !deepCompare(lastSavedData.current, currentData);
       }
       
-      console.log('🔍 useUnsavedChanges - Détection de modifications:', {
+      log.debug('🔍 useUnsavedChanges - Détection de modifications:', {
         hasChanges,
         lastSaved: lastSavedData.current,
         current: currentData,
@@ -188,14 +192,14 @@ export const useUnsavedChanges = (
     if (currentData) {
       lastSavedData.current = { ...currentData };
       setHasUnsavedChanges(false);
-      console.log('✅ Marqué comme sauvegardé');
+      log.debug('✅ Marqué comme sauvegardé');
     }
   }, [currentDataString]);
 
   // ✅ NOUVEAU : Utilise le modal system unifié au lieu d'un état local
   const requestNavigation = useCallback((navigationFn) => {
     if (hasUnsavedChanges && !isSaving) {
-      console.log('🎭 MODAL UNIFIÉE - Affichage modal pour modifications non sauvegardées');
+      log.debug('🎭 MODAL UNIFIÉE - Affichage modal pour modifications non sauvegardées');
       
       const modalConfig = {
         title: "Modifications non sauvegardées",
@@ -209,26 +213,26 @@ export const useUnsavedChanges = (
       showConfirm(modalConfig)
         .then((result) => {
           if (result.action === 'confirm') {
-            console.log('✅ MODAL UNIFIÉE - Navigation confirmée par l\'utilisateur');
-            console.log('🚀 MODAL UNIFIÉE - Exécution du callback de navigation');
+            log.debug('✅ MODAL UNIFIÉE - Navigation confirmée par l\'utilisateur');
+            log.debug('🚀 MODAL UNIFIÉE - Exécution du callback de navigation');
             
             // ✅ CORRECTIF : Vérifier et exécuter le callback
             if (typeof navigationFn === 'function') {
               try {
                 navigationFn();
-                console.log('✅ MODAL UNIFIÉE - Callback de navigation exécuté avec succès');
+                log.debug('✅ MODAL UNIFIÉE - Callback de navigation exécuté avec succès');
               } catch (error) {
-                console.error('❌ MODAL UNIFIÉE - Erreur lors de l\'exécution du callback:', error);
+                log.error('❌ MODAL UNIFIÉE - Erreur lors de l\'exécution du callback:', error);
               }
             } else {
-              console.error('❌ MODAL UNIFIÉE - navigationFn n\'est pas une fonction:', typeof navigationFn);
+              log.error('❌ MODAL UNIFIÉE - navigationFn n\'est pas une fonction:', typeof navigationFn);
             }
           } else {
-            console.log('❌ MODAL UNIFIÉE - Navigation annulée par l\'utilisateur');
+            log.debug('❌ MODAL UNIFIÉE - Navigation annulée par l\'utilisateur');
           }
         })
         .catch((error) => {
-          console.error('❌ Erreur dans la modal unifiée:', error);
+          log.error('❌ Erreur dans la modal unifiée:', error);
         });
         
       return false; // Bloquer la navigation
@@ -239,18 +243,18 @@ export const useUnsavedChanges = (
   // ✅ SIMPLIFIÉES : Plus besoin de ces fonctions avec le modal system
   const confirmNavigation = useCallback(() => {
     // Cette fonction n'est plus utilisée avec le modal system
-    console.log('⚠️ confirmNavigation appelé - mais utilise le modal system maintenant');
+    log.debug('⚠️ confirmNavigation appelé - mais utilise le modal system maintenant');
   }, []);
 
   const cancelNavigation = useCallback(() => {
     // Cette fonction n'est plus utilisée avec le modal system
-    console.log('⚠️ cancelNavigation appelé - mais utilise le modal system maintenant');
+    log.debug('⚠️ cancelNavigation appelé - mais utilise le modal system maintenant');
   }, []);
 
   const resetChanges = useCallback(() => {
     setHasUnsavedChanges(false);
     setPendingNavigation(null);
-    console.log('🔄 Reset des changements');
+    log.debug('🔄 Reset des changements');
   }, []);
 
   return {

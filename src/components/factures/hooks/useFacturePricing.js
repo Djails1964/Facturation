@@ -301,7 +301,7 @@ export function useFacturePricing(
 
                     // CALCUL DU PRIX
                     const nouveauPrix = await calculerPrixPourClient({
-                        idClient: client.id,
+                        idClient: client.idClient,
                         idService: ids.idService,
                         idUnite: ids.idUnite,
                         forceRecalcul: shouldForceRecalcul
@@ -384,7 +384,7 @@ export function useFacturePricing(
         }
 
         return await calculerPrixPourClient({
-            idClient: client.id,
+            idClient: client.idClient,
             idService: service.idService,
             idUnite: unite.idUnite
         });
@@ -395,7 +395,7 @@ export function useFacturePricing(
      */
     const isPrixCalculating = useCallback((idService, idUnite) => {
         if (!client) return false;
-        const cacheKey = `${client.id}-${idService}-${idUnite}`;
+        const cacheKey = `${client.idClient}-${idService}-${idUnite}`;
         return calculationPromises.current.has(cacheKey);
     }, [client]);
 
@@ -419,7 +419,7 @@ export function useFacturePricing(
      */
     const clearCacheForServiceUnite = useCallback((idService, idUnite) => {
         if (!client) return;
-        const cacheKey = `${client.id}-${idService}-${idUnite}`;
+        const cacheKey = `${client.idClient}-${idService}-${idUnite}`;
         clearCache(cacheKey);
     }, [client, clearCache]);
 
@@ -469,13 +469,13 @@ export function useFacturePricing(
      * EFFET SIMPLIFIÉ pour changement de client
      */
     useEffect(() => {
-        if (client?.id !== lastCalculation.idClient) {
+        if (client?.idClient !== lastCalculation.idClient) {
             clearCache();
             
             if (lastCalculation.idClient) { // Pas la première initialisation
                 log.debug('Changement de client détecté:', {
                     ancien: lastCalculation.idClient,
-                    nouveau: client?.id
+                    nouveau: client?.idClient
                 });
                 
                 setTimeout(() => {
@@ -484,11 +484,11 @@ export function useFacturePricing(
             }
             
             setLastCalculation({ 
-                idClient: client?.id, 
+                idClient: client?.idClient, 
                 timestamp: Date.now() 
             });
         }
-    }, [client?.id, lastCalculation.idClient, clearCache, recalculerPrixChangementClient]);
+    }, [client?.idClient, lastCalculation.idClient, clearCache, recalculerPrixChangementClient]);
 
     /**
      * Effet pour déclencher le calcul automatique des prix manquants
@@ -515,7 +515,7 @@ export function useFacturePricing(
         }, 300);
 
         return () => clearTimeout(timer);
-    }, [client?.id, lignes?.length, lignes, tarifActions]);
+    }, [client?.idClient, lignes?.length, lignes, tarifActions]);
 
     /**
      * Nettoyage lors du démontage

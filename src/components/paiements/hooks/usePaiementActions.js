@@ -46,18 +46,18 @@ export const usePaiementActions = () => {
 
   /**
    * Récupère un paiement spécifique par son ID
-   * @param {number} id - ID du paiement
+   * @param {number} idPaiement - ID du paiement
    * @returns {Promise<Object|null>} Données du paiement
    */
-  const getPaiement = useCallback(async (id) => {
+  const getPaiement = useCallback(async (idPaiement) => {
     return await executeApi(
       async () => {
-        log.debug('📥 Récupération du paiement:', id);
-        const result = await paiementService.getPaiement(id);
+        log.debug('📥 Récupération du paiement:', idPaiement);
+        const result = await paiementService.getPaiement(idPaiement);
         if (result) {
           log.debug('✅ Paiement récupéré:', result.numeroPaiement);
         } else {
-          log.warn('⚠️ Paiement non trouvé:', id);
+          log.warn('⚠️ Paiement non trouvé:', idPaiement);
         }
         return result;
       },
@@ -135,6 +135,33 @@ export const usePaiementActions = () => {
   }, [paiementService, executeApi, log]);
 
   /**
+   * Récupère les paiements libres (non attribués à une facture ni à un loyer) d'un client
+   * @param {number} idClient - ID du client
+   * @returns {Promise<Array>} Liste des paiements libres
+   */
+  const getPaiementsLibresParClient = useCallback(async (idClient) => {
+    return await executeApi(
+      async () => {
+        log.debug('📥 Récupération des paiements libres pour le client:', idClient);
+        const result = await paiementService.chargerPaiements({
+          idClient,
+          libre:  true,
+          statut: 'confirme',
+          limit:  50,
+        });
+        const paiements = result?.paiements || [];
+        log.debug(`✅ ${paiements.length} paiements libres trouvés`);
+        return paiements;
+      },
+      null,
+      (error) => {
+        log.error('❌ Erreur récupération paiements libres:', error);
+        return [];
+      }
+    );
+  }, [paiementService, executeApi, log]);
+
+  /**
    * Récupère les paiements pour une période donnée
    * @param {number} annee - Année
    * @param {number|null} mois - Mois (optionnel)
@@ -152,6 +179,28 @@ export const usePaiementActions = () => {
       null,
       (error) => {
         log.error('❌ Erreur récupération paiements période:', error);
+        throw error;
+      }
+    );
+  }, [paiementService, executeApi, log]);
+
+  /**
+   * Récupère la ventilation d'un paiement libre
+   * (liste des attributions sur loyers ou factures depuis ce paiement source)
+   * @param {number} idPaiement - ID du paiement libre source
+   * @returns {Promise<Object>} {success, ventilation: Array, montant_original, montant_paye, montant_attribue, solde_disponible}
+   */
+  const getVentilation = useCallback(async (idPaiement) => {
+    return await executeApi(
+      async () => {
+        log.debug('📊 Récupération ventilation du paiement:', idPaiement);
+        const result = await paiementService.getVentilation(idPaiement);
+        log.debug(`✅ Ventilation récupérée: ${result?.ventilation?.length ?? 0} attribution(s)`);
+        return result;
+      },
+      null,
+      (error) => {
+        log.error('❌ Erreur récupération ventilation:', error);
         throw error;
       }
     );
@@ -205,15 +254,15 @@ export const usePaiementActions = () => {
 
   /**
    * Met à jour un paiement existant
-   * @param {number} id - ID du paiement
+   * @param {number} idPaiement - ID du paiement
    * @param {Object} paiementData - Nouvelles données
    * @returns {Promise<Object>} Résultat de l'opération
    */
-  const modifierPaiement = useCallback(async (id, paiementData) => {
+  const modifierPaiement = useCallback(async (idPaiement, paiementData) => {
     return await executeApi(
       async () => {
-        log.debug('🔄 Modification du paiement:', id);
-        const result = await paiementService.updatePaiement(id, paiementData);
+        log.debug('🔄 Modification du paiement:', idPaiement);
+        const result = await paiementService.updatePaiement(idPaiement, paiementData);
         log.debug('✅ Paiement modifié');
         return result;
       },
@@ -227,14 +276,14 @@ export const usePaiementActions = () => {
 
   /**
    * Supprime un paiement
-   * @param {number} id - ID du paiement
+   * @param {number} idPaiement - ID du paiement
    * @returns {Promise<Object>} Résultat de l'opération
    */
-  const supprimerPaiement = useCallback(async (id) => {
+  const supprimerPaiement = useCallback(async (idPaiement) => {
     return await executeApi(
       async () => {
-        log.debug('🗑️ Suppression du paiement:', id);
-        const result = await paiementService.deletePaiement(id);
+        log.debug('🗑️ Suppression du paiement:', idPaiement);
+        const result = await paiementService.deletePaiement(idPaiement);
         log.debug('✅ Paiement supprimé');
         return result;
       },
@@ -248,15 +297,15 @@ export const usePaiementActions = () => {
 
   /**
    * Annule un paiement
-   * @param {number} id - ID du paiement
+   * @param {number} idPaiement - ID du paiement
    * @param {string} motifAnnulation - Motif de l'annulation
    * @returns {Promise<Object>} Résultat de l'opération
    */
-  const annulerPaiement = useCallback(async (id, motifAnnulation) => {
+  const annulerPaiement = useCallback(async (idPaiement, motifAnnulation) => {
     return await executeApi(
       async () => {
-        log.debug('🚫 Annulation du paiement:', id);
-        const result = await paiementService.cancelPaiement(id, motifAnnulation);
+        log.debug('🚫 Annulation du paiement:', idPaiement);
+        const result = await paiementService.cancelPaiement(idPaiement, motifAnnulation);
         log.debug('✅ Paiement annulé');
         return result;
       },
@@ -270,14 +319,14 @@ export const usePaiementActions = () => {
 
   /**
    * Restaure un paiement annulé
-   * @param {number} id - ID du paiement
+   * @param {number} idPaiement - ID du paiement
    * @returns {Promise<Object>} Résultat de l'opération
    */
-  const restaurerPaiement = useCallback(async (id) => {
+  const restaurerPaiement = useCallback(async (idPaiement) => {
     return await executeApi(
       async () => {
-        log.debug('♻️ Restauration du paiement:', id);
-        const result = await paiementService.restaurerPaiement(id);
+        log.debug('♻️ Restauration du paiement:', idPaiement);
+        const result = await paiementService.restaurerPaiement(idPaiement);
         log.debug('✅ Paiement restauré');
         return result;
       },
@@ -418,7 +467,9 @@ export const usePaiementActions = () => {
     getPaiementsParFacture,
     getPaiementsParMethode,
     getPaiementsParClient,
+    getPaiementsLibresParClient,
     getPaiementsParPeriode,
+    getVentilation,
     rechercherPaiements,
     
     // CRUD

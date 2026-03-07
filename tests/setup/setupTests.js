@@ -210,7 +210,7 @@ global.createTestClient = (overrides = {}) => ({
   prenom: 'Jean',
   rue: 'Rue de Test',
   numero: '10',
-  code_postal: 1000,
+  codePostal: 1000,
   localite: 'TestVille',
   telephone: '+41 79 000 00 00',
   email: 'jean.dupont@test.com',

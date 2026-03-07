@@ -243,9 +243,109 @@
     background-color: #f8d7da;
 }
 
+
+/* Conteneur de l'icône composite */
+.cl-rental-icon {
+  display: inline-flex;
+  position: relative;
+  margin-left: 8px;
+  vertical-align: middle;
+  width: 20px;
+  height: 20px;
+  cursor: help;
+}
+
+/* Icône de maison (arrière-plan) - Style Fi bordeaux */
+.cl-rental-icon .rental-icon-home {
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: #800000;  /* Bordeaux uniforme */
+  stroke-width: 2;  /* Traits fins style Fi */
+}
+
+/* Icône de clé (premier plan) - Style Fi bordeaux */
+.cl-rental-icon .rental-icon-key {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-45deg);  /* Rotation pour effet clé */
+  color: #800000;  /* Même bordeaux */
+  stroke-width: 2.5;  /* Légèrement plus épais pour visibilité */
+  filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.8));  /* Halo blanc pour contraste */
+}
+
+/* Tooltip au hover */
+.cl-rental-icon::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(128, 0, 0, 0.9);  /* Bordeaux semi-transparent */
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  margin-bottom: 5px;
+  z-index: 10;
+}
+
+.cl-rental-icon:hover::after {
+  opacity: 1;
+}
+
+/* Animation subtile au hover */
+.cl-rental-icon:hover .rental-icon-key {
+  animation: subtle-wiggle 0.3s ease-in-out;
+}
+
+@keyframes subtle-wiggle {
+  0%, 100% { transform: translate(-50%, -50%) rotate(-45deg); }
+  50% { transform: translate(-50%, -50%) rotate(-40deg); }
+}
+
+/* ============================================================
+   ClientsListe — Couleurs RentalIcon selon état paiement loyer
+   À intégrer dans styles/components/clients/ClientsListe.css
+   ============================================================ */
+
+/* État payé — vert */
+.cl-rental-icon.rental-etat-paye .rental-icon-home,
+.cl-rental-icon.rental-etat-paye .rental-icon-key {
+    color: var(--badge-payee-text, #155724);
+}
+
+/* État partiellement payé — violet */
+.cl-rental-icon.rental-etat-partiel .rental-icon-home,
+.cl-rental-icon.rental-etat-partiel .rental-icon-key {
+    color: var(--badge-partiellement-payee-text, #4B0082);
+}
+
+/* État non payé — jaune/orange */
+.cl-rental-icon.rental-etat-non-paye .rental-icon-home,
+.cl-rental-icon.rental-etat-non-paye .rental-icon-key {
+    color: var(--badge-attente-text, #856404);
+}
+
 /* Ajout aux styles existants - Bouton flottant pour l'ajout d'un nouveau client */
 /* ------ styles définis dans FacturationPage.css ------- */
 
+/* ============================================================================
+   RESPONSIVE
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  .cl-rental-icon {
+    width: 18px;
+    height: 18px;
+    margin-left: 6px;
+  }
+}
 
 /* Responsive design */
 @media (max-width: 768px) {

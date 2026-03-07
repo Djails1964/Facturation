@@ -336,8 +336,8 @@
 /* ========== BOUTON FLOTTANT ========== */
 .floating-button {
   position: fixed;
-  bottom: 30px;
-  right: 50px;
+  bottom: 60px;
+  right: 90px;
   width: 60px;
   height: 60px;
   border-radius: var(--border-radius-circle);
@@ -401,6 +401,148 @@
 .facture-preview-button:active {
   background-color: #d0d0d0;
 }
+
+/* ============================================================================
+   SWITCHES / TOGGLES - COMPOSANT PUR
+   ============================================================================
+   Composant switch réutilisable sans contexte de layout
+   À utiliser dans buttons.css
+   ============================================================================ */
+
+/* Conteneur du switch toggle
+   Géométrie : 44×24px — cercle 18px — marge 3px de chaque côté */
+.switch-container {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+/* Input checkbox caché */
+.switch-input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+/* Le switch toggle lui-même */
+.switch-toggle {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: background-color 0.3s ease;
+  border-radius: 24px;
+}
+
+/* Le cercle dans le switch — 18px, marge 3px → reste dans les 24px */
+.switch-toggle::before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: transform 0.3s ease;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+/* ============================================================================
+   ÉTATS ACTIVÉS - SPÉCIFICITÉ MAXIMALE
+   ============================================================================ */
+
+/* Switch activé : fond bordeaux - HAUTE SPÉCIFICITÉ */
+.input-group-switch .switch-input:checked + .switch-toggle,
+.switch-field .switch-input:checked + .switch-toggle,
+input.switch-input:checked + label.switch-toggle,
+.switch-input:checked + .switch-toggle {
+  background-color: #800000 !important;
+}
+
+/* Switch activé : cercle déplacé - HAUTE SPÉCIFICITÉ */
+.input-group-switch .switch-input:checked + .switch-toggle::before,
+.switch-field .switch-input:checked + .switch-toggle::before,
+input.switch-input:checked + label.switch-toggle::before,
+.switch-input:checked + .switch-toggle::before {
+  transform: translateX(20px) !important;
+}
+
+/* ============================================================================
+   ÉTATS DÉSACTIVÉS
+   ============================================================================ */
+
+/* Switch désactivé (readOnly) */
+.switch-input:disabled + .switch-toggle {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #e0e0e0;
+}
+
+.switch-input:disabled:checked + .switch-toggle {
+  background-color: #999;
+}
+
+/* ============================================================================
+   FOCUS ET HOVER
+   ============================================================================ */
+
+/* Focus accessibilité */
+.switch-input:focus + .switch-toggle {
+  outline: 2px solid rgba(128, 0, 32, 0.3);
+  outline-offset: 2px;
+}
+
+/* Hover sur le switch */
+.switch-container:hover .switch-toggle:not(:disabled) {
+  box-shadow: 0 0 0 3px rgba(128, 0, 32, 0.1);
+}
+
+/* ============================================================================
+   VARIANTES DE TAILLE
+   ============================================================================ */
+
+/* Switch compact (40px × 20px) */
+.switch-container.switch-sm {
+  width: 36px;
+  height: 20px;
+}
+
+.switch-container.switch-sm .switch-toggle::before {
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+}
+
+.switch-container.switch-sm .switch-input:checked + .switch-toggle::before {
+  transform: translateX(16px) !important;
+}
+
+/* Switch large (60px × 28px) */
+.switch-container.switch-lg {
+  width: 56px;
+  height: 30px;
+}
+
+.switch-container.switch-lg .switch-toggle::before {
+  height: 22px;
+  width: 22px;
+  left: 4px;
+  bottom: 4px;
+}
+
+.switch-container.switch-lg .switch-input:checked + .switch-toggle::before {
+  transform: translateX(26px) !important;
+}
+
+
 
 /* ========== RESPONSIVE ========== */
 @media (max-width: 768px) {

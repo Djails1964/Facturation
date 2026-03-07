@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { SECTION_TITLES, LOADING_MESSAGES } from '../../../constants/paiementConstants';
-import { formatDate } from '../../../utils/formatters';
+import DateService from '../../../utils/DateService';
 
 const PaiementFormSystemInfoSection = ({ logsInfo, paiement, logsLoading }) => {
     
@@ -18,7 +18,7 @@ const PaiementFormSystemInfoSection = ({ logsInfo, paiement, logsLoading }) => {
         const { userName, date, details } = logEntry;
         
         const userInfo = userName || 'Utilisateur inconnu';
-        const dateInfo = date ? formatDate(date, 'datetime') : '';
+        const dateInfo = date ? DateService.formatSingleDate(date) : '';
         
         return `${userInfo} le ${dateInfo}${details && details.length > 0 ? 
             ' - ' + details.map(change => 
@@ -74,7 +74,7 @@ const PaiementFormSystemInfoSection = ({ logsInfo, paiement, logsLoading }) => {
                     <div className="input-group">
                         <input
                             type="text"
-                            value={formatDate(paiement.dateCreation, 'datetime')}
+                            value={DateService.formatSingleDate(paiement.dateCreation, 'datetime')}
                             readOnly
                             placeholder=" "
                         />
@@ -88,7 +88,7 @@ const PaiementFormSystemInfoSection = ({ logsInfo, paiement, logsLoading }) => {
                     <div className="input-group">
                         <input
                             type="text"
-                            value={formatDate(paiement.dateModification, 'datetime')}
+                            value={DateService.formatSingleDate(paiement.dateModification, 'datetime')}
                             readOnly
                             placeholder=" "
                         />

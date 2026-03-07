@@ -2,11 +2,12 @@
 /**
  * Composant affichant le tableau des factures récentes
  * ✅ Modulaire et réutilisable
- * ✅ Utilise les formatters centralisés
+ * ✅ Utilise DateService pour le formatage des dates
  */
 
 import React, { useMemo } from 'react';
-import { formatMontant, formatDate, getBadgeClasses } from '../../../utils/formatters';
+import { formatMontant, getBadgeClasses } from '../../../utils/formatters';
+import DateService from '../../../utils/DateService';
 import { getEtatBadgeClass } from '../helpers/dashboardHelpers';
 import '../../../styles/components/dashboard/DashboardRecentInvoices.css';
 
@@ -23,7 +24,8 @@ function InvoiceTableRow({ facture, onViewFacture }) {
   return (
     <tr>
       <td className="numero-col">{facture.numeroFacture}</td>
-      <td className="date-col">{formatDate(facture.dateFacture)}</td>
+      {/* ✅ Utilisation de DateService.formatSingleDate au lieu de formatDate */}
+      <td className="date-col">{DateService.formatSingleDate(facture.dateFacture)}</td>
       <td className="client-col">{clientName}</td>
       <td className="montant-col text-right">{formatMontant(facture.montantTotal)} CHF</td>
       <td className="etat-col">
@@ -34,7 +36,7 @@ function InvoiceTableRow({ facture, onViewFacture }) {
       <td className="action-col">
         <button
           className="btn-view-facture"
-          onClick={() => onViewFacture && onViewFacture(facture.idFacture)}
+          onClick={() => onViewFacture && onViewFacture(facture.id)}
           title="Voir la facture"
         >
           Voir

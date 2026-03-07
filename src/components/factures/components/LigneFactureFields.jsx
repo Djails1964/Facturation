@@ -389,7 +389,7 @@ function ServiceTypeSelect({
         if (serviceObj.idUniteDefaut) {
              log.debug('🔍 Recherche unité par défaut via idUniteDefaut:', serviceObj.idUniteDefaut);
             const uniteDefaut = unites.find(u => 
-                u && (u.idUnite === serviceObj.idUniteDefaut || u.id === serviceObj.idUniteDefaut)
+                u && (u.idUnite === serviceObj.idUniteDefaut || u.idUnite === serviceObj.idUniteDefaut)
             );
             
             if (uniteDefaut) {
@@ -562,7 +562,7 @@ function UniteSelect({
             
              log.debug('✅ Unité mise à jour:', {
                 code: uniteObj.codeUnite || uniteObj.code,
-                id: uniteObj.idUnite,
+                idUnite: uniteObj.idUnite,
                 nom: uniteObj.nomUnite || uniteObj.nom
             });
         } else {

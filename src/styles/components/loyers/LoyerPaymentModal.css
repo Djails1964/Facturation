@@ -1,0 +1,447 @@
+/*
+ * LoyerPaymentModal.css
+ * Styles de la modal de saisie des paiements de loyer.
+ *
+ * CE FICHIER ne redéfinit PAS ce qui existe déjà :
+ *   - Couleurs/espacements  → variables.css  (--color-*, --spacing-*, --border-radius-*, etc.)
+ *   - Feedback messages     → .modal-error/.modal-success (modals.css) inspirent les modificateurs
+ *   - Bouton valider        → .btn-success (buttons.css) surchargé uniquement pour la taille compacte
+ *   - Tokens badges         → --badge-* et --color-*-bg/text/border (variables.css)
+ *
+ * Préfixe BEM : .lpm-  (Loyer Payment Modal)
+ */
+
+/* ============================================================
+   EN-TÊTE RÉCAPITULATIF DU LOYER
+   Extension de .details-container (modals.css) avec grille 3 colonnes
+   ============================================================ */
+
+.lpm-header {
+  /* Base visuelle identique à .details-container */
+  background-color: #f9f9f9;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  /* Extension spécifique : mise en page grille */
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-sm) var(--spacing-lg);
+}
+
+.lpm-header__field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Reprend visuellement .info-label (modals.css) */
+.lpm-header__label {
+  font-size: 11px;
+  color: var(--color-text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+/* Reprend visuellement .info-value (modals.css) */
+.lpm-header__value {
+  font-size: 14px;
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.lpm-header__value--normal {
+  font-size: 13px;
+  font-weight: normal;
+  color: var(--color-text);
+}
+
+/* Modificateurs sémantiques — couleurs depuis variables.css */
+.lpm-header__value--solde   { color: var(--color-success-text); }
+.lpm-header__value--encours { color: #e67e22; }
+.lpm-montant--ok            { color: var(--color-success-text); }
+.lpm-montant--restant       { color: var(--color-error-text); }
+
+/* ============================================================
+   TITRE DE SECTION
+   ============================================================ */
+
+.lpm-section-title {
+  margin: 0 0 var(--spacing-sm) 0;
+  font-size: 13px;
+  color: var(--color-text-light);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ============================================================
+   WRAPPER DU TABLEAU
+   ============================================================ */
+
+.lpm-table-wrapper {
+  overflow-x: auto;
+  max-height: 380px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-sm);
+}
+
+/* ============================================================
+   TABLEAU DES MOIS
+   ============================================================ */
+
+.lpm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.lpm-table thead th {
+  padding: 9px 10px;
+  background-color: var(--color-secondary);
+  border-bottom: 2px solid var(--color-border);
+  font-weight: 600;
+  color: var(--color-text);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.lpm-table thead th.lpm-th--right  { text-align: right; }
+.lpm-table thead th.lpm-th--center { text-align: center; }
+
+.lpm-td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: middle;
+  color: var(--color-text);
+}
+
+/* Modificateurs de cellules */
+.lpm-td--right  { text-align: right; }
+.lpm-td--center { text-align: center; }
+.lpm-td--muted  { color: var(--color-text-light); font-size: 12px; }
+
+/* Largeurs minimales pour les colonnes avec champs inline */
+.lpm-td--date    { min-width: 100px; max-width: 120px; }
+.lpm-td--montant { min-width: 105px; }
+.lpm-td--methode { min-width: 105px; }
+.lpm-td--action  { min-width: 90px; text-align: center; }
+
+/* Colonne Mois : assez large pour tenir sur une seule ligne (ex: "Septembre 2025") */
+.lpm-table tbody td:first-child,
+.lpm-table thead th:first-child { min-width: 110px; white-space: nowrap; }
+
+/* États des lignes */
+.lpm-row--paye   { background-color: #f8fff9; }
+.lpm-row--partiel { background-color: #f0f4ff; }
+.lpm-row--impaye {
+  background-color: var(--color-background);
+  transition: background-color var(--transition-speed) var(--transition-ease);
+}
+.lpm-row--impaye:hover { background-color: #fffbf0; }
+
+/* ============================================================
+   BADGES DE STATUT DES MOIS
+   Toutes les couleurs viennent des tokens de variables.css —
+   aucune valeur codée en dur.
+   ============================================================ */
+
+.lpm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--badge-border-radius);
+  font-size: var(--badge-font-size);
+  font-weight: var(--badge-font-weight);
+  white-space: nowrap;
+}
+
+.lpm-badge--paye {
+  background-color: var(--color-success-bg);
+  color: var(--color-success-text);
+  border: 1px solid var(--color-success-border);
+}
+
+.lpm-badge--attente {
+  background-color: var(--badge-attente-bg);
+  color: var(--badge-attente-text);
+  border: 1px solid var(--badge-attente-border);
+}
+
+.lpm-badge--partiel {
+  background-color: var(--color-info-bg);
+  color: var(--color-info-text);
+  border: 1px solid var(--color-info-border);
+}
+
+/* ============================================================
+   CHAMP DATE NATIF DANS LES CELLULES
+   .input-group.date-input de forms.css réutilisé tel quel.
+   Ajustements pour usage dans une cellule de tableau :
+   - margin-bottom supprimé (prévu pour les formulaires)
+   - padding-top réduit (le label flottant n'est pas utilisé ici,
+     l'en-tête de colonne joue ce rôle)
+   ============================================================ */
+
+.lpm-td--date .input-group.date-input {
+  margin-bottom: 0;
+}
+
+.lpm-td--date .input-group.date-input input[type="date"] {
+  padding-top: 6px;
+  padding-bottom: 6px;
+  font-size: 12px;
+}
+
+/* ============================================================
+   CHAMPS INLINE (date / montant / méthode)
+   Style compact pour l'usage dans les cellules de tableau.
+   Différent des .input-group de forms.css (labels flottants,
+   border-bottom only, font-size 16px).
+   ============================================================ */
+
+.lpm-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--color-text);
+  background-color: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-sm);
+  outline: none;
+  transition: border-color var(--transition-speed) var(--transition-ease);
+}
+
+.lpm-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(128, 0, 0, 0.1);
+}
+
+.lpm-input:disabled {
+  background-color: var(--color-secondary);
+  color: var(--color-text-light);
+  cursor: not-allowed;
+}
+
+/* Suppression des flèches sur number — même règle que dans forms.css */
+.lpm-input[type="number"]::-webkit-outer-spin-button,
+.lpm-input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.lpm-input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* ============================================================
+   BOUTON VALIDER
+   Reprend .btn-success (buttons.css) à l'identique,
+   surcharge uniquement padding/font-size pour usage compact.
+   ============================================================ */
+
+.lpm-btn-valider {
+  /* Même fond/comportement que .btn-success */
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  transition: background-color var(--transition-speed) var(--transition-ease);
+  white-space: nowrap;
+  /* Taille compacte (vs padding: 10px 20px dans .btn-success) */
+  padding: 5px 12px;
+  font-size: 12px;
+}
+
+.lpm-btn-valider:hover:not(:disabled) {
+  background-color: #218838;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* Identique à .btn-success:disabled (buttons.css) */
+.lpm-btn-valider:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ============================================================
+   FEEDBACK INLINE
+   Les 4 variantes reprennent les mêmes tokens que
+   .modal-error/.modal-success (modals.css) + variables.css.
+   Une classe de base + 4 modificateurs sémantiques.
+   ============================================================ */
+
+.lpm-feedback {
+  margin-top: var(--spacing-sm);
+  min-height: 28px;
+}
+
+.lpm-feedback__msg {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-sm);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Variantes sémantiques — à activer si besoin :
+   .lpm-feedback__msg--success { background: var(--color-success-bg); color: var(--color-success-text); border: 1px solid var(--color-success-border); }
+   .lpm-feedback__msg--error   { background: var(--color-error-bg);   color: var(--color-error-text);   border: 1px solid var(--color-error-border);   }
+   .lpm-feedback__msg--warning { background: var(--color-warning-bg); color: var(--color-warning-text); border: 1px solid var(--color-warning-border); }
+   .lpm-feedback__msg--info    { background: var(--color-info-bg);    color: var(--color-info-text);    border: 1px solid var(--color-info-border);    }
+*/
+
+/* ============================================================
+   MODAL "DÉJÀ SOLDÉ"
+   ============================================================ */
+
+.lpm-deja-paye {
+  text-align: center;
+  padding: var(--spacing-md) 0;
+}
+
+.lpm-deja-paye__icon {
+  font-size: 42px;
+  margin-bottom: var(--spacing-md);
+  line-height: 1;
+}
+
+.lpm-deja-paye__titre {
+  margin: 0 0 var(--spacing-sm) 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.lpm-deja-paye__info {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-light);
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 768px) {
+  .lpm-header {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .lpm-table-wrapper {
+    max-height: none;
+  }
+  /* Ajouter lpm-th--hide-mobile / lpm-td--hide-mobile sur les colonnes à masquer sur mobile */
+  .lpm-th--hide-mobile,
+  .lpm-td--hide-mobile {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .lpm-header {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
+   ACCESSIBILITÉ
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .lpm-row--impaye,
+  .lpm-input,
+  .lpm-btn-valider {
+    transition: none;
+  }
+}
+
+@media (prefers-contrast: high) {
+  .lpm-input:focus {
+    outline: 3px solid var(--color-primary);
+    box-shadow: none;
+  }
+  .lpm-badge {
+    border-width: 2px;
+  }
+}
+
+/* ============================================================
+   PRINT
+   ============================================================ */
+
+@media print {
+  .lpm-td--action,
+  .lpm-table thead th:last-child,
+  .lpm-feedback,
+  .lpm-btn-valider {
+    display: none;
+  }
+}
+
+/* ============================================================
+   SECTION PAIEMENTS LIBRES
+   ============================================================ */
+
+.lpm-libres-section {
+  margin-bottom: 16px;
+  border: 1px solid var(--color-info, #0288d1);
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+}
+
+.lpm-section-title--libres {
+  background-color: var(--color-info-light, #e1f5fe);
+  color: var(--color-info-dark, #01579b);
+  border-bottom: 1px solid var(--color-info, #0288d1);
+  padding: 8px 12px;
+  margin: 0;
+}
+
+.lpm-row--libre {
+  background-color: #f0f8ff;
+}
+
+.lpm-row--libre:hover {
+  background-color: #dbeeff;
+}
+
+.lpm-btn-attribuer {
+  padding: 4px 10px;
+  font-size: 12px;
+  border: 1px solid var(--color-info, #0288d1);
+  border-radius: var(--border-radius-sm);
+  background-color: #fff;
+  color: var(--color-info-dark, #01579b);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--transition-speed) var(--transition-ease);
+}
+
+.lpm-btn-attribuer:hover {
+  background-color: var(--color-info-light, #e1f5fe);
+}
+
+.lpm-btn-attribuer:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Message d'avertissement surplus dans la popup d'attribution */
+.lpm-surplus-info {
+  margin-top: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  border: 1px solid var(--color-warning-border);
+  border-radius: var(--border-radius-sm);
+}

@@ -14,7 +14,7 @@ const FactureActions = ({
     onSetNotification
 }) => {
     // ✅ CORRECTION: Extraction robuste de l'ID
-    const id = facture.idFacture || facture.id;
+    const idFacture = facture.idFacture || facture.id;
     const { etat } = facture;
     
     // État pour gérer le tooltip
@@ -92,10 +92,10 @@ const FactureActions = ({
                     onMouseLeave={handleMouseLeave}
                     onClick={(e) => {
                         e.stopPropagation();
-                        console.log('🔍 CLICK AFFICHER - ID passé à onAfficherFacture:', id);
-                        console.log('🔍 CLICK AFFICHER - Type ID:', typeof id);
+                        console.log('🔍 CLICK AFFICHER - ID passé à onAfficherFacture:', idFacture);
+                        console.log('🔍 CLICK AFFICHER - Type ID:', typeof idFacture);
                         console.log('🔍 CLICK AFFICHER - Objet facture complet:', facture);
-                        onAfficherFacture(id);
+                        onAfficherFacture(idFacture);
                     }}
                 >
                     <FiEye size={16} color="#800000" />
@@ -112,7 +112,7 @@ const FactureActions = ({
                     onClick={(e) => {
                         e.stopPropagation();
                         if (canModify) {
-                            onModifierFacture(id);
+                            onModifierFacture(idFacture);
                         } else {
                             onSetNotification('Seules les factures en attente et éditée peuvent être modifiées', 'error');
                         }
@@ -132,7 +132,7 @@ const FactureActions = ({
                     onClick={(e) => {
                         e.stopPropagation();
                         if (canPrint) {
-                            onImprimerFacture(id, e);
+                            onImprimerFacture(idFacture, e);
                         } else {
                             onSetNotification('Seules les factures en attente et éditée peuvent être imprimées', 'error');
                         }
@@ -150,7 +150,7 @@ const FactureActions = ({
                     onMouseLeave={handleMouseLeave}
                     onClick={(e) => {
                         e.stopPropagation();
-                        onCopierFacture(id, e);
+                        onCopierFacture(idFacture, e);
                     }}
                 >
                     <FiCopy size={16} color="#800020" />
@@ -170,7 +170,7 @@ const FactureActions = ({
                             onSetNotification('Seules les factures éditées peuvent être envoyées par email', 'error');
                             return;
                         }
-                        onEnvoyerFacture(id, e);
+                        onEnvoyerFacture(idFacture, e);
                     }}
                 >
                     <FiMail size={16} color={canSendEmail ? "#800020" : "#ccc"} />
@@ -190,7 +190,7 @@ const FactureActions = ({
                             onSetNotification('Seules les factures envoyées, en retard ou partiellement payées peuvent être payées', 'error');
                             return;
                         }
-                        onPayerFacture(id, e);
+                        onPayerFacture(idFacture, e);
                     }}
                 >
                     <FiDollarSign size={16} color={canPay ? "#800020" : "#ccc"} />
@@ -218,7 +218,7 @@ const FactureActions = ({
                             onSetNotification('Cette facture ne peut pas être supprimée ou annulée', 'error');
                             return;
                         }
-                        onSupprimerFacture(id);
+                        onSupprimerFacture(idFacture);
                     }}
                 >
                     <FiTrash2 size={16} color={(canDelete || canCancel) ? "#800020" : "#ccc"} />

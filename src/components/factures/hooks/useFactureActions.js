@@ -74,17 +74,43 @@ export const useFactureActions = () => {
   }, [factureService, executeApi, log]);
 
   /**
-   * Charge une facture par son ID (données brutes sans enrichissement tarification)
-   * @param {number} id - ID de la facture
-   * @returns {Promise<Object>} Facture brute depuis l'API
+   * Charge toutes les factures d'un client spécifique
+   * ✅ OPTIMISÉ : Appel API dédié (filtrage server-side)
+   * @param {number} idClient - ID du client
+   * @returns {Promise<Array>} Factures du client avec états calculés
    */
-  const chargerFacture = useCallback(async (id) => {
+  const chargerFacturesClient = useCallback(async (idClient) => {
     return await executeApi(
       async () => {
-        log.debug('📥 Chargement facture:', id);
-        const factureData = await factureService.getFacture(id);
+        log.debug(`📥 Chargement factures client #${idClient}...`);
+        
+        // ✅ OPTIMISÉ : Endpoint dédié avec snake_case → camelCase automatique
+        const facturesClient = await factureService.getFacturesClient(idClient);
+        
+        log.debug(`✅ ${facturesClient?.length || 0} factures chargées pour le client #${idClient}`);
+        return facturesClient || [];
+      },
+      null,
+      (error) => {
+        log.error(`❌ Erreur factures client #${idClient}:`, error);
+        throw error;
+      }
+    );
+  }, [factureService, executeApi, log]);
+
+  /**
+   * Charge une facture par son ID (données brutes sans enrichissement tarification)
+   * @param {number} idFacture - ID de la facture
+   * @returns {Promise<Object>} Facture brute depuis l'API
+   */
+  const chargerFacture = useCallback(async (idFacture) => {
+    return await executeApi(
+      async () => {
+        log.debug('📥 Chargement facture:', idFacture);
+        const factureData = await factureService.getFacture(idFacture);
         
         log.debug("✅ Facture chargée:", factureData?.numeroFacture);
+        log.debug("📊 Données brutes de la facture:", factureData);
 
         if (!factureData) {
           throw new Error('Aucune donnée de facture trouvée');
@@ -187,15 +213,15 @@ export const useFactureActions = () => {
 
   /**
    * Met à jour une facture existante
-   * @param {number} id - ID de la facture
+   * @param {number} idFacture - ID de la facture
    * @param {Object} factureData - Nouvelles données
    * @returns {Promise<Object>} Facture mise à jour
    */
-  const modifierFacture = useCallback(async (id, factureData) => {
+  const modifierFacture = useCallback(async (idFacture, factureData) => {
     return await executeApi(
       async () => {
-        log.debug('🔄 Modification facture:', id);
-        const result = await factureService.updateFacture(id, factureData);
+        log.debug('🔄 Modification facture:', idFacture);
+        const result = await factureService.updateFacture(idFacture, factureData);
         log.debug('✅ Facture modifiée:', result);
         return result;
       },
@@ -209,14 +235,14 @@ export const useFactureActions = () => {
 
   /**
    * Supprime une facture
-   * @param {number} id - ID de la facture à supprimer
+   * @param {number} idFacture - ID de la facture à supprimer
    * @returns {Promise<boolean>} Succès de la suppression
    */
-  const supprimerFacture = useCallback(async (id) => {
+  const supprimerFacture = useCallback(async (idFacture) => {
     return await executeApi(
       async () => {
-        log.debug('🗑️ Suppression facture:', id);
-        await factureService.deleteFacture(id);
+        log.debug('🗑️ Suppression facture:', idFacture);
+        await factureService.deleteFacture(idFacture);
         log.debug('✅ Facture supprimée');
         return true;
       },
@@ -230,15 +256,15 @@ export const useFactureActions = () => {
 
   /**
    * Marque une facture comme payée
-   * @param {number} id - ID de la facture
+   * @param {number} idFacture - ID de la facture
    * @param {Object} paiementData - Données du paiement
    * @returns {Promise<Object>} Facture mise à jour
    */
-  const marquerCommePayee = useCallback(async (id, paiementData) => {
+  const marquerCommePayee = useCallback(async (idFacture, paiementData) => {
     return await executeApi(
       async () => {
-        log.debug('💰 Marquage facture comme payée:', id);
-        const result = await factureService.marquerCommePayee(id, paiementData);
+        log.debug('💰 Marquage facture comme payée:', idFacture);
+        const result = await factureService.marquerCommePayee(idFacture, paiementData);
         log.debug('✅ Facture marquée comme payée');
         return result;
       },
@@ -252,14 +278,14 @@ export const useFactureActions = () => {
 
   /**
    * Annule une facture
-   * @param {number} id - ID de la facture
+   * @param {number} idFacture - ID de la facture
    * @returns {Promise<Object>} Facture annulée
    */
-  const annulerFacture = useCallback(async (id) => {
+  const annulerFacture = useCallback(async (idFacture) => {
     return await executeApi(
       async () => {
-        log.debug('🚫 Annulation facture:', id);
-        const result = await factureService.annulerFacture(id);
+        log.debug('🚫 Annulation facture:', idFacture);
+        const result = await factureService.annulerFacture(idFacture);
         log.debug('✅ Facture annulée');
         return result;
       },
@@ -273,14 +299,14 @@ export const useFactureActions = () => {
 
   /**
    * Marque une facture comme imprimée
-   * @param {number} id - ID de la facture
+   * @param {number} idFacture - ID de la facture
    * @returns {Promise<Object>} Facture mise à jour
    */
-  const marquerCommeImprimee = useCallback(async (id) => {
+  const marquerCommeImprimee = useCallback(async (idFacture) => {
     return await executeApi(
       async () => {
-        log.debug('🖨️ Marquage facture comme imprimée:', id);
-        const result = await factureService.marquerCommeImprimee(id);
+        log.debug('🖨️ Marquage facture comme imprimée:', idFacture);
+        const result = await factureService.marquerCommeImprimee(idFacture);
         log.debug('✅ Facture marquée comme imprimée');
         return result;
       },
@@ -294,14 +320,14 @@ export const useFactureActions = () => {
 
   /**
    * Marque une facture comme envoyée
-   * @param {number} id - ID de la facture
+   * @param {number} idFacture - ID de la facture
    * @returns {Promise<Object>} Facture mise à jour
    */
-  const marquerCommeEnvoyee = useCallback(async (id) => {
+  const marquerCommeEnvoyee = useCallback(async (idFacture) => {
     return await executeApi(
       async () => {
-        log.debug('📧 Marquage facture comme envoyée:', id);
-        const result = await factureService.marquerCommeEnvoyee(id);
+        log.debug('📧 Marquage facture comme envoyée:', idFacture);
+        const result = await factureService.marquerCommeEnvoyee(idFacture);
         log.debug('✅ Facture marquée comme envoyée');
         return result;
       },
@@ -378,6 +404,7 @@ export const useFactureActions = () => {
     // Actions CRUD
     chargerFactures,
     chargerFacturesPayables,
+    chargerFacturesClient,
     chargerFacture,
     creerFacture,
     modifierFacture,
@@ -403,6 +430,7 @@ export const useFactureActions = () => {
   }), [
     chargerFactures,
     chargerFacturesPayables,
+    chargerFacturesClient,
     chargerFacture,
     creerFacture,
     modifierFacture,

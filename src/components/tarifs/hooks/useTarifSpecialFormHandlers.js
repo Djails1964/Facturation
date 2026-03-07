@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useDateContext } from '../../../context/DateContext';
-import { formatDateToYYYYMMDD } from '../../../utils/formatters';
+import DateService from '../../../utils/DateService';
 
 /**
  * Hook pour gérer les handlers du formulaire de tarif spécial
@@ -103,7 +103,7 @@ export const useTarifSpecialFormHandlers = (formState, formLogic, formValidation
         const callback = (dates) => {
             if (dates && dates.length > 0) {
                 const selectedDate = dates[0];
-                const formattedDate = formatDateToYYYYMMDD(selectedDate);
+                const formattedDate = DateService.toInputFormat(selectedDate);
                 
                 const syntheticEvent = {
                     target: {

@@ -42,7 +42,7 @@ const ServiceSelect = ({
                 <option value="">Sélectionner un service</option>
                 {Array.isArray(services) && services.map(service => (
                     <option 
-                        key={`service-${service.id || index}`} 
+                        key={`service-${service.idService || index}`} 
                         value={service.code || ''}
                     >
                         {service.nom || 'Service sans nom'}

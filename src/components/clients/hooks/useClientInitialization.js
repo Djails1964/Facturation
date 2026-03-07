@@ -50,18 +50,18 @@ export function useClientInitialization(mode, idClient, dependencies = {}) {
   // CHARGEMENT D'UN CLIENT EXISTANT
   // ================================
 
-  const chargerClient = useCallback(async (id, options = {}) => {
+  const chargerClient = useCallback(async (idClient, options = {}) => {
     const { silent = false, retry = false } = options;
     
     try {
       if (!silent) setIsLoading?.(true);
       setLoadingError(null);
       
-      logger.info('🔄 Chargement du client:', id);
+      logger.info('🔄 Chargement du client:', idClient);
       
       // ✅ Appel API via useClientActions
       // getClient retourne directement le client (pas un objet wrappé {success, client})
-      const clientData = await getClient(id);
+      const clientData = await getClient(idClient);
       
       // ✅ Vérification que le client existe
       if (!clientData) {
@@ -81,7 +81,7 @@ export function useClientInitialization(mode, idClient, dependencies = {}) {
       }
       
       logger.info('✅ Client chargé avec succès:', {
-        id: normalizedClient.id,
+        idClient: normalizedClient.idClient,
         nom: `${normalizedClient.prenom} ${normalizedClient.nom}`,
         estTherapeute: normalizedClient.estTherapeute
       });
@@ -194,7 +194,7 @@ export function useClientInitialization(mode, idClient, dependencies = {}) {
       logger.info('🎯 Initialisation finalisée pour la détection de modifications:', {
         mode,
         hasData: Object.keys(currentData).length > 0,
-        idClient: client?.id || 'nouveau'
+        idClient: client?.idClient || 'nouveau'
       });
       
       return true;

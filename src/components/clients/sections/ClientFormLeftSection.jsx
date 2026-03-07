@@ -2,7 +2,6 @@
 // Section gauche du formulaire client (Thérapeute + Titre)
 
 import React from 'react';
-import { toBoolean } from '../../../utils/booleanHelper';
 import { createLogger } from '../../../utils/createLogger';
 
 /**
@@ -11,7 +10,6 @@ import { createLogger } from '../../../utils/createLogger';
 function ClientFormLeftSection({ 
   client, 
   handleChange, 
-  toggleTherapeute, 
   isReadOnly = false,
   fieldErrors = {},
   className = ''
@@ -26,13 +24,6 @@ function ClientFormLeftSection({
   return (
     <div className={sectionClasses.join(' ')}>
       
-      {/* Switch Thérapeute */}
-      <TherapistField
-        checked={toBoolean(client.estTherapeute)}
-        onChange={toggleTherapeute}
-        disabled={isReadOnly}
-      />
-      
       {/* Select Titre */}
       <TitleField
         value={client.titre || ''}
@@ -46,31 +37,6 @@ function ClientFormLeftSection({
   );
 }
 
-/**
- * Composant pour le champ thérapeute avec switch
- */
-function TherapistField({ checked, onChange, disabled = false }) {
-  return (
-    <div className="therapist-field">
-      <div className="field-label">
-        Thérapeute
-      </div>
-      <div className="switch-container">
-        <input
-          type="checkbox"
-          id="estTherapeute"
-          name="estTherapeute"
-          className="switch-input"
-          checked={checked}
-          onChange={onChange}
-          disabled={disabled}
-          aria-label={checked ? 'Client défini comme thérapeute' : 'Client standard'}
-        />
-        <label htmlFor="estTherapeute" className="switch-label" aria-hidden="true"></label>
-      </div>
-    </div>
-  );
-}
 
 /**
  * Composant pour le champ titre

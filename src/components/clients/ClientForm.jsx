@@ -62,8 +62,8 @@ function ClientForm({
   
   const {
     client, isLoading, isSubmitting, error,
-    handleChange, toggleTherapeute, isReadOnly,
-    fieldErrors, phoneType  // ✅ AJOUT: Extraire fieldErrors et phoneType de useClientForm
+    handleChange, toggleTherapeute, toggleLoyer, isReadOnly,  // ✅ AJOUT: toggleLoyer
+    fieldErrors, phoneType
   } = clientFormState;
 
   const { isFormValid } = validation;
@@ -125,7 +125,7 @@ function ClientForm({
   // RENDU CONDITIONNEL - ERREUR CRITIQUE
   // ================================
   
-  if (error && !client.id && mode !== FORM_MODES.CREATE) {
+  if (error && !client.idClient && mode !== FORM_MODES.CREATE) {
     return (
       <div className="content-section-container">
         <ClientFormHeader 
@@ -168,7 +168,6 @@ function ClientForm({
           <ClientFormLeftSection
             client={client}
             handleChange={handleChange}
-            toggleTherapeute={toggleTherapeute}
             isReadOnly={isReadOnly}
             getFieldClasses={getFieldClasses}
           />
@@ -177,6 +176,8 @@ function ClientForm({
           <ClientFormMainSection
             client={client}
             handleChange={handleChange}
+            toggleTherapeute={toggleTherapeute}
+            toggleLoyer={toggleLoyer}
             fieldErrors={fieldErrors}
             phoneType={phoneType}
             isReadOnly={isReadOnly}

@@ -1,0 +1,21 @@
+/*
+ * PaiementsTableau.css
+ *
+ * SCOPE : uniquement les éléments visuels propres aux paiements.
+ * UnifiedTable.css gère toute la structure (table-row, table-cell,
+ * header, états loading/error/empty, responsive de base).
+ * On ne redéfinit AUCUNE de ces classes ici.
+ */
+
+/* ========== TITRES EN-TÊTE : casse normale ========== */
+/* UnifiedTable impose text-transform:uppercase — on annule pour ce tableau */
+
+.unified-table-header .table-cell {
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: var(--font-size-sm);
+}
+
+/* ========== RESPONSIVE ========== */
+
+/* ========== PRINT ========== */
