@@ -1,7 +1,6 @@
 // src/constants/fieldMappings.js - Configuration centralisée des mappings de champs
 // Intégré avec la structure existante de votre application + gestion des dates vides
 
-import { MdNotificationAdd } from 'react-icons/md';
 import FieldConverter from '../utils/FieldConverter';
 
 import { createLogger } from '../utils/createLogger';
@@ -55,6 +54,7 @@ const GENERIC_MAPPINGS = {
 const FACTURATION_MAPPINGS = {
   // Facture
   idFacture: 'id_facture',
+  idLoyer: 'id_loyer',   // ✅ Non null si cette facture a été générée depuis un loyer
   numeroFacture: 'numero_facture',
   dateFacture: 'date_facture',
   dateEcheance: 'date_echeance',
@@ -81,6 +81,9 @@ const FACTURATION_MAPPINGS = {
   noOrdre: 'no_ordre',
   idLigne: 'id_ligne',
   totalLigne: 'total_ligne',
+  // ✅ Multiplicateur de durée hh:mm (migration 027)
+  duree: 'duree',
+  nbSeances: 'nb_seances',
 
     // Relations
   idClient: 'id_client',
@@ -110,6 +113,7 @@ const TARIFICATION_MAPPINGS = {
   idUnite: 'id_unite',
   codeUnite: 'code_unite',
   nomUnite: 'nom_unite',
+  abreviationUnite: 'abreviation_unite',
   descriptionUnite: 'description_unite',
   
   // Types de tarifs
@@ -140,6 +144,9 @@ const TARIFICATION_MAPPINGS = {
   
   // Unités dans les relations
   isDefaultPourService: 'is_default_pour_service',
+  
+  // ✅ Multiplicateur de durée hh:mm (migration 027)
+  permetMultiplicateur: 'permet_multiplicateur',
   
   // Types tarifs
   typesTarifs: 'types_tarifs'
@@ -178,7 +185,7 @@ const PAIEMENT_MAPPINGS = {
 
 const CLIENT_MAPPINGS = {
   // Informations de base
-  clientId: 'client_id',
+  idClient: 'id_client',
   prenomClient: 'prenom_client',
   nomClient: 'nom_client',
   raisonSociale: 'raison_sociale',
@@ -225,6 +232,7 @@ const LOYER_MAPPINGS = {
   idLoyer: 'id_loyer',
   numeroLoyer: 'numero_loyer',
   numeroSequence: 'numero_sequence',
+  idContratLocation: 'id_contrat_location',
   
   // ✅ Relation client
   idClient: 'id_client',
@@ -246,14 +254,17 @@ const LOYER_MAPPINGS = {
   // ✅ Durée et description
   dureeMois: 'duree_mois',
   motif: 'motif',
-  afficherDatesPaiement: 'afficher_dates_paiement',
   description: 'description',
+  idFacture: 'id_facture',  // ✅ Facture générée depuis ce loyer (null si paiement direct)
+  factureEtat: 'facture_etat', // ✅ État de la facture liée (null si pas de facture)
+  afficherDatesPaiement: 'afficher_dates_paiement',
   
   // ✅ Montants
   loyerMontantTotal: 'loyer_montant_total',
   montantMensuelMoyen: 'montant_mensuel_moyen',
   loyerMontantPaye: 'loyer_montant_paye',
   montantRestant: 'montant_restant',
+  soldeRestant: 'solde_restant',
   pourcentagePaye: 'pourcentage_paye',
   
   // ✅ États
@@ -267,18 +278,69 @@ const LOYER_MAPPINGS = {
   loyerMois: 'loyer_mois',
   loyerNumeroMois: 'loyer_numero_mois',
   loyerAnnee: 'loyer_annee',
+  idUnite:           'id_unite',
+  quantite:          'quantite',
   loyerDetailMontant: 'loyer_detail_montant',
+  dates:             'dates',
   loyerDetailPaye: 'loyer_detail_paye',
   montantMensuel: 'montant',  // Alias
   montantsMensuels: 'montants_mensuels',  // Array côté frontend
   estPaye: 'est_paye',
   datePaiement: 'date_paiement',
+  // ✅ Infos unité et service (JOINs dans getLoyerParId)
+  nomUnite:         'nom_unite',
+  abreviationUnite: 'abreviation_unite',
+  codeUnite:        'code_unite',
+  idService:        'id_service',
+  nomService:       'nom_service',
   
   // ✅ Métadonnées
   dateCreation: 'date_creation',
   dateModification: 'date_modification',
   createurId: 'createur_id',
   modificateurId: 'modificateur_id'
+};
+
+// ================================
+// MAPPINGS LOCATION DE SALLE
+// ================================
+
+/**
+ * ✅ Mappings pour les tables location_salle_contrat + location_salle_detail
+ * Contrat : un client affiché dans le tableau pour une année
+ * Détail  : une saisie mensuelle (mois, salle, type, quantité, note)
+ */
+const LOCATION_SALLE_MAPPINGS = {
+  // Contrat (maître)
+  idContrat:      'id_contrat',
+  idClient:       'id_client',
+  nomClient:      'nom_client',
+  annee:          'annee',
+
+  // Détail
+  idDetail:       'id_detail',
+  mois:           'mois',
+  salle:          'salle',
+  idSalle:        'id_salle',
+  idUnite:        'id_unite',
+  idService:      'id_service',
+  motif:          'motif',
+  description:    'description',
+  dates:          'dates',
+  nomUnite:       'nom_unite',
+  abreviationUnite: 'abreviation_unite',
+  quantite:       'quantite',
+
+  // Table salle (entité propre)
+  nomService:          'nom_service',
+  typeClientRequis:    'type_client_requis',
+  typeDocument:        'type_document',
+
+  // Métadonnées
+  createdAt:      'created_at',
+  updatedAt:      'updated_at',
+  createdBy:      'created_by',
+  updatedBy:      'updated_by',
 };
 
 // ================================
@@ -432,6 +494,7 @@ const ALL_MAPPINGS = {
   ...TARIFICATION_MAPPINGS,
   ...PAIEMENT_MAPPINGS,
   ...LOYER_MAPPINGS,
+  ...LOCATION_SALLE_MAPPINGS,
   ...CLIENT_MAPPINGS,
   ...USER_MAPPINGS,
   ...PARAMETRES_MAPPINGS
@@ -479,6 +542,14 @@ const CONTEXT_MAPPINGS = {
     ...FACTURATION_MAPPINGS
   },
   
+  // Contexte location de salle
+  locationSalle: {
+    ...GENERIC_MAPPINGS,
+    ...LOCATION_SALLE_MAPPINGS,
+    ...CLIENT_MAPPINGS,
+    ...TARIFICATION_MAPPINGS,  // pour abreviationUnite, nomUnite, idUnite...
+  },
+
   // Contexte administration
   admin: {
     ...USER_MAPPINGS,
@@ -614,6 +685,8 @@ const API_ENDPOINTS_MAPPING = {
     'facture-api.php',
     'paiement-api.php',
     'loyer-api.php',
+    'location-salle-api.php',
+    'salle-api.php',
     'user-api.php',
     'parametre-api.php'
   ],
@@ -630,6 +703,8 @@ const API_ENDPOINTS_MAPPING = {
     'facture-api.php': 'facturation',
     'paiement-api.php': 'paiement',
     'loyer-api.php': 'loyer',
+    'location-salle-api.php': 'locationSalle',
+    'salle-api.php': 'locationSalle',
     'user-api.php': 'admin',
     'parametre-api.php': 'parametres'
   },
@@ -696,6 +771,7 @@ export {
   TARIFICATION_MAPPINGS,
   PAIEMENT_MAPPINGS,
   LOYER_MAPPINGS,
+  LOCATION_SALLE_MAPPINGS,
   CLIENT_MAPPINGS,
   USER_MAPPINGS,
   DATE_FIELDS,
@@ -736,6 +812,7 @@ export default {
   TARIFICATION_MAPPINGS,
   PAIEMENT_MAPPINGS,
   LOYER_MAPPINGS,
+  LOCATION_SALLE_MAPPINGS,
   CLIENT_MAPPINGS,
   USER_MAPPINGS,
   DATE_FIELDS

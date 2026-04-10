@@ -1,148 +1,226 @@
 // src/hooks/useFactureModals.js
+//
+// Logique MÉTIER factures pour les modales.
+// Utilise GenericPaymentModalHandler pour la collecte des données,
+// mais reste responsable de :
+//   - Charger la facture
+//   - Vérifier l'état (payée, annulée)
+//   - Valider montantPaye vs montantRestant
+//   - Confirmer les paiements partiels
+//   - Appeler savePayment
 
 import { useCallback } from 'react';
 import { useFactureActions } from './useFactureActions';
-import { usePaiementActions } from '../../paiements/hooks/usePaiementActions'
+import { usePaiementActions } from '../../paiements/hooks/usePaiementActions';
 import EmailModalHandler from '../modals/handlers/EmailModalHandler';
 import DeleteModalHandler from '../modals/handlers/DeleteModalHandler';
-import PrintModalHandler from '../modals/handlers/PrintModalHandler';
-import PaymentModalHandler from '../modals/handlers/PaymentModalHandler';
+import { DocumentPrintModalHandler } from '../../shared/modals/handlers/DocumentPrintModalHandler';
+import { GenericPaymentModalHandler } from '../../shared/modals/handlers/GenericPaymentModalHandler';
 import CopyModalHandler from '../modals/handlers/CopyModalHandler';
+import { openFacturePdf } from '../../../utils/pdfUtils';
 import { createLogger } from '../../../utils/createLogger';
-import { useApiCall } from '../../../hooks/useApiCall';
+import {
+    PAYMENT_MODES,
+    FORM_TITLES,
+    HELP_TEXTS,
+    VALIDATION_MESSAGES,
+    BUTTON_TEXTS,
+} from '../../../constants/paiementConstants';
 
-/**
- * Hook unifié pour la gestion des modales de factures
- * ✅ REFACTORISÉ : Utilise useFactureActions au lieu de useApiCall direct
- * Utilise tous les handlers externalisés pour réduire la complexité de FacturesListe.jsx
- * 
- * @param {Object} dependencies - Toutes les dépendances nécessaires aux handlers
- * @returns {Object} - Tous les handlers de modales prêts à utiliser
- */
 export const useFactureModals = (dependencies) => {
-    
+
     const log = createLogger('useFactureModals');
-
-        // Hook useApiCall
-    const { execute: executeApi, isLoading: isApiLoading, error: apiError } = useApiCall();
-
-    // ✅ Utilisation de useFactureActions au lieu de useApiCall
-    const factureActions = useFactureActions();
-
+    const factureActions  = useFactureActions();
     const paiementActions = usePaiementActions();
 
-    // ========== HANDLER EMAIL ==========
+    // ── Helper : instancier le handler générique ──────────────────────────────
+    const makePaymentHandler = () => new GenericPaymentModalHandler({
+        ...dependencies,
+        factureActions,
+        paiementActions,
+    });
+
+    // ── Helper : calculer montantRestant fiable ───────────────────────────────
+    const getMontantRestant = (factureData) => {
+        if (factureData.montantRestant != null) return parseFloat(factureData.montantRestant);
+        const net     = parseFloat(factureData.montantTotal || factureData.montantBrut || 0);
+        const paye    = parseFloat(factureData.montantPayeTotal || 0);
+        return Math.max(0, net - paye);
+    };
+
+    // =========================================================================
+    // HANDLER EMAIL
+    // =========================================================================
     const handleEnvoyerFacture = useCallback(async (idFacture, event) => {
-        log.debug('📧 useFactureModals - handleEnvoyerFacture appelé pour:', idFacture);
-        
         try {
-            // ✅ Passer factureActions au handler
-            const emailHandler = new EmailModalHandler({
-                ...dependencies,
-                factureActions  // ✅ Passer factureActions au lieu de executeApi
-            });
-            await emailHandler.handle(idFacture, event);
-            log.debug('✅ useFactureModals - handleEnvoyerFacture terminé avec succès');
-        } catch (error) {
-            log.error('❌ Erreur dans handleEnvoyerFacture:', error);
-            dependencies.onSetNotification('Erreur lors de l\'envoi de l\'email: ' + error.message, 'error');
+            const h = new EmailModalHandler({ ...dependencies, factureActions });
+            await h.handle(idFacture, event);
+        } catch (err) {
+            log.error('❌ handleEnvoyerFacture:', err);
+            dependencies.onSetNotification("Erreur lors de l'envoi : " + err.message, 'error');
         }
     }, [dependencies, factureActions]);
 
-    // ========== HANDLER SUPPRESSION/ANNULATION ==========
+    // =========================================================================
+    // HANDLER SUPPRESSION
+    // =========================================================================
     const handleSupprimerFacture = useCallback(async (idFacture, event) => {
-        log.debug('🗑️ useFactureModals - handleSupprimerFacture appelé pour:', idFacture);
-        
         try {
-            // ✅ Passer factureActions au handler
-            const deleteHandler = new DeleteModalHandler({
-                ...dependencies,
-                factureActions  // ✅ Passer factureActions au lieu de executeApi
-            });
-            await deleteHandler.handle(idFacture, event);
-            log.debug('✅ useFactureModals - handleSupprimerFacture terminé avec succès');
-        } catch (error) {
-            log.error('❌ Erreur dans handleSupprimerFacture:', error);
-            log.error('❌ Stack trace:', error.stack);
-            dependencies.onSetNotification('Erreur lors de la suppression/annulation: ' + error.message, 'error');
+            const h = new DeleteModalHandler({ ...dependencies, factureActions });
+            await h.handle(idFacture, event);
+        } catch (err) {
+            log.error('❌ handleSupprimerFacture:', err);
+            dependencies.onSetNotification("Erreur lors de la suppression : " + err.message, 'error');
         }
     }, [dependencies, factureActions]);
 
-    // ========== HANDLER IMPRESSION ==========
+    // =========================================================================
+    // HANDLER IMPRESSION
+    // =========================================================================
     const handleImprimerFacture = useCallback(async (idFacture, event) => {
-        log.debug('🖨️ useFactureModals - handleImprimerFacture appelé pour:', idFacture);
-
         try {
-            // ✅ Passer factureActions au handler
-            const printHandler = new PrintModalHandler({
+            const h = new DocumentPrintModalHandler({
                 ...dependencies,
-                factureActions  // ✅ Passer factureActions au lieu de executeApi
+                printAction:     (id) => factureActions.imprimerFacture(id),
+                openPdfFn:       openFacturePdf,
+                extractFilename: (pdfUrl) => {
+                    if (!pdfUrl) return null;
+                    if (pdfUrl.includes('facture='))
+                        return new URLSearchParams(pdfUrl.split('?')[1]).get('facture');
+                    return pdfUrl.split('/').pop()?.split('?')[0] || null;
+                },
+                afterSuccess: () => dependencies.chargerFactures?.(),
+                titles:   { loading: 'Impression de facture', success: 'Impression de facture', error: "Erreur d'impression" },
+                messages: { loading: 'Génération du PDF en cours...', success: 'La facture a été générée avec succès !', notifSuccess: 'Facture imprimée avec succès' },
             });
-            await printHandler.handle(idFacture, event);
-            log.debug('✅ useFactureModals - handleImprimerFacture terminé avec succès');
-        } catch (error) {
-            log.error('❌ Erreur dans handleImprimerFacture:', error);
-            dependencies.onSetNotification('Erreur lors de l\'impression', 'error');
+            await h.handle(idFacture, event);
+        } catch (err) {
+            log.error('❌ handleImprimerFacture:', err);
+            dependencies.onSetNotification("Erreur lors de l'impression", 'error');
         }
     }, [dependencies, factureActions]);
 
-    // ========== HANDLER PAIEMENT ==========
+    // =========================================================================
+    // HANDLER PAIEMENT — logique métier facture ici
+    // =========================================================================
     const handleEnregistrerPaiement = useCallback(async (idFacture, event) => {
-        log.debug('💳 useFactureModals - handleEnregistrerPaiement appelé pour:', idFacture);
-        
-        try {
-            // ✅ Passer factureActions au handler
-            const paymentHandler = new PaymentModalHandler({
-                ...dependencies,
-                executeApi,
-                factureActions,
-                paiementActions  // ✅ Passer factureActions au lieu de executeApi
-            });
-            await paymentHandler.handle(idFacture, event);
-            log.debug('✅ useFactureModals - handleEnregistrerPaiement terminé avec succès');
-        } catch (error) {
-            log.error('❌ Erreur dans handleEnregistrerPaiement:', error);
-            dependencies.onSetNotification('Erreur lors de l\'enregistrement du paiement: ' + error.message, 'error');
-        }
-    }, [dependencies, factureActions, executeApi]);
+        log.debug('💳 handleEnregistrerPaiement - idFacture:', idFacture);
 
-    // ========== HANDLER COPIE ==========
-    const handleCopierFacture = useCallback(async (idFacture, event) => {
-        log.debug('📄 useFactureModals - handleCopierFacture appelé pour:', idFacture);
-        
+        const handler   = makePaymentHandler();
+        const anchorRef = handler.createAnchorRef(event);
+
         try {
-            // ✅ Passer factureActions au handler
-            const copyHandler = new CopyModalHandler({
-                ...dependencies,
-                factureActions  // ✅ Passer factureActions au lieu de executeApi
+            // ── 1. Charger la facture ─────────────────────────────────────────
+            const factureData = await dependencies.showLoading(
+                { title: 'Chargement...', content: 'Chargement de la facture...', anchorRef, size: 'small', position: 'smart' },
+                () => factureActions.chargerFacture(idFacture)
+            );
+            if (!factureData) throw new Error('Facture introuvable');
+
+            // ── 2. Vérifier état ──────────────────────────────────────────────
+            const etat = (factureData.etat || '').toLowerCase();
+            if (etat === 'payée' || etat === 'payee') {
+                await handler.showInfo(HELP_TEXTS.FACTURE_PAYEE, FORM_TITLES.MODAL_ERREUR, anchorRef, 'warning');
+                return;
+            }
+            if (etat === 'annulée' || etat === 'annulee') {
+                await handler.showInfo(HELP_TEXTS.FACTURE_ANNULEE, FORM_TITLES.MODAL_ERREUR, anchorRef, 'error');
+                return;
+            }
+
+            // ── 3. Calculer montant restant ───────────────────────────────────
+            const montantRestant = getMontantRestant(factureData);
+            const montantDefaut  = montantRestant > 0 ? montantRestant
+                : parseFloat(factureData.montantTotal || 0);
+
+            // ── 4. Afficher le formulaire ─────────────────────────────────────
+            const result = await handler.showPaymentForm({
+                mode:        PAYMENT_MODES.FROM_FACTURE,
+                factureData,
+                montantDefaut,
+            }, anchorRef);
+
+            if (result?.action !== 'submit') return;
+
+            const formData = handler.normalizeFormData(result.data);
+
+            // ── 5. Validation forme ───────────────────────────────────────────
+            const errForme = handler.validateForme(formData);
+            if (errForme) {
+                await handler.showInfo(errForme, FORM_TITLES.MODAL_ERREUR, anchorRef);
+                return;
+            }
+
+            const montantPaye = parseFloat(formData.montantPaye);
+
+            // ── 6. Validation métier : montant vs restant ─────────────────────
+            if (montantRestant > 0 && montantPaye > montantRestant + 0.01) {
+                await handler.showInfo(
+                    `${VALIDATION_MESSAGES.MONTANT_SUPERIEUR} (${dependencies.formatMontant(montantRestant)} CHF restant).`,
+                    FORM_TITLES.MODAL_ERREUR, anchorRef
+                );
+                return;
+            }
+
+            // ── 7. Confirmer paiement partiel ─────────────────────────────────
+            if (montantRestant > 0 && montantPaye < montantRestant - 0.01) {
+                const restantApres = montantRestant - montantPaye;
+                const confirmation = await dependencies.showCustom({
+                    title:    FORM_TITLES.MODAL_PARTIEL,
+                    content:  `<div>${HELP_TEXTS.PARTIEL_INTRO}<br><br>
+                        <strong>${HELP_TEXTS.PARTIEL_MONTANT}</strong> ${dependencies.formatMontant(montantPaye)} CHF<br>
+                        <strong>${HELP_TEXTS.PARTIEL_RESTE}</strong> ${dependencies.formatMontant(restantApres)} CHF<br><br>
+                        ${HELP_TEXTS.PARTIEL_QUESTION}</div>`,
+                    anchorRef,
+                    size:     'small',
+                    position: 'smart',
+                    buttons: [
+                        { text: BUTTON_TEXTS.CANCEL,         action: 'cancel',  className: 'secondary' },
+                        { text: BUTTON_TEXTS.MODAL_CONFIRM,  action: 'confirm', className: 'primary'   },
+                    ],
+                });
+                if (confirmation?.action !== 'confirm') return;
+            }
+
+            // ── 8. Enregistrer ────────────────────────────────────────────────
+            await handler.savePayment({
+                idClient:        factureData.idClient,
+                idFacture,
+                montantPaye,
+                datePaiement:    formData.datePaiement,
+                methodePaiement: formData.methodePaiement,
+                commentaire:     formData.commentaire || '',
+                factureData,     // données initiales — savePayment récupère les fraîches
+                anchorRef,
             });
-            await copyHandler.handle(idFacture, event);
-            log.debug('✅ useFactureModals - handleCopierFacture terminé avec succès');
-        } catch (error) {
-            log.error('❌ Erreur dans handleCopierFacture:', error);
-            log.error('❌ Stack trace:', error.stack);
-            dependencies.onSetNotification('Erreur lors de la copie de la facture: ' + error.message, 'error');
+
+        } catch (err) {
+            log.error('❌ handleEnregistrerPaiement:', err);
+            dependencies.onSetNotification("Erreur lors du paiement : " + err.message, 'error');
+        }
+    }, [dependencies, factureActions, paiementActions]);
+
+    // =========================================================================
+    // HANDLER COPIE
+    // =========================================================================
+    const handleCopierFacture = useCallback(async (idFacture, event) => {
+        try {
+            const h = new CopyModalHandler({ ...dependencies, factureActions });
+            await h.handle(idFacture, event);
+        } catch (err) {
+            log.error('❌ handleCopierFacture:', err);
+            dependencies.onSetNotification("Erreur lors de la copie : " + err.message, 'error');
         }
     }, [dependencies, factureActions]);
 
-    // ========== RETOUR DE TOUS LES HANDLERS ==========
     return {
-        // Handlers principaux
-        handleEnvoyerFacture,        // EmailModalHandler
-        handleSupprimerFacture,      // DeleteModalHandler  
-        handleImprimerFacture,       // PrintModalHandler
-        handleEnregistrerPaiement,   // PaymentModalHandler
-        handleCopierFacture,         // CopyModalHandler
-
-        // État du hook useApiCall (optionnel, peut être utile pour le debugging)
-        isApiLoading,
-        apiError,
-        
-        // Alias pour compatibilité avec FacturesListe.jsx
-        handlePayerFacture: handleEnregistrerPaiement,
-        
-        // ✅ Exposer factureActions pour accès direct si besoin
-        factureActions
+        handleEnvoyerFacture,
+        handleSupprimerFacture,
+        handleImprimerFacture,
+        handleEnregistrerPaiement,
+        handleCopierFacture,
+        handlePayerFacture: handleEnregistrerPaiement,  // alias compatibilité
+        factureActions,
     };
 };
 

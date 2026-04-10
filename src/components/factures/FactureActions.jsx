@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { FiEdit, FiEye, FiPrinter, FiTrash2, FiDollarSign, FiCopy, FiMail } from 'react-icons/fi';
-import '../../styles/components/factures/FactureActions.css';
 
 const FactureActions = ({
     facture,
+    style,
     onAfficherFacture,
     onModifierFacture,
     onImprimerFacture,
@@ -26,7 +26,10 @@ const FactureActions = ({
     });
     
     // Conditions d'activation des boutons
-    const canModify = ['En attente', 'Éditée'].includes(etat);
+    // ✅ Une facture liée à un loyer ne peut pas être modifiée directement —
+    //    passer par la modification du loyer pour régénérer la facture.
+    const estLieeAUnLoyer = !!(facture.idLoyer);
+    const canModify = !estLieeAUnLoyer && ['En attente', 'Éditée'].includes(etat);
     const canSendEmail = etat === 'Éditée';
     const canPay = ['Envoyée', 'Retard', 'Partiellement payée'].includes(etat);
     const canDelete = etat === 'En attente';
@@ -82,7 +85,7 @@ const FactureActions = ({
 
     return (
         <>
-            <div className="lf-table-cell lf-actions-cell">
+            <div className="table-cell actions-cell" style={style}>
                 {/* Bouton Afficher */}
                 <button 
                     className="bouton-action"
@@ -92,9 +95,7 @@ const FactureActions = ({
                     onMouseLeave={handleMouseLeave}
                     onClick={(e) => {
                         e.stopPropagation();
-                        console.log('🔍 CLICK AFFICHER - ID passé à onAfficherFacture:', idFacture);
-                        console.log('🔍 CLICK AFFICHER - Type ID:', typeof idFacture);
-                        console.log('🔍 CLICK AFFICHER - Objet facture complet:', facture);
+
                         onAfficherFacture(idFacture);
                     }}
                 >
@@ -106,13 +107,27 @@ const FactureActions = ({
                     className={`bouton-action ${!canModify ? 'bouton-desactive' : ''}`}
                     aria-label="Modifier la facture"
                     disabled={!canModify}
-                    onMouseEnter={(e) => handleMouseEnter(e, canModify ? 'Modifier la facture' : 'Modification impossible')}
-                    onMouseMove={(e) => handleMouseMove(e, canModify ? 'Modifier la facture' : 'Modification impossible')}
+                    onMouseEnter={(e) => handleMouseEnter(e,
+                        canModify
+                            ? 'Modifier la facture'
+                            : estLieeAUnLoyer
+                                ? 'Modification via le loyer uniquement'
+                                : 'Modification impossible'
+                    )}
+                    onMouseMove={(e) => handleMouseMove(e,
+                        canModify
+                            ? 'Modifier la facture'
+                            : estLieeAUnLoyer
+                                ? 'Modification via le loyer uniquement'
+                                : 'Modification impossible'
+                    )}
                     onMouseLeave={handleMouseLeave}
                     onClick={(e) => {
                         e.stopPropagation();
                         if (canModify) {
                             onModifierFacture(idFacture);
+                        } else if (estLieeAUnLoyer) {
+                            onSetNotification('Cette facture est liée à un loyer. Modifiez le loyer pour mettre à jour la facture.', 'warning');
                         } else {
                             onSetNotification('Seules les factures en attente et éditée peuvent être modifiées', 'error');
                         }

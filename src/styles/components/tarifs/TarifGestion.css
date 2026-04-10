@@ -104,54 +104,13 @@
    ========================================= */
 
 /* Header de formulaire tarif - intégré visuellement */
-.tarif-form-header {
-  margin-bottom: 25px;
-  background: transparent; /* Même fond que le formulaire */
-}
+/* ── tarif-form-header / tarif-form-title / tarif-form-description supprimés ──
+   Remplacés par SectionTitle (content-section-title.compact) dans layout.css
+   ──────────────────────────────────────────────────────────────────────────── */
 
-.tarif-form-title {
-  margin: 0 0 8px 0;
-  color: var(--color-primary);
-  font-size: 18px;
-  font-weight: bold;
-}
-
-.tarif-form-description {
-  margin: 0 0 15px 0;
-  color: var(--color-primary-light);
-  font-size: 16px;
-  font-weight: normal;
-  line-height: 1.4;
-}
-
+/* Boutons d'actions dans TarifFormHeader */
 .tarif-form-actions {
   margin-bottom: 10px;
-}
-
-/* Responsive pour les headers de tarification */
-@media (max-width: 768px) {
-  .tarif-form-header {
-    margin-bottom: 20px;
-  }
-  
-  .tarif-form-title {
-    font-size: 16px;
-  }
-  
-  .tarif-form-description {
-    font-size: 14px;
-    margin-bottom: 12px;
-  }
-}
-
-@media (max-width: 480px) {
-  .tarif-form-title {
-    font-size: 15px;
-  }
-  
-  .tarif-form-description {
-    font-size: 13px;
-  }
 }
 
 /* === LISTES - BASE COMMUNE === */

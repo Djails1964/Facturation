@@ -1,6 +1,6 @@
 // src/hooks/paiement/usePaiementFormValidation.js
 import { useCallback } from 'react';
-import DateService from '../../../utils/DateService';
+import { fromIsoString, isStrictlyFuture } from '../../../utils/dateHelpers';
 import { VALIDATION_MESSAGES } from '../../../constants/paiementConstants';
 
 export const usePaiementFormValidation = (formState) => {
@@ -24,12 +24,12 @@ export const usePaiementFormValidation = (formState) => {
             return { isValid: false, error: VALIDATION_MESSAGES.DATE_REQUIRED };
         }
         
-        const dateObj = DateService.fromInputFormat(datePaiement);
+        const dateObj = fromIsoString(datePaiement);
         if (!dateObj) {
             return { isValid: false, error: 'Format de date invalide' };
         }
         
-        if (DateService.isStrictlyFuture(dateObj)) {
+        if (isStrictlyFuture(dateObj)) {
             return { 
                 isValid: false, 
                 error: 'Les dates futures ne sont pas autorisées pour les paiements' 

@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo } from 'react';
 import ServiceTableSection from '../sections/ServiceTableSection';
-import { AddButton } from '../../../components/ui/buttons';
+import { FloatingAddButton } from '../../../components/ui/buttons/ActionButtons';
 import TarifFormHeader from '../sections/TarifFormHeader';
 import UnifiedFilter from '../../../components/shared/filters/UnifiedFilter';
 import { useTarifFilter, createInitialFilters } from '../hooks/useTarifFilter';
@@ -136,9 +136,6 @@ const ServiceGestion = ({
         titre="Gestion des services"
         description="Gérez les services proposés par votre entreprise"
       >
-        <AddButton onClick={handleCreateClick}>
-          Nouveau service
-        </AddButton>
       </TarifFormHeader>
       
       {/* Filtres unifiés */}
@@ -184,6 +181,9 @@ const ServiceGestion = ({
           - ✅ NORMALISATION ACTIVE
         </div>
       )}
+
+      {/* Bouton flottant ajout */}
+      <FloatingAddButton onClick={handleCreateClick} tooltip="Nouveau service" />
     </div>
   );
 };

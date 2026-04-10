@@ -1,54 +1,78 @@
-// src/utils/formatters.js - Version améliorée
+// src/utils/formatters.js
 
-import DateService from './DateService';
+import {
+    toIsoString,
+    fromIsoString,
+    fromDisplayString,
+    pad2,
+} from './dateHelpers';
+
+import { LOCALES } from '../constants/dateConstants';
+
+// ─── Formatage de dates ───────────────────────────────────────────────────────
 
 /**
- * Formate un montant avec séparateur de milliers
- * @param {number|string} montant - Le montant à formater 
- * @returns {string} Montant formaté
+ * Convertit une date en string YYYY-MM-DD (pour les inputs HTML).
+ * @param {Date|string} date
+ * @returns {string}
  */
+export const formatDateToYYYYMMDD = (date) => toIsoString(date);
+
+/**
+ * Formate une date simple pour l'affichage (format français suisse).
+ * @param {Date|string} date
+ * @param {'date'|'datetime'|'short'|'compact'|'long'|'time'} format
+ * @returns {string}
+ */
+export const formatDate = (dateStr, format = 'date') => {
+    if (!dateStr) return '';
+    try {
+        const d = typeof dateStr === 'string'
+            ? (fromDisplayString(dateStr) || fromIsoString(dateStr) || new Date(dateStr))
+            : dateStr;
+        if (!d || isNaN(d.getTime())) return '';
+        const locale = LOCALES?.PRIMARY ?? 'fr-CH';
+        switch (format) {
+            case 'compact':
+                return `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}`;
+            case 'short':
+                return d.toLocaleDateString(locale, { day: '2-digit', month: '2-digit' });
+            case 'time':
+                return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+            case 'datetime':
+                return d.toLocaleDateString(locale) + ' ' +
+                       d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+            case 'long':
+                return d.toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            default: // 'date'
+                return d.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+    } catch { return ''; }
+};
+
+/**
+ * Formate un tableau de dates ISO en texte compact pour affichage.
+ * Ex: ["2025-01-05", "2025-01-12"] → "05.01, 12.01"
+ * @param {string[]} isoArray
+ * @returns {string}
+ */
+export const formatDatesIso = (isoArray) => {
+    if (!Array.isArray(isoArray) || isoArray.length === 0) return '';
+    return isoArray
+        .filter(Boolean)
+        .map(iso => {
+            const d = fromIsoString(iso);
+            return d ? `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}` : iso;
+        })
+        .join(', ');
+};
+
+
 export const formatMontant = (montant) => {
     return new Intl.NumberFormat('fr-CH', { 
         minimumFractionDigits: 2,
         maximumFractionDigits: 2 
     }).format(parseFloat(montant) || 0);
-};
-
-/**
- * ✅ AMÉLIORÉ: Formate une date avec options multiples
- * * 
- * @deprecated Depuis v7.0 - Sera supprimé en v8.0
- * Utiliser {@link DateService.formatSingleDate} à la place.
- * 
- * @param {string} dateStr - La date au format AAAA-MM-JJ ou ISO
- * @param {string} format - Type de format ('date', 'datetime', 'time')
- * @returns {string} Date formatée
- * @see DateService.formatSingleDate
- */
-export const formatDate = (dateStr, format = 'date') => {
-    if (process.env.NODE_ENV === 'development') {
-        console.warn('⚠️ DEPRECATED: formatDate() → Utiliser DateService.formatSingleDate()');
-    }
-    // Déléguer à la nouvelle fonction
-    return DateService.formatSingleDate(dateStr, format);
-};
-
-/**
- * Convertit une date en string au format YYYY-MM-DD pour les inputs HTML
- * 
- * @deprecated Depuis v7.0 - Sera supprimé en v8.0
- * Utiliser {@link DateService.toInputFormat} à la place.
- * 
- * @param {Date} date - Date à convertir
- * @returns {string} Date au format YYYY-MM-DD
- * @see DateService.toInputFormat
- */
-export const formatDateToYYYYMMDD = (date) => {
-    if (process.env.NODE_ENV === 'development') {
-        console.warn('⚠️ DEPRECATED: formatDateToYYYYMMDD() → Utiliser DateService.toInputFormat()');
-    }
-    // Déléguer à la nouvelle fonction
-    return DateService.toInputFormat(date);
 };
 
 /**
@@ -625,12 +649,191 @@ export const formatNomComplet = (prenom, nom, nomEnPremier = false) => {
     }
 };
 
-// ✅ EXPORT PAR DÉFAUT avec toutes les fonctions
+// ─── Formatage de tableaux de dates (format compact propriétaire) ─────────────
+// Format compact : [09/16/23/30.01, 06/13/20/27.02]  (jours.mois groupés)
+
+/**
+ * Formate un tableau de Date[] au format compact.
+ * @param {Date[]} dates
+ * @returns {string}  ex: "[05/12.01, 03.02]"
+ */
+export const formatDatesCompact = (dates) => {
+    if (!Array.isArray(dates) || dates.length === 0) return '';
+    try {
+        const valid = dates
+            .filter(d => d instanceof Date && !isNaN(d.getTime()))
+            .sort((a, b) => a - b);
+        if (valid.length === 0) return '';
+        const groups = {};
+        valid.forEach(d => {
+            const m = d.getMonth() + 1;
+            if (!groups[m]) groups[m] = [];
+            groups[m].push(d.getDate());
+        });
+        const parts = Object.keys(groups)
+            .sort((a, b) => a - b)
+            .map(m => {
+                const days = groups[m].sort((a, b) => a - b).map(d => pad2(d)).join('/');
+                return `${days}.${pad2(m)}`;
+            });
+        return `[${parts.join(', ')}]`;
+    } catch { return ''; }
+};
+
+/**
+ * Parse une chaîne au format compact en tableau de Date[].
+ * @param {string} formattedString  ex: "[05/12.01, 03.02]"
+ * @returns {Date[]}
+ */
+export const parseDatesFromCompact = (formattedString) => {
+    if (!formattedString || typeof formattedString !== 'string') return [];
+    try {
+        const inner = formattedString.replace(/^\[|\]$/g, '').trim();
+        if (!inner) return [];
+        const dates = [];
+        const year  = new Date().getFullYear();
+        for (const group of inner.split(',').map(s => s.trim())) {
+            const dotIdx = group.lastIndexOf('.');
+            if (dotIdx === -1) continue;
+            const month    = parseInt(group.substring(dotIdx + 1), 10);
+            const dayParts = group.substring(0, dotIdx).split('/');
+            for (const dayStr of dayParts) {
+                const day = parseInt(dayStr, 10);
+                if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+                    const d = new Date(year, month - 1, day);
+                    if (!isNaN(d.getTime())) dates.push(d);
+                }
+            }
+        }
+        return dates.sort((a, b) => a - b);
+    } catch { return []; }
+};
+
+/**
+ * Formate un tableau de dates en texte verbeux : "5 janvier, 12 janvier".
+ * @param {Date[]} dates
+ * @param {string} locale
+ * @returns {string}
+ */
+export const formatDatesVerbose = (dates, locale = 'fr-CH') => {
+    if (!Array.isArray(dates) || dates.length === 0) return '';
+    try {
+        return dates
+            .filter(d => d instanceof Date && !isNaN(d.getTime()))
+            .sort((a, b) => a - b)
+            .map(d => d.toLocaleDateString(locale, { day: 'numeric', month: 'long' }))
+            .join(', ');
+    } catch { return ''; }
+};
+
+/**
+ * Formate un tableau de dates en incluant le nom du jour : "lundi 5 janvier".
+ * @param {Date[]} dates
+ * @param {string} locale
+ * @returns {string}
+ */
+export const formatDatesWithDayNames = (dates, locale = 'fr-CH') => {
+    if (!Array.isArray(dates) || dates.length === 0) return '';
+    try {
+        return dates
+            .filter(d => d instanceof Date && !isNaN(d.getTime()))
+            .sort((a, b) => a - b)
+            .map(d => {
+                const dayName = d.toLocaleDateString(locale, { weekday: 'long' });
+                const month   = d.toLocaleDateString(locale, { month: 'long' });
+                return `${dayName} ${d.getDate()} ${month}`;
+            })
+            .join(', ');
+    } catch { return formatDatesCompact(dates); }
+};
+
+/**
+ * Formate un tableau de dates de façon optimisée (plages ou liste compacte).
+ * @param {Date[]} dates
+ * @param {boolean} useRanges
+ * @returns {string}
+ */
+export const formatDatesOptimized = (dates, useRanges = true) => {
+    if (!Array.isArray(dates) || dates.length === 0) return '';
+    try {
+        if (!useRanges || dates.length <= 2) return formatDatesCompact(dates);
+        const sorted = dates
+            .filter(d => d instanceof Date && !isNaN(d.getTime()))
+            .sort((a, b) => a - b);
+        if (sorted.length === 0) return '';
+        const groups = {};
+        sorted.forEach(d => {
+            const key = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(d);
+        });
+        const parts = Object.values(groups).map(group => {
+            if (group.length === 1) {
+                return `${pad2(group[0].getDate())}.${pad2(group[0].getMonth() + 1)}`;
+            }
+            const first = group[0], last = group[group.length - 1];
+            if (first.getMonth() === last.getMonth()) {
+                return `[${pad2(first.getDate())}-${pad2(last.getDate())}.${pad2(first.getMonth() + 1)}]`;
+            }
+            return `${pad2(first.getDate())}.${pad2(first.getMonth() + 1)} - ${pad2(last.getDate())}.${pad2(last.getMonth() + 1)} (${group.length})`;
+        });
+        return parts.join(', ');
+    } catch { return formatDatesCompact(dates); }
+};
+
+/**
+ * Convertit une string compact en affichage lisible.
+ * @param {string} compactString
+ * @param {'readable'|'short'} format
+ * @returns {string}
+ */
+export const formatCompactToDisplay = (compactString, format = 'readable') => {
+    if (!compactString) return '';
+    try {
+        const dates = parseDatesFromCompact(compactString);
+        if (format === 'short') {
+            return dates.map(d => `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}`).join(', ');
+        }
+        if (dates.length >= 2) {
+            const first = dates[0], last = dates[dates.length - 1];
+            return `${pad2(first.getDate())}.${pad2(first.getMonth() + 1)} - ${pad2(last.getDate())}.${pad2(last.getMonth() + 1)} (${dates.length})`;
+        }
+        return dates.map(d => `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}`).join(', ');
+    } catch { return compactString; }
+};
+
+/**
+ * Valide une chaîne au format compact.
+ * @param {string} dateString
+ * @returns {{ isValid: boolean, errors: string[], parsedCount: number }}
+ */
+export const validateDatesString = (dateString) => {
+    if (!dateString || typeof dateString !== 'string') {
+        return { isValid: true, errors: [], parsedCount: 0 };
+    }
+    try {
+        const parsed = parseDatesFromCompact(dateString);
+        const errors = [];
+        if (!dateString.startsWith('[') || !dateString.endsWith(']')) {
+            errors.push('Le format doit être entouré de crochets []');
+        }
+        const inner = dateString.replace(/^\[|\]$/g, '').trim();
+        if (inner && parsed.length === 0) errors.push('Aucune date valide trouvée dans la chaîne');
+        if (inner && !/^\[[\d/,.\s]+\]$/.test(dateString)) errors.push('Format incorrect. Attendu: [jj/jj.MM, jj/jj.MM]');
+        return { isValid: errors.length === 0, errors, parsedCount: parsed.length };
+    } catch (e) {
+        return { isValid: false, errors: ['Erreur : ' + e.message], parsedCount: 0 };
+    }
+};
+
+// ─── Export par défaut ────────────────────────────────────────────────────────
 const formatters = {
-    // Fonctions principales
-    formatMontant,
+    // Dates
     formatDate,
     formatDateToYYYYMMDD,
+    formatDatesIso,
+    // Montants
+    formatMontant,
     formatTelephone,
     formatNPA,
     toTitleCase,
@@ -657,7 +860,16 @@ const formatters = {
     formatNumeroSequence,
     formatTailleFichier,
     capitalize,
-    formatNomComplet
+    formatNomComplet,
+
+    // Formatage de tableaux de dates
+    formatDatesCompact,
+    parseDatesFromCompact,
+    formatDatesVerbose,
+    formatDatesWithDayNames,
+    formatDatesOptimized,
+    formatCompactToDisplay,
+    validateDatesString,
 };
 
 export default formatters;

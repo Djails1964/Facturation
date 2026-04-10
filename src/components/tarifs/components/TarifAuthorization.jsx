@@ -1,4 +1,5 @@
 import React from 'react';
+import SectionTitle from '../../shared/SectionTitle';
 
 const TarifAuthorization = ({ 
   message, 
@@ -8,8 +9,7 @@ const TarifAuthorization = ({
 }) => {
   return (
     <div className="content-section-container">
-      <div className="content-section-title">
-        <h2>Gestion des tarifs</h2>
+      <SectionTitle>Gestion des tarifs</SectionTitle>
         {message && (
           <div className="alert alert-danger">
             {message}
@@ -23,7 +23,6 @@ const TarifAuthorization = ({
             </button>
           </div>
         )}
-      </div>
       <div className="unauthorized-access">
         <p>Vous n'avez pas les droits nécessaires pour accéder à cette page.</p>
         <p>Veuillez contacter votre administrateur si vous pensez qu'il s'agit d'une erreur.</p>

@@ -4,10 +4,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import TarifSpecialTableSection from '../sections/TarifSpecialTableSection';
 import TarifFormHeader from '../sections/TarifFormHeader';
-import { AddButton } from '../../../components/ui/buttons';
 import UnifiedFilter from '../../../components/shared/filters/UnifiedFilter';
 import { useTarifFilter, createInitialFilters, enrichTarifsWithEtat } from '../hooks/useTarifFilter';
 import { createLogger } from '../../../utils/createLogger';
+import { FloatingAddButton } from '../../../components/ui/buttons/ActionButtons';
 
 const TarifSpecialGestion = ({ 
   tarifsSpeciaux, 
@@ -52,7 +52,7 @@ const TarifSpecialGestion = ({
     const normalized = enrichedTarifsSpeciaux.map(tarif => {
       // Trouver les entités liées
       const client = clients.find(c => 
-        c.id == (tarif.idClient || tarif.clientId)
+        c.id == (tarif.idClient || tarif.idClient)
       );
       const service = services.find(s => 
         (s.id || s.idService) === tarif.idService
@@ -188,11 +188,7 @@ const TarifSpecialGestion = ({
       <TarifFormHeader
         titre="Gestion des tarifs spéciaux"
         description="Gérez les tarifs personnalisés pour vos clients"
-      >
-        <AddButton onClick={handleCreateClick}>
-          Nouveau tarif spécial
-        </AddButton>
-      </TarifFormHeader>
+      ></TarifFormHeader>
 
       {/* Filtres unifiés */}
       <UnifiedFilter
@@ -241,31 +237,9 @@ const TarifSpecialGestion = ({
           isSubmitting={isSubmitting}
         />
       )}
-      
-      {/* Informations de debug */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="debug-info" style={{
-          marginTop: '20px',
-          padding: '10px',
-          backgroundColor: '#f8f9fa',
-          border: '1px solid #dee2e6',
-          borderRadius: '4px',
-          fontSize: '12px'
-        }}>
-          <strong>🔧 Debug TarifSpecialGestion :</strong><br/>
-          - Tarifs spéciaux chargés : {tarifsSpeciaux.length}<br/>
-          - Tarifs enrichis : {enrichedTarifsSpeciaux.length}<br/>
-          - Tarifs normalisés : {normalizedTarifsSpeciaux.length}<br/>
-          - Tarifs filtrés : {tarifsSpeciauxFiltered.length}<br/>
-          - Filtres actifs : {filterStats.hasActiveFilters ? 'Oui' : 'Non'}<br/>
-          - Filtres actuels : {JSON.stringify(filters)}<br/>
-          - Clients : {clients.length}<br/>
-          - Services : {services.length}<br/>
-          - Unités : {unites.length}<br/>
-          - Highlighted ID : {highlightedId || 'aucun'}<br/>
-          - ✅ MIGRATION UNIFIEDFILTER COMPLÈTE
-        </div>
-      )}
+
+      {/* Bouton flottant ajout */}
+      <FloatingAddButton onClick={handleCreateClick} tooltip="Nouveau tarif spécial" />
     </div>
   );
 };

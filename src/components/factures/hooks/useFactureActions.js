@@ -339,27 +339,6 @@ export const useFactureActions = () => {
     );
   }, [factureService, executeApi, log]);
 
-  /**
-   * Récupère le prochain numéro de facture
-   * @param {number} annee - Année
-   * @returns {Promise<string>} Prochain numéro de facture
-   */
-  const getProchainNumeroFacture = useCallback(async (annee) => {
-    return await executeApi(
-      async () => {
-        log.debug('🔢 Récupération prochain numéro pour année:', annee);
-        const result = await factureService.getProchainNumeroFacture(annee);
-        log.debug('✅ Prochain numéro récupéré:', result);
-        return result;
-      },
-      null,
-      (error) => {
-        log.error('❌ Erreur récupération numéro facture:', error);
-        throw error;
-      }
-    );
-  }, [factureService, executeApi, log]);
-
   // ========================================
   // UTILITAIRES
   // ========================================
@@ -421,9 +400,6 @@ export const useFactureActions = () => {
     imprimerFacture,
     envoyerFactureParEmail,
     
-    // Numérotation
-    getProchainNumeroFacture,
-    
     // Utilitaires
     enrichirFacturesAvecEtat,
     clearCache
@@ -442,7 +418,6 @@ export const useFactureActions = () => {
     getFactureUrl,
     imprimerFacture,
     envoyerFactureParEmail,
-    getProchainNumeroFacture,
     enrichirFacturesAvecEtat,
     clearCache
   ]);

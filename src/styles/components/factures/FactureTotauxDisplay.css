@@ -19,7 +19,7 @@
 .facture-totaux-label {
   flex: 1;
   font-weight: 500;
-  color: #333;
+  color: var(--color-text);
 }
 
 /* Valeur du total */
@@ -32,13 +32,13 @@
 
 /* Style pour la ligne de ristourne */
 .facture-totaux-row.ristourne-row {
-  color: #333; /* Couleur de texte par défaut */
+  color: var(--color-text); /* Couleur de texte par défaut */
 }
 
 /* Mise en forme spéciale pour le total final */
 .facture-totaux-row.total-final {
   margin-top: 15px;
-  border-top: 1px solid #ddd;
+  border-top: 1px solid var(--color-border);
   padding-top: 15px;
   font-size: 1.1em;
 }
@@ -46,14 +46,14 @@
 .facture-totaux-row.total-final .facture-totaux-label,
 .facture-totaux-row.total-final .facture-totaux-value {
   font-weight: 700;
-  color: #800000;
+  color: var(--color-primary);
 }
 
 /* Style pour le bouton de suggestion de ristourne */
 .sugerer-ristourne-btn {
   background-color: #f0f0f0;
-  color: #800000;
-  border: 1px solid #ddd;
+  color: var(--color-primary);
+  border: 1px solid var(--color-border);
   border-radius: 50%;
   width: 22px;
   height: 22px;
@@ -107,5 +107,5 @@
 }
 
 #ristourne:focus {
-  border-bottom: 2px solid #800000 !important;
+  border-bottom: 2px solid var(--color-primary) !important;
 }

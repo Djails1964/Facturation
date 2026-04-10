@@ -1,15 +1,15 @@
-// src/components/loyers/LoyerGestion.jsx
-// Composant principal de gestion des loyers
-// ✅ AJOUT : useLoyerModals pour la génération PDF confirmation
-
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import LoyersListe from './LoyersListe';
 import LoyerForm from './LoyerForm';
-import { FORM_MODES } from '../../constants/loyerConstants';
+import { LOYER_FORM_MODES } from '../../constants';
 import { useClientActions } from '../clients/hooks/useClientActions';
 import { useLoyerModals } from './hooks/useLoyerModals';
-import { createLogger } from '../../utils/createLogger';
+import { createLogger }        from '../../utils/createLogger';
+import { useFactureFromLoyer }  from './hooks/useFactureFromLoyer';
 import { useNotifications } from '../../services/NotificationService';
+import { showCustom } from '../../utils/modalSystem';
+import { getTodayIso } from '../../utils/dateHelpers';
+import SalleService from '../../services/SalleService';
 import '../../styles/components/loyers/LoyerPaymentModal.css';
 
 function LoyerGestion({ 
@@ -19,7 +19,8 @@ function LoyerGestion({
     onSectionChange  = null,
     initialFilter    = {}, 
     onRetour         = null,
-    navigationSource = 'liste'
+    navigationSource = 'liste',
+    onFactureGeneree = null,   // ✅ (idFacture) → navigue vers la liste des factures
 }) {
     
     const log = createLogger("LoyerGestion");
@@ -57,6 +58,104 @@ function LoyerGestion({
         chargerLoyers: () => setListeKey(k => k + 1),
     });
 
+    // ── Hook génération facture depuis loyer ───────────────────────────────
+    const { genererFactureDepuisLoyer } = useFactureFromLoyer();
+
+    /**
+     * Génère le bon document selon le paramètre type_document de la salle.
+     * SalleService.getTypeDocument(idService) → 'facture' | 'confirmation'
+     */
+    const handleGenererDocument = useCallback(async (loyer) => {
+        const client    = clients.find(c => c.id === loyer.idClient)
+                       ?? { id: loyer.idClient, nom: loyer.nomClient ?? '', prenom: loyer.prenomClient ?? '' };
+        const annee     = new Date(loyer.periodeDebut).getFullYear();
+        const idService = parseInt(loyer.idService, 10);
+
+        // Une seule requête : SELECT type_document FROM salle WHERE id_service = ?
+        const typeDocument = await SalleService.getTypeDocument(idService);
+        log.debug(`📄 type_document salle (service ${idService}) : ${typeDocument}`);
+
+        if (typeDocument === 'confirmation') {
+            try {
+                await handleGenererConfirmationPDF(loyer.idLoyer);
+            } catch (e) {
+                log.error('Erreur génération confirmation PDF:', e);
+                showError(e.message || 'Erreur lors de la génération de la confirmation');
+            }
+        } else {
+            // ── Demander la date de facturation ──────────────────────────────
+            const today = getTodayIso();
+            // Variable capturée dans le closure pour lire la valeur au submit
+            let dateChoisie = today;
+
+            const popupResult = await showCustom({
+                title: 'Date de la facture',
+                content: `
+                    <div style="padding: 8px 0 4px;">
+                        <label style="display:block; font-size:12px; font-weight:600;
+                                      text-transform:uppercase; letter-spacing:0.4px;
+                                      color:#666; margin-bottom:6px;">
+                            Date de facturation
+                        </label>
+                        <input
+                            id="popup-date-facture"
+                            name="popup-date-facture"
+                            type="date"
+                            style="width:100%; box-sizing:border-box; padding:7px 10px;
+                                   border:1.5px solid #ddd; border-radius:6px;
+                                   font-size:13px; font-family:inherit; outline:none;"
+                        />
+                        <p style="margin:8px 0 0; font-size:12px; color:#888; font-style:italic;">
+                            Facture pour ${client.prenom ?? ''} ${client.nom ?? ''} — ${annee}
+                        </p>
+                    </div>
+                `,
+                size: 'small',
+                buttons: [
+                    { text: 'Annuler',  action: 'cancel',  className: 'secondary' },
+                    { text: 'Générer',  action: 'submit',  className: 'primary'   },
+                ],
+                onMount: (container) => {
+                    const input = container.querySelector('#popup-date-facture');
+                    if (input) {
+                        // Initialiser via propriété (pas attribut)
+                        input.value = today;
+                        dateChoisie = today;
+                        // Capturer chaque changement dans la closure
+                        input.addEventListener('change', () => {
+                            if (input.value) dateChoisie = input.value;
+                        });
+                        input.addEventListener('input', () => {
+                            if (input.value) dateChoisie = input.value;
+                        });
+                    }
+                },
+            });
+
+            if (popupResult?.action !== 'submit') return; // annulé
+
+            // ✅ dateChoisie est mis à jour par les listeners onMount
+            const dateFacture = dateChoisie || today;
+
+            log.debug('📅 Date facture saisie:', dateFacture);
+
+            try {
+                const result = await genererFactureDepuisLoyer({ client, annee, idService, dateFacture });
+                showSuccess(`Facture ${result.numeroFacture ?? ''} créée pour ${client.prenom} ${client.nom}`);
+                log.debug('📦 result complet:', result);
+                // ✅ Naviguer vers la liste des factures avec la facture créée sélectionnée.
+                // anneeFacture est directement dans result, calculé par useFactureFromLoyer
+                if (result.idFacture && onFactureGeneree) {
+                    log.debug('📅 Appel onFactureGeneree:', result.idFacture, result.anneeFacture);
+                    onFactureGeneree(result.idFacture, result.anneeFacture ?? null);
+                }
+            } catch (e) {
+                log.error('Erreur génération facture:', e);
+                showError(e.message || 'Erreur lors de la génération de la facture');
+            }
+        }
+    }, [clients, genererFactureDepuisLoyer, handleGenererConfirmationPDF, showSuccess, showError, onFactureGeneree]);
+
     // ── Effets de synchronisation ───────────────────────────────────
     useEffect(() => {
         setActiveView(section);
@@ -79,7 +178,7 @@ function LoyerGestion({
     }, [activeView, onSectionChange]);
 
     // ── Chargement clients ──────────────────────────────────────────
-    const chargerClients = useCallback(async () => {
+    const chargerClients = useCallback(async (vue = null) => {
         // Protection contre les appels multiples
         if (isLoadingClientsRef.current) {
             log.debug('⏳ Chargement des clients déjà en cours, ignoré');
@@ -96,11 +195,17 @@ function LoyerGestion({
             log.debug('✅ Clients chargés depuis API:', clientsData.length);
             log.debug('📊 Données clients brutes:', clientsData);
             
-            // Filtrer uniquement les clients avec loyer actif
-            const clientsAvecLoyer = (clientsData || []).filter(c => c.aLoyer === true || c.aLoyer === 1);
-            setClients(clientsAvecLoyer);
-            log.debug('✅ Clients avec loyer chargés:', clientsAvecLoyer.length);
-            log.debug('📊 Clients avec loyer:', clientsAvecLoyer);
+            // ✅ En mode modifier/afficher : tous les clients sans filtre
+            //    Le client du loyer doit toujours être disponible même si
+            //    aLoyer n'est pas à jour en base.
+            // ✅ En mode liste/création : seulement les clients avec loyer actif
+            const estEnModification = vue === 'modifier' || vue === 'afficher';
+            const clientsFiltres = estEnModification
+                ? (clientsData || [])
+                : (clientsData || []).filter(c => c.aLoyer === true || c.aLoyer === 1);
+            setClients(clientsFiltres);
+            log.debug('✅ Clients chargés:', clientsFiltres.length,
+                estEnModification ? '(tous — mode modification)' : '(filtrés aLoyer)');
         } catch (error) {
             log.error('❌ Erreur lors du chargement des clients:', error);
             setClientError('Impossible de charger les clients avec loyer');
@@ -113,8 +218,17 @@ function LoyerGestion({
 
     // Charger les clients au montage
     useEffect(() => {
-        chargerClients();
+        chargerClients('liste');
     }, [chargerClients]);
+
+    // Recharger les clients quand on navigue vers 'afficher' ou 'modifier'
+    // pour s'assurer que le client d'un loyer nouvellement créé est dans la liste
+    useEffect(() => {
+        if (activeView === 'afficher' || activeView === 'modifier') {
+            chargerClients(activeView);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeView, selectedLoyerId]);
 
     // ── Gestionnaires de navigation ─────────────────────────────────
     const handleNouveauLoyer = useCallback(() => {
@@ -165,7 +279,7 @@ function LoyerGestion({
             case 'nouveau':
                 return (
                     <LoyerForm 
-                        mode={FORM_MODES.CREATE}
+                        mode={LOYER_FORM_MODES.CREATE}
                         onRetourListe={handleRetourListe} 
                         onLoyerCreated={handleLoyerCreated}
                         clients={clients}
@@ -176,7 +290,7 @@ function LoyerGestion({
             case 'modifier':
                 return (
                     <LoyerForm 
-                        mode={FORM_MODES.EDIT}
+                        mode={LOYER_FORM_MODES.EDIT}
                         onRetourListe={handleRetourListe}
                         idLoyer={selectedLoyerId}
                         clients={clients}
@@ -187,7 +301,7 @@ function LoyerGestion({
             case 'afficher':
                 return (
                     <LoyerForm 
-                        mode={FORM_MODES.VIEW}
+                        mode={LOYER_FORM_MODES.VIEW}
                         idLoyer={selectedLoyerId}
                         onRetourListe={handleRetourListe}
                         clients={clients}
@@ -205,9 +319,8 @@ function LoyerGestion({
                         onLoyerSupprime={handleLoyerSupprime}
                         initialFilter={initialFilter}
                         onNouveauLoyer={handleNouveauLoyer}
-                        // ✅ Paiement et PDF
                         onSaisirPaiement={handleSaisirPaiement}
-                        onGenererPDF={handleGenererConfirmationPDF}
+                        onGenererDocument={handleGenererDocument}
                         impressionEnCours={impressionEnCours}
                     />
                 );

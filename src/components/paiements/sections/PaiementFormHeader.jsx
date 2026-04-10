@@ -5,9 +5,8 @@
 //   – nom du client  ]  affichés en EDIT/VIEW uniquement,
 //   – référence facture ou loyer ]  invisibles en CREATE (données inconnues)
 
-import React from 'react';
-import { getBadgeClasses, formatEtatText } from '../../../utils/formatters';
-import DateService from '../../../utils/DateService';
+import { getBadgeClasses, formatEtatText, formatDate } from '../../../utils/formatters';
+import SectionTitle from '../../shared/SectionTitle';
 
 const PaiementFormHeader = ({ titre, paiement = {}, etat }) => {
 
@@ -29,28 +28,27 @@ const PaiementFormHeader = ({ titre, paiement = {}, etat }) => {
 
     // Complément date facture ou période loyer
     const refComplement = estFacture && paiement.dateFacture
-        ? DateService.formatSingleDate(paiement.dateFacture)
+        ? formatDate(paiement.dateFacture, 'date')
         : estLoyer && (paiement.periodeDebut || paiement.periodeFin)
             ? [
-                paiement.periodeDebut ? DateService.formatSingleDate(paiement.periodeDebut) : null,
-                paiement.periodeFin   ? DateService.formatSingleDate(paiement.periodeFin)   : null,
+                paiement.periodeDebut ? formatDate(paiement.periodeDebut, 'date') : null,
+                paiement.periodeFin   ? formatDate(paiement.periodeFin, 'date')   : null,
               ].filter(Boolean).join(' → ')
             : null;
 
     const afficherMeta = nomClient || refValeur;
 
     return (
-        <div className="content-section-title">
-
-            {/* ── Ligne titre + badge ── */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                <h2>{titre}</h2>
-                {etat && (
-                    <span className={getBadgeClasses(etat, 'normal')}>
-                        {formatEtatText(etat)}
-                    </span>
-                )}
-            </div>
+        <div className="paiement-form-header">
+        <SectionTitle
+            actions={etat ? (
+                <span className={getBadgeClasses(etat, 'normal')}>
+                    {formatEtatText(etat)}
+                </span>
+            ) : null}
+        >
+            {titre}
+        </SectionTitle>
 
             {/* ── Méta : client | référence  (EDIT/VIEW uniquement) ── */}
             {afficherMeta && (

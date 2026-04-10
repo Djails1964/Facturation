@@ -1,180 +1,168 @@
 // src/components/factures/FacturesTable.jsx
+// Utilise UnifiedTable nativement — plus de FactureRow/CSS lf-* parallèles.
 
-import React, { useState, useMemo } from 'react';
-import '../../styles/components/factures/FacturesTable.css';
-import FactureRow from './FactureRow';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import UnifiedTable from '../shared/tables/UnifiedTable';
+import FactureActions from './FactureActions';
+import { formatDate, getBadgeClasses, formatEtatText, formatMontant } from '../../utils/formatters';
 import { createLogger } from '../../utils/createLogger';
+import { COLUMN_LABELS } from '../../constants/factureConstants';
+import '../../styles/components/factures/FacturesTable.css';
+
+const log = createLogger('FacturesTable');
+
+// ── Composant ligne avec scroll-to ────────────────────────────────────────────
+function FactureRowWrapper({ facture, isSelected, columns, onSelectionFacture, actionProps }) {
+    const rowRef = useRef(null);
+    useEffect(() => {
+        if (isSelected && rowRef.current) {
+            rowRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }, [isSelected]);
+
+    const etat = facture.etatAffichage || facture.etat;
+
+    return (
+        <div
+            ref={rowRef}
+            className={`table-row ${isSelected ? 'selected' : ''}`}
+            onClick={() => onSelectionFacture(facture.idFacture)}
+        >
+            {columns.map((col, i) => {
+                // La colonne actions : FactureActions rend son propre div.table-cell
+                // → on ne crée pas de wrapper pour éviter l'imbrication
+                if (col.field === 'actions') {
+                    return (
+                        <FactureActions
+                            key={i}
+                            facture={facture}
+                            style={{ flex: col.flex, minWidth: col.minWidth }}
+                            {...actionProps}
+                        />
+                    );
+                }
+                return (
+                    <div
+                        key={i}
+                        className={`table-cell ${col.className || ''}`}
+                        style={{ flex: col.flex, minWidth: col.minWidth, justifyContent: col.align === 'right' ? 'flex-end' : undefined }}
+                    >
+                        {col.field === 'numeroFacture' && facture.numeroFacture}
+                        {col.field === 'client' && `${facture.client?.prenom || ''} ${facture.client?.nom || ''}`}
+                        {col.field === 'dateFacture' && formatDate(facture.dateFacture)}
+                        {col.field === 'montantTotal' && formatMontant(facture.montantTotal)}
+                        {col.field === 'etat' && (
+                            <span className={getBadgeClasses(etat)}>{formatEtatText(etat)}</span>
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+// ── Colonnes ──────────────────────────────────────────────────────────────────
+const COLUMNS = [
+    { label: COLUMN_LABELS.NUMERO,  field: 'numeroFacture', sortKey: 'numeroFacture', flex: '1',       minWidth: '120px', className: 'factures-numero-cell' },
+    { label: COLUMN_LABELS.CLIENT,  field: 'client',        sortKey: 'client',        flex: '1.5',     minWidth: '150px', className: 'factures-client-cell' },
+    { label: COLUMN_LABELS.DATE,    field: 'dateFacture',   sortKey: 'dateFacture',   flex: '0.8',     minWidth: '100px', className: 'factures-date-cell' },
+    { label: COLUMN_LABELS.MONTANT, field: 'montantTotal',  sortKey: 'montant',       flex: '0.8',     minWidth: '100px', className: 'factures-montant-cell', align: 'right' },
+    { label: COLUMN_LABELS.ETAT,    field: 'etat',          sortKey: 'etat',          flex: '1',       minWidth: '100px', className: 'factures-etat-cell' },
+    { label: '',                    field: 'actions',                                 flex: '0 0 240px', minWidth: '240px', className: 'actions-cell' },
+];
 
 const FacturesTable = ({
-    factures,
-    isLoading,
-    error,
-    factureSelectionnee,
-    onSelectionFacture,
-    onAfficherFacture,
-    onModifierFacture,
-    onImprimerFacture,
-    onCopierFacture,
-    onEnvoyerFacture,
-    onPayerFacture,
-    onSupprimerFacture,
-    onSetNotification
+    factures, isLoading, error, factureSelectionnee, onSelectionFacture,
+    onAfficherFacture, onModifierFacture, onImprimerFacture, onCopierFacture,
+    onEnvoyerFacture, onPayerFacture, onSupprimerFacture, onSetNotification
 }) => {
+    // ── Tri ───────────────────────────────────────────────────────────────────
+    const [sortConfig, setSortConfig] = useState({ key: 'numeroFacture', direction: 'desc' });
 
-    const log = createLogger("FacturesTable");
-
-    // État du tri : colonne et direction
-    const [sortConfig, setSortConfig] = useState({
-        key: 'numeroFacture',
-        direction: 'desc'
-    });
-
-    // Gérer le clic sur une colonne pour trier
     const handleSort = (key) => {
-        setSortConfig(prevConfig => ({
+        setSortConfig(prev => ({
             key,
-            direction: prevConfig.key === key && prevConfig.direction === 'desc' ? 'asc' : 'desc'
+            direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc'
         }));
     };
 
-    // Trier les factures
     const sortedFactures = useMemo(() => {
-        if (!factures || factures.length === 0) return [];
-
-        const sorted = [...factures].sort((a, b) => {
-            let aValue, bValue;
-
+        if (!factures?.length) return [];
+        return [...factures].sort((a, b) => {
+            const dir = sortConfig.direction === 'asc' ? 1 : -1;
             switch (sortConfig.key) {
-                case 'numeroFacture':
-                    // Tri par année puis numéro séquentiel (format: "001.2024")
-                    const partsA = a.numeroFacture?.split('.') || ['0', '0'];
-                    const partsB = b.numeroFacture?.split('.') || ['0', '0'];
-                    
-                    const numSeqA = parseInt(partsA[0]) || 0;  // 001
-                    const anneeA = parseInt(partsA[1]) || 0;   // 2024
-                    
-                    const numSeqB = parseInt(partsB[0]) || 0;
-                    const anneeB = parseInt(partsB[1]) || 0;
-                    
-                    // Comparer d'abord par année
-                    if (anneeA !== anneeB) {
-                        aValue = anneeA;
-                        bValue = anneeB;
-                    } else {
-                        // Si même année, comparer par numéro séquentiel
-                        aValue = numSeqA;
-                        bValue = numSeqB;
-                    }
-                    break;
-                case 'client':
-                    // Tri alphabétique sur le nom complet du client
-                    aValue = `${a.client?.prenom || ''} ${a.client?.nom || ''}`.toLowerCase();
-                    bValue = `${b.client?.prenom || ''} ${b.client?.nom || ''}`.toLowerCase();
-                    break;
+                case 'numeroFacture': {
+                    const [seqA, yearA] = (a.numeroFacture || '0.0').split('.').map(Number);
+                    const [seqB, yearB] = (b.numeroFacture || '0.0').split('.').map(Number);
+                    const aVal = yearA !== yearB ? yearA : seqA;
+                    const bVal = yearA !== yearB ? yearB : seqB;
+                    return (aVal - bVal) * dir;
+                }
+                case 'client': {
+                    const aVal = `${a.client?.prenom || ''} ${a.client?.nom || ''}`.trim();
+                    const bVal = `${b.client?.prenom || ''} ${b.client?.nom || ''}`.trim();
+                    return aVal.localeCompare(bVal, 'fr', { sensitivity: 'base' }) * dir;
+                }
                 case 'dateFacture':
-                    // Tri par date
-                    aValue = new Date(a.dateFacture || 0).getTime();
-                    bValue = new Date(b.dateFacture || 0).getTime();
-                    break;
+                    return (new Date(a.dateFacture || 0) - new Date(b.dateFacture || 0)) * dir;
                 case 'montant':
-                    // Tri numérique sur le montant
-                    aValue = parseFloat(a.montantTotal) || 0;
-                    bValue = parseFloat(b.montantTotal) || 0;
-                    break;
-                case 'etat':
-                    // Tri alphabétique sur l'état
-                    aValue = (a.etatAffichage || a.etat || '').toLowerCase();
-                    bValue = (b.etatAffichage || b.etat || '').toLowerCase();
-                    break;
-                default:
-                    return 0;
+                    return ((parseFloat(a.montantTotal) || 0) - (parseFloat(b.montantTotal) || 0)) * dir;
+                case 'etat': {
+                    const aVal = (a.etatAffichage || a.etat || '');
+                    const bVal = (b.etatAffichage || b.etat || '');
+                    return aVal.localeCompare(bVal, 'fr', { sensitivity: 'base' }) * dir;
+                }
+                default: return 0;
             }
-
-            if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-            if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-            return 0;
         });
-
-        return sorted;
     }, [factures, sortConfig]);
 
-    // Générer l'icône de tri
-    const getSortIcon = (key) => {
-        if (sortConfig.key !== key) {
-            return <span className="sort-icon sort-inactive">⇅</span>;
-        }
-        return sortConfig.direction === 'asc' 
-            ? <span className="sort-icon sort-active">↑</span>
-            : <span className="sort-icon sort-active">↓</span>;
+    // ── Colonnes avec labels triables ─────────────────────────────────────────
+    const columns = useMemo(() => COLUMNS.map(col => ({
+        ...col,
+        label: col.sortKey ? (
+            <span
+                className="table-sort-header"
+                onClick={(e) => { e.stopPropagation(); handleSort(col.sortKey); }}
+            >
+                <span>{col.label}</span>
+                <span className={`sort-icon ${sortConfig.key === col.sortKey ? 'sort-active' : 'sort-inactive'}`}>
+                    {sortConfig.key === col.sortKey
+                        ? (sortConfig.direction === 'asc' ? '↑' : '↓')
+                        : '⇅'}
+                </span>
+            </span>
+        ) : col.label
+    })), [sortConfig]);
+
+    const actionProps = {
+        onAfficherFacture, onModifierFacture, onImprimerFacture,
+        onCopierFacture, onEnvoyerFacture, onPayerFacture,
+        onSupprimerFacture, onSetNotification
     };
 
-    log.debug("contenu de factures : ", factures);
+    log.debug('Rendu FacturesTable:', factures?.length, 'factures');
 
     return (
-        <div className="factures-table">
-            {/* En-tête du tableau */}
-            <div className="lf-table-header">
-                <div 
-                    className="lf-header-cell lf-numero-cell sortable"
-                    onClick={() => handleSort('numeroFacture')}
-                >
-                    <span className="header-label">Numéro de facture</span> {getSortIcon('numeroFacture')}
-                </div>
-                <div 
-                    className="lf-header-cell lf-client-cell sortable"
-                    onClick={() => handleSort('client')}
-                >
-                    <span className="header-label">Client</span> {getSortIcon('client')}
-                </div>
-                <div 
-                    className="lf-header-cell lf-date-cell sortable"
-                    onClick={() => handleSort('dateFacture')}
-                >
-                    <span className="header-label">Date facture</span> {getSortIcon('dateFacture')}
-                </div>
-                <div 
-                    className="lf-header-cell lf-montant-cell sortable"
-                    onClick={() => handleSort('montant')}
-                >
-                    <span className="header-label">Montant (CHF)</span> {getSortIcon('montant')}
-                </div>
-                <div 
-                    className="lf-header-cell lf-etat-cell sortable"
-                    onClick={() => handleSort('etat')}
-                >
-                    <span className="header-label">État</span> {getSortIcon('etat')}
-                </div>
-                <div className="lf-header-cell lf-actions-cell"></div>
-            </div>
-
-            {/* Corps du tableau */}
-            <div className="lf-table-body">
-                {isLoading ? (
-                    <div className="lf-loading-message">Chargement des factures...</div>
-                ) : error ? (
-                    <div className="lf-error-message">{error}</div>
-                ) : sortedFactures.length === 0 ? (
-                    <div className="lf-empty-message">Aucune facture trouvée</div>
-                ) : (
-                    sortedFactures.map(facture => (
-                        <FactureRow
-                            key={facture.idFacture}
-                            facture={facture}
-                            isSelected={factureSelectionnee === facture.idFacture}
-                            onSelectionFacture={onSelectionFacture}
-                            onAfficherFacture={onAfficherFacture}
-                            onModifierFacture={onModifierFacture}
-                            onImprimerFacture={onImprimerFacture}
-                            onCopierFacture={onCopierFacture}
-                            onEnvoyerFacture={onEnvoyerFacture}
-                            onPayerFacture={onPayerFacture}
-                            onSupprimerFacture={onSupprimerFacture}
-                            onSetNotification={onSetNotification}
-                        />
-                    ))
-                )}
-            </div>
-        </div>
+        <UnifiedTable
+            columns={columns}
+            data={sortedFactures}
+            isLoading={isLoading}
+            error={error}
+            emptyMessage="Aucune facture trouvée"
+            selectedId={factureSelectionnee}
+            getRowId={(f) => f.idFacture}
+            renderRow={(facture, cols) => (
+                <FactureRowWrapper
+                    key={facture.idFacture}
+                    facture={facture}
+                    isSelected={Number(factureSelectionnee) === Number(facture.idFacture)}
+                    columns={cols}
+                    onSelectionFacture={onSelectionFacture}
+                    actionProps={actionProps}
+                />
+            )}
+        />
     );
 };
 

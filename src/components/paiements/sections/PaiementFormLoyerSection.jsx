@@ -2,11 +2,19 @@
 
 import React, { useMemo, useState } from 'react';
 import { FiChevronRight, FiChevronDown } from 'react-icons/fi';
-import DateService from '../../../utils/DateService';
-import { formatMontant } from '../../../utils/formatters';
+import { formatMontant, formatDate } from '../../../utils/formatters';
+import { getTodayIso, fromIsoString, toIsoString } from '../../../utils/dateHelpers';
 import { usePaiementActions } from '../hooks/usePaiementActions';
-import { MOIS_ANNEE } from '../../../constants/loyerConstants';
+import { MOIS_ANNEE } from '../../../constants';
 import { createLogger } from '../../../utils/createLogger';
+import { 
+    FORM_MODES, 
+    VALIDATION_MESSAGES, 
+    NOTIFICATIONS,
+    PAIEMENT_ETATS,
+    LOG_ACTIONS,
+    DEFAULT_VALUES
+} from '../../../constants/paiementConstants';
 
 const logger = createLogger('PaiementFormLoyerSection');
 
@@ -15,8 +23,7 @@ const nomMois = (numero) => {
     return m ? m.nomCourt : String(numero).padStart(2, '0');
 };
 
-const DEFAULT_METHODE = 'virement';
-const TODAY_ISO = DateService.getTodayInputFormat();
+const TODAY_ISO = getTodayIso();
 
 // Solde restant d'un mois = montant dû - somme des paiements existants
 const soldeMois = (d) => {
@@ -86,7 +93,7 @@ const PaiementFormLoyerSection = ({
             selectionne:     false,
             datePaiement:    TODAY_ISO,
             montantPaye:     '',
-            methodePaiement: DEFAULT_METHODE,
+            methodePaiement: DEFAULT_VALUES.METHODE_PAIEMENT,
         };
 
     const updateMois = (id, patch) =>
@@ -167,8 +174,8 @@ const PaiementFormLoyerSection = ({
                         </option>
                         {loyers.map(l => {
                             const id    = l.idLoyer || l.id;
-                            const debut = l.periodeDebut ? DateService.formatSingleDate(l.periodeDebut) : null;
-                            const fin   = l.periodeFin   ? DateService.formatSingleDate(l.periodeFin)   : null;
+                            const debut = l.periodeDebut ? formatDate(l.periodeDebut, 'date') : null;
+                            const fin   = l.periodeFin   ? formatDate(l.periodeFin, 'date')   : null;
                             const periode = [debut, fin].filter(Boolean).join(' → ');
                             return (
                                 <option key={id} value={id}>
@@ -226,11 +233,11 @@ const PaiementFormLoyerSection = ({
                             <div className="pf-recap-sub pf-recap-sub--periode">
                                 <strong className="pf-recap-val pf-recap-val--sm">
                                     {loyerSelectionne.periodeDebut
-                                        ? DateService.formatSingleDate(loyerSelectionne.periodeDebut)
+                                        ? formatDate(loyerSelectionne.periodeDebut, 'date')
                                         : '—'}
                                     {' → '}
                                     {loyerSelectionne.periodeFin
-                                        ? DateService.formatSingleDate(loyerSelectionne.periodeFin)
+                                        ? formatDate(loyerSelectionne.periodeFin, 'date')
                                         : '—'}
                                 </strong>
                             </div>
@@ -388,8 +395,8 @@ const PaiementFormLoyerSection = ({
                                                         max={TODAY_ISO}
                                                         placeholder=" "
                                                         onChange={e => updateMois(id, {
-                                                            datePaiement: DateService.toInputFormat(
-                                                                DateService.fromInputFormat(e.target.value)
+                                                            datePaiement: toIsoString(
+                                                                fromIsoString(e.target.value)
                                                             ) || e.target.value
                                                         })}
                                                         required
@@ -449,7 +456,7 @@ const PaiementFormLoyerSection = ({
                                         {/* [E] date / montant / méthode en readonly */}
                                         <div className="pf-col pf-col--saisie">
                                             <div className="pf-col pf-col--date pf-versement-val">
-                                                {DateService.formatSingleDate(p.datePaiement)}
+                                                {formatDate(p.datePaiement)}
                                             </div>
                                             <div className="pf-col pf-col--montant pf-versement-val pf-versement-val--right">
                                                 {formatMontant(parseFloat(p.montantPaye || 0))} CHF

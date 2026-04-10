@@ -71,7 +71,9 @@
 .action-move-icon,
 .action-add-icon,
 .action-save-icon,
-.action-confirm-icon {
+.action-confirm-icon,
+.action-loyer-icon,
+.action-facture-icon {
   color: var(--color-primary-light, #800020);
   transition: color 0.2s ease;
 }
@@ -84,7 +86,9 @@
 .bouton-action:hover:not(.bouton-desactive) .action-mail-icon,
 .bouton-action:hover:not(.bouton-desactive) .action-pay-icon,
 .bouton-action:hover:not(.bouton-desactive) .action-print-icon,
-.bouton-action:hover:not(.bouton-desactive) .action-cancel-icon {
+.bouton-action:hover:not(.bouton-desactive) .action-cancel-icon,
+.bouton-action:hover:not(.bouton-desactive) .action-loyer-icon,
+.bouton-action:hover:not(.bouton-desactive) .action-facture-icon {
   color: var(--color-primary, #800000);
 }
 
@@ -96,7 +100,9 @@
 .bouton-desactive .action-mail-icon,
 .bouton-desactive .action-pay-icon,
 .bouton-desactive .action-print-icon,
-.bouton-desactive .action-cancel-icon {
+.bouton-desactive .action-cancel-icon,
+.bouton-desactive .action-loyer-icon,
+.bouton-desactive .action-facture-icon {
   color: #ccc !important;
 }
 
@@ -284,11 +290,7 @@
   margin-left: auto;
 }
 
-/* Actions des listes de tarifs */
-.tarif-actions-cell {
-  min-width: 280px;
-  max-width: 320px;
-}
+/* Actions des listes de tarifs - largeurs définies dans buttons.css */
 
 /* Animations pour les actions */
 .tarif-actions-cell .bouton-action {
@@ -385,14 +387,17 @@
   .action-mail-icon,
   .action-pay-icon,
   .action-print-icon,
-  .action-cancel-icon {
+  .action-cancel-icon,
+  .action-loyer-icon,
+  .action-facture-icon {
     color: #000000;
   }
   
   .bouton-desactive .action-edit-icon,
   .bouton-desactive .action-delete-icon,
   .bouton-desactive .action-view-icon,
-  .bouton-desactive .action-copy-icon {
+  .bouton-desactive .action-copy-icon,
+  .bouton-desactive .action-facture-icon {
     color: #666666 !important;
   }
   

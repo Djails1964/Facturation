@@ -73,75 +73,127 @@
   gap: 20px;
 }
 
-/* ========== CHAMP DE PARAMÈTRE ========== */
-.parametre-field {
+/* ========== CHAMP DE PARAMÈTRE (ParametreField) — style label-au-dessus ========== */
+/* Cohérent avec .ls-salle-field (SalleEditor) et les blocs Motifs */
+
+.pf-field {
   display: flex;
-  gap: 15px;
-  align-items: flex-end; /* ✅ MODIFIÉ : flex-end pour aligner les bases des champs */
-  padding: 15px 0;
+  gap: 16px;
+  align-items: flex-end;
+  padding: 12px 0;
   border-bottom: 1px solid #f0f0f0;
 }
 
-.parametre-field:last-child {
+.pf-field:last-child {
   border-bottom: none;
+  padding-bottom: 0;
 }
 
-/* ✅ LAYOUT PAR DÉFAUT : Champs SANS année occupent 100% */
-.parametre-field-main {
-  flex: 1 1 100%;
+.pf-field-main {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
   min-width: 0;
 }
 
-/* ✅ Champ année : caché par défaut */
-.parametre-field-year {
-  display: none;
-  flex-shrink: 0;
-  align-self: flex-end; /* ✅ Aligné sur la base */
-  padding-bottom: 0; /* ✅ Pas de padding en bas */
+/* Layout 72/28 uniquement pour les champs avec sélecteur d'année */
+.pf-field--with-year .pf-field-main {
+  flex: 0 0 72%;
 }
 
-/* ✅ LAYOUT 80/20 : Uniquement pour les champs AVEC année */
-.parametre-field:has(.parametre-field-year) .parametre-field-main {
-  flex: 0 0 80%;
-  max-width: 80%; /* ✅ Empêche le débordement */
+.pf-field-year {
+  flex: 0 0 calc(28% - 16px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.parametre-field:has(.parametre-field-year) .parametre-field-year {
-  display: block;
-  flex: 0 0 calc(20% - 15px); /* ✅ 20% moins le gap */
-  max-width: calc(20% - 15px); /* ✅ Empêche le débordement */
-}
-
-/* Select dans le champ année */
-.parametre-field-year select {
-  width: 100%;
-  box-sizing: border-box; /* ✅ Inclut padding et border dans la largeur */
-}
-
-/* S'assurer que le input-group ne déborde pas */
-.parametre-field-year .input-group {
-  width: 100%;
-  margin-bottom: 0; /* ✅ Neutralise le margin-bottom de forms.css */
-  box-sizing: border-box; /* ✅ Inclut padding et border dans la largeur */
-}
-
-/* Input-group dans main aussi */
-.parametre-field-main .input-group {
-  width: 100%;
-  margin-bottom: 0; /* ✅ AJOUT : Neutralise aussi pour le champ principal */
-  box-sizing: border-box; /* ✅ Inclut padding et border dans la largeur */
-}
-
-/* Description du paramètre */
-.parametre-description {
-  font-size: 0.85rem;
+/* Label */
+.pf-label {
+  font-size: 12px;
+  font-weight: 600;
   color: var(--secondary-text, #666);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  cursor: default;
+}
+
+/* Champ de saisie commun */
+.pf-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 10px;
+  border: 1.5px solid var(--border-color, #ddd);
+  border-radius: var(--border-radius, 6px);
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text-color, #333);
+  background: white;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.pf-input:focus,
+.pf-input--focused {
+  border-color: var(--primary-color, #800000);
+  box-shadow: 0 0 0 2px rgba(128, 0, 0, 0.08);
+}
+
+.pf-input--error {
+  border-color: #dc3545;
+}
+
+/* Select — flèche personnalisée */
+.pf-input--select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 16px;
+  padding-right: 30px;
+  cursor: pointer;
+}
+
+.pf-input--select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Textarea */
+.pf-input--textarea {
+  resize: vertical;
+  min-height: 100px;
+  line-height: 1.5;
+}
+
+/* Description et erreur */
+.pf-desc {
+  font-size: 11px;
+  color: var(--secondary-text, #888);
   font-style: italic;
-  margin-top: -8px;
-  padding-left: 0;
+}
+
+.pf-error {
+  font-size: 11px;
+  color: #dc3545;
+  font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .pf-field,
+  .pf-field--with-year {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .pf-field--with-year .pf-field-main,
+  .pf-field-year {
+    flex: 1 1 100%;
+  }
 }
 
 /* ========== ÉTATS DE CHARGEMENT ========== */
@@ -215,3 +267,296 @@
 .parametre-groupe:nth-child(2) { animation-delay: 0.1s; }
 .parametre-groupe:nth-child(3) { animation-delay: 0.2s; }
 .parametre-groupe:nth-child(4) { animation-delay: 0.3s; }
+/* ═══════════════════════════════════════════════════════════════════
+   ÉDITEUR DE MOTIFS DE LOCATION (MotifsParametreEditor)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.motifs-editeur {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Bloc par catégorie ── */
+.motifs-categorie-bloc {
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: var(--border-radius, 8px);
+  overflow: hidden;
+}
+
+.motifs-categorie-titre {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  background: var(--color-background-alt, #f8f8f8);
+  border-bottom: 1px solid var(--border-color, #ddd);
+}
+
+.motifs-categorie-badge {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--primary-color, #800000);
+  background: rgba(128, 0, 0, 0.08);
+  border: 1px solid rgba(128, 0, 0, 0.2);
+  border-radius: 4px;
+  padding: 2px 10px;
+}
+
+/* ── Liste des motifs ── */
+.motifs-liste {
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 40px;
+}
+
+.motifs-vide {
+  font-size: 0.875rem;
+  color: var(--secondary-text, #888);
+  font-style: italic;
+  margin: 0;
+  padding: 8px 0;
+}
+
+/* ── Ligne d'un motif ── */
+.motif-ligne {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.motif-ligne:last-child {
+  border-bottom: none;
+}
+
+.motif-texte {
+  flex: 1;
+  font-size: 0.9rem;
+  color: var(--text-color, #333);
+  padding: 4px 0;
+}
+
+.motif-input-edit {
+  flex: 1;
+  font-size: 0.9rem;
+  padding: 4px 8px;
+  border: 1px solid var(--primary-color, #800000);
+  border-radius: 4px;
+  outline: none;
+  color: var(--text-color, #333);
+}
+
+/* ── Boutons d'action sur un motif ── */
+.motif-btn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  line-height: 1;
+  transition: background 0.15s;
+}
+
+.motif-btn--edit   { color: #555; }
+.motif-btn--delete { color: #c00; }
+.motif-btn--confirm { color: #1a5c2e; font-weight: 700; }
+.motif-btn--cancel  { color: #888; }
+
+.motif-btn:hover { background: rgba(0,0,0,0.07); }
+.motif-btn--delete:hover { background: rgba(200,0,0,0.1); }
+.motif-btn--confirm:hover { background: rgba(26,92,46,0.1); }
+
+/* ── Ligne d'ajout d'un nouveau motif ── */
+.motif-ajout-ligne {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #fafafa;
+  border-top: 1px dashed #ddd;
+}
+
+.motif-input-nouveau {
+  flex: 1;
+  font-size: 0.875rem;
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.motif-input-nouveau:focus {
+  border-color: var(--primary-color, #800000);
+}
+
+.motif-btn--ajouter {
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  color: white;
+  background: var(--primary-color, #800000);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.motif-btn--ajouter:hover:not(:disabled) {
+  background: #a00;
+}
+
+.motif-btn--ajouter:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Motif par défaut ── */
+.motif-defaut-ligne {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: rgba(128, 0, 0, 0.03);
+  border-top: 1px solid var(--border-color, #ddd);
+}
+
+.motif-defaut-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--secondary-text, #555);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.motif-defaut-select {
+  flex: 1;
+  font-size: 0.875rem;
+  padding: 5px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  color: var(--text-color, #333);
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.motif-defaut-select:focus {
+  outline: none;
+  border-color: var(--primary-color, #800000);
+}
+
+.motif-defaut-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Mobile ── */
+@media (max-width: 600px) {
+  .motif-defaut-ligne {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .motif-defaut-select {
+    width: 100%;
+  }
+}
+
+/* ── LocationSalleParametreEditor ────────────────────────────────────────── */
+
+/* Conteneur : une box par salle, pleine largeur, empilées */
+.ls-salle-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+}
+
+/* Corps de la box (sous le bandeau) */
+.ls-salle-body {
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* Ligne champ */
+.ls-salle-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* Label */
+.ls-salle-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--secondary-text, #666);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+/* Select service */
+.ls-salle-select {
+    padding: 7px 10px;
+    border: 1.5px solid var(--border-color, #ddd);
+    border-radius: var(--border-radius, 6px);
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text-color, #333);
+    background: white;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.ls-salle-select:focus {
+    border-color: var(--primary-color, #800000);
+}
+
+/* Input texte (type_client_requis) */
+.ls-salle-input {
+    padding: 7px 10px;
+    border: 1.5px solid var(--border-color, #ddd);
+    border-radius: var(--border-radius, 6px);
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text-color, #333);
+    outline: none;
+    transition: border-color 0.15s;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.ls-salle-input:focus {
+    border-color: var(--primary-color, #800000);
+}
+
+/* Description sous le champ */
+.ls-salle-desc {
+    font-size: 11px;
+    color: var(--secondary-text, #888);
+    font-style: italic;
+}
+/* ── Boutons actions SalleEditor ── */
+.ls-salle-actions {
+    display: flex;
+    gap: 8px;
+    padding-top: 4px;
+}
+
+.ls-salle-add-btn {
+    margin-top: 8px;
+    align-self: flex-start;
+}

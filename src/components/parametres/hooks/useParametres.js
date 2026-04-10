@@ -2,6 +2,7 @@
 /**
  * Hook personnalisé pour la gestion des paramètres
  * Centralise toute la logique métier
+ * ✅ Import centralisé depuis constants/index.js
  */
 
 import { useState, useCallback, useMemo } from 'react';
@@ -11,7 +12,7 @@ import {
   PARAMETRE_SUCCESS_MESSAGES,
   PARAMETRE_ERROR_MESSAGES,
   PARAMETRE_STATE_MESSAGES
-} from '../../../constants/parametreConstants';
+} from '../../../constants'; // ✅ Import depuis l'index centralisé
 import {
   normalizeParametresStructure,
   prepareParametresForSubmit
@@ -60,7 +61,7 @@ export const useParametres = () => {
     } finally {
       setLoading(false);
     }
-  }, [parametreService, showInfo, showError]); // ✅ Dépendances stables
+  }, [parametreService, showInfo, showError]);
 
   /**
    * Modifie la valeur d'un paramètre

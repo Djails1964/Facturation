@@ -23,7 +23,7 @@ function ClientGestion({ section = 'liste', idClient = null, onClientCreated = n
     } = useClientActions();
 
     const [activeView, setActiveView] = useState(section);
-    const [selectedClientId, setSelectedClientId] = useState(idClient);
+    const [selectedidClient, setSelectedidClient] = useState(idClient);
     const [notification, setNotification] = useState({ message: '', type: '' });
 
     // Effet pour mettre à jour la vue active quand la prop section change
@@ -34,7 +34,7 @@ function ClientGestion({ section = 'liste', idClient = null, onClientCreated = n
     // Effet pour mettre à jour l'ID du client sélectionné quand la prop idClient change
     useEffect(() => {
         if (idClient !== null) {
-            setSelectedClientId(idClient);
+            setSelectedidClient(idClient);
         }
     }, [idClient]);
 
@@ -50,7 +50,7 @@ function ClientGestion({ section = 'liste', idClient = null, onClientCreated = n
         logger.info('🔄 handleRetourListe appelé avec:', { idClient, success, message, type });
         
         if (idClient) {
-            setSelectedClientId(idClient);
+            setSelectedidClient(idClient);
         }
         
         // ✅ Gérer correctement les paramètres dans l'ordre
@@ -65,7 +65,7 @@ function ClientGestion({ section = 'liste', idClient = null, onClientCreated = n
 
     // Fonction pour gérer la création réussie d'un client
     const handleClientCreated = async (idClient, message = 'Client créé avec succès') => {
-        setSelectedClientId(idClient);
+        setSelectedidClient(idClient);
         setNotification({ message, type: 'success' });
         
         // ✅ VÉRIFICATION SÉCURISÉE DU STATUT THÉRAPEUTE AVEC useClientActions
@@ -94,14 +94,14 @@ function ClientGestion({ section = 'liste', idClient = null, onClientCreated = n
     // Fonction pour gérer la modification d'un client
     const handleModifierClient = (idClient) => {
         logger.debug('✏️ Modification du client:', idClient);
-        setSelectedClientId(idClient);
+        setSelectedidClient(idClient);
         setActiveView('modifier');
     };
 
     // Fonction pour gérer l'affichage d'un client
     const handleAfficherClient = (idClient) => {
         logger.debug('👁️ Affichage du client:', idClient);
-        setSelectedClientId(idClient);
+        setSelectedidClient(idClient);
         setActiveView('afficher');
     };
 
@@ -167,7 +167,7 @@ function ClientGestion({ section = 'liste', idClient = null, onClientCreated = n
                     <ClientForm 
                         mode={FORM_MODES.EDIT}
                         onRetourListe={handleRetourListe}
-                        idClient={selectedClientId}
+                        idClient={selectedidClient}
                         // ❌ SUPPRIMÉ: clientService - useClientActions est utilisé dans useClientForm
                     />
                 );
@@ -175,7 +175,7 @@ function ClientGestion({ section = 'liste', idClient = null, onClientCreated = n
                 return (
                     <ClientForm 
                         mode={FORM_MODES.VIEW}
-                        idClient={selectedClientId}
+                        idClient={selectedidClient}
                         onRetourListe={handleRetourListe}
                         // ❌ SUPPRIMÉ: clientService - useClientActions est utilisé dans useClientForm
                     />
@@ -184,7 +184,7 @@ function ClientGestion({ section = 'liste', idClient = null, onClientCreated = n
             default:
                 return (
                     <ClientsListe 
-                        nouveauClientId={selectedClientId}
+                        nouveauidClient={selectedidClient}
                         onModifierClient={handleModifierClient}
                         onAfficherClient={handleAfficherClient}
                         onClientSupprime={handleClientSupprime}

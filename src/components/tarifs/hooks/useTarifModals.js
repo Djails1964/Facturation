@@ -9,7 +9,9 @@ import ModalComponents from '../../shared/ModalComponents';
 import { createLogger } from '../../../utils/createLogger';
 import { useNotifications } from '../../../services/NotificationService';
 import DateService from '../../../utils/DateService';
-import { useDateContext } from '../../../context/DateContext';
+import { showDatePicker } from '../../shared/modals/handlers/DatePickerModalHandler';
+import { fromDisplayString, fromIsoString, toIsoString } from '../../../utils/dateHelpers';
+import { formatDate } from '../../../utils/formatters';
 
 export const useTarifModals = ({ 
   gestionState, 
@@ -19,7 +21,6 @@ export const useTarifModals = ({
 
   const log = createLogger("useTarifModals");
   const { showSuccess, showError: showErrorNotif, showWarning } = useNotifications();
-  const { openDatePicker } = useDateContext();
 
   //  MÉTHODE UTILITAIRE pour récupérer les données existantes (DÉCLARÉE EN PREMIER)
   const getExistingItemsForValidation = useCallback((formType, gestionState) => {
@@ -95,7 +96,7 @@ export const useTarifModals = ({
         
         if (codeExists) {
           const typeLabel = TarifFormService.getFormTypeDisplayName(formType).toLowerCase();
-          throw new Error(`Le code "${finalFormData.code}" existe déjÃ  pour un autre ${typeLabel} (${codeExists.nom})`);
+          throw new Error(`Le code "${finalFormData.code}" existe déjà pour un autre ${typeLabel} (${codeExists.nom})`);
         }
       }
       
@@ -109,7 +110,7 @@ export const useTarifModals = ({
         
         if (nomExists) {
           const typeLabel = TarifFormService.getFormTypeDisplayName(formType).toLowerCase();
-          throw new Error(`Le nom "${finalFormData.nom}" existe déjÃ  pour un autre ${typeLabel} (${nomExists.code || nomExists.id})`);
+          throw new Error(`Le nom "${finalFormData.nom}" existe déjà pour un autre ${typeLabel} (${nomExists.code || nomExists.id})`);
         }
       }
       
@@ -120,7 +121,7 @@ export const useTarifModals = ({
         {
           title: isEdit ? 'Modification en cours...' : 'Création en cours...',
           content: ModalComponents.createLoadingContent(
-            isEdit ? 'Mise Ã  jour des données...' : 'Enregistrement des données...'
+            isEdit ? 'Mise à jour des données...' : 'Enregistrement des données...'
           ),
           size: MODAL_SIZES.SMALL
         },
@@ -132,10 +133,10 @@ export const useTarifModals = ({
       if (result && result.success) {
         log.debug(` Succès ${formType}:`, result);
         
-        // Mise Ã  jour des données locales
+        // Mise à jour des données locales
         await TarifFormService.refreshDataAfterSave(formType, gestionState, false);
         
-        // Mise Ã  jour des IDs créés pour highlighting
+        // Mise à jour des IDs créés pour highlighting
         if (!isEdit) {
           setCreatedIds(prev => ({
             ...prev,
@@ -426,76 +427,72 @@ export const useTarifModals = ({
         onMount: (container) => {
           // Passer les unités pour le filtrage dynamique
           container.dataset.unites = JSON.stringify(additionalData.unites || []);
+
+          // Filtrage dynamique unités par service (tarif spécial)
+          if (formType === FORM_TYPES.TARIF_SPECIAL) {
+            const serviceSelect = container.querySelector('#select-idService');
+            const uniteSelect = container.querySelector('#select-idUnite');
+            if (serviceSelect && uniteSelect) {
+              const updateUniteOptions = (idService) => {
+                let unitesData = [];
+                try {
+                  unitesData = JSON.parse(serviceSelect.getAttribute('data-unites-enrichies') || '[]');
+                } catch(e) { unitesData = additionalData.unites || []; }
+                const idServiceNum = parseInt(idService);
+                const filtered = idServiceNum
+                  ? unitesData.filter(u => Array.isArray(u.servicesIds) && u.servicesIds.includes(idServiceNum))
+                  : [];
+                uniteSelect.innerHTML = filtered.length > 0
+                  ? `<option value="">Sélectionner une unité</option>` + filtered.map(u => `<option value="${u.idUnite}">${u.nomUnite}</option>`).join('')
+                  : `<option value="">Sélectionner d'abord un service</option>`;
+                uniteSelect.disabled = filtered.length === 0;
+              };
+              serviceSelect.addEventListener('change', (e) => updateUniteOptions(e.target.value));
+              // Initialiser avec la valeur actuelle si présente
+              if (serviceSelect.value) updateUniteOptions(serviceSelect.value);
+            }
+          }
           
           const existingItems = getExistingItemsForValidation(formType, gestionState);
           log.debug(` Données existantes pour validation ${formType}:`, existingItems.length);
           TarifValidationService.setupFormValidation(container, formType, null, existingItems);
 
-          // Initialiser le handler du DatePicker
-          // const datePickerHandler = new DatePickerModalHandler({
-          //   showCustom: showCustom,
-          //   showError: showErrorNotif,
-          //   showLoading: showLoading
-          // });
-
-          //  NOUVEAU : Gestion des dates via DateContext
+          // Gestion des dates via calendrier unifié (showDatePicker)
           const dateIcons = container.querySelectorAll('[data-date-trigger]');
           log.debug(` Initialisation de ${dateIcons.length} champs date`);
           
           dateIcons.forEach(icon => {
-              icon.addEventListener('click', (e) => {
+              icon.addEventListener('click', async (e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  
+
                   const inputId = icon.getAttribute('data-date-trigger');
                   const input = container.querySelector(`#${inputId}`);
-                  
-                  if (!input) {
-                      log.warn(` ï¸ Champ ${inputId} introuvable`);
-                      return;
-                  }
-                  
-                  // Récupérer la configuration
-                  let config = {};
-                  try {
-                      const configAttr = input.getAttribute('data-date-config');
-                      if (configAttr) config = JSON.parse(configAttr);
-                  } catch (err) {
-                      log.warn(' ï¸ Erreur parsing config:', err);
-                  }
-                  
-                  // Parser la date actuelle
+                  if (!input) { log.warn(`Champ ${inputId} introuvable`); return; }
+
+                  // Parser la date actuelle → ISO
                   const currentValue = input.value;
                   let initialDates = [];
                   if (currentValue) {
-                      const parsedDate = DateService.fromDisplayFormat(currentValue) || 
-                                      DateService.fromInputFormat(currentValue);
-                      if (parsedDate) initialDates = [parsedDate];
+                      const d = fromDisplayString(currentValue) || fromIsoString(currentValue);
+                      if (d) initialDates = [toIsoString(d)];
                   }
-                  
-                  // Configuration du DatePicker
-                  const datePickerConfig = {
-                      title: 'Sélectionner une date',
+
+                  // Ouvrir le calendrier unifié
+                  const result = await showDatePicker({
+                      initialDates,
                       multiSelect: false,
-                      minDate: config.minDate ? new Date(config.minDate) : null,
-                      maxDate: config.maxDate ? new Date(config.maxDate) : null,
-                      confirmText: 'Confirmer'
-                  };
-                  
-                  // Callback quand l'utilisateur sélectionne
-                  const callback = (dates) => {
-                      if (dates && dates.length > 0) {
-                          const dateString = DateService.formatSingleDate(dates[0], 'date');
-                          log.debug(` Date sélectionnée: ${dateString}`);
-                          
-                          input.value = dateString;
-                          input.dispatchEvent(new Event('change', { bubbles: true }));
-                          input.dispatchEvent(new Event('input', { bubbles: true }));
-                      }
-                  };
-                  
-                  //  Ouvrir le DatePicker via DateContext
-                  openDatePicker(datePickerConfig, callback, initialDates);
+                      allowFuture: true,
+                      title:       'Sélectionner une date',
+                      anchorRef:   { current: icon },
+                  });
+
+                  if (result.action === 'confirm' && result.dates.length > 0) {
+                      log.debug(`Date sélectionnée: ${result.dates[0]}`);
+                      input.value = formatDate(result.dates[0], 'date');
+                      input.dispatchEvent(new Event('change', { bubbles: true }));
+                      input.dispatchEvent(new Event('input',  { bubbles: true }));
+                  }
               });
           });          
         }
@@ -570,76 +567,74 @@ export const useTarifModals = ({
         onMount: (container) => {
           container.dataset.unites = JSON.stringify(additionalData.unites || []);
 
+          // Filtrage dynamique unités par service (tarif spécial)
+          if (formType === FORM_TYPES.TARIF_SPECIAL) {
+            const serviceSelect = container.querySelector('#select-idService');
+            const uniteSelect = container.querySelector('#select-idUnite');
+            if (serviceSelect && uniteSelect) {
+              const updateUniteOptions = (idService, selectedUniteId = null) => {
+                let unitesData = [];
+                try {
+                  unitesData = JSON.parse(serviceSelect.getAttribute('data-unites-enrichies') || '[]');
+                } catch(e) { unitesData = additionalData.unites || []; }
+                const idServiceNum = parseInt(idService);
+                const filtered = idServiceNum
+                  ? unitesData.filter(u => Array.isArray(u.servicesIds) && u.servicesIds.includes(idServiceNum))
+                  : [];
+                uniteSelect.innerHTML = filtered.length > 0
+                  ? `<option value="">Sélectionner une unité</option>` + filtered.map(u => 
+                      `<option value="${u.idUnite}"${String(u.idUnite) === String(selectedUniteId || '') ? ' selected' : ''}>${u.nomUnite}</option>`
+                    ).join('')
+                  : `<option value="">Sélectionner d'abord un service</option>`;
+                uniteSelect.disabled = filtered.length === 0;
+              };
+              serviceSelect.addEventListener('change', (e) => updateUniteOptions(e.target.value));
+              // Initialiser avec la valeur actuelle (mode édition : conserver l'unité sélectionnée)
+              if (serviceSelect.value) updateUniteOptions(serviceSelect.value, itemData.idUnite);
+            }
+          }
+
           const existingItems = getExistingItemsForValidation(formType, gestionState);
           log.debug(` 
              ${formType}:`, existingItems);
           TarifValidationService.setupFormValidation(container, formType, itemId, existingItems);
 
-          // Initialiser le handler du DatePicker
-          // const datePickerHandler = new DatePickerModalHandler({
-          //   showCustom: showCustom,
-          //   showError: showErrorNotif,
-          //   showLoading: showLoading
-          // });
-          
-          //  NOUVEAU : Gestion des dates via DateContext
+          // Gestion des dates via calendrier unifié (showDatePicker)
           const dateIcons = container.querySelectorAll('[data-date-trigger]');
           log.debug(` Initialisation de ${dateIcons.length} champs date`);
           
           dateIcons.forEach(icon => {
-              icon.addEventListener('click', (e) => {
+              icon.addEventListener('click', async (e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  
+
                   const inputId = icon.getAttribute('data-date-trigger');
                   const input = container.querySelector(`#${inputId}`);
-                  
-                  if (!input) {
-                      log.warn(` ï¸ Champ ${inputId} introuvable`);
-                      return;
-                  }
-                  
-                  // Récupérer la configuration
-                  let config = {};
-                  try {
-                      const configAttr = input.getAttribute('data-date-config');
-                      if (configAttr) config = JSON.parse(configAttr);
-                  } catch (err) {
-                      log.warn(' ï¸ Erreur parsing config:', err);
-                  }
-                  
-                  // Parser la date actuelle
+                  if (!input) { log.warn(`Champ ${inputId} introuvable`); return; }
+
+                  // Parser la date actuelle → ISO
                   const currentValue = input.value;
                   let initialDates = [];
                   if (currentValue) {
-                      const parsedDate = DateService.fromDisplayFormat(currentValue) || 
-                                      DateService.fromInputFormat(currentValue);
-                      if (parsedDate) initialDates = [parsedDate];
+                      const d = fromDisplayString(currentValue) || fromIsoString(currentValue);
+                      if (d) initialDates = [toIsoString(d)];
                   }
-                  
-                  // Configuration du DatePicker
-                  const datePickerConfig = {
-                      title: 'Sélectionner une date',
+
+                  // Ouvrir le calendrier unifié
+                  const result = await showDatePicker({
+                      initialDates,
                       multiSelect: false,
-                      minDate: config.minDate ? new Date(config.minDate) : null,
-                      maxDate: config.maxDate ? new Date(config.maxDate) : null,
-                      confirmText: 'Confirmer'
-                  };
-                  
-                  // Callback quand l'utilisateur sélectionne
-                  const callback = (dates) => {
-                      if (dates && dates.length > 0) {
-                          const dateString = DateService.formatSingleDate(dates[0], 'date');
-                          log.debug(` Date sélectionnée: ${dateString}`);
-                          
-                          input.value = dateString;
-                          input.dispatchEvent(new Event('change', { bubbles: true }));
-                          input.dispatchEvent(new Event('input', { bubbles: true }));
-                      }
-                  };
-                  
-                  //  Ouvrir le DatePicker via DateContext
-                  openDatePicker(datePickerConfig, callback, initialDates);
+                      allowFuture: true,
+                      title:       'Sélectionner une date',
+                      anchorRef:   { current: icon },
+                  });
+
+                  if (result.action === 'confirm' && result.dates.length > 0) {
+                      log.debug(`Date sélectionnée: ${result.dates[0]}`);
+                      input.value = formatDate(result.dates[0], 'date');
+                      input.dispatchEvent(new Event('change', { bubbles: true }));
+                      input.dispatchEvent(new Event('input',  { bubbles: true }));
+                  }
               });
           });
         }

@@ -32,7 +32,7 @@ export const useLoyerFiltres = (loyersNonFiltres = []) => {
 
     if (clientSelectionne) {
       resultats = resultats.filter(loyer =>
-        (loyer.idClient || loyer.id_client) === parseInt(clientSelectionne)
+        (loyer.idClient || loyer.idClient) === parseInt(clientSelectionne)
       );
       logger.debug('📊 Après filtre client:', resultats.length);
     }

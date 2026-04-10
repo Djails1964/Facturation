@@ -78,11 +78,14 @@ export const BUTTON_TEXTS = {
     ANNULER_PAIEMENT: 'Annuler le paiement',
     RESTAURER_PAIEMENT: 'Restaurer le paiement',
     SUPPRIMER_PAIEMENT: 'Supprimer le paiement',
-    
+    // Boutons modales
+    MODAL_SUBMIT:    'Enregistrer paiement',
+    MODAL_CONFIRM:   'Confirmer',
+    MODAL_OK:        'OK',
     // ✅ RÉUTILISATION des boutons de date communs
     DATE_CONFIRM: DATE_BUTTON_TEXTS.CONFIRM,
-    DATE_CANCEL: DATE_BUTTON_TEXTS.CANCEL,
-    DATE_TODAY: DATE_BUTTON_TEXTS.TODAY
+    DATE_CANCEL:  DATE_BUTTON_TEXTS.CANCEL,
+    DATE_TODAY:   DATE_BUTTON_TEXTS.TODAY
 };
 
 // ✅ TITRES DE FORMULAIRES
@@ -91,7 +94,14 @@ export const FORM_TITLES = {
     EDIT: 'Modifier le paiement',
     EDIT_CANCELLED: 'Paiement annulé (lecture seule)',
     VIEW: 'Détail du paiement',
-    VIEW_CANCELLED: 'Paiement annulé'
+    VIEW_CANCELLED: 'Paiement annulé',
+    // Titres modales
+    MODAL_ENREGISTRER:   'Enregistrer un paiement',
+    MODAL_ENREGISTREMENT: 'Enregistrement...',
+    MODAL_SUCCESS:       'Paiement enregistré !',
+    MODAL_ERREUR:        'Erreur',
+    MODAL_PARTIEL:       'Paiement partiel',
+    MODAL_CHARGEMENT:    'Chargement...',
 };
 
 // ✅ TITRES DE SECTIONS
@@ -104,21 +114,46 @@ export const SECTION_TITLES = {
 
 // ✅ LABELS SPÉCIFIQUES AUX PAIEMENTS (avec dates)
 export const LABELS = {
-    // Labels de champs
-    FACTURE: 'Facture',
-    DATE_PAIEMENT: 'Date de paiement',
-    MONTANT_PAYE: 'Montant payé (CHF)',
+    // Labels de champs formulaire
+    FACTURE:          'Facture',
+    DATE_PAIEMENT:    'Date de paiement',
+    MONTANT_PAYE:     'Montant payé (CHF)',
     METHODE_PAIEMENT: 'Méthode de paiement',
-    COMMENTAIRE: 'Commentaire',
+    COMMENTAIRE:      'Commentaire (optionnel)',
+
+    // Labels section détails facture
+    NUMERO_FACTURE:   'N° Facture :',
+    MONTANT_FACTURE:  'Montant facture :',
+    MONTANT_RESTANT:  'Reste à payer :',
+    DEJA_PAYE:        'Déjà payé :',
+    MONTANT_TOTAL:    'Montant total',
+    ETAT_FACTURE:     'État de la facture :',
+
+    // Labels calendrier
+    CALENDRIER_TITRE: 'Date de paiement',
+
+    // Labels confirmation paiement partiel
+    PARTIEL_MONTANT:  'Montant :',
+    PARTIEL_RESTE:    'Reste après :',
+    PARTIEL_QUESTION: 'Continuer ?',
     
     // ✅ RÉUTILISATION des labels de date
     SELECT_PAYMENT_DATE: DATE_LABELS.SELECT_DATE,
-    OPEN_DATE_CALENDAR: DATE_LABELS.OPEN_CALENDAR,
+    OPEN_DATE_CALENDAR:  DATE_LABELS.OPEN_CALENDAR,
     
     // Labels contextuels
     MONTANT_RESTANT: 'Reste à payer',
     MONTANT_TOTAL: 'Montant total',
     DEJA_PAYE: 'Déjà payé'
+};
+
+// ✅ TITRES DE COLONNES DU TABLEAU DES PAIEMENTS
+export const COLUMN_LABELS = {
+    NUMERO:   'Numéro',
+    DATE:     'Date paiement',
+    CLIENT:   'Client',
+    MONTANT:  'Montant payé',
+    STATUT:   'État',
 };
 
 // ✅ CONFIGURATION SPÉCIFIQUE AU CONTEXTE PAIEMENT
@@ -148,7 +183,8 @@ export const NOTIFICATIONS = {
         UPDATE: 'Paiement modifié avec succès',
         CANCEL: 'Paiement annulé avec succès',
         RESTORE: 'Paiement restauré avec succès',
-        DELETE: 'Paiement supprimé avec succès'
+        DELETE: 'Paiement supprimé avec succès',
+        ENREGISTRE: 'Paiement enregistré avec succès',
     },
     ERROR: {
         CREATE: 'Erreur lors de la création du paiement',
@@ -173,19 +209,26 @@ export const LOADING_MESSAGES = {
     LOADING_PAIEMENT: 'Chargement des données du paiement...',
     LOADING_FACTURES: 'Chargement des factures...',
     LOADING_LOGS: 'Chargement de l\'historique...',
-    SAVING: 'Enregistrement en cours...',
+    SAVING: 'Enregistrement du paiement...',
     CANCELLING: 'Annulation en cours...',
     VALIDATING_DATE: 'Validation de la date...'
 };
 
-// ✅ TEXTES D'AIDE
+// ✅ TEXTES D'AIDE ET MESSAGES MODALES
 export const HELP_TEXTS = {
     NO_LOGS: 'Aucune action enregistrée pour ce paiement.',
     CANCELLED_WARNING: 'Ce paiement a été annulé et ne peut plus être modifié.',
     AMOUNT_HELP: 'Saisissez le montant effectivement payé par le client.',
     METHOD_HELP: 'Sélectionnez la méthode de paiement utilisée par le client.',
     DATE_HELP: 'Date à laquelle le paiement a été effectué (pas de dates futures).',
-    DATE_REALISTIC: 'Choisissez une date réaliste correspondant au paiement effectif.'
+    DATE_REALISTIC: 'Choisissez une date réaliste correspondant au paiement effectif.',
+    // Textes modales
+    SUCCESS_INTRO:   '💰 Le paiement de {montant} CHF a été enregistré avec succès.',
+    PARTIEL_INTRO:   'Vous enregistrez un paiement partiel.',
+    FACTURE_PAYEE:   'Cette facture a déjà été payée.',
+    FACTURE_ANNULEE: 'Cette facture a été annulée et ne peut pas être payée.',
+    AUCUNE_FACTURE:  'ℹ️ Ce client n\'a aucune facture en attente de paiement. Vous pouvez enregistrer un paiement libre.',
+    PAIEMENT_LIBRE:  '💰 Paiement libre (sans facture)',
 };
 
 // ✅ LIMITES ET CONTRAINTES
@@ -215,6 +258,7 @@ const paiementConstants = {
     FORM_TITLES,
     SECTION_TITLES,
     LABELS,
+    COLUMN_LABELS,
     PAIEMENT_DATE_CONFIG,
     LOG_ACTIONS,
     NOTIFICATIONS,

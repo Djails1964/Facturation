@@ -1,10 +1,10 @@
 import { useCallback } from 'react';
-import { useDateContext } from '../../../context/DateContext';
-import DateService from '../../../utils/DateService';
+import { VALIDATION_MESSAGES } from '../../../constants/tarifConstants';
 
 /**
  * Hook pour gérer les handlers du formulaire de tarif
  * ✅ REFACTORISÉ: Utilise tarifActions au lieu de tarificationService
+ * ✅ REFACTORISÉ: DateInputField gère la saisie des dates — handleOpenDateModal supprimé
  */
 export const useTarifFormHandlers = (formState, formLogic, formValidation) => {
     const {
@@ -14,14 +14,13 @@ export const useTarifFormHandlers = (formState, formLogic, formValidation) => {
         setIsSubmitting,
         hasUnsavedChanges,
         setShowUnsavedModal,
-        tarifActions, // ✅ NOUVEAU: Utilise tarifActions
+        tarifActions,
         isCreate,
         setHasUnsavedChanges
     } = formState;
     
     const { handleInputChange, resetForm } = formLogic;
     const { validateForm } = formValidation;
-    const { openDatePicker } = useDateContext();
     
     const handleSubmit = useCallback(async (event) => {
         event.preventDefault();
@@ -80,44 +79,6 @@ export const useTarifFormHandlers = (formState, formLogic, formValidation) => {
         }
     }, [hasUnsavedChanges, setShowUnsavedModal, formState.onRetourListe]);
     
-    const handleOpenDateModal = useCallback((dateType) => {
-        const currentValue = tarif[dateType];
-        let initialDate = null;
-        
-        if (currentValue) {
-            try {
-                initialDate = new Date(currentValue);
-            } catch (error) {
-                console.warn('Date invalide:', currentValue);
-            }
-        }
-        
-        const config = {
-            title: dateType === 'date_debut' ? 'Sélectionner la date de début' : 'Sélectionner la date de fin',
-            multiSelect: false,
-            confirmText: 'Confirmer la date',
-            context: 'default'
-        };
-        
-        const callback = (dates) => {
-            if (dates && dates.length > 0) {
-                const selectedDate = dates[0];
-                const formattedDate = DateService.toInputFormat(selectedDate);
-                
-                const syntheticEvent = {
-                    target: {
-                        name: dateType,
-                        value: formattedDate
-                    }
-                };
-                
-                handleInputChange(syntheticEvent);
-            }
-        };
-        
-        openDatePicker(config, callback, initialDate ? [initialDate] : []);
-    }, [tarif, openDatePicker, handleInputChange]);
-    
     const handleConfirmGlobalNavigation = useCallback(() => {
         setHasUnsavedChanges(false);
         formState.setShowGlobalModal(false);
@@ -136,7 +97,6 @@ export const useTarifFormHandlers = (formState, formLogic, formValidation) => {
         handleSubmit,
         handleCancel,
         handleInputChange,
-        handleOpenDateModal,
         handleConfirmGlobalNavigation,
         handleCancelGlobalNavigation,
         resetForm

@@ -4,7 +4,7 @@
 import React, { useState, useMemo } from 'react';
 import TypeTarifTableSection from '../sections/TypeTarifTableSection';
 import TarifFormHeader from '../sections/TarifFormHeader';
-import { AddButton } from '../../../components/ui/buttons';
+import { FloatingAddButton } from '../../../components/ui/buttons/ActionButtons';
 import UnifiedFilter from '../../../components/shared/filters/UnifiedFilter';
 import { useTarifFilter, createInitialFilters } from '../hooks/useTarifFilter';
 import { createLogger } from '../../../utils/createLogger';
@@ -120,9 +120,6 @@ const TypeTarifGestion = ({
         titre="Gestion des types de tarifs"
         description="Gérez les différents types de tarification (Normal, Étudiant, Thérapeutique, etc.)"
       >
-        <AddButton onClick={handleCreateClick}>
-          Nouveau type de tarif
-        </AddButton>
       </TarifFormHeader>
 
       {/* Filtres unifiés */}
@@ -147,28 +144,8 @@ const TypeTarifGestion = ({
         highlightedId={highlightedId}
         isSubmitting={isSubmitting}
       />
-      
-      {/* Informations de debug */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="debug-info" style={{
-          marginTop: '20px',
-          padding: '10px',
-          backgroundColor: '#f8f9fa',
-          border: '1px solid #dee2e6',
-          borderRadius: '4px',
-          fontSize: '12px'
-        }}>
-          <strong>🔧 Debug TypeTarifGestion :</strong><br/>
-          - Types de tarifs chargés : {typesTarifs.length}<br/>
-          - Types normalisés : {normalizedTypesTarifs.length}<br/>
-          - Types filtrés : {typeTarifsFiltered.length}<br/>
-          - Filtres actifs : {filterStats.hasActiveFilters ? 'Oui' : 'Non'}<br/>
-          - Filtres actuels : {JSON.stringify(filters)}<br/>
-          - Highlighted ID : {highlightedId || 'aucun'}<br/>
-          - Premier type : {typesTarifs[0] ? JSON.stringify(Object.keys(typesTarifs[0])) : 'aucun'}<br/>
-          - ✅ MIGRATION UNIFIEDFILTER COMPLÈTE
-        </div>
-      )}
+      {/* Bouton flottant ajout */}
+      <FloatingAddButton onClick={handleCreateClick} tooltip="Nouveau type de tarif" />
     </div>
   );
 };

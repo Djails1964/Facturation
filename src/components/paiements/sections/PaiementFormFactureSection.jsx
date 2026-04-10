@@ -23,10 +23,10 @@ const PaiementFormFactureSection = ({
     const facturesFiltrees = React.useMemo(() => {
         if (!isCreate || !paiement.idClient) return factures || [];
         return (factures || []).filter(facture => {
-            const factureClientId = String(
+            const factureidClient = String(
                 facture.client?.id || facture.client?.idClient || facture.idClient || ''
             );
-            return factureClientId === String(paiement.idClient);
+            return factureidClient === String(paiement.idClient);
         });
     }, [isCreate, factures, paiement.idClient]);
 
@@ -51,11 +51,11 @@ const PaiementFormFactureSection = ({
                                         {clientsLoading ? 'Chargement…' : '— Sélectionner un client —'}
                                     </option>
                                     {(clients || []).map(client => {
-                                        const clientId = client.id || client.idClient;
-                                        if (!clientId) return null;
+                                        const idClient = client.id || client.idClient;
+                                        if (!idClient) return null;
                                         const nomComplet = `${client.prenom || ''} ${client.nom || ''}`.trim();
                                         return (
-                                            <option key={clientId} value={clientId}>
+                                            <option key={idClient} value={idClient}>
                                                 {nomComplet || 'Client sans nom'}
                                             </option>
                                         );

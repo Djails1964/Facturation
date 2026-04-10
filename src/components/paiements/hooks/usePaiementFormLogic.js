@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
-import DateService from '../../../utils/DateService';
+import { getTodayIso } from '../../../utils/dateHelpers';
+import { formatDate } from '../../../utils/formatters';
 import { createLogger } from '../../../utils/createLogger';
 import { 
     VALIDATION_MESSAGES, 
     NOTIFICATIONS, 
     LOG_ACTIONS,
-    METHODES_PAIEMENT_LABELS,
     LABELS,
     DEFAULT_VALUES
 } from '../../../constants/paiementConstants';
@@ -101,7 +101,7 @@ export const usePaiementFormLogic = (formState) => {
                         idClient: '',
                         idFacture: '',
                         idLoyer: '',
-                        datePaiement: DateService.getTodayInputFormat(),
+                        datePaiement: getTodayIso(),
                         montantPaye: '',
                         methodePaiement: DEFAULT_VALUES.METHODE_PAIEMENT,
                         commentaire: ''
@@ -296,8 +296,8 @@ export const usePaiementFormLogic = (formState) => {
             );
             const filtrees = facturesEnrichies.filter(f => {
                 if (!f) return false;
-                const clientId = String(f.client?.id || f.client?.idClient || f.idClient || '');
-                if (clientId !== String(idClient)) return false;
+                const idClient = String(f.client?.id || f.client?.idClient || f.idClient || '');
+                if (idClient !== String(idClient)) return false;
                 const restant = f.montantRestant || 0;
                 return restant > 0;
             });
@@ -317,11 +317,15 @@ export const usePaiementFormLogic = (formState) => {
         setLoyersLoading(true);
         try {
             logLine.debug('🔄 Chargement loyers du client:', idClient);
-            const tous = await loyerActions.chargerLoyers({ id_client: idClient });
-            // Garder uniquement les loyers avec des mois impayés
+            const tous = await loyerActions.chargerLoyers({ idClient: idClient });
+            // Garder uniquement les loyers :
+            // - non soldés
+            // - sans facture liée (les loyers avec id_facture se paient via la facture)
             const nonSoldes = (tous || []).filter(l => {
                 const statut = l.statut || l.etat || '';
-                return statut !== 'solde' && statut !== 'soldé';
+                const estSolde = statut === 'solde' || statut === 'soldé';
+                const aFactureLiee = !!l.idFacture;
+                return !estSolde && !aFactureLiee;
             });
 
             logLine.debug('🔍 [chargerLoyersDuClient] tous les loyers reçus:', tous);
@@ -446,7 +450,7 @@ export const usePaiementFormLogic = (formState) => {
         }
     };
 
-    // ✅ FONCTION pour traduire les noms de champs — ajout id_client
+    // ✅ FONCTION pour traduire les noms de champs — ajout idClient
     const translateFieldName = (field) => {
         const translations = {
             'date_paiement': LABELS.DATE_PAIEMENT,
@@ -458,7 +462,7 @@ export const usePaiementFormLogic = (formState) => {
             'commentaire': LABELS.COMMENTAIRE,
             'facture_id': LABELS.FACTURE,
             'idFacture': LABELS.FACTURE,
-            'id_client': LABELS.CLIENT || 'Client',
+            'idClient': LABELS.CLIENT || 'Client',
             'idClient': LABELS.CLIENT || 'Client'
         };
         return translations[field] || field;
@@ -476,7 +480,7 @@ export const usePaiementFormLogic = (formState) => {
         switch (normalizedField) {
             case 'datepaiement':
             case 'datePaiement':
-                return DateService.formatSingleDate(value, 'date');
+                return formatDate(value, 'date');
             case 'montantpaye':
             case 'montantPaye':
                 return `${value} CHF`;

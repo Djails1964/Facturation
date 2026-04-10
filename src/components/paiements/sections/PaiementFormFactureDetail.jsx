@@ -5,9 +5,7 @@
 // PaiementFormPaiementSection (lignes 209-263 de l'ancienne version).
 // Classes CSS unifiées : .form-section, .facture-details, .details-row, .montant-restant
 
-import React from 'react';
-import DateService from '../../../utils/DateService';
-import { formatMontant } from '../../../utils/formatters';
+import { formatMontant, formatDate } from '../../../utils/formatters';
 
 const PaiementFormFactureDetail = ({ factureSelectionnee }) => {
     if (!factureSelectionnee) return null;
@@ -46,7 +44,7 @@ const PaiementFormFactureDetail = ({ factureSelectionnee }) => {
                     <span>Date facture</span>
                     <span>
                         {factureSelectionnee.dateFacture
-                            ? DateService.formatSingleDate(factureSelectionnee.dateFacture)
+                            ? formatDate(factureSelectionnee.dateFacture, 'date')
                             : '—'}
                     </span>
                 </div>

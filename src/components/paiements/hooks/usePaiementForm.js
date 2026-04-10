@@ -9,14 +9,11 @@ import { usePaiementActions } from './usePaiementActions';
 import { useFactureActions } from '../../factures/hooks/useFactureActions';
 import { useClientActions } from '../../clients/hooks/useClientActions';
 import { useLoyerActions } from '../../loyers/hooks/useLoyerActions';
-import DateService from '../../../utils/DateService';
+import { getTodayIso } from '../../../utils/dateHelpers';
 import { createLogger } from '../../../utils/createLogger';
 import { 
     FORM_MODES, 
-    VALIDATION_MESSAGES, 
-    NOTIFICATIONS,
     PAIEMENT_ETATS,
-    LOG_ACTIONS,
     DEFAULT_VALUES
 } from '../../../constants/paiementConstants';
 
@@ -49,7 +46,7 @@ export const usePaiementForm = ({ mode, idPaiement, onRetourListe, onPaiementCre
         nomClient: '',  // ✅ IMPORTANT : Permet d'afficher le nom du client
         
         // Détails du paiement
-        datePaiement: DateService.getTodayInputFormat(),
+        datePaiement: getTodayIso(),
         montantPaye: '',
         methodePaiement: DEFAULT_VALUES.METHODE_PAIEMENT,
         commentaire: '',

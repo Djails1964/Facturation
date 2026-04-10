@@ -1,6 +1,7 @@
 import React from 'react';
 import TableSection from './TableSection';
-import { ServiceActions } from './TarifListActions';
+import { EditActionButton, DeleteActionButton } from '../../../components/ui/buttons/ActionButtons';
+import { COLUMN_LABELS_SERVICE, TABLE_TITLES } from '../../../constants/tarifConstants';
 
 const ServiceTableSection = ({
   services,
@@ -9,45 +10,40 @@ const ServiceTableSection = ({
   highlightedId,
   isSubmitting = false
 }) => {
-  // Configuration des colonnes avec largeurs contrôlées
   const columns = [
     {
-      label: 'Code',
-      field: 'codeService',
-      width: '100px', // Largeur fixe pour le code
-      className: 'col-code',
+      label:    COLUMN_LABELS_SERVICE.CODE,
+      field:    'codeService',
+      flex:     '0 0 10%',
+      minWidth: '70px',
       sortable: true,
-      render: (service) => (
-        <span className="service-code">{service.codeService}</span>
-      )
+      render: (service) => <span>{service.codeService}</span>
     },
     {
-      label: 'Nom',
-      field: 'nomService',
-      width: '25%',
-      className: 'col-name',
+      label:    COLUMN_LABELS_SERVICE.NOM,
+      field:    'nomService',
+      flex:     '0 0 25%',
+      minWidth: '100px',
       sortable: true,
-      render: (service) => (
-        <span className="service-name">{service.nomService}</span>
-      )
+      render: (service) => <span>{service.nomService}</span>
     },
     {
-      label: 'Description',
-      field: 'descriptionService',
-      width: 'auto', // Prend l'espace restant
-      className: 'col-description',
+      label:    COLUMN_LABELS_SERVICE.DESCRIPTION,
+      field:    'descriptionService',
+      flex:     '0 0 40%',
+      minWidth: '100px',
       sortable: true,
       render: (service) => (
-        <span className="service-description" title={service.descriptionService}>
+        <span title={service.descriptionService}>
           {service.descriptionService || <em>Aucune description</em>}
         </span>
       )
     },
     {
-      label: 'Statut',
-      field: 'actif',
-      width: '100px', // Largeur fixe pour le statut
-      className: 'col-status',
+      label:    COLUMN_LABELS_SERVICE.STATUT,
+      field:    'actif',
+      flex:     '0 0 15%',
+      minWidth: '80px',
       sortable: true,
       render: (service) => (
         <span className={`etat-badge ${service.actif ? 'etat-confirme' : 'etat-annulee'}`}>
@@ -56,25 +52,26 @@ const ServiceTableSection = ({
       )
     },
     {
-      label: '',
-      field: 'actions',
-      width: '120px', // Largeur fixe au lieu de pourcentage
-      className: 'col-actions',
-      sortable: false,
+      label:     '',
+      field:     'actions',
+      flex:     '0 0 10%',
+      minWidth: '70px',
+      sortable:  false,
+      className: 'actions-cell',
       render: (service) => (
-        <ServiceActions
-          service={service}
-          onEdit={() => onEdit?.(service)}
-          onDelete={() => onDelete?.(service)}
-          disabled={isSubmitting}
-        />
+        <>
+          <>
+                    <EditActionButton   onClick={() => onEdit?.(service)}   disabled={isSubmitting} />
+                    <DeleteActionButton onClick={() => onDelete?.(service)} disabled={isSubmitting} />
+                </>
+        </>
       )
     }
   ];
 
   return (
     <TableSection
-      title="Liste des services"
+      title={TABLE_TITLES.SERVICES}
       data={services}
       columns={columns}
       highlightedId={highlightedId}

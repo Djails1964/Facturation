@@ -1,0 +1,146 @@
+/* ── Détail loyer groupé par service / unité tarifaire ──────────────────── */
+
+.loyer-detail-service {
+  margin-top: 1.5rem;
+}
+
+.loyer-detail-service h3 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-light, #666);
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--color-border, #e0e0e0);
+}
+
+/* ── Bloc unité ────────────────────────────────────────────────────────── */
+.loyer-detail-unite {
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--color-border, #e8e8e8);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+/* ── Bandeau header (toujours visible, cliquable) ─────────────────────── */
+.loyer-detail-unite__header {
+  display:     flex;
+  align-items: center;
+  flex-wrap:   wrap;
+  gap:         0.4rem 0.75rem;
+  padding:     0.55rem 0.75rem;
+  background:  var(--color-bg-subtle, #f8f8f8);
+  cursor:      pointer;
+  user-select: none;
+  transition:  background 0.15s;
+}
+
+.loyer-detail-unite--open .loyer-detail-unite__header {
+  border-bottom: 1px solid var(--color-border, #e8e8e8);
+  background:    var(--color-bg-light, #f2f2f2);
+}
+
+.loyer-detail-unite__header:hover {
+  background: var(--color-bg-hover, #efefef);
+}
+
+.loyer-detail-unite__label {
+  font-size:   0.9rem;
+  font-weight: 600;
+  color:       var(--color-primary, #800000);
+  white-space: nowrap;
+}
+
+.loyer-detail-unite__titre {
+  font-size:   0.9rem;
+  font-weight: 600;
+  color:       var(--color-text, #333);
+}
+
+.loyer-detail-unite__motif {
+  font-size:   0.8rem;
+  color:       var(--color-primary, #800000);
+  font-style:  italic;
+}
+
+.loyer-detail-unite__desc {
+  font-size: 0.8rem;
+  color:     var(--color-text-light, #666);
+}
+
+/* Résumé aligné à droite : quantité totale + montant total */
+.loyer-detail-unite__summary {
+  margin-left: auto;
+  display:     flex;
+  align-items: center;
+  gap:         0.75rem;
+}
+
+.loyer-detail-unite__qte {
+  font-size:   0.82rem;
+  color:       var(--color-text-light, #555);
+  white-space: nowrap;
+}
+
+.loyer-detail-unite__total {
+  font-weight: 600;
+  font-size:   0.9rem;
+  color:       var(--color-text, #333);
+  white-space: nowrap;
+}
+
+/* ── Tableau mensuel ───────────────────────────────────────────────────── */
+.loyer-detail-table {
+  width:           100%;
+  border-collapse: collapse;
+  font-size:       0.85rem;
+}
+
+.loyer-detail-table th {
+  padding:         0.4rem 0.75rem;
+  font-weight:     600;
+  font-size:       0.75rem;
+  text-transform:  uppercase;
+  letter-spacing:  0.03em;
+  color:           var(--color-text-light, #888);
+  border-bottom:   1px solid var(--color-border, #e8e8e8);
+  text-align:      left;
+}
+
+.loyer-detail-table th.text-right,
+.loyer-detail-table td.text-right {
+  text-align: right;
+}
+
+.loyer-detail-table td {
+  padding:       0.4rem 0.75rem;
+  vertical-align: top;
+  border-bottom: 1px solid var(--color-border-light, #f0f0f0);
+  color:         var(--color-text, #333);
+}
+
+.loyer-detail-table tr:last-child td {
+  border-bottom: none;
+}
+
+.loyer-detail-row--paye td {
+  opacity: 0.6;
+}
+
+/* ── Chips de dates ─────────────────────────────────────────────────────── */
+.loyer-date-chips {
+  display:  flex;
+  flex-wrap: wrap;
+  gap:      3px;
+}
+
+.loyer-date-chip {
+  display:    inline-block;
+  padding:    2px 8px;
+  background: var(--color-primary, #800000);
+  color:      #fff;
+  border-radius: 10px;
+  font-size:  0.75rem;
+  white-space: nowrap;
+}

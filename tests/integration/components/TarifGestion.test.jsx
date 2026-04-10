@@ -138,8 +138,8 @@ describe('TarifGestion - Unités', () => {
 
     it('devrait afficher les abréviations', () => {
       testUnites.forEach(unite => {
-        expect(unite.abreviation).toBeDefined();
-        expect(unite.abreviation.length).toBeLessThanOrEqual(3);
+        expect(unite.abreviationUnite).toBeDefined();
+        expect(unite.abreviationUnite.length).toBeLessThanOrEqual(3);
       });
     });
   });
@@ -149,7 +149,7 @@ describe('TarifGestion - Unités', () => {
       const result = await mockTarificationService.createUnite({
         codeUnite: 'NEW',
         nomUnite: 'Nouvelle unité',
-        abreviation: 'n',
+        abreviationUnite: 'n',
         actif: true
       });
 

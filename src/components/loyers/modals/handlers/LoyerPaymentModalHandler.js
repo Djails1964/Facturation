@@ -10,7 +10,8 @@ import React from 'react';
 import ModalComponents from '../../../shared/ModalComponents';
 import { createLogger } from '../../../../utils/createLogger';
 import { showCustom, showLoading } from '../../../../utils/modalSystem';
-import DateService from '../../../../utils/DateService';
+import { formatDate } from '../../../../utils/formatters';
+import { getTodayIso } from '../../../../utils/dateHelpers';
 import { METHODES_PAIEMENT, METHODES_PAIEMENT_LABELS } from '../../../../constants/paiementConstants';
 
 
@@ -36,12 +37,12 @@ function fmt(montant) {
 
 function fmtDate(dateStr) {
     if (!dateStr) return '—';
-    return DateService.formatSingleDate(dateStr, 'date') || dateStr;
+    return formatDate(dateStr, 'date') || dateStr;
 }
 
-// Aujourd'hui au format YYYY-MM-DD via DateService
+// Aujourd'hui au format YYYY-MM-DD via datehelpers.getTodayIso — format attendu par les inputs date et l'API
 function todayISO() {
-    return DateService.getTodayInputFormat();
+    return getTodayIso();
 }
 
 // ─── HTML : en-tête récapitulatif du loyer ────────────────────────────────────
@@ -200,7 +201,9 @@ function buildModalContent(loyer) {
     return `
     <div class="loyer-payment-modal">
       ${buildHeaderHTML(loyer)}
-      <p class="lpm-section-title">Détail des paiements mensuels</p>
+      <div class="content-section-title compact">
+        <h3>Détail des paiements mensuels</h3>
+      </div>
       ${buildTableHTML(loyer.montantsMensuels || [])}
     </div>`;
 }
@@ -333,7 +336,7 @@ export class LoyerPaymentModalHandler {
                 this._feedback(feedback, `⏳ Enregistrement pour ${moisLabel}...`, 'info');
 
                 const result = await this.paiementActions.creerPaiement({
-                    id_client:        idClient,
+                    idClient:        idClient,
                     id_loyer:         idLoyer,
                     id_loyer_detail:  idLoyerDetail,
                     date_paiement:    datePaiement,

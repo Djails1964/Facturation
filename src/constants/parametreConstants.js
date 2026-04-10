@@ -27,7 +27,8 @@ export const PARAMETRE_TYPES = {
   PATH: 'path',
   BOOLEAN: 'boolean',
   SELECT: 'select',
-  YEAR: 'year'
+  YEAR: 'year',
+  MOTIFS_LOYER: 'motifs_loyer',   // liste de motifs éditables individuellement
 };
 
 // ========== MESSAGES DE SUCCÈS ==========
@@ -122,7 +123,54 @@ export const PARAMETRE_METADATA = {
   'texte_corps|vous': {
     libelle: 'Texte du courriel',
     description: 'Texte du courriel, proposition 2'
+  },
+  // ── Loyer / Motifs ──────────────────────────────────────────────────────────
+  'motifs|Cabinet': {
+    libelle: 'Motifs de loyer — Cabinet',
+    description: 'Liste des motifs disponibles pour les locations de cabinet'
+  },
+  'motifs|Salle': {
+    libelle: 'Motifs de loyer — Salle',
+    description: 'Liste des motifs disponibles pour les locations de salle'
+  },
+  'motif_defaut|Cabinet': {
+    libelle: 'Motif par défaut — Cabinet',
+    description: 'Motif pré-sélectionné pour les locations de cabinet'
+  },
+  'motif_defaut|Salle': {
+    libelle: 'Motif par défaut — Salle',
+    description: 'Motif pré-sélectionné pour les locations de salle'
+  },
+
+  // ── LocationSalle > Salles ───────────────────────────────────────────────
+  'label': {
+    libelle: 'Nom de la salle',
+    description: 'Nom affiché dans le tableau de location'
+  },
+  'nom_service': {
+    libelle: 'Service tarifaire associé',
+    description: 'Service utilisé pour calculer le prix de la location'
+  },
+  'type_client_requis': {
+    libelle: 'Location ouverte à :',
+    description: 'Laisser vide = tous les clients. Ex : therapeute'
+  },
+  'type_document': {
+    libelle: 'Document généré',
+    description: 'Type de document produit lors d\'une location de cette salle'
   }
+};
+
+// ========== OPTIONS DE SÉLECTION PAR PARAMÈTRE ==========
+/**
+ * Options fixes pour les paramètres de type select dont les choix
+ * sont définis statiquement (sans appel API).
+ */
+export const PARAMETRE_SELECT_OPTIONS = {
+  'type_document': [
+    { value: 'facture',       label: 'Facture' },
+    { value: 'confirmation',  label: 'Confirmation de paiement' }
+  ]
 };
 
 /**
@@ -145,4 +193,58 @@ export const getParametreLibelle = (nomParametre, categorie) => {
 export const getParametreDescription = (nomParametre, categorie) => {
   const key = categorie ? `${nomParametre}|${categorie}` : nomParametre;
   return PARAMETRE_METADATA[key]?.description || '';
+};
+
+// ========== TITRES DES GROUPES ==========
+/**
+ * Dictionnaire des titres affichés (h3) pour chaque groupe.
+ * Permet de changer l'intitulé visible sans toucher au nom technique en base.
+ * Clé = groupe_parametre (valeur DB), valeur = libellé affiché.
+ */
+export const PARAMETRE_GROUPE_TITRES = {
+  'Facture':            'Facturation',
+  'RelationsBancaires': 'Relations bancaires',
+  'Email':              'Courriel',
+  'Loyer':              'Loyers',
+  'LocationSalle':      'Location de salles',
+  'General':            'Général'
+};
+
+// ========== TITRES DES SOUS-GROUPES ==========
+/**
+ * Dictionnaire des titres affichés (h4) pour chaque sous-groupe.
+ * Clé = "groupe|sousGroupe" pour gérer les homonymes entre groupes.
+ * Valeur = libellé affiché (chaîne vide = pas de titre h4 rendu).
+ */
+export const PARAMETRE_SOUS_GROUPE_TITRES = {
+  'Loyer|Motifs':               'Motifs de location',
+  'Loyer|Général':              '',
+  'LocationSalle|Salles':       'Salles',
+  'LocationSalle|Général':      '',
+  'Email|Corps':                'Texte du courriel',
+  'Facture|Général':            '',
+  'RelationsBancaires|Général': ''
+};
+
+/**
+ * Retourne le titre affiché (h3) d'un groupe.
+ * Si aucune entrée dans le dictionnaire, retourne le nom brut.
+ * @param {string} groupe - groupe_parametre (valeur DB)
+ * @returns {string}
+ */
+export const getGroupeTitre = (groupe) =>
+  PARAMETRE_GROUPE_TITRES[groupe] ?? groupe;
+
+/**
+ * Retourne le titre affiché (h4) d'un sous-groupe.
+ * Retourne '' pour 'Général', 'General', 'Default' si non défini explicitement.
+ * @param {string} groupe     - groupe_parametre
+ * @param {string} sousGroupe - sous_groupe_parametre
+ * @returns {string}
+ */
+export const getSousGroupeTitre = (groupe, sousGroupe) => {
+  const key = `${groupe}|${sousGroupe}`;
+  if (key in PARAMETRE_SOUS_GROUPE_TITRES) return PARAMETRE_SOUS_GROUPE_TITRES[key];
+  if (sousGroupe === 'Général' || sousGroupe === 'General' || sousGroupe === 'Default') return '';
+  return sousGroupe;
 };

@@ -20,6 +20,9 @@ export {
   PayActionButton,
   PdfActionButton,
   MoveActionButton,
+  FactureActionButton,
+  PrevMonthButton,
+  NextMonthButton,
   
   // Boutons de formulaire
   SaveButton,

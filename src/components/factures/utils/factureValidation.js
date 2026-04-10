@@ -190,11 +190,6 @@ export const validateAllLignes = (lignes) => {
 export const validateFactureForm = (facture, isLignesValid = true) => {
     const errors = {};
     
-    // Validation du numéro de facture
-    if (!facture.numeroFacture) {
-        errors.numeroFacture = 'Le numéro de facture est requis';
-    }
-    
     // Validation du client
     if (!facture.idClient) {
         errors.idClient = 'Veuillez sélectionner un client';
@@ -238,9 +233,6 @@ export const validateFactureForm = (facture, isLignesValid = true) => {
  * Schéma de validation pour le formulaire de facture (compatible avec useFormValidation)
  */
 export const factureValidationSchema = {
-    numeroFacture: [
-        (value) => ValidationRules.required(value, 'Le numéro de facture est requis')
-    ],
     idClient: [
         (value) => FactureValidationRules.clientRequired(value)
     ],

@@ -6,8 +6,7 @@
 // Classes CSS unifiées : .form-section, .facture-details, .details-row, .montant-restant
 
 import React from 'react';
-import DateService from '../../../utils/DateService';
-import { formatMontant } from '../../../utils/formatters';
+import { formatMontant, formatDate } from '../../../utils/formatters';
 
 const PaiementFormLoyerDetail = ({ paiement = {} }) => {
     if (!paiement.idLoyer) return null;
@@ -19,10 +18,10 @@ const PaiementFormLoyerDetail = ({ paiement = {} }) => {
         : null;
 
     const periodeDebut = paiement.periodeDebut
-        ? DateService.formatSingleDate(paiement.periodeDebut)
+        ? formatDate(paiement.periodeDebut, 'date')
         : '—';
     const periodeFin = paiement.periodeFin
-        ? DateService.formatSingleDate(paiement.periodeFin)
+        ? formatDate(paiement.periodeFin, 'date')
         : '—';
 
     return (

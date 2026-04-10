@@ -1,9 +1,9 @@
 // src/components/factures/FactureRow.jsx
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import '../../styles/components/factures/FactureRow.css';
 import FactureActions from './FactureActions';
-import DateService from '../../utils/DateService';
+import { formatDate } from '../../utils/formatters';
 import { getBadgeClasses, formatEtatText, formatMontant } from '../../utils/formatters';
 
 const FactureRow = ({
@@ -20,11 +20,20 @@ const FactureRow = ({
     onSetNotification
 }) => {
     
+    const rowRef = useRef(null);
+    
+    // Scroll automatique vers la ligne surlignée
+    useEffect(() => {
+        if (isSelected && rowRef.current) {
+            rowRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }, [isSelected]);
+    
     // Utiliser etatAffichage en priorité, puis etat en fallback
     const etatAUtiliser = facture.etatAffichage || facture.etat;
     
     return (
-        <div className={`lf-table-row ${isSelected ? 'lf-selected' : ''}`}>
+        <div ref={rowRef} className={`lf-table-row ${isSelected ? 'lf-selected' : ''}`}>
             <div 
                 className="lf-table-cell lf-numero-cell"
                 onClick={() => onSelectionFacture(facture.idFacture)}
@@ -41,7 +50,7 @@ const FactureRow = ({
                 className="lf-table-cell lf-date-cell"
                 onClick={() => onSelectionFacture(facture.idFacture)}
             >
-                {DateService.formatSingleDate(facture.dateFacture)}
+                {formatDate(facture.dateFacture)}
             </div>
             <div 
                 className="lf-table-cell lf-montant-cell"

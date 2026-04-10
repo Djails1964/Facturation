@@ -184,7 +184,7 @@ export function useFactureDetailsForm(
             servicesLength: configuration.services?.length,
             unitesLength: configuration.unites?.length,
             defaultService: !!configuration.defaultService,
-            currentClientId: client?.idClient,
+            currentidClient: client?.idClient,
             lignesInitialesLength: lignesInitiales?.length,
             readOnly,
             tarifDataLoaded: tarifData?.isLoaded

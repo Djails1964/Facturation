@@ -1,6 +1,5 @@
 // src/components/factures/FacturesListe.jsx
 import React, { useState, useEffect, useMemo } from 'react';
-import '../../styles/components/factures/FacturesListe.css';
 
 // Import des composants
 import FacturesTable from './FacturesTable';
@@ -20,11 +19,13 @@ import { useFactureFilters } from './hooks/useFactureFilters';
 import { useTemplates } from './hooks/useTemplates';
 import { useFactureModals } from './hooks/useFactureModals';
 import { formatMontant } from '../../utils/formatters';
-import DateService from '../../utils/DateService';
+import { formatDate } from '../../utils/formatters';
 import { createLogger } from '../../utils/createLogger';
+import SectionTitle from '../shared/SectionTitle';
 
 function FacturesListe({ 
     nouvelleFactureId,
+    anneeInitiale = null,
     onModifierFacture,
     onAfficherFacture,
     onNouvelleFacture,
@@ -73,7 +74,7 @@ function FacturesListe({
         setFactureSelectionnee,
         anneeSelectionnee,        // ✅ Récupérer depuis useFactures
         setAnneeSelectionnee      // ✅ Récupérer depuis useFactures
-    } = useFactures(nouvelleFactureId, factureModified, onResetFactureModified);
+    } = useFactures(nouvelleFactureId, factureModified, onResetFactureModified, anneeInitiale);
 
     useEffect(() => {
         if (facturesNonFiltrees.length > 0) {
@@ -153,7 +154,7 @@ function FacturesListe({
         showCustom,
         showLoading,
         formatMontant: (montant) => formatMontant(montant),
-        formatDate: (dateStr) => DateService.formatSingleDate(dateStr),
+        formatDate: (dateStr) => formatDate(dateStr),
         formatEmailMessage: (template, facture) => {
             if (!template) {
                 log.warn("Template vide ou non défini");
@@ -176,7 +177,7 @@ function FacturesListe({
                 }
                 
                 if (facture.dateEcheance) {
-                    const dateFormatee = DateService.formatSingleDate(facture.dateEcheance);
+                    const dateFormatee = formatDate(facture.dateEcheance);
                     message = message.replace(/\[Date d'échéance\]/g, dateFormatee);
                 }
                 
@@ -282,13 +283,18 @@ function FacturesListe({
     // Rendu
     return (
         <div className="content-section-container">
-            <div className="content-section-title">
-                <h2>Factures ({filteredFactures.length})</h2>
-            </div>
+            <SectionTitle>Factures ({filteredFactures.length})</SectionTitle>
             {/* ✅ AJOUT : Affichage de la notification en haut */}
             {/* {renderNotification()} */}
 
             {/* Filtres */}
+            {log.debug('🔍 [RENDER] UnifiedFilter reçoit:', {
+                annee: anneeSelectionnee,
+                client: clientSelectionne,
+                etat: etatSelectionne,
+                totalCount: facturesNonFiltrees.length,
+                filteredCount: filteredFactures.length,
+            }) || null}
             <UnifiedFilter
                 filterType="factures"
                 filterOptions={filterOptions}
@@ -314,6 +320,12 @@ function FacturesListe({
             />
 
             {/* Tableau des factures */}
+            {log.debug('🔍 [RENDER] FacturesTable reçoit:', {
+                facturesCount: filteredFactures.length,
+                factureSelectionnee,
+                ids: filteredFactures.map(f => f.idFacture),
+                anneeSelectionnee,
+            }) || null}
             <FacturesTable
                 factures={filteredFactures}
                 isLoading={isLoading}

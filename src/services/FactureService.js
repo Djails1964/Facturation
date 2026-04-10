@@ -7,7 +7,6 @@ import api from './api';
 import { backendUrl, apiUrl } from '../utils/urlHelper';
 import { toBoolean, normalizeBooleanFields, normalizeBooleanFieldsArray } from '../utils/booleanHelper';
 import ParametreService from './ParametreService';
-import { formatMontant } from '../utils/formatters';
 import { handleApiError } from '../utils/apiErrorHandler';
 import { createLogger } from '../utils/createLogger';
 
@@ -254,8 +253,8 @@ class FactureService {
         if (facturesData.length > 0) {
           console.log('  → Vérification idClient dans les factures reçues:');
           facturesData.forEach((f, idx) => {
-            const idClientFacture = f.idClient || f.id_client;
-            console.log(`    [${idx}] Facture ${f.numeroFacture || f.numero_facture}: idClient=${idClientFacture}, attendu=${idClient}, match=${idClientFacture == idClient ? '✅' : '❌'}`);
+            const idClientFacture = f.idClient || f.idClient;
+            console.log(`[${idx}] Facture ${f.numeroFacture || f.numero_facture}: idClient=${idClientFacture}, attendu=${idClient}, match=${idClientFacture == idClient ? '✅' : '❌'}`);
           });
         }
         
@@ -433,9 +432,9 @@ class FactureService {
 
           const factureFormattee = {
               // ✅ CORRECTION: Essayer différentes variantes de noms de champs
-              idFacture: factureNormalisee.idFacture || factureNormalisee.id_facture || '',
-              numeroFacture: factureNormalisee.numeroFacture || factureNormalisee.numero_facture || '',
-              dateFacture: factureNormalisee.dateFacture || factureNormalisee.date_facture || '',
+              idFacture: factureNormalisee.idFacture || '',
+              numeroFacture: factureNormalisee.numeroFacture || '',
+              dateFacture: factureNormalisee.dateFacture || '',
               idClient: factureNormalisee.idClient,
               montantTotal: parseFloat(factureNormalisee.montantTotal || 0),
               ristourne: parseFloat(factureNormalisee.ristourne || 0),
@@ -451,15 +450,18 @@ class FactureService {
               lignes: (factureNormalisee.lignes || []).map(ligne => ({
                   idLigne: ligne.idLigne,
                   description: ligne.description,
-                  // unite: ligne.unite,
                   quantite: parseFloat(ligne.quantite || 0),
                   prixUnitaire: parseFloat(ligne.prixUnitaire || 0),
                   totalLigne: parseFloat(ligne.totalLigne || 0),
                   idService: ligne.idService || null,
                   idUnite: ligne.idUnite || null,
-                  // serviceType: ligne.service_type || ligne.serviceType || null,
                   noOrdre: ligne.noOrdre || null,
-                  descriptionDates: ligne.descriptionDates || null
+                  descriptionDates: ligne.descriptionDates || null,
+                  // Champs multiplicateur de durée
+                  duree: ligne.duree || null,
+                  nbSeances: ligne.nbSeances != null ? parseFloat(ligne.nbSeances) : null,
+                  // permetMultiplicateur sera résolu par useFactureFormActions via l'unité enrichie
+                  permetMultiplicateur: !!(ligne.permetMultiplicateur || ligne.permet_multiplicateur),
               })),
               etat: this._determinerEtatBase(factureNormalisee), // État de base uniquement
               documentPath: documentPath,
@@ -497,24 +499,6 @@ class FactureService {
     }
   }
 
-  async getProchainNumeroFacture(annee) {
-    try {
-      const response = await api.get(`facture-api.php?prochainNumeroFacture=${annee}`);
-      
-      if (response && response.success && response.parametre) {
-        const numero = response.parametre.valeurParametre 
-          ? `${response.parametre.valeurParametre.toString().padStart(3, '0')}.${annee}`
-          : `001.${annee}`;
-        
-        return numero;
-      }
-      
-      return `001.${annee}`;
-    } catch (error) {
-      handleApiError(error, `getProchainNumeroFacture(${annee})`);
-    }
-  }
-
   async createFacture(factureData) {
     this.log.debug('FactureService - createFacture - Création de la facture avec les données:', factureData);
     try {
@@ -524,9 +508,10 @@ class FactureService {
       if (response && response.success) {
         this._clearCache();
         return {
-          success: true,
-          idFacture: response.factureId,
-          message: response.message || 'Facture créée avec succès'
+          success:       true,
+          idFacture:     response.idFacture,
+          numeroFacture: response.numeroFacture ?? '',
+          message:       response.message || 'Facture créée avec succès'
         };
       } else {
         throw new Error(response?.message || 'Erreur lors de la création de la facture');

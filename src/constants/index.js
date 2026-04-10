@@ -1,34 +1,12 @@
-// src/constants/index.js - Export centralisé de toutes les constantes
+// src/constants/index.js
+// Point d'entrée unique pour toutes les constantes de l'application.
+// Tous les composants doivent importer depuis '../../constants' (ou chemin relatif vers ce dossier)
+// et NON pas depuis les fichiers individuels (ex: '../../constants/parametreConstants').
 
 // ================================
-// FIELD MAPPINGS (nouveau)
+// FACTURES
 // ================================
-export { 
-  ALL_MAPPINGS, 
-  CONTEXT_MAPPINGS, 
-  initializeFieldMappings,
-  getMappingsForContext,
-  validateMappings,
-  addCustomMappings
-} from './fieldMappings';
-
-// ================================
-// TARIFICATION
-// ================================
-export { 
-  FORM_MODES as TARIF_FORM_MODES,
-  FORM_TYPES,
-  FORM_TITLES as TARIF_FORM_TITLES,
-  LOADING_MESSAGES as TARIF_LOADING_MESSAGES,
-  VALIDATION_MESSAGES as TARIF_VALIDATION_MESSAGES,
-  ACTION_TYPES as TARIF_ACTION_TYPES,
-  NOTIFICATION_TYPES as TARIF_NOTIFICATION_TYPES
-} from './tarifConstants';
-
-// ================================
-// FACTURATION
-// ================================
-export { 
+export {
   FORM_MODES as FACTURE_FORM_MODES,
   VALIDATION_MESSAGES as FACTURE_VALIDATION_MESSAGES,
   BUTTON_TEXTS as FACTURE_BUTTON_TEXTS,
@@ -38,7 +16,7 @@ export {
 // ================================
 // PAIEMENTS
 // ================================
-export { 
+export {
   PAIEMENT_ETATS,
   METHODES_PAIEMENT,
   METHODES_PAIEMENT_LABELS,
@@ -56,9 +34,22 @@ export {
 } from './paiementConstants';
 
 // ================================
+// TARIFICATION
+// ================================
+export {
+  FORM_MODES as TARIF_FORM_MODES,
+  FORM_TYPES,
+  FORM_TITLES as TARIF_FORM_TITLES,
+  LOADING_MESSAGES as TARIF_LOADING_MESSAGES,
+  VALIDATION_MESSAGES as TARIF_VALIDATION_MESSAGES,
+  ACTION_TYPES as TARIF_ACTION_TYPES,
+  NOTIFICATION_TYPES as TARIF_NOTIFICATION_TYPES
+} from './tarifConstants';
+
+// ================================
 // DATES
 // ================================
-export { 
+export {
   DATE_FORMATS,
   LOCALES,
   DATE_VALIDATION_MESSAGES,
@@ -70,85 +61,120 @@ export {
   DATEPICKER_CONFIG,
   DATE_LOADING_MESSAGES,
   CONTEXT_CONFIGS as DATE_CONTEXT_CONFIGS,
-  DATE_HELPERS,
-  VALIDATION_TYPES as DATE_VALIDATION_TYPES
+  VALIDATION_TYPES as DATE_VALIDATION_TYPES,
+  MOIS_ANNEE,
+  NOMS_MOIS_COURTS,
+  NOMS_MOIS_LONGS,
+  getNomMois,
+  getNomMoisCourt
 } from './dateConstants';
+// ⚠️  DATE_HELPERS supprimé — utiliser DateService.js à la place
+//     (DateService.isBusinessDay, isToday, isFuture, isPast)
 
 // ================================
-// EXPORTS GROUPÉS PAR DOMAINE
+// PARAMÈTRES
 // ================================
-
-// Groupe tarification
-export const TARIFICATION = {
-  FORM_MODES: TARIF_FORM_MODES,
-  FORM_TYPES,
-  FORM_TITLES: TARIF_FORM_TITLES,
-  LOADING_MESSAGES: TARIF_LOADING_MESSAGES,
-  VALIDATION_MESSAGES: TARIF_VALIDATION_MESSAGES,
-  ACTION_TYPES: TARIF_ACTION_TYPES,
-  NOTIFICATION_TYPES: TARIF_NOTIFICATION_TYPES
-};
-
-// Groupe facturation  
-export const FACTURATION = {
-  FORM_MODES: FACTURE_FORM_MODES,
-  VALIDATION_MESSAGES: FACTURE_VALIDATION_MESSAGES,
-  BUTTON_TEXTS: FACTURE_BUTTON_TEXTS,
-  FORM_TITLES: FACTURE_FORM_TITLES
-};
-
-// Groupe dates
-export const DATES = {
-  FORMATS: DATE_FORMATS,
-  LOCALES,
-  VALIDATION_MESSAGES: DATE_VALIDATION_MESSAGES,
-  ERROR_MESSAGES: DATE_ERROR_MESSAGES,
-  INFO_MESSAGES: DATE_INFO_MESSAGES,
-  LABELS: DATE_LABELS,
-  BUTTON_TEXTS: DATE_BUTTON_TEXTS,
-  CONSTRAINTS: DATE_CONSTRAINTS,
-  DATEPICKER_CONFIG,
-  LOADING_MESSAGES: DATE_LOADING_MESSAGES,
-  CONTEXT_CONFIGS: DATE_CONTEXT_CONFIGS,
-  HELPERS: DATE_HELPERS,
-  VALIDATION_TYPES: DATE_VALIDATION_TYPES
-};
-
-// Groupe paiements
-export const PAIEMENTS = {
-  ETATS: PAIEMENT_ETATS,
-  METHODES: METHODES_PAIEMENT,
-  METHODES_LABELS: METHODES_PAIEMENT_LABELS,
-  VALIDATION_MESSAGES: PAIEMENT_VALIDATION_MESSAGES,
-  BUTTON_TEXTS: PAIEMENT_BUTTON_TEXTS,
-  FORM_TITLES: PAIEMENT_FORM_TITLES,
-  SECTION_TITLES: PAIEMENT_SECTION_TITLES,
-  LABELS: PAIEMENT_LABELS,
-  DATE_CONFIG: PAIEMENT_DATE_CONFIG,
-  LOG_ACTIONS: PAIEMENT_LOG_ACTIONS,
-  NOTIFICATIONS: PAIEMENT_NOTIFICATIONS,
-  LOADING_MESSAGES: PAIEMENT_LOADING_MESSAGES,
-  HELP_TEXTS: PAIEMENT_HELP_TEXTS,
-  LIMITS: PAIEMENT_LIMITS
-};
-
-// Groupe field mappings
-export const FIELD_MAPPINGS = {
-  ALL: ALL_MAPPINGS,
-  CONTEXTS: CONTEXT_MAPPINGS,
-  initialize: initializeFieldMappings,
-  getForContext: getMappingsForContext,
-  validate: validateMappings,
-  addCustom: addCustomMappings
-};
+export {
+  PARAMETRE_MODES,
+  PARAMETRE_GROUPES,
+  PARAMETRE_TYPES,
+  PARAMETRE_SUCCESS_MESSAGES,
+  PARAMETRE_ERROR_MESSAGES,
+  PARAMETRE_STATE_MESSAGES,
+  PARAMETRE_BUTTON_TEXTS,
+  PARAMETRE_VALIDATION,
+  PARAMETRE_FIELD_LABELS,
+  PARAMETRE_METADATA,
+  PARAMETRE_SELECT_OPTIONS,
+  PARAMETRE_GROUPE_TITRES,
+  PARAMETRE_SOUS_GROUPE_TITRES,
+  getParametreLibelle,
+  getParametreDescription,
+  getGroupeTitre,
+  getSousGroupeTitre
+} from './parametreConstants';
 
 // ================================
-// EXPORT PAR DÉFAUT POUR USAGE GLOBAL
+// CLIENTS
 // ================================
-export default {
-  TARIFICATION,
-  FACTURATION,
-  DATES,
-  PAIEMENTS,
-  FIELD_MAPPINGS
-};
+export {
+  PHONE_TYPES,
+  FORM_TITLES as CLIENT_FORM_TITLES,
+  VALIDATION_MESSAGES as CLIENT_VALIDATION_MESSAGES,
+  LOADING_MESSAGES as CLIENT_LOADING_MESSAGES,
+  HELP_TEXTS as CLIENT_HELP_TEXTS
+} from './clientConstants';
+
+// ================================
+// LOYERS
+// ================================
+export {
+  // MOIS_ANNEE est exporté depuis dateConstants — pas besoin de le ré-exporter ici
+  FORM_MODES as LOYER_FORM_MODES,
+  STATUTS_LOYER,
+  ETATS_PAIEMENT as LOYER_ETATS_PAIEMENT,
+  LABELS_STATUTS,
+  LABELS_ETATS_PAIEMENT,
+  COLUMN_LABELS as LOYER_COLUMN_LABELS,
+  TABLE_COLUMNS_CONFIG as LOYER_TABLE_COLUMNS_CONFIG,
+  DUREES_LOYER
+} from './loyerConstants';
+
+// ================================
+// UTILISATEURS
+// ================================
+export {
+  USER_FORM_MODES,
+  USER_ROLES,
+  USER_ROLE_LABELS,
+  USER_STATUS,
+  USER_STATUS_LABELS,
+  USER_FORM_TITLES,
+  USER_VALIDATION_MESSAGES,
+  USER_SUCCESS_MESSAGES,
+  USER_ERROR_MESSAGES,
+  USER_BUTTON_TEXTS,
+  USER_CONFIRM_MESSAGES,
+  USER_PLACEHOLDERS,
+  USER_FIELD_LABELS,
+  USER_STATE_MESSAGES
+} from './userConstants';
+
+// ================================
+// DASHBOARD
+// ================================
+export {
+  FACTURE_STATES,
+  DASHBOARD_MESSAGES,
+  DASHBOARD_ALERTS,
+  STATE_COLORS,
+  STATE_BADGE_CLASSES,
+  CHART_CONFIG,
+  STAT_CARD_CONFIG,
+  TABLE_CONFIG,
+  ALERT_TYPES,
+  ALERT_ICONS,
+  REFRESH_INTERVALS,
+  CACHE_CONFIG,
+  YEARS_RANGE,
+  EXPORT_FORMATS,
+  TABLE_COLUMNS,
+  PERFORMANCE_INDICATORS,
+  DEFAULT_STATS,
+  getStateIcon,
+  getStateLabel,
+  isStateResolved,
+  isStateAtRisk
+} from './dashboardConstants';
+
+// ================================
+// FIELD MAPPINGS
+// ================================
+export {
+  ALL_MAPPINGS,
+  CONTEXT_MAPPINGS,
+  initializeFieldMappings,
+  getMappingsForContext,
+  validateMappings,
+  addCustomMappings
+} from './fieldMappings';

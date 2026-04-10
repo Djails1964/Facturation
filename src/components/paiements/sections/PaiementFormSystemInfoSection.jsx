@@ -1,9 +1,8 @@
 // src/components/paiements/sections/PaiementFormSystemInfoSection.jsx
 // Version sécurisée qui gère le cas où logsInfo est undefined
 
-import React from 'react';
 import { SECTION_TITLES, LOADING_MESSAGES } from '../../../constants/paiementConstants';
-import DateService from '../../../utils/DateService';
+import { formatDate } from '../../../utils/formatters';
 
 const PaiementFormSystemInfoSection = ({ logsInfo, paiement, logsLoading }) => {
     
@@ -18,7 +17,7 @@ const PaiementFormSystemInfoSection = ({ logsInfo, paiement, logsLoading }) => {
         const { userName, date, details } = logEntry;
         
         const userInfo = userName || 'Utilisateur inconnu';
-        const dateInfo = date ? DateService.formatSingleDate(date) : '';
+        const dateInfo = date ? formatDate(date, 'date') : '';
         
         return `${userInfo} le ${dateInfo}${details && details.length > 0 ? 
             ' - ' + details.map(change => 
@@ -74,7 +73,7 @@ const PaiementFormSystemInfoSection = ({ logsInfo, paiement, logsLoading }) => {
                     <div className="input-group">
                         <input
                             type="text"
-                            value={DateService.formatSingleDate(paiement.dateCreation, 'datetime')}
+                            value={formatDate(paiement.dateCreation, 'datetime')}
                             readOnly
                             placeholder=" "
                         />
@@ -88,7 +87,7 @@ const PaiementFormSystemInfoSection = ({ logsInfo, paiement, logsLoading }) => {
                     <div className="input-group">
                         <input
                             type="text"
-                            value={DateService.formatSingleDate(paiement.dateModification, 'datetime')}
+                            value={formatDate(paiement.dateModification, 'datetime')}
                             readOnly
                             placeholder=" "
                         />

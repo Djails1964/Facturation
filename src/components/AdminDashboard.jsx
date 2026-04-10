@@ -13,6 +13,7 @@ import {
 import authService from '../services/authService';
 import { backendUrl } from '../utils/urlHelper'; // CORRECTION: Import du helper URL
 import '../styles/AdminDashboard.css';
+import SectionTitle from './shared/SectionTitle';
 
 const AdminDashboard = ({ userContext }) => {
   const [stats, setStats] = useState({
@@ -136,7 +137,7 @@ const AdminDashboard = ({ userContext }) => {
       {/* Section des derniers utilisateurs */}
       {derniersUtilisateurs.length > 0 && (
         <>
-          <h3 className="section-title">Derniers utilisateurs créés</h3>
+          <SectionTitle as="h3" compact>Derniers utilisateurs créés</SectionTitle>
           <div className="recent-users">
             <div className="users-grid">
               {derniersUtilisateurs.map(user => (
@@ -159,7 +160,7 @@ const AdminDashboard = ({ userContext }) => {
         </>
       )}
       
-      <h3 className="section-title">Fonctions d'administration</h3>
+      <SectionTitle as="h3" compact>Fonctions d'administration</SectionTitle>
       
       <div className="admin-links">
         {/* En mode développement, afficher des liens supplémentaires */}
@@ -219,7 +220,7 @@ const AdminDashboard = ({ userContext }) => {
         </a>
       </div>
       
-      <h3 className="section-title">Activité récente</h3>
+      <SectionTitle as="h3" compact>Activité récente</SectionTitle>
       
       <div className="recent-activity">
         <table className="activity-table">
@@ -256,7 +257,7 @@ const AdminDashboard = ({ userContext }) => {
         </table>
       </div>
       
-      <h3 className="section-title">Informations système</h3>
+      <SectionTitle as="h3" compact>Informations système</SectionTitle>
       
       <div className="system-info">
         <div className="info-grid">

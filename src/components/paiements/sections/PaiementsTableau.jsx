@@ -1,25 +1,15 @@
 // src/components/paiements/sections/PaiementsTableau.jsx
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { FiEye, FiEdit, FiX } from 'react-icons/fi';
 
 import UnifiedTable from '../../shared/tables/UnifiedTable';
-import { formatMontant, getBadgeClasses, formatEtatText } from '../../../utils/formatters';
-import DateService from '../../../utils/DateService';
+import { formatMontant, getBadgeClasses, formatEtatText, formatDate } from '../../../utils/formatters';
 import { createLogger } from '../../../utils/createLogger';
-import { MOIS_ANNEE } from '../../../constants/loyerConstants';
-import '../../../styles/components/paiements/PaiementsTableau.css';
+import { COLUMN_LABELS } from '../../../constants/paiementConstants';
 
 const log = createLogger('PaiementsTableau');
 
-const nomMois = (numero) => {
-    const m = MOIS_ANNEE.find(m => m.numero === parseInt(numero));
-    return m ? m.nom : numero;
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Composant principal
-// ─────────────────────────────────────────────────────────────────────────────
 function PaiementsTableau({
     paiements,
     paiementSelectionne,
@@ -31,14 +21,62 @@ function PaiementsTableau({
     error,
     isProcessing,
 }) {
-    // ── Déclaration des colonnes ─────────────────────────────────────────────
-    // column.render(item) est appelé par UnifiedTable pour chaque cellule.
-    // UnifiedTable applique lui-même flex, minWidth, maxWidth et justifyContent.
-    // On n'écrit aucun style inline ici.
+    // ── Tri ───────────────────────────────────────────────────────────────────
+    const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+
+    const handleSort = (key) => {
+        setSortConfig(prev => ({
+            key,
+            direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
+        }));
+    };
+
+    const sortedPaiements = useMemo(() => {
+        if (!paiements?.length || !sortConfig.key) return paiements ?? [];
+        const dir = sortConfig.direction === 'asc' ? 1 : -1;
+
+        return [...paiements].sort((a, b) => {
+            switch (sortConfig.key) {
+                case 'date':
+                    return (new Date(a.datePaiement || 0) - new Date(b.datePaiement || 0)) * dir;
+                case 'client':
+                    return (a.nomClient || '').localeCompare(
+                        b.nomClient || '', 'fr', { sensitivity: 'base' }
+                    ) * dir;
+                case 'statut':
+                    return (a.statut || '').localeCompare(
+                        b.statut || '', 'fr', { sensitivity: 'base' }
+                    ) * dir;
+                default:
+                    return 0;
+            }
+        });
+    }, [paiements, sortConfig]);
+
+    // ── Helper icône de tri ───────────────────────────────────────────────────
+    const sortIcon = (key) => (
+        <span className={`sort-icon ${sortConfig.key === key ? 'sort-active' : 'sort-inactive'}`}>
+            {sortConfig.key === key
+                ? (sortConfig.direction === 'asc' ? '↑' : '↓')
+                : '⇅'}
+        </span>
+    );
+
+    const sortLabel = (key, label) => (
+        <span
+            className="table-sort-header"
+            onClick={() => handleSort(key)}
+        >
+            <span>{label}</span>
+            {sortIcon(key)}
+        </span>
+    );
+
+    // ── Colonnes ──────────────────────────────────────────────────────────────
     const columns = [
         {
             key:      'numero',
-            label:    'Numéro',
+            label:    COLUMN_LABELS.NUMERO,
             flex:     '0 0 90px',
             minWidth: '90px',
             maxWidth: '90px',
@@ -46,35 +84,31 @@ function PaiementsTableau({
         },
         {
             key:      'date',
-            label:    'Date de paiement',
-            flex:     '0 0 10%',
-            minWidth: '90px',
-            render:   (p) => DateService.formatSingleDate(p.datePaiement),
+            label:    sortLabel('date', COLUMN_LABELS.DATE),
+            flex:     '0 0 150px',
+            minWidth: '150px',
+            render:   (p) => formatDate(p.datePaiement, 'date'),
         },
         {
             key:      'client',
-            label:    'Client',
+            label:    sortLabel('client', COLUMN_LABELS.CLIENT),
             flex:     '1',
             minWidth: '130px',
-            align:    'left',
             render:   (p) => p.nomClient,
         },
         {
             key:      'montant',
-            label:    'Montant payé',
+            label:    COLUMN_LABELS.MONTANT,
             flex:     '0 0 12%',
             minWidth: '110px',
             align:    'right',
-            render:   (p) => (
-                <strong>{formatMontant(parseFloat(p.montantPaye || 0))} CHF</strong>
-            ),
+            render:   (p) => `${formatMontant(parseFloat(p.montantPaye || 0))} CHF`,
         },
         {
             key:      'statut',
-            label:    'Statut',
+            label:    sortLabel('statut', COLUMN_LABELS.STATUT),
             flex:     '0 0 10%',
             minWidth: '90px',
-            align:    'center',
             render:   (p) => (
                 <span className={getBadgeClasses(p.statut)}>
                     {formatEtatText(p.statut)}
@@ -114,14 +148,12 @@ function PaiementsTableau({
         },
     ];
 
-    // renderRow délégué à UnifiedTable (pas de sous-lignes ventilation)
-
     log.debug(`Affichage de ${paiements?.length ?? 0} paiements`);
 
     return (
         <UnifiedTable
             columns={columns}
-            data={paiements}
+            data={sortedPaiements}
             selectedId={paiementSelectionne}
             onRowClick={(p) => onSelectPaiement(p.idPaiement)}
             isLoading={isLoading}
@@ -131,6 +163,5 @@ function PaiementsTableau({
         />
     );
 }
-
 
 export default PaiementsTableau;

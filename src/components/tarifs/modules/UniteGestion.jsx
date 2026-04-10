@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo } from 'react';
 import UniteTableSection from '../sections/UniteTableSection';
-import { AddButton } from '../../../components/ui/buttons';
+import { FloatingAddButton } from '../../../components/ui/buttons/ActionButtons';
 import TarifFormHeader from '../sections/TarifFormHeader';
 import UnifiedFilter from '../../../components/shared/filters/UnifiedFilter';
 import { useTarifFilter, createInitialFilters } from '../hooks/useTarifFilter';
@@ -26,11 +26,11 @@ const UniteGestion = ({
   const normalizedUnites = useMemo(() => {
     return unites.map(unite => ({
       ...unite,
-      // Ajouter les propriétés normalisées attendues par useTarifFilter
-      code: unite.codeUnite,
-      nom: unite.nomUnite,
-      description: unite.descriptionUnite || ''
-      // Note: Les unités n'ont pas de statut actif/inactif
+      code:                  unite.codeUnite,
+      nom:                   unite.nomUnite,
+      abreviationUnite:      unite.abreviationUnite || '',
+      descriptionUnite:      unite.descriptionUnite || '',
+      permetMultiplicateur:  !!unite.permet_multiplicateur,
     }));
   }, [unites]);
   
@@ -47,7 +47,6 @@ const UniteGestion = ({
 
   // ===== OPTIONS DE FILTRAGE =====
   const filterOptions = useMemo(() => {
-    log.debug('🔍 Préparation filterOptions pour unités:', unites.length);
     
     // Extraire les valeurs uniques pour chaque champ
     const uniqueCodes = [...new Set(
@@ -61,10 +60,7 @@ const UniteGestion = ({
     const uniqueDescriptions = [...new Set(
       unites.map(u => u.descriptionUnite).filter(Boolean)
     )].sort();
-    
-    log.debug('📊 Codes uniques:', uniqueCodes);
-    log.debug('📊 Noms uniques:', uniqueNoms);
-    log.debug('📊 Descriptions uniques:', uniqueDescriptions);
+
     
     return {
       code: uniqueCodes,
@@ -113,9 +109,6 @@ const UniteGestion = ({
         titre="Gestion des unités"
         description="Gérez les unités de mesure utilisées dans vos services"
       >
-        <AddButton onClick={handleCreateClick}>
-          Nouvelle unité
-        </AddButton>
       </TarifFormHeader>
       
       {/* Filtres unifiés */}
@@ -140,27 +133,9 @@ const UniteGestion = ({
         highlightedId={highlightedId}
         isSubmitting={isSubmitting}
       />
-      
-      {/* Informations de debug */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="debug-info" style={{
-          marginTop: '20px',
-          padding: '10px',
-          backgroundColor: '#f8f9fa',
-          border: '1px solid #dee2e6',
-          borderRadius: '4px',
-          fontSize: '12px'
-        }}>
-          <strong>🔧 Debug UniteGestion :</strong><br/>
-          - Unités chargées : {unites.length}<br/>
-          - Unités normalisées : {normalizedUnites.length}<br/>
-          - Unités filtrées : {unitesFiltered.length}<br/>
-          - Filtres actifs : {filterStats.hasActiveFilters ? 'Oui' : 'Non'}<br/>
-          - Filtres actuels : {JSON.stringify(filters)}<br/>
-          - Highlighted ID : {highlightedId || 'aucun'}<br/>
-          - ✅ MIGRATION UNIFIEDFILTER COMPLÈTE
-        </div>
-      )}
+
+      {/* Bouton flottant ajout */}
+      <FloatingAddButton onClick={handleCreateClick} tooltip="Nouvelle unité" />
     </div>
   );
 };

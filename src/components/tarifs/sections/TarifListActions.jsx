@@ -2,7 +2,6 @@ import React from 'react';
 import { 
   EditActionButton, 
   DeleteActionButton,
-  TableActionsContainer
 } from '../../../components/ui/buttons';
 
 // ===== COMPOSANTS SIMPLIFIÉS - SEULEMENT MODIFIER ET SUPPRIMER =====
@@ -15,19 +14,18 @@ export const ServiceActions = ({
   disabled = false 
 }) => {
   return (
-    <TableActionsContainer className="tarif-actions-cell">
+    <>
       <EditActionButton
         size="small"
         onClick={() => onEdit?.(service)}
         disabled={disabled}
       />
-      
       <DeleteActionButton
         size="small"
         onClick={() => onDelete?.(service)}
         disabled={disabled}
       />
-    </TableActionsContainer>
+    </>
   );
 };
 
@@ -39,19 +37,18 @@ export const UniteActions = ({
   disabled = false 
 }) => {
   return (
-    <TableActionsContainer className="tarif-actions-cell">
+    <>
       <EditActionButton
         size="small"
         onClick={() => onEdit?.(unite)}
         disabled={disabled}
       />
-      
       <DeleteActionButton
         size="small"
         onClick={() => onDelete?.(unite)}
         disabled={disabled}
       />
-    </TableActionsContainer>
+    </>
   );
 };
 
@@ -63,19 +60,18 @@ export const TypeTarifActions = ({
   disabled = false 
 }) => {
   return (
-    <TableActionsContainer className="tarif-actions-cell">
+    <>
       <EditActionButton
         size="small"
         onClick={() => onEdit?.(typeTarif)}
         disabled={disabled}
       />
-      
       <DeleteActionButton
         size="small"
         onClick={() => onDelete?.(typeTarif)}
         disabled={disabled}
       />
-    </TableActionsContainer>
+    </>
   );
 };
 
@@ -87,19 +83,18 @@ export const TarifStandardActions = ({
   disabled = false 
 }) => {
   return (
-    <TableActionsContainer className="tarif-actions-cell">
+    <>
       <EditActionButton
         size="small"
         onClick={() => onEdit?.(tarif)}
         disabled={disabled}
       />
-      
       <DeleteActionButton
         size="small"
         onClick={() => onDelete?.(tarif)}
         disabled={disabled}
       />
-    </TableActionsContainer>
+    </>
   );
 };
 
@@ -111,19 +106,18 @@ export const TarifSpecialActions = ({
   disabled = false 
 }) => {
   return (
-    <TableActionsContainer className="tarif-actions-cell">
+    <>
       <EditActionButton
         size="small"
         onClick={() => onEdit?.(tarifSpecial)}
         disabled={disabled}
       />
-      
       <DeleteActionButton
         size="small"
         onClick={() => onDelete?.(tarifSpecial)}
         disabled={disabled}
       />
-    </TableActionsContainer>
+    </>
   );
 };
 

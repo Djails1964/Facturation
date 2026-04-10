@@ -41,8 +41,6 @@ const DateInputField = ({
     const handleOpenDateModal = useCallback(async (event) => {
         if (readOnly) return;
 
-        console.log('📅 Ouverture modal de sélection de dates - Mode:', multiSelect ? 'Multi' : 'Single');
-
         try {
             // Créer une référence d'ancrage
             const anchorRef = React.createRef();
@@ -57,8 +55,6 @@ const DateInputField = ({
                     if (multiSelect) {
                         // Mode FACTURE: format compact [09/16/23/30.01, ...]
                         initialDates = DateService.parseDatesFromCompact(value);
-                        console.log('📅 Dates initiales parsées (format compact):', initialDates.length, 
-                            initialDates.map(d => d.toLocaleDateString('fr-CH')));
                     } else {
                         // Mode PAIEMENT: format DD.MM.YYYY ou YYYY-MM-DD
                         let dateStr = value.trim();
@@ -75,11 +71,9 @@ const DateInputField = ({
                         const dateObj = DateService.fromInputFormat(dateStr);
                         if (dateObj) {
                             initialDates = [dateObj];
-                            console.log('📅 Date initiale parsée (single):', dateObj.toLocaleDateString('fr-CH'));
                         }
                     }
                 } catch (error) {
-                    console.warn('⚠️ Erreur lors du parsing des dates existantes:', error);
                     initialDates = [];
                 }
             }
@@ -99,29 +93,20 @@ const DateInputField = ({
             // Ouvrir la modal et attendre le résultat
             const result = await datePickerHandler.handle(config, event);
 
-            console.log('📅 Résultat sélection dates:', result);
-
             // Traitement du résultat
             if (result.action === 'confirm' && result.dates.length > 0) {
                 
                 if (multiSelect) {
-                    // ✅ Mode FACTURE: Formater au format compact
                     const formattedDates = DateService.formatDatesCompact(result.dates);
-                    
-                    console.log('📅 Dates formatées (format compact):', formattedDates);
-                    console.log('📅 Exemple de format: [09/16/23/30.01, 06/13/20/27.02]');
 
-                    // Mettre à jour le champ
-                    if (onChange && typeof onChange === 'function') {
-                        onChange(formattedDates); // Passage direct de la chaîne formatée
-                    }
-
-                    // ✅ Mettre à jour la quantité si callback fourni (IMPORTANT pour factures)
+                    // Si updateQuantity est fourni (mode facture), il gère les deux champs
+                    // en un seul setState atomique — on n'appelle PAS onChange séparément.
                     if (updateQuantity && typeof updateQuantity === 'function') {
                         updateQuantity(formattedDates, result.dates.length);
+                    } else if (onChange && typeof onChange === 'function') {
+                        // Mode sans quantité : simple mise à jour du champ dates
+                        onChange(formattedDates);
                     }
-
-                    console.log('✅ Champ de dates mis à jour avec:', formattedDates, '(', result.dates.length, 'dates)');
                     
                 } else {
                     // ✅ Mode PAIEMENT: Format DD.MM.YYYY
@@ -130,18 +115,13 @@ const DateInputField = ({
                     const month = String(singleDate.getMonth() + 1).padStart(2, '0');
                     const year = singleDate.getFullYear();
                     const formattedDate = `${day}.${month}.${year}`;
-                    
-                    console.log('📅 Date formatée (single):', formattedDate);
 
                     // Mettre à jour le champ
                     if (onChange && typeof onChange === 'function') {
                         onChange(formattedDate);
                     }
-
-                    console.log('✅ Champ de date mis à jour avec:', formattedDate);
                 }
             } else {
-                console.log('❌ Sélection annulée ou aucune date sélectionnée');
             }
 
         } catch (error) {

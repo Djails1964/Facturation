@@ -6,6 +6,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import FacturesListe from './FacturesListe';
 import FactureForm from './FactureForm';
 import { FORM_MODES } from '../../constants/factureConstants';
+import { FloatingAddButton } from '../ui/buttons/ActionButtons';
 import { useClientActions } from '../clients/hooks/useClientActions';
 import { useTarifActions } from '../tarifs/hooks/useTarifActions';
 import { createLogger } from '../../utils/createLogger';
@@ -13,7 +14,8 @@ import { useNotifications } from '../../services/NotificationService';
 
 function FactureGestion({ 
     section = 'liste', 
-    idFacture = null, 
+    idFacture = null,
+    anneeFacture = null,   // ✅ Année de la facture nouvellement créée (pour afficher la bonne année)
     onFactureCreated = null, 
     onSectionChange = null,
     initialFilter = {}, 
@@ -63,7 +65,8 @@ function FactureGestion({
         if (idFacture !== null && idFacture !== undefined) {
             log.debug('📌 FactureGestion - idFacture reçue de parent:', idFacture);
             setSelectedFactureId(idFacture);
-            setActiveView('afficher');
+            // ✅ Rester sur la liste (highlight) — ne pas ouvrir le détail automatiquement
+            // setActiveView('afficher') supprimé : la liste utilise nouvelleFactureId pour surligner
         }
     }, [idFacture]);
 
@@ -373,7 +376,8 @@ function FactureGestion({
                             </div>
                         )}
                         <FacturesListe 
-                            nouvelleFactureId={selectedFactureId}
+                            nouvelleFactureId={selectedFactureId ?? idFacture}
+                            anneeInitiale={anneeFacture}
                             onModifierFacture={handleModifierFacture}
                             onAfficherFacture={handleAfficherFacture}
                             onNouvelleFacture={handleNouvelleFacture}
@@ -392,10 +396,7 @@ function FactureGestion({
             
             {/* Bouton flottant pour ajouter une nouvelle facture */}
             {activeView === 'liste' && section !== 'nouvelle' && (
-                <div className="floating-button" onClick={handleNouvelleFacture}>
-                    <span>+</span>
-                    <div className="floating-tooltip">Nouvelle facture</div>
-                </div>
+                <FloatingAddButton onClick={handleNouvelleFacture} tooltip="Nouvelle facture" />
             )}
         </div>
     );

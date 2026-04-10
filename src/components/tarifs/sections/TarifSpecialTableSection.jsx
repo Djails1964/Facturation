@@ -1,191 +1,122 @@
 import React, { useMemo } from 'react';
 import TableSection from './TableSection';
-import { TarifSpecialActions } from './TarifListActions';
-import { getEtatValidite } from '../../../utils/formatters';
+import { EditActionButton, DeleteActionButton } from '../../../components/ui/buttons/ActionButtons';
+import { getEtatValidite, formatDate } from '../../../utils/formatters';
+import { COLUMN_LABELS_TARIF_SPECIAL, TABLE_TITLES } from '../../../constants/tarifConstants';
 import { createLogger } from '../../../utils/createLogger';
 
-const TarifSpecialTableSection = ({ 
-  tarifsSpeciaux = [], 
-  services = [],
-  unites = [],
-  clients = [],
-  onEdit,
-  onDelete,
-  highlightedId,
-  isSubmitting 
+const log = createLogger('TarifSpecialTableSection');
+
+const TarifSpecialTableSection = ({
+    tarifsSpeciaux = [], services = [], unites = [], clients = [],
+    onEdit, onDelete, highlightedId, isSubmitting
 }) => {
-  
-  const log = createLogger('TarifSpecialTableSection');
-  
-  // 🔧 ENRICHISSEMENT des tarifs spéciaux avec les vraies données
-  const enrichedTarifsSpeciaux = useMemo(() => {
-    if (!Array.isArray(tarifsSpeciaux) || tarifsSpeciaux.length === 0) {
-      return [];
-    }
 
-    log.debug('🔍 Enrichissement tarifs spéciaux:', {
-      tarifsSpeciaux: tarifsSpeciaux.length,
-      services: services.length,
-      unites: unites.length,
-      clients: clients.length,
-      sampleTarif: tarifsSpeciaux[0]
-    });
+    const enrichedTarifs = useMemo(() => {
+        if (!Array.isArray(tarifsSpeciaux) || tarifsSpeciaux.length === 0) return [];
+        return tarifsSpeciaux.map((t, index) => {
+            const client  = clients.find(c => c.idClient == t.idClient);
+            const service = services.find(s => s.idService == t.idService);
+            const unite   = unites.find(u => u.idUnite == t.idUnite);
+            const dateDebut = t.dateDebutTarifSpecial || t.date_debut_tarif_special;
+            const dateFin   = t.dateFinTarifSpecial   || t.date_fin_tarif_special;
+            const status    = getEtatValidite(dateDebut, dateFin);
+            return {
+                ...t,
+                id:            t.idTarifSpecial || index,
+                clientNom:     client  ? `${client.prenom} ${client.nom}` : `Client ${t.idClient || '?'}`,
+                nomService:    service?.nomService || `Service ${t.idService || '?'}`,
+                nomUnite:      unite?.nomUnite     || `Unité ${t.idUnite || '?'}`,
+                dateDebut,
+                dateFin,
+                statutCalcule: status.label,
+                statusClass:   status.classe,
+            };
+        });
+    }, [tarifsSpeciaux, services, unites, clients]);
 
-    return tarifsSpeciaux.map((tarifSpecial, index) => {
+    const columns = [
+        {
+            label:    COLUMN_LABELS_TARIF_SPECIAL.CLIENT,
+            field:    'clientNom',
+            flex:     '0 0 20%',
+            minWidth: '100px',
+            sortable: true,
+            render:   (t) => <strong>{t.clientNom}</strong>
+        },
+        {
+            label:    COLUMN_LABELS_TARIF_SPECIAL.SERVICE,
+            field:    'nomService',
+            flex:     '0 0 20%',
+            minWidth: '100px',
+            sortable: true,
+        },
+        {
+            label:    COLUMN_LABELS_TARIF_SPECIAL.UNITE,
+            field:    'nomUnite',
+            flex:     '0 0 15%',
+            minWidth: '100px',
+            sortable: true,
+        },
+        {
+            label:    COLUMN_LABELS_TARIF_SPECIAL.PRIX,
+            field:    'prixTarifSpecial',
+            flex:     '0 0 10%',
+            minWidth: '80px',
+            sortable: true,
+            align:    'right',
+            render:   (t) => `${parseFloat(t.prixTarifSpecial || 0).toFixed(2)}`
+        },
+        {
+            label:    COLUMN_LABELS_TARIF_SPECIAL.PERIODE,
+            field:    'dateDebut',
+            flex:     '0 0 15%',
+            minWidth: '120px',
+            sortable: true,
+            render:   (t) => (
+                <div className="periode">
+                    <div>Du: {t.dateDebut ? formatDate(t.dateDebut) : 'Non défini'}</div>
+                    {t.dateFin && <div>Au: {formatDate(t.dateFin)}</div>}
+                </div>
+            )
+        },
+        {
+            label:    COLUMN_LABELS_TARIF_SPECIAL.STATUT,
+            field:    'statutCalcule',
+            flex:     '0 0 10%',
+            minWidth: '80px',
+            sortable: true,
+            render:   (t) => <span className={`etat-badge ${t.statusClass}`}>{t.statutCalcule}</span>
+        },
+        {
+            label:     '',
+            field:     'actions',
+            flex:     '0 0 10%',
+            minWidth: '70px',
+            sortable:  false,
+            className: 'actions-cell',
+            render:    (t) => (
+                <>
+                    <EditActionButton   onClick={() => onEdit?.(t)}   disabled={isSubmitting} />
+                    <DeleteActionButton onClick={() => onDelete?.(t)} disabled={isSubmitting} />
+                </>
+            )
+        },
+    ];
 
-      log.debug("enrichedTarifsSpeciaux - tarifSpecial :" , tarifSpecial);
-      log.debug("enrichedTarifsSpeciaux - clients :" , clients);
-      // IDs avec support camelCase et snake_case
-      const idClient = tarifSpecial.clientId;
-      const idService = tarifSpecial.idService;
-      const idUnite = tarifSpecial.idUnite;
+    log.debug('TarifSpecialTableSection:', enrichedTarifs.length, 'tarifs spéciaux');
 
-      // Recherche des entités liées
-      const client = clients.find(c => c.id == idClient);
-      const service = services.find(s => s.idService == idService);
-      const unite = unites.find(u => u.idUnite == idUnite);
-
-      // Utilisation de la méthode centralisée pour calculer l'état
-      const dateDebut = tarifSpecial.dateDebutTarifSpecial || tarifSpecial.date_debut_tarif_special;
-      const dateFin = tarifSpecial.dateFinTarifSpecial || tarifSpecial.date_fin_tarif_special;
-      const status = getEtatValidite(dateDebut, dateFin);
-
-      return {
-        ...tarifSpecial,
-        id: tarifSpecial.id || tarifSpecial.tarif_special_id || tarifSpecial.idTarifSpecial || index,
-        
-        // Noms enrichis
-        clientNom: client ? `${client.prenom} ${client.nom}` : `Client ${idClient || 'inconnu'}`,
-        nomService: service?.nomService || `Service ${idService || 'inconnu'}`,
-        nomUnite: unite?.nomUnite || `Unité ${idUnite || 'inconnue'}`,
-        
-        // Informations de période
-        dateDebut: dateDebut ? new Date(dateDebut) : null,
-        dateFin: dateFin ? new Date(dateFin) : null,
-        
-        // Statut calculé avec la méthode centralisée
-        statutCalcule: status.label,
-        statusClass: status.classe,
-        etatSimple: status.etat, // Pour le filtrage : 'valide', 'futur' ou 'expire'
-        
-        // IDs normalisés
-        idClient: idClient,
-        idService: idService,
-        idUnite: idUnite
-      };
-    });
-  }, [tarifsSpeciaux, services, unites, clients]);
-
-  // 📊 Configuration des colonnes
-  const columns = useMemo(() => [
-    {
-      label: 'Client',
-      field: 'clientNom',
-      width: '200px',
-      sortable: true,
-      render: (tarif) => <strong className="tarif-client">{tarif.clientNom}</strong>
-    },
-    {
-      label: 'Service',
-      field: 'nomService',
-      width: '180px',
-      sortable: true
-    },
-    {
-      label: 'Unité',
-      field: 'nomUnite',
-      width: '120px',
-      sortable: true
-    },
-    {
-      label: 'Prix',
-      field: 'prixTarifSpecial' || 'prix_tarif_special' || 'prix',
-      width: '100px',
-      sortable: true,
-      render: (tarif) => (
-        <span className="tarif-prix">
-          {parseFloat(tarif.prixTarifSpecial || 0).toFixed(2)} CHF
-        </span>
-      )
-    },
-    {
-      label: 'Période',
-      field: 'dateDebutTarifSpecial' || 'date_debut_tarif_special' || 'dateDebut',
-      width: '180px',
-      sortable: true,
-      render: (tarif) => {
-        const dateDebut = tarif.dateDebutTarifSpecial;
-        const dateFin = tarif.dateFinTarifSpecial;
-        
-        return (
-          <div className="periode">
-            <div>Du: {dateDebut ? new Date(dateDebut).toLocaleDateString() : 'Non défini'}</div>
-            {dateFin && (
-              <div>Au: {new Date(dateFin).toLocaleDateString()}</div>
-            )}
-          </div>
-        );
-      }
-    },
-    {
-      label: 'Statut',
-      field: 'statutCalcule',
-      width: '100px',
-      sortable: true,
-      render: (tarif) => (
-        <span className={`etat-badge ${tarif.statusClass}`}>
-          {tarif.statutCalcule}
-        </span>
-      )
-    },
-    {
-      label: '',
-      field: 'actions',
-      width: '100px',
-      sortable: false,
-      render: (tarif) => (
-        <TarifSpecialActions
-          tarif={tarif}
-          onEdit={() => onEdit?.(tarif)}
-          onDelete={() => onDelete?.(tarif)}
-          disabled={isSubmitting}
+    return (
+        <TableSection
+            title={TABLE_TITLES.TARIFS_SPECIAUX}
+            data={enrichedTarifs}
+            columns={columns}
+            highlightedId={highlightedId}
+            emptyMessage="Aucun tarif spécial trouvé"
+            className="tarif-special-table-section"
+            defaultSort={{ field: 'clientNom', direction: 'asc' }}
         />
-      )
-    }
-  ], [onEdit, onDelete, isSubmitting]);
-
-  log.debug('✅ TarifSpecialTableSection - Rendu avec', enrichedTarifsSpeciaux.length, 'tarifs spéciaux enrichis');
-
-  return (
-    <div>
-      {process.env.NODE_ENV === 'development' && (
-        <div style={{ 
-          fontSize: '12px', 
-          color: '#666', 
-          marginBottom: '10px',
-          padding: '5px',
-          backgroundColor: '#f8f9fa',
-          border: '1px solid #dee2e6',
-          borderRadius: '3px'
-        }}>
-          ✅ TarifSpecialTableSection: {enrichedTarifsSpeciaux.length} tarifs | 
-          Services: {services.length} | 
-          Unités: {unites.length} | 
-          Clients: {clients.length}
-        </div>
-      )}
-      
-      <TableSection
-        title="Liste des tarifs spéciaux"
-        data={enrichedTarifsSpeciaux}
-        columns={columns}
-        highlightedId={highlightedId}
-        emptyMessage="Aucun tarif spécial trouvé"
-        className="tarif-special-table-section"
-        defaultSort={{ field: 'clientNom', direction: 'asc' }}
-      />
-    </div>
-  );
+    );
 };
 
 export default TarifSpecialTableSection;

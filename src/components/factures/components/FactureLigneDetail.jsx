@@ -1,14 +1,11 @@
 import React, { useMemo } from 'react';
-import { 
-    FiMove, 
-    FiChevronUp, 
-    FiChevronDown, 
-    FiCopy, 
-    FiTrash2, 
-    FiClipboard 
-} from 'react-icons/fi';
-
-import GlobalDateInputField from '../../../context/GlobalDateInputField';
+import { FiMove, FiClipboard } from 'react-icons/fi';
+import {
+    CopyActionButton,
+    DeleteActionButton,
+    ToggleActionButton,
+} from '../../ui/buttons/ActionButtons';
+import DateInputField from '../../shared/DateInputField';
 import { formatMontant } from '../../../utils/formatters';
 
 // Import du CSS spécifique
@@ -229,42 +226,34 @@ const FactureLigneDetail = ({
         <div className="fdf_actions_container">
             {!readOnly && (
                 <>
-                    <button 
+                    <CopyActionButton
+                        tooltip="Copier la ligne"
                         onClick={() => {
-                            const ligneCopie = { 
-                                ...ligne, 
-                                id: undefined, 
+                            const ligneCopie = {
+                                ...ligne,
+                                id: undefined,
                                 noOrdre: undefined
                             };
-                            
                             if (typeof onCopierLigne === 'function') {
                                 onCopierLigne(ligneCopie);
                             }
                         }}
-                        className="fdf_action_btn"
-                        title="Copier la ligne"
-                    >
-                        <FiCopy strokeWidth={2} />
-                    </button>
+                    />
 
-                    <button 
-                        onClick={() => canSupprimerLigne && supprimerLigne(index)}
-                        className={`fdf_action_btn ${!canSupprimerLigne ? 'fdf_disabled' : ''}`}
+                    <DeleteActionButton
                         disabled={!canSupprimerLigne}
-                        title={!canSupprimerLigne ? "Au moins une ligne est requise" : "Supprimer la ligne"}
-                    >
-                        <FiTrash2 strokeWidth={2} />
-                    </button>
+                        tooltip={!canSupprimerLigne ? 'Au moins une ligne est requise' : 'Supprimer la ligne'}
+                        onClick={() => canSupprimerLigne && supprimerLigne(index)}
+                    />
                 </>
             )}
 
-            <button 
+            <ToggleActionButton
+                isOpen={isOuverte}
+                className={hasLineErrors ? 'fdf_has_error' : ''}
+                tooltip={hasLineErrors ? 'Cette ligne contient des erreurs' : (isOuverte ? 'Réduire' : 'Développer')}
                 onClick={() => toggleLigneOuverte(index)}
-                className={`fdf_action_btn ${hasLineErrors ? 'fdf_has_error' : ''}`}
-                title={hasLineErrors ? "Cette ligne contient des erreurs" : "Fermer"}
-            >
-                {isOuverte ? <FiChevronUp strokeWidth={2} /> : <FiChevronDown strokeWidth={2} />}
-            </button>
+            />
         </div>
     );
 
@@ -325,18 +314,22 @@ const FactureLigneDetail = ({
                     />
 
                     {/* Champ des dates */}
-                    <GlobalDateInputField
+                    <DateInputField
                         id={`descriptionDates-${index}`}
                         label="Dates"
                         value={ligne.descriptionDates || ''}
-                        onChange={(e) => modifierLigne(index, 'descriptionDates', e.target.value)}
-                        updateQuantity={(formattedDates, count) => {
-                            modifierLigne(index, 'descriptionDates', formattedDates);
-                            // Mise à jour séparée de la quantité pour déclencher le recalcul du total
-                            setTimeout(() => {
-                                modifierLigne(index, 'quantite', count);
-                            }, 50); // Petit délai pour s'assurer que les dates sont mises à jour en premier
+                        onChange={(val) => {
+                            const v = typeof val === 'object' ? val.target.value : val;
+                            modifierLigne(index, 'descriptionDates', v);
                         }}
+                        updateQuantity={(formattedDates, count) => {
+                            // Mise à jour atomique des deux champs en un seul setState
+                            modifierLigne(index, {
+                                descriptionDates: formattedDates,
+                                quantite: count,
+                            });
+                        }}
+                        multiSelect={true}
                         readOnly={readOnly}
                         maxLength={100}
                     />

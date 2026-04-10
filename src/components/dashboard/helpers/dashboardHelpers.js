@@ -168,8 +168,8 @@ export const filterFactures = (factures, criteria) => {
     filtered = filtered.filter(f => f.montantTotal <= criteria.maxMontant);
   }
 
-  if (criteria.clientId) {
-    filtered = filtered.filter(f => f.client?.id === criteria.clientId);
+  if (criteria.idClient) {
+    filtered = filtered.filter(f => f.client?.id === criteria.idClient);
   }
 
   if (criteria.dateDebut) {

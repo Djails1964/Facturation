@@ -1,0 +1,75 @@
+/* src/styles/components/factures/_base.css
+ *
+ * Variables locales aux composants facture.
+ * ⚠️  NE PAS ajouter de nouvelles variables --facture-* ici.
+ *     Utiliser directement les variables globales de variables.css :
+ *       --color-primary      (ex --facture-color-primary)
+ *       --color-error-text   (ex --facture-color-danger)
+ *       --spacing-xs/sm/md/lg (ex --facture-spacing-*)
+ *       --border-radius-sm   (ex --facture-border-radius)
+ *       --transition-speed   (ex --facture-transition-speed)
+ */
+
+:root {
+    /* Alias de compatibilité — seront supprimés une fois tous les
+       var(--facture-*) migrés dans les CSS facture                */
+    --facture-color-primary:    var(--color-primary);
+    --facture-color-secondary:  var(--color-primary-light);
+    --facture-color-success:    var(--color-success-text);
+    --facture-color-warning:    var(--color-warning-text);
+    --facture-color-danger:     var(--color-error-text);
+    --facture-font-size-base:   16px;
+    --facture-font-size-small:  14px;
+    --facture-spacing-xs:       var(--spacing-xs);
+    --facture-spacing-sm:       var(--spacing-sm);
+    --facture-spacing-md:       var(--spacing-md);
+    --facture-spacing-lg:       var(--spacing-lg);
+    --facture-border-radius:    var(--border-radius-sm);
+    --facture-transition-speed: var(--transition-speed);
+}
+
+/* ── Classes utilitaires conservées (utilisées dans les composants) ── */
+
+/* Champ de formulaire ligne de facture */
+.fdf_form-control {
+    width: 100%;
+    padding: var(--spacing-sm);
+    border: none;
+    border-bottom: 1px solid var(--color-border);
+    border-radius: 0;
+    background-color: transparent;
+    transition: border-color var(--transition-speed);
+    font-family: inherit;
+    font-size: inherit;
+}
+
+.fdf_form-control:focus {
+    outline: none;
+    border-bottom-color: var(--color-primary);
+    box-shadow: none;
+}
+
+/* État désactivé */
+.fdf_disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Message d'erreur inline */
+.fdf_error-message {
+    color: var(--color-error-text);
+    font-size: 0.8rem;
+    margin-top: var(--spacing-xs);
+}
+
+/* ── Animations ── */
+@keyframes fdf_fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes fdf_slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}

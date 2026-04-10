@@ -25,7 +25,8 @@
   margin: 0;
 }
 
-.content-section-title h2 {
+.content-section-title h2,
+.content-section-title h3 {
   color: var(--color-primary);
   text-align: left;
   border-bottom: 2px solid var(--color-primary);
@@ -33,6 +34,40 @@
   margin: 0;
   font-size: 1.5rem;
   width: 100%;
+}
+
+/* Ligne titre + actions (boutons, badges) sur la même ligne */
+.content-section-title__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.content-section-title__row h2,
+.content-section-title__row h3 {
+  flex: 1;
+  min-width: 0;       /* Permet le wrapping du texte */
+}
+
+.content-section-title__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Variante compacte pour les formulaires intégrés (tarifs, etc.) */
+.content-section-title.compact h2,
+.content-section-title.compact h3 {
+  font-size: 1.1rem;
+  padding-bottom: 8px;
+}
+
+/* Variante sans padding bas */
+.content-section-title.no-padding {
+  padding: 0 0 15px 0;
 }
 
 /* Variante avec fond bordeaux */
@@ -280,7 +315,8 @@
     min-width: 60px;
   }
 
-  .content-section-title h2 {
+  .content-section-title h2,
+  .content-section-title h3 {
     font-size: 1.25rem;
   }
 }
@@ -292,7 +328,8 @@
     min-width: 50px;
   }
 
-  .content-section-title h2 {
+  .content-section-title h2,
+  .content-section-title h3 {
     font-size: 1rem;
   }
 }

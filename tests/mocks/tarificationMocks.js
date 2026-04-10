@@ -49,7 +49,7 @@ export const testUnites = [
     idUnite: 1,
     codeUnite: 'H',
     nomUnite: 'Heure',
-    abreviation: 'h',
+    abreviationUnite: 'h',
     actif: true,
     isDefault: true
   },
@@ -57,7 +57,7 @@ export const testUnites = [
     idUnite: 2,
     codeUnite: 'DJ',
     nomUnite: 'Demi-journée',
-    abreviation: '½j',
+    abreviationUnite: '½j',
     actif: true,
     isDefault: false
   },
@@ -65,7 +65,7 @@ export const testUnites = [
     idUnite: 3,
     codeUnite: 'J',
     nomUnite: 'Journée',
-    abreviation: 'j',
+    abreviationUnite: 'j',
     actif: true,
     isDefault: false
   },
@@ -73,7 +73,7 @@ export const testUnites = [
     idUnite: 4,
     codeUnite: 'INACT',
     nomUnite: 'Unité inactive',
-    abreviation: 'x',
+    abreviationUnite: 'x',
     actif: false,
     isDefault: false
   }
@@ -439,7 +439,7 @@ export const createTestUnite = (overrides = {}) => ({
   idUnite: null,
   codeUnite: 'TEST',
   nomUnite: 'Unité test',
-  abreviation: 't',
+  abreviationUnite: 't',
   actif: true,
   isDefault: false,
   ...overrides

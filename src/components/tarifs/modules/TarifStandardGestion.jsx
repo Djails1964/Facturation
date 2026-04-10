@@ -4,10 +4,10 @@
 import React, { useState, useMemo } from 'react';
 import TarifTableSection from '../sections/TarifTableSection';
 import TarifFormHeader from '../sections/TarifFormHeader';
-import { AddButton } from '../../../components/ui/buttons';
 import UnifiedFilter from '../../../components/shared/filters/UnifiedFilter';
 import { useTarifFilter, createInitialFilters, enrichTarifsWithEtat } from '../hooks/useTarifFilter';
 import { createLogger } from '../../../utils/createLogger';
+import { FloatingAddButton } from '../../../components/ui/buttons/ActionButtons';
 
 const TarifStandardGestion = ({ 
   tarifs, 
@@ -197,11 +197,7 @@ const TarifStandardGestion = ({
       <TarifFormHeader
         titre="Gestion des tarifs standards"
         description="Gérez les tarifs standards applicables à tous les clients"
-      >
-        <AddButton onClick={handleCreateClick}>
-          Nouveau tarif
-        </AddButton>
-      </TarifFormHeader>
+      ></TarifFormHeader>
 
       {/* Filtres unifiés */}
       <UnifiedFilter
@@ -231,32 +227,8 @@ const TarifStandardGestion = ({
         highlightedId={highlightedId}
         isSubmitting={isSubmitting}
       />
-      
-      {/* Informations de debug */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="debug-info" style={{
-          marginTop: '20px',
-          padding: '10px',
-          backgroundColor: '#f8f9fa',
-          border: '1px solid #dee2e6',
-          borderRadius: '4px',
-          fontSize: '12px'
-        }}>
-          <strong>🔧 Debug TarifStandardGestion :</strong><br/>
-          - Tarifs chargés : {tarifs?.length || 0}<br/>
-          - Tarifs enrichis : {enrichedTarifs.length}<br/>
-          - Tarifs normalisés : {normalizedTarifs.length}<br/>
-          - Tarifs filtrés : {tarifsFiltered.length}<br/>
-          - Filtres actifs : {filterStats.hasActiveFilters ? 'Oui' : 'Non'}<br/>
-          - Filtres actuels : {JSON.stringify(filters)}<br/>
-          - Services : {services?.length || 0}<br/>
-          - Unités : {unites?.length || 0}<br/>
-          - Types de tarifs : {typesTarifs?.length || 0}<br/>
-          - Sélectionnés : {selectedTarifs.length}<br/>
-          - Highlighted ID : {highlightedId || 'aucun'}<br/>
-          - ✅ MIGRATION UNIFIEDFILTER COMPLÈTE
-        </div>
-      )}
+      {/* Bouton flottant ajout */}
+      <FloatingAddButton onClick={handleCreateClick} tooltip="Nouveau tarif standard" />
     </div>
   );
 };

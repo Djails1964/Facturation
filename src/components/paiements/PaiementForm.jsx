@@ -10,9 +10,6 @@
 
 import React, { useCallback } from 'react';
 
-import GlobalDatePicker from '../../context/GlobalDatePicker';
-import { DateProvider } from '../../context/DateContext';
-
 // ── Sections ──────────────────────────────────────────────────────────────────
 import PaiementFormHeader            from './sections/PaiementFormHeader';
 import PaiementFormBadge             from './sections/PaiementFormBadge';
@@ -131,8 +128,7 @@ function PaiementForm({
 
     // ── Rendu ───────────────────────────────────────────────────────────────────
     return (
-        <DateProvider>
-            <div className="form-container">
+        <div className="form-container">
                 <form onSubmit={handleSubmit} className="paiement-form">
 
                     {/* ════════════════════════════════════════════════════════
@@ -284,9 +280,7 @@ function PaiementForm({
                     />
 
                 </form>
-                <GlobalDatePicker />
             </div>
-        </DateProvider>
     );
 }
 

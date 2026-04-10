@@ -41,8 +41,7 @@ export const useFactureForm = (mode, idFacture) => {
   // Utilitaires
   const isReadOnly = mode === FORM_MODES.VIEW;
   const isFormValid = mode === FORM_MODES.VIEW ||
-    (facture.numeroFacture &&
-      facture.idClient &&
+    (facture.idClient &&
       facture.lignes &&
       facture.lignes.length > 0 &&
       isLignesValid);

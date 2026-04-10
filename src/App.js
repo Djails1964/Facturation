@@ -8,7 +8,6 @@
 import React, { useState, useEffect } from 'react';
 import { createHashRouter, RouterProvider, Navigate, Outlet } from 'react-router-dom';
 import { NotificationProvider } from './services/NotificationService';
-import { DateProvider } from './context/DateContext';
 import authService from './services/authService';
 import FacturationPage from './FacturationPage';
 import LoginPage from './components/LoginPage';
@@ -19,7 +18,6 @@ import SessionAlert from './components/SessionAlert';
 import EnvironmentBadge from './components/EnvironmentBadge';
 import AppFooter from './components/AppFooter';
 import Header from './components/Header';
-import GlobalDatePicker from './context/GlobalDatePicker';
 import { useGlobalNavigationGuard } from './hooks/useGlobalNavigationGuard';
 import './styles/components/users/GestionUtilisateurs.css';
 import {
@@ -256,7 +254,6 @@ function App() {
           <Outlet context={userContext} />
         </main>
         <AppFooter />
-        <GlobalDatePicker />
       </div>
     </NavigationGuardProvider>
   );
@@ -364,10 +361,8 @@ function App() {
 
   return (
     <NotificationProvider>
-      <DateProvider>
-        <EnvironmentBadge />
-        <RouterProvider router={router} />
-      </DateProvider>
+      <EnvironmentBadge />
+      <RouterProvider router={router} />
     </NotificationProvider>
   );
 }

@@ -9,12 +9,14 @@ import { useLoyerActions } from './hooks/useLoyerActions';
 import { useClientActions } from '../clients/hooks/useClientActions';
 import { useLoyerFiltres } from './hooks/useLoyerFiltres';
 import { createLogger } from '../../utils/createLogger';
-import { formatMontant, getBadgeClasses } from '../../utils/formatters';
+import { showConfirm } from '../../utils/modalSystem';
+import { formatMontant, getBadgeClasses, formatDate } from '../../utils/formatters';
 import { LABELS_ETATS_PAIEMENT } from '../../constants/loyerConstants';
-import DateService from '../../utils/DateService';
-import { ViewActionButton, EditActionButton, DeleteActionButton, PayActionButton, PdfActionButton } from '../ui/buttons';
-import { COLUMN_LABELS, TABLE_COLUMNS_CONFIG } from '../../constants/loyerConstants';
+import { ViewActionButton, EditActionButton, DeleteActionButton, PayActionButton, PdfActionButton, FactureActionButton } from '../ui/buttons';
+import { COLUMN_LABELS } from '../../constants/loyerConstants';
+import { useSalleActions } from '../parametres/hooks/useSalleActions';
 import '../../styles/components/loyers/LoyersListe.css';
+import SectionTitle from '../shared/SectionTitle';
 
 const logger = createLogger('LoyersListe');
 
@@ -24,14 +26,15 @@ function LoyersListe({
     onAfficherLoyer,
     onNouveauLoyer,
     onLoyerSupprime,
-    onSaisirPaiement,  // ✅ NOUVEAU : callback pour ouvrir saisie paiement
-    onGenererPDF       // ✅ NOUVEAU : callback pour générer PDF confirmation
+    onSaisirPaiement,
+    onGenererDocument,  // ✅ Remplace onGenererPDF + onGenererFacture — route selon type_document
 }) {
-    const { showSuccess, showError } = useNotifications();
+    const { showError } = useNotifications();
     
     // Hooks pour les actions
     const { chargerLoyers, deleteLoyer, isLoading: isLoadingLoyers } = useLoyerActions();
     const { chargerClients: chargerClientsApi } = useClientActions();
+    const { listerSalles } = useSalleActions();
 
     // États
     const [loyers, setLoyers] = useState([]);
@@ -40,6 +43,9 @@ function LoyersListe({
     const [error, setError] = useState(null);
     const [loyerSelectionne, setLoyerSelectionne] = useState(null);
     const [showFilters, setShowFilters] = useState(false);
+    // Map idService → typeDocument ('facture' | 'confirmation')
+    // Chargée une fois au montage depuis la table salle
+    const [typeDocumentParService, setTypeDocumentParService] = useState({});
     
     // Refs pour éviter les recharges multiples
     const isLoadingLoyersRef = useRef(false);
@@ -86,6 +92,19 @@ function LoyersListe({
 
         loadClients();
         // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Charger les salles UNE SEULE FOIS pour construire la map idService → typeDocument
+    useEffect(() => {
+        listerSalles().then(salles => {
+            const map = {};
+            (salles ?? []).forEach(s => {
+                if (s.idService) map[s.idService] = s.typeDocument ?? 'facture';
+            });
+            setTypeDocumentParService(map);
+            logger.debug('✅ Map typeDocument par service:', map);
+        }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Fonction de chargement des loyers
@@ -186,13 +205,18 @@ function LoyersListe({
 
     // Suppression via useLoyerActions
     const handleSupprimer = async (idLoyer, numeroLoyer) => {
-        if (!window.confirm(`Êtes-vous sûr de vouloir supprimer le loyer ${numeroLoyer} ?`)) {
-            return;
-        }
+        const result = await showConfirm({
+            title:       'Supprimer le loyer',
+            message:     `Êtes-vous sûr de vouloir supprimer le loyer ${numeroLoyer} ?`,
+            confirmText: 'Supprimer',
+            cancelText:  'Annuler',
+            type:        'danger',
+        });
+        if (result.action !== 'confirm') return;
 
         try {
             await deleteLoyer(idLoyer);
-            showSuccess('Loyer supprimé avec succès');
+            // ✅ Pas de showSuccess ici — LoyerGestion le fait via onLoyerSupprime
             await loadLoyers();
             if (onLoyerSupprime) {
                 onLoyerSupprime(idLoyer);
@@ -210,7 +234,7 @@ function LoyersListe({
             field: 'numeroLoyer',
             flex: '0 0 13%',
             minWidth: '110px',
-            render: (loyer) => loyer.numeroLoyer || loyer.numero_loyer
+            render: (loyer) => loyer.numeroLoyer
         },
         {
             label: COLUMN_LABELS.CLIENT,
@@ -218,8 +242,7 @@ function LoyersListe({
             flex: '1',
             minWidth: '180px',
             render: (loyer) => loyer.nomCompletClient || 
-                               loyer.nom_complet_client || 
-                               `${loyer.prenomClient || loyer.prenom_client} ${loyer.nomClient || loyer.nom_client}`
+                               `${loyer.prenomClient} ${loyer.nomClient}`
         },
         {
             label: COLUMN_LABELS.PERIODE,
@@ -228,9 +251,9 @@ function LoyersListe({
             minWidth: '200px',
             render: (loyer) => (
                 <>
-                    {DateService.formatSingleDate(loyer.periodeDebut)}
+                    {formatDate(loyer.periodeDebut)}
                     {' → '}
-                    {DateService.formatSingleDate(loyer.periodeFin)}
+                    {formatDate(loyer.periodeFin)}
                 </>
             )
         },
@@ -265,9 +288,45 @@ function LoyersListe({
             maxWidth: '240px',
             className: 'actions-cell',
             render: (loyer) => {
-                const estNonPaye = (loyer.etatPaiement || loyer.etat_paiement) === 'non_paye';
-                const tooltipModifier  = estNonPaye ? 'Modifier'  : 'Non modifiable (paiement enregistré)';
-                const tooltipSupprimer = estNonPaye ? 'Supprimer' : 'Non supprimable (paiement enregistré)';
+                const estNonPaye = (loyer.etatPaiement) === 'non_paye';
+                const aFacture  = !!loyer.idFacture;
+                const etatFact  = loyer.factureEtat || null;
+
+                // 🔍 DEBUG TEMPORAIRE
+                if (aFacture) {
+                    logger.debug('[LoyersListe] loyer avec facture:', {
+                        numeroLoyer: loyer.numeroLoyer,
+                        idFacture: loyer.idFacture,
+                        factureEtat: loyer.factureEtat,
+                        etatFact,
+                        keys: Object.keys(loyer).filter(k => k.toLowerCase().includes('fact') || k.toLowerCase().includes('etat'))
+                    });
+                }
+
+                // ── Règles métier ───────────────────────────────────────────
+                // Sans facture liée : règle classique (non payé = modifiable/supprimable)
+                // Avec facture liée :
+                //   En attente | Éditée → modifiable ET supprimable
+                //   Autres états        → ni modifiable ni supprimable
+                const factureModifiable = !aFacture
+                    ? estNonPaye
+                    : (etatFact === 'En attente' || etatFact === 'Éditée');
+
+                const factureSuppr = !aFacture
+                    ? estNonPaye
+                    : (etatFact === 'En attente' || etatFact === 'Éditée');
+
+                const tooltipModifier = factureModifiable
+                    ? 'Modifier'
+                    : aFacture
+                        ? `Non modifiable (facture ${etatFact ?? 'liée'})`
+                        : 'Non modifiable (paiement enregistré)';
+
+                const tooltipSupprimer = factureSuppr
+                    ? 'Supprimer'
+                    : aFacture
+                        ? `Non supprimable (facture ${etatFact ?? 'liée'})`
+                        : 'Non supprimable (paiement enregistré)';
                 return (
                 <>
                     <ViewActionButton
@@ -276,23 +335,44 @@ function LoyersListe({
                         onMouseLeave={handleMouseLeave}
                     />
                     <EditActionButton
-                        disabled={!estNonPaye}
+                        disabled={!factureModifiable}
                         onClick={(e) => { e.stopPropagation(); onModifierLoyer(loyer.idLoyer); }}
                         onMouseEnter={(e) => handleMouseEnter(e, tooltipModifier)}
                         onMouseLeave={handleMouseLeave}
                     />
-                    <PayActionButton
-                        onClick={(e) => { e.stopPropagation(); if (onSaisirPaiement) onSaisirPaiement(loyer.idLoyer); }}
-                        onMouseEnter={(e) => handleMouseEnter(e, 'Saisir paiement')}
-                        onMouseLeave={handleMouseLeave}
-                    />
-                    <PdfActionButton
-                        onClick={(e) => { e.stopPropagation(); if (onGenererPDF) onGenererPDF(loyer.idLoyer); }}
-                        onMouseEnter={(e) => handleMouseEnter(e, 'Confirmation PDF')}
-                        onMouseLeave={handleMouseLeave}
-                    />
+                    {/* ✅ Paiement direct masqué si le loyer génère une facture —
+                        le paiement doit se faire sur la facture correspondante */}
+                    {(() => {
+                        const typeDoc = typeDocumentParService[loyer.idService] ?? 'facture';
+                        if (typeDoc !== 'facture') {
+                            return (
+                                <PayActionButton
+                                    onClick={(e) => { e.stopPropagation(); if (onSaisirPaiement) onSaisirPaiement(loyer.idLoyer); }}
+                                    onMouseEnter={(e) => handleMouseEnter(e, 'Saisir paiement')}
+                                    onMouseLeave={handleMouseLeave}
+                                />
+                            );
+                        }
+                        return null;
+                    })()}
+                    {loyer.idService && onGenererDocument && (() => {
+                        const typeDoc = typeDocumentParService[loyer.idService] ?? 'facture';
+                        return typeDoc === 'confirmation' ? (
+                            <PdfActionButton
+                                onClick={(e) => { e.stopPropagation(); onGenererDocument(loyer); }}
+                                onMouseEnter={(e) => handleMouseEnter(e, 'Confirmation de paiement PDF')}
+                                onMouseLeave={handleMouseLeave}
+                            />
+                        ) : (
+                            <FactureActionButton
+                                onClick={(e) => { e.stopPropagation(); onGenererDocument(loyer); }}
+                                onMouseEnter={(e) => handleMouseEnter(e, 'Générer une facture')}
+                                onMouseLeave={handleMouseLeave}
+                            />
+                        );
+                    })()}
                     <DeleteActionButton
-                        disabled={!estNonPaye}
+                        disabled={!factureSuppr}
                         onClick={(e) => { e.stopPropagation(); handleSupprimer(loyer.idLoyer, loyer.numeroLoyer); }}
                         onMouseEnter={(e) => handleMouseEnter(e, tooltipSupprimer)}
                         onMouseLeave={handleMouseLeave}
@@ -301,7 +381,7 @@ function LoyersListe({
                 );
             }
         }
-    ], [handleMouseEnter, handleMouseLeave, handleSupprimer, onAfficherLoyer, onModifierLoyer, onSaisirPaiement, onGenererPDF]);
+    ], [handleMouseEnter, handleMouseLeave, handleSupprimer, onAfficherLoyer, onModifierLoyer, onSaisirPaiement, onGenererDocument, typeDocumentParService]);
 
     // Rendu du tooltip
     const TooltipComponent = () => {
@@ -326,9 +406,7 @@ function LoyersListe({
     return (
         <div className="content-section-container">
             {/* Titre */}
-            <div className="content-section-title">
-                <h2>Loyers ({loyersFiltres.length})</h2>
-            </div>
+            <SectionTitle>Loyers ({loyersFiltres.length})</SectionTitle>
 
             {/* Filtres unifiés */}
             {logger.debug('Rendu de LoyersListe avec', {

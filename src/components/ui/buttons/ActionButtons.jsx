@@ -9,11 +9,13 @@ export const ActionButton = ({
   className = '',
   disabled = false,
   tooltip,
+  size = 'md',
   iconClass = 'action-icon',
   ...props 
 }) => {
   const buttonClass = [
     'bouton-action',
+    size !== 'md' ? `bouton-action--${size}` : '',
     disabled ? 'bouton-desactive' : '',
     className
   ].filter(Boolean).join(' ');
@@ -29,7 +31,7 @@ export const ActionButton = ({
       {IconComponent && (
         <IconComponent 
           className={iconClass}
-          size={16}
+          size={size === 'sm' ? 13 : size === 'lg' ? 20 : 16}
         />
       )}
     </button>
@@ -41,6 +43,7 @@ export const FormButton = ({
   icon: IconComponent, 
   children, 
   variant = 'primary',
+  size = 'md',
   className = '',
   disabled = false,
   onClick,
@@ -49,6 +52,7 @@ export const FormButton = ({
 }) => {
   const buttonClass = [
     `btn-${variant}`,
+    size !== 'md' ? `btn-${size}` : '',
     className
   ].filter(Boolean).join(' ');
 
@@ -171,6 +175,50 @@ export const MoveActionButton = ({ onClick, disabled, ...props }) => (
   />
 );
 
+export const PrevMonthButton = ({ onClick, disabled, ...props }) => (
+  <ActionButton
+    icon={ICONS.CHEVRON_LEFT}
+    iconClass="action-icon"
+    onClick={onClick}
+    disabled={disabled}
+    tooltip="Mois précédent"
+    {...props}
+  />
+);
+
+export const NextMonthButton = ({ onClick, disabled, ...props }) => (
+  <ActionButton
+    icon={ICONS.CHEVRON_RIGHT}
+    iconClass="action-icon"
+    onClick={onClick}
+    disabled={disabled}
+    tooltip="Mois suivant"
+    {...props}
+  />
+);
+
+export const FactureActionButton = ({ onClick, disabled, ...props }) => (
+  <ActionButton
+    icon={ICONS.INVOICE}
+    iconClass="action-facture-icon"
+    onClick={onClick}
+    disabled={disabled}
+    tooltip="Générer une facture"
+    {...props}
+  />
+);
+
+export const LoyerActionButton = ({ onClick, disabled, ...props }) => (
+  <ActionButton
+    icon={ICONS.HOME}
+    iconClass="action-loyer-icon"
+    onClick={onClick}
+    disabled={disabled}
+    tooltip="Générer un loyer"
+    {...props}
+  />
+);
+
 // Boutons de formulaire (style existant)
 export const SaveButton = ({ children, ...props }) => (
   <FormButton 
@@ -262,3 +310,31 @@ export const FormActionsContainer = ({ children, align = 'right', className = ''
     </div>
   );
 };
+
+/**
+ * Bouton bascule ouvert/fermé — utilisé pour les sections repliables.
+ * Affiche ChevronDown (fermé) ou ChevronUp (ouvert).
+ */
+export const ToggleActionButton = ({ isOpen, onClick, disabled, ...props }) => (
+  <ActionButton
+    icon={isOpen ? ICONS.CHEVRON_UP : ICONS.CHEVRON_DOWN}
+    iconClass="action-icon"
+    onClick={onClick}
+    disabled={disabled}
+    tooltip={isOpen ? 'Réduire' : 'Développer'}
+    {...props}
+  />
+);
+/**
+ * Bouton flottant d'ajout — rond bordeaux, positionné fixed en bas à droite.
+ * Remplace les <div className="floating-button"> dispersés dans l'application.
+ * 
+ * @param {function} onClick  - Handler de clic
+ * @param {string}   tooltip  - Texte du tooltip (affiché au survol)
+ */
+export const FloatingAddButton = ({ onClick, tooltip = 'Ajouter' }) => (
+  <div className="floating-button" onClick={onClick} role="button" aria-label={tooltip}>
+    <span>+</span>
+    <div className="floating-tooltip">{tooltip}</div>
+  </div>
+);  

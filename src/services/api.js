@@ -547,6 +547,8 @@ function convertApiResponse(data, context = null) {
 
   const loyerProperties = ['loyers', 'loyer', 'montants_mensuels', 'montantsMensuels'];
 
+  const locationSalleProperties = ['contrats', 'details', 'salles'];
+
   // ✅ AJOUT: Propriété spécifique aux lignes de facture
   const lignesProperties = ['lignes'];
 
@@ -567,7 +569,8 @@ function convertApiResponse(data, context = null) {
     ...parametreProperties,
     ...tarifEnrichedProperties,
     ...clientProperties,
-    ...loyerProperties
+    ...loyerProperties,
+    ...locationSalleProperties
   ];
   
   // Convertir les propriétés qui contiennent des données métier
@@ -743,15 +746,11 @@ export const disableFieldConversion = () => {
 };
 
 // Fonction pour réactiver la conversion
+// ✅ Restaure depuis fieldMappings pour éviter toute désynchronisation
 export const enableFieldConversion = () => {
-  ENDPOINT_CONVERSION_CONFIG.autoConvert = [
-    'tarif-api.php',
-    'client-api.php', 
-    'facture-api.php',
-    'user-api.php',
-    'loyer-api.php'
-  ];
-  log.debug('▶️ Conversion automatique réactivée');
+  ENDPOINT_CONVERSION_CONFIG.autoConvert    = [...API_ENDPOINTS_MAPPING.autoConvert];
+  ENDPOINT_CONVERSION_CONFIG.contextMapping = { ...API_ENDPOINTS_MAPPING.contextMapping };
+  log.debug('▶️ Conversion automatique réactivée:', ENDPOINT_CONVERSION_CONFIG.autoConvert);
 };
 
 // ============================================

@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import ClientGestion from './components/clients/ClientGestion';
 import FactureGestion from './components/factures/FactureGestion';
+import LocationSalleGestion from './components/locationSalle/LocationSalleGestion';
 import LoyerGestion from './components/loyers/LoyerGestion';
 import PaiementGestion from './components/paiements/PaiementGestion';
 import TarifGestion from './components/tarifs/TarifGestion';
@@ -27,6 +28,7 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
   const [activeSection, setActiveSection] = useState(initialSection);
   const [clientCreatedId, setClientCreatedId] = useState(null);
   const [factureCreatedId, setFactureCreatedId] = useState(null);
+  const [factureCreatedAnnee, setFactureCreatedAnnee] = useState(null);
   const [paiementCreatedId, setPaiementCreatedId] = useState(null);
   const [loyerCreatedId, setLoyerCreatedId] = useState(null);
   const [tarifIntegration, setTarifIntegration] = useState({
@@ -72,6 +74,15 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
     setActiveSection('loyers');
   };
 
+  // ✅ Navigation vers les factures après génération depuis un loyer
+  // anneeFacture est fourni par useFactureFromLoyer via result.anneeFacture
+  const handleFactureCreatedFromLoyer = useCallback((idFacture, anneeFacture) => {
+    log.info('➡️ Navigation vers factures après génération depuis loyer, id:', idFacture, 'année:', anneeFacture);
+    setFactureCreatedId(idFacture);
+    setFactureCreatedAnnee(anneeFacture ?? null);
+    setActiveSection('factures');
+  }, [log]);
+
   // Fonction protégée pour changer de section
   const handleSectionChange = (newSection) => {
     interceptNavigation(
@@ -92,6 +103,7 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
         }
         if (newSection !== 'factures') {
           setFactureCreatedId(null);
+          setFactureCreatedAnnee(null);
         }
         if (newSection !== 'paiements') {
           setPaiementCreatedId(null);
@@ -135,9 +147,11 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
       
       case 'factures':
         return <FactureGestion
+          key={factureCreatedId ? `facture-${factureCreatedId}` : 'factures-liste'}
           section="liste"
           idFacture={factureCreatedId}
-          onSectionChange={() => setFactureCreatedId(null)}
+          anneeFacture={factureCreatedAnnee}
+          onSectionChange={() => { setFactureCreatedId(null); setFactureCreatedAnnee(null); }}
         />;
       
       case 'nouveau-paiement':
@@ -152,6 +166,9 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
           idPaiement={paiementCreatedId}
           onSectionChange={() => setPaiementCreatedId(null)}
         />;
+
+      case 'location-salle':
+        return <LocationSalleGestion />;
       
       case 'nouveau-loyer':
         return <LoyerGestion
@@ -164,6 +181,7 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
           section="liste"
           idLoyer={loyerCreatedId}
           onSectionChange={() => setLoyerCreatedId(null)}
+          onFactureGeneree={handleFactureCreatedFromLoyer}
         />;
       
       case 'clients':
@@ -226,6 +244,18 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
               <span className="menu-label">
                 <span className="menu-icon">🏠</span>
                 <span>Loyers</span>
+              </span>
+            </li>
+
+            {/* Locations de salle */}
+            <li
+              className={activeSection === 'location-salle' ? 'active' : ''}
+              onClick={() => handleSectionChange('location-salle')}
+              title="Locations de salle"
+            >
+              <span className="menu-label">
+                <span className="menu-icon">🏢</span>
+                <span>Locations salle</span>
               </span>
             </li>
             

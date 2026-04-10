@@ -11,6 +11,7 @@ import { createLogger } from '../../utils/createLogger';
 import UnifiedFilter from '../../components/shared/filters/UnifiedFilter';
 import PaiementsTableau from './sections/PaiementsTableau';
 import '../../styles/components/paiements/PaiementsListe.css';
+import SectionTitle from '../shared/SectionTitle';
 
 const log = createLogger('PaiementsListe');
 
@@ -101,9 +102,7 @@ function PaiementsListe({
 
     return (
         <div className="content-section-container">
-            <div className="content-section-title">
-                <h2>Paiements ({paiements.length})</h2>
-            </div>
+            <SectionTitle>Paiements ({paiements.length})</SectionTitle>
 
             <UnifiedFilter
                 filterType="paiements"

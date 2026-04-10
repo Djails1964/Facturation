@@ -85,6 +85,92 @@ export const DATE_CONSTRAINTS = {
     EXCLUDE_HOLIDAYS: false        // Autoriser jours fériés par défaut
 };
 
+// ✅ MOIS DE L'ANNÉE (fr-CH)
+// Source de vérité unique pour les noms de mois en français.
+// Remplace les tableaux locaux éparpillés dans les composants (MOIS_COURTS, MOIS_LONGS, MOIS_LABELS…).
+export const MOIS_ANNEE = [
+    { numero: 1,  nom: 'Janvier',   nomCourt: 'Jan' },
+    { numero: 2,  nom: 'Février',   nomCourt: 'Fév' },
+    { numero: 3,  nom: 'Mars',      nomCourt: 'Mar' },
+    { numero: 4,  nom: 'Avril',     nomCourt: 'Avr' },
+    { numero: 5,  nom: 'Mai',       nomCourt: 'Mai' },
+    { numero: 6,  nom: 'Juin',      nomCourt: 'Jun' },
+    { numero: 7,  nom: 'Juillet',   nomCourt: 'Jul' },
+    { numero: 8,  nom: 'Août',      nomCourt: 'Aoû' },
+    { numero: 9,  nom: 'Septembre', nomCourt: 'Sep' },
+    { numero: 10, nom: 'Octobre',   nomCourt: 'Oct' },
+    { numero: 11, nom: 'Novembre',  nomCourt: 'Nov' },
+    { numero: 12, nom: 'Décembre',  nomCourt: 'Déc' },
+];
+
+// Dérivés pratiques (générés depuis MOIS_ANNEE — ne pas dupliquer manuellement)
+export const NOMS_MOIS_COURTS = MOIS_ANNEE.map(m => m.nomCourt); // ['Jan', 'Fév', ...]
+export const NOMS_MOIS_LONGS  = MOIS_ANNEE.map(m => m.nom);      // ['Janvier', 'Février', ...]
+
+/**
+ * Retourne le nom long d'un mois (1-based).
+ * @param {number} numero  1 = Janvier … 12 = Décembre
+ * @returns {string}
+ */
+export function getNomMois(numero) {
+    return MOIS_ANNEE[numero - 1]?.nom ?? `Mois ${numero}`;
+}
+
+/**
+ * Retourne le nom court d'un mois (1-based).
+ * @param {number} numero  1 = Jan … 12 = Déc
+ * @returns {string}
+ */
+export function getNomMoisCourt(numero) {
+    return MOIS_ANNEE[numero - 1]?.nomCourt ?? `M${numero}`;
+}
+
+// ✅ JOURS DE LA SEMAINE (fr-CH)
+// Source de vérité unique pour les noms de jours en français.
+// Ordre : lundi=0 … dimanche=6 (convention calendrier ISO 8601).
+// Note : JS natif utilise dimanche=0 — convertir avec (getDay() + 6) % 7.
+export const JOURS_SEMAINE = [
+    { iso: 0, jsDay: 1, nom: 'Lundi',    nomCourt: 'Lu', nomMin: 'L' },
+    { iso: 1, jsDay: 2, nom: 'Mardi',    nomCourt: 'Ma', nomMin: 'M' },
+    { iso: 2, jsDay: 3, nom: 'Mercredi', nomCourt: 'Me', nomMin: 'M' },
+    { iso: 3, jsDay: 4, nom: 'Jeudi',    nomCourt: 'Je', nomMin: 'J' },
+    { iso: 4, jsDay: 5, nom: 'Vendredi', nomCourt: 'Ve', nomMin: 'V' },
+    { iso: 5, jsDay: 6, nom: 'Samedi',   nomCourt: 'Sa', nomMin: 'S' },
+    { iso: 6, jsDay: 0, nom: 'Dimanche', nomCourt: 'Di', nomMin: 'D' },
+];
+
+// Dérivés pratiques
+export const NOMS_JOURS_COURTS = JOURS_SEMAINE.map(j => j.nomCourt); // ['Lu', 'Ma', ...]
+export const NOMS_JOURS_LONGS  = JOURS_SEMAINE.map(j => j.nom);      // ['Lundi', 'Mardi', ...]
+export const NOMS_JOURS_MIN    = JOURS_SEMAINE.map(j => j.nomMin);   // ['L', 'M', ...]
+
+/**
+ * Retourne le nom long d'un jour (ordre ISO : 0=lundi … 6=dimanche).
+ * @param {number} isoDay  0 = Lundi … 6 = Dimanche
+ * @returns {string}
+ */
+export function getNomJour(isoDay) {
+    return JOURS_SEMAINE[isoDay]?.nom ?? `Jour ${isoDay}`;
+}
+
+/**
+ * Retourne le nom court d'un jour (ordre ISO).
+ * @param {number} isoDay  0 = Lundi … 6 = Dimanche
+ * @returns {string}
+ */
+export function getNomJourCourt(isoDay) {
+    return JOURS_SEMAINE[isoDay]?.nomCourt ?? `J${isoDay}`;
+}
+
+/**
+ * Convertit un jour JS (0=dim … 6=sam) en index ISO (0=lun … 6=dim).
+ * @param {number} jsDay
+ * @returns {number}
+ */
+export function jsJourToIso(jsDay) {
+    return (jsDay + 6) % 7;
+}
+
 // ✅ CONFIGURATION DU DATEPICKER
 export const DATEPICKER_CONFIG = {
     DEFAULT_TITLE: 'Sélectionner une date',
@@ -127,30 +213,14 @@ export const CONTEXT_CONFIGS = {
     }
 };
 
-// ✅ HELPER FUNCTIONS (constantes utilitaires)
-export const DATE_HELPERS = {
-    isBusinessDay: (date) => {
-        const day = date.getDay();
-        return day !== 0 && day !== 6; // Pas dimanche (0) ni samedi (6)
-    },
-    
-    isToday: (date) => {
-        const today = new Date();
-        return date.toDateString() === today.toDateString();
-    },
-    
-    isFuture: (date) => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        return date > today;
-    },
-    
-    isPast: (date) => {
-        const today = new Date();
-        today.setHours(23, 59, 59, 999);
-        return date < today;
-    }
-};
+// ⚠️  DATE_HELPERS supprimé — les fonctions utilitaires de date appartiennent
+//     à DateService.js (méthodes statiques), pas à un fichier de constantes.
+//
+//     Remplacements :
+//       DATE_HELPERS.isBusinessDay(d) → DateService.isBusinessDay(d)
+//       DATE_HELPERS.isToday(d)       → DateService.isToday(d)
+//       DATE_HELPERS.isFuture(d)      → DateService.isFuture(d)
+//       DATE_HELPERS.isPast(d)        → DateService.isPast(d)
 
 // ✅ TYPES DE VALIDATION
 export const VALIDATION_TYPES = {
@@ -173,10 +243,16 @@ const dateConstants = {
     DATE_LABELS,
     DATE_BUTTON_TEXTS,
     DATE_CONSTRAINTS,
+    MOIS_ANNEE,
+    NOMS_MOIS_COURTS,
+    NOMS_MOIS_LONGS,
+    JOURS_SEMAINE,
+    NOMS_JOURS_COURTS,
+    NOMS_JOURS_LONGS,
+    NOMS_JOURS_MIN,
     DATEPICKER_CONFIG,
     DATE_LOADING_MESSAGES,
     CONTEXT_CONFIGS,
-    DATE_HELPERS,
     VALIDATION_TYPES
 };
 

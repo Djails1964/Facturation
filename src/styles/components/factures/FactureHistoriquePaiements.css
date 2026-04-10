@@ -6,16 +6,16 @@
   gap: 8px;
   font-weight: 600;
   margin-bottom: 12px;
-  color: #333;
+  color: var(--color-text);
 }
 
 .facture-paiements-icon {
-  color: #800000;
+  color: var(--color-primary);
 }
 
 .facture-paiements-container-simple {
-  background: #f8f9fa;
-  border-radius: 4px;
+  background: var(--color-secondary);
+  border-radius: var(--border-radius-sm);
   padding: 12px;
 }
 
@@ -24,7 +24,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid #e9ecef;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .facture-paiement-ligne:last-of-type {
@@ -36,22 +36,22 @@
   align-items: center;
   gap: 6px;
   flex: 1;
-  font-size: 14px;
-  color: #666;
+  font-size: 0.875rem;
+  color: var(--color-text-light);
 }
 
 .paiement-icon-inline {
-  color: #800000;
-  font-size: 16px;
+  color: var(--color-primary);
+  font-size: 1rem;
 }
 
 .paiement-montant-simple {
   font-weight: 600;
-  color: #28a745;
+  color: var(--color-success-text);
 }
 
 .facture-paiements-separateur {
-  border-top: 2px solid #dee2e6;
+  border-top: 2px solid var(--color-border);
   margin: 12px 0 8px 0;
 }
 
@@ -60,10 +60,10 @@
   justify-content: space-between;
   align-items: center;
   font-weight: 700;
-  font-size: 16px;
-  color: #333;
+  font-size: 1rem;
+  color: var(--color-text);
 }
 
 .total-montant {
-  color: #28a745;
+  color: var(--color-success-text);
 }

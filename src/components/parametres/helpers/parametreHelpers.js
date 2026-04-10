@@ -4,7 +4,6 @@
  */
 
 import {
-  PARAMETRE_MODES,
   PARAMETRE_TYPES,
   PARAMETRE_VALIDATION,
   PARAMETRE_ERROR_MESSAGES
@@ -130,6 +129,11 @@ export const getInputType = (nomParametre, groupe = '') => {
   if (groupe === 'Email' && nom.includes('texte')) {
     return PARAMETRE_TYPES.TEXTAREA;
   }
+
+  // ✅ SELECT pour les paramètres à choix contraints dans LocationSalle > Salles
+  if (groupe === 'LocationSalle' && (nom === 'nom_service' || nom === 'type_document')) {
+    return PARAMETRE_TYPES.SELECT;
+  }
   
   if (nom.includes('email')) return PARAMETRE_TYPES.EMAIL;
   if (nom.includes('anneeParametre') || nom.includes('year')) return PARAMETRE_TYPES.YEAR;
@@ -246,17 +250,6 @@ export const getSousGroupeLabel = (groupe, sousGroupe) => {
 };
 
 /**
- * Vérifie si on doit afficher le nom du paramètre
- * @param {string} nomParametre - Nom du paramètre
- * @returns {boolean} True si on doit l'afficher
- */
-export const shouldShowParameterName = (nomParametre) => {
-  // ✅ CORRECTION: On affiche TOUJOURS le nom du paramètre
-  // Le label personnalisé (comme "Texte du courriel") est géré dans ParametreField.getFieldLabel()
-  return true;
-};
-
-/**
  * Obtient la description d'un champ selon sa hiérarchie
  * @param {string} groupe - Groupe
  * @param {string} sousGroupe - Sous-groupe
@@ -276,8 +269,10 @@ export const getFieldDescription = (groupe, sousGroupe, categorie, nomParametre)
  * @returns {boolean} True si le groupe doit être affiché
  */
 export const shouldDisplayGroup = (groupe) => {
-  // Masquer le groupe Tarifs qui a sa propre gestion
-  return groupe !== 'Tarifs';
+  // 'Tarifs' a sa propre page de gestion
+  // 'LocationSalle' est rendu statiquement via SalleEditor (table salle)
+  // → les deux sont exclus de la boucle parametresStructure
+  return groupe !== 'Tarifs' && groupe !== 'LocationSalle';
 };
 
 /**

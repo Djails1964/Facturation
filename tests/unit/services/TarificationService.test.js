@@ -124,7 +124,7 @@ describe('TarificationService', () => {
         const unites = await mockTarificationService.chargerUnites();
 
         unites.forEach(unite => {
-          expect(unite.abreviation).toBeDefined();
+          expect(unite.abreviationUnite).toBeDefined();
         });
       });
     });

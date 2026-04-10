@@ -15,7 +15,7 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--color-border);
   border-radius: var(--border-radius-md);
   overflow: hidden;
   background-color: var(--color-background);
@@ -24,20 +24,21 @@
 /* ========== EN-TÊTE ========== */
 .unified-table-header {
   display: flex;
-  background-color: var(--header-bg, #f5f5f5);
-  border-bottom: 2px solid var(--border-color);
+  background-color: var(--color-secondary);
+  border-bottom: 2px solid var(--color-border);
   font-weight: 600;
-  color: var(--header-text);
+  color: var(--color-text);
   min-height: 48px;
 }
 
 .unified-table-header .table-cell {
   padding: var(--spacing-sm) var(--spacing-md);
   font-size: var(--font-size-sm);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-weight: 600;
   display: flex;
   align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 /* ========== CORPS ========== */
@@ -49,32 +50,28 @@
 
 .table-row {
   display: flex;
-  width: 100%;          /* force la pleine largeur même hors flux flex direct */
+  width: 100%;
   box-sizing: border-box;
-  border-bottom: 1px solid var(--border-color);
   transition: background-color var(--transition-speed) var(--transition-ease);
   cursor: pointer;
-  min-height: 56px;
+  box-shadow: inset 0 -1px 0 var(--color-border, #eee);
 }
 
 .table-row:hover {
-  background-color: var(--row-hover-bg, rgba(0, 0, 0, 0.02));
-}
-
-.table-row:last-child {
-  border-bottom: none;
+  background-color: var(--color-secondary);
 }
 
 .table-row.selected {
-  background-color: var(--row-selected-bg, rgba(128, 0, 32, 0.08));
+  background-color: rgba(128, 0, 32, 0.08);
 }
 
 .table-row .table-cell {
-  padding: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
   font-size: var(--font-size-base);
-  color: var(--text-color);
+  color: var(--color-text);
   display: flex;
   align-items: center;
+  line-height: 1.4; /* neutralise line-height:1.6 hérité de body */
 }
 
 /* Groupe de lignes quand renderRow retourne un Fragment (ligne + sous-lignes) */
@@ -82,7 +79,29 @@
   display: contents; /* transparent pour le layout flex — les enfants directs deviennent membres du flex */
 }
 
-/* ========== CELLULES ========== */
+/* ========== EN-TÊTE TRIABLE ========== */
+.table-sort-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  width: 100%;
+}
+
+.table-sort-header:hover {
+  opacity: 0.75;
+}
+
+.sort-icon {
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.sort-inactive { opacity: 0.35; }
+.sort-active   { color: var(--color-primary); font-weight: bold; }
+
+
 .table-cell {
   box-sizing: border-box;
   overflow: hidden;
@@ -93,10 +112,12 @@
 /* ========== CELLULE D'ACTIONS ========== */
 .table-cell.actions-cell {
   display: flex !important;
-  gap: 6px;
-  justify-content: flex-end !important;
-  padding-right: var(--spacing-sm) !important;
-  flex-shrink: 0;       /* la colonne ne se compresse jamais */
+  gap: 4px;
+  justify-content: flex-start !important;
+  align-items: center;
+  padding: 0 var(--spacing-sm) !important;
+  flex-shrink: 0;
+  overflow: visible;
 }
 
 /* ✅ Les boutons utilisent directement les styles de buttons.css et actionButtons.css */
@@ -127,7 +148,7 @@
 
 @keyframes highlight {
   0%, 100% { background-color: transparent; }
-  50% { background-color: var(--highlight-color, #fff3cd); }
+  50% { background-color: #fff3cd; }
 }
 
 /* ========== ÉTATS (Loading, Error, Empty) ========== */
@@ -139,15 +160,15 @@
   align-items: center;
   justify-content: center;
   padding: var(--spacing-xl) var(--spacing-md);
-  color: var(--muted-text);
+  color: var(--color-text-light);
 }
 
 .unified-table-loading .spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid var(--border-color);
+  border: 4px solid var(--color-border);
   border-top-color: var(--color-primary);
-  border-radius: var(--border-radius-circle);
+  border-radius: var(--border-radius-full, 50%);
   animation: spin 0.8s linear infinite;
   margin-bottom: var(--spacing-md);
 }
@@ -157,7 +178,7 @@
 }
 
 .unified-table-error {
-  color: var(--color-danger);
+  color: var(--color-error-text);
 }
 
 .unified-table-error i {
@@ -166,10 +187,30 @@
 }
 
 .unified-table-empty {
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--color-border);
   border-radius: var(--border-radius-md);
   background-color: var(--color-background);
 }
+
+
+/* ── En-tête triable ─────────────────────────────────────────────────────── */
+.table-sort-header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    user-select: none;
+    width: 100%;
+}
+
+.table-sort-header:hover {
+    opacity: 0.8;
+}
+
+/* ── Icônes de tri ───────────────────────────────────────────────────────── */
+.sort-icon    { font-size: 11px; }
+.sort-inactive { opacity: 0.35; }
+.sort-active   { color: var(--color-primary); font-weight: bold; }
 
 /* ========== RESPONSIVE ========== */
 @media (max-width: 768px) {
@@ -180,7 +221,7 @@
   }
   
   .table-row {
-    min-height: 48px;
+    /* min-height retiré — hauteur définie par le contenu */
   }
   
   .table-cell.actions-cell .bouton-action {

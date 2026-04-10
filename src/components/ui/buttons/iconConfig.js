@@ -1,14 +1,15 @@
 // iconConfig.js - Configuration centralisée des icônes pour s'intégrer avec buttons.css
 import {
-  FiMove, FiChevronUp, FiChevronDown, FiCopy, FiTrash2, FiClipboard,
+  FiMove, FiChevronUp, FiChevronDown, FiChevronLeft, FiChevronRight, FiCopy, FiTrash2, FiClipboard,
   FiEdit, FiEye, FiMail, FiPhone, FiMapPin, FiSlack, FiX, FiUserPlus,
   FiCheck, FiUser, FiShield, FiPrinter, FiDollarSign, FiFile,
   FiCalendar, FiCreditCard, FiClock, FiAlertCircle, FiCheckCircle,
-  FiPlus, FiFilter, FiAlertTriangle, FiSave, FiFileText
+  FiPlus, FiFilter, FiAlertTriangle, FiSave, FiFileText, FiHome
 } from 'react-icons/fi';
 
 import { Link, X, Heart } from 'react-feather';
 import { LuUnlink } from 'react-icons/lu';
+import { LiaFileInvoiceDollarSolid } from 'react-icons/lia';
 
 // Configuration centralisée des icônes pour l'application
 export const ICONS = {
@@ -28,6 +29,8 @@ export const ICONS = {
   // Navigation et UI
   CHEVRON_UP: FiChevronUp,
   CHEVRON_DOWN: FiChevronDown,
+  CHEVRON_LEFT: FiChevronLeft,
+  CHEVRON_RIGHT: FiChevronRight,
   FILTER: FiFilter,
   CLIPBOARD: FiClipboard,
 
@@ -62,7 +65,9 @@ export const ICONS = {
 
   // Spéciaux
   HEART: Heart,
-  CLOSE_ALT: X // Alternative à FiX de react-feather
+  CLOSE_ALT: X, // Alternative à FiX de react-feather
+  HOME: FiHome,
+  INVOICE: LiaFileInvoiceDollarSolid
 };
 
 // Types d'actions pour une cohérence sémantique
@@ -81,6 +86,8 @@ export const ACTION_ICONS = {
   // Actions de navigation
   BACK: ICONS.CHEVRON_UP,
   NEXT: ICONS.CHEVRON_DOWN,
+  PREV_MONTH: ICONS.CHEVRON_LEFT,
+  NEXT_MONTH: ICONS.CHEVRON_RIGHT,
   
   // Actions de communication
   SEND_EMAIL: ICONS.MAIL,
@@ -105,6 +112,8 @@ export const ICON_GROUPS = {
   NAVIGATION: {
     UP: ICONS.CHEVRON_UP,
     DOWN: ICONS.CHEVRON_DOWN,
+    LEFT: ICONS.CHEVRON_LEFT,
+    RIGHT: ICONS.CHEVRON_RIGHT,
     CLOSE: ICONS.CLOSE
   },
   

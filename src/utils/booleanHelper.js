@@ -169,7 +169,7 @@ export const normalizeService = (service) => {
  * @returns {Object} - Unité avec propriétés booléennes normalisées
  */
 export const normalizeUnite = (unite) => {
-  return normalizeBooleanFields(unite, ['actif', 'isDefault']);
+  return normalizeBooleanFields(unite, ['actif', 'isDefault', 'permet_multiplicateur']);
 };
 
 /**

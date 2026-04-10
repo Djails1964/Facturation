@@ -46,11 +46,21 @@ export const useTarifSpecialForm = ({
     const isEdit = mode === FORM_MODES.EDIT;
     const isView = mode === FORM_MODES.VIEW;
     const isReadOnly = isView;
+
+    console.log('useTarifSpecialForm - mode:', mode, 'tarifSpecialId:', tarifSpecialId);
+    console.log('useTarifSpecialForm - clients:', clients);
     
     // ✅ SIMPLIFIÉ: Chargement initial sans duplication
     useEffect(() => {
         const initializeForm = async () => {
             try {
+
+                console.log('Initialisation du formulaire de tarif spécial avec:', {
+                    mode,
+                    tarifSpecialId,
+                    clients,
+                    services
+                });
                 setIsLoading(true);
                 
                 // ✅ IMPORTANT: Vérifier que les données sont disponibles

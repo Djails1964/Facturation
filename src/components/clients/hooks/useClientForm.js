@@ -50,7 +50,6 @@ export const useClientForm = (mode, idClient) => {
     telephone: '',
     email: '',
     estTherapeute: false,
-    aLoyer: false
   });
 
   // ✅ États locaux pour le chargement initial et les erreurs de validation
@@ -88,7 +87,6 @@ export const useClientForm = (mode, idClient) => {
       telephone: client.telephone,
       email: client.email,
       estTherapeute: client.estTherapeute,
-      aLoyer: client.aLoyer
     };
   }, [client]);
 
@@ -278,8 +276,7 @@ export const useClientForm = (mode, idClient) => {
           telephone: normalizedClient.telephone || '',
           email: normalizedClient.email || '',
           estTherapeute: normalizedClient.estTherapeute || false,
-          aLoyer: normalizedClient.aLoyer || false
-        };
+            };
 
         setInitialFormData(formData);
         setIsInitialLoadDone(true);
@@ -316,12 +313,6 @@ export const useClientForm = (mode, idClient) => {
   const toggleTherapeute = useCallback(() => {
     if (isReadOnly) return;
     setClient(prev => ({ ...prev, estTherapeute: !prev.estTherapeute }));
-  }, [isReadOnly]);
-
-  // ✅ NOUVEAU: Toggle loyer
-  const toggleLoyer = useCallback(() => {
-    if (isReadOnly) return;
-    setClient(prev => ({ ...prev, aLoyer: !prev.aLoyer }));
   }, [isReadOnly]);
 
   // ================================
@@ -415,7 +406,6 @@ export const useClientForm = (mode, idClient) => {
     // Fonctions
     handleChange,
     toggleTherapeute,
-    toggleLoyer,
     handleSubmit,
     setClient,
     setError: setLocalError,

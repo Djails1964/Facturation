@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import '../../../styles/components/factures/FactureTotauxDisplay.css';
-import { useTraceUpdate } from '../../../useTraceUpdate';
 // ✅ AJOUT: Import du formatter centralisé
 import { formatMontant } from '../../../utils/formatters';
 // ✅ AJOUT: Import du createLogger
@@ -15,8 +14,6 @@ function FactureTotauxDisplay({
 }) {
     // ✅ AJOUT: Initialisation du logger
     const logger = createLogger('FactureTotauxDisplay');
-    
-    useTraceUpdate({ lignes, ristourneInitiale, readOnly, onChange, montantPayeTotal }, 'FactureTotauxDisplay');
     logger.debug('⭐ FactureTotauxDisplay rendu', { 
         ristourneInitiale, 
         montantPayeTotal,

@@ -1,5 +1,10 @@
 import React from 'react';
-import { FiCopy, FiTrash, FiChevronUp, FiChevronDown, FiMove } from 'react-icons/fi';
+import { FiMove } from 'react-icons/fi';
+import {
+    CopyActionButton,
+    DeleteActionButton,
+    ToggleActionButton,
+} from '../ui/buttons/ActionButtons';
 import { formatMontant } from '../../utils/formatters';
 
 /**
@@ -91,55 +96,33 @@ export function LigneFactureActions({
 }) {
     return (
         <div className="fdf_actions_container">
-            {/* Boutons d'action en mode édition */}
             {!readOnly && isOpen && (
                 <>
-                    <button 
-                        onClick={(e) => {
-                            e.preventDefault();
-                            onCopy();
-                        }}
-                        className="fdf_action_btn"
-                        title="Copier la ligne"
-                    >
-                        <FiCopy strokeWidth={2} />
-                    </button>
-
-                    <button 
-                        onClick={onDelete} 
-                        className={`fdf_action_btn ${!canDelete ? 'fdf_disabled' : ''}`}
-                        title={!canDelete ? "Au moins une ligne est requise" : "Supprimer la ligne"}
+                    <CopyActionButton
+                        tooltip="Copier la ligne"
+                        onClick={(e) => { e.preventDefault(); onCopy(); }}
+                    />
+                    <DeleteActionButton
                         disabled={!canDelete}
-                    >
-                        <FiTrash strokeWidth={2} />
-                    </button>
+                        tooltip={!canDelete ? 'Au moins une ligne est requise' : 'Supprimer la ligne'}
+                        onClick={onDelete}
+                    />
                 </>
             )}
-
-            {/* Bouton toggle - toujours présent */}
-            <button 
-                onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onToggle();
-                }}
-                className={`fdf_action_btn ${hasErrors ? 'fdf_has_error' : ''}`}
-                title={
-                    hasErrors 
-                        ? "Cette ligne contient des erreurs" 
-                        : isOpen 
-                            ? "Fermer" 
-                            : readOnly 
-                                ? "Voir détails"
-                                : "Ouvrir pour édition"
+            <ToggleActionButton
+                isOpen={isOpen}
+                className={hasErrors ? 'fdf_has_error' : ''}
+                tooltip={
+                    hasErrors
+                        ? 'Cette ligne contient des erreurs'
+                        : isOpen
+                            ? 'Fermer'
+                            : readOnly
+                                ? 'Voir détails'
+                                : 'Ouvrir pour édition'
                 }
-            >
-                {isOpen ? (
-                    <FiChevronUp strokeWidth={2} />
-                ) : (
-                    <FiChevronDown strokeWidth={2} />
-                )}
-            </button>
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggle(); }}
+            />
         </div>
     );
 }

@@ -2,7 +2,7 @@
 // ✅ VERSION avec bouton Payer intégré
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { FiEdit, FiEye, FiTrash2, FiMail, FiPhone, FiMapPin, FiDollarSign, FiHome, FiKey } from 'react-icons/fi';
+import { FiEdit, FiEye, FiTrash2, FiMail, FiPhone, FiMapPin, FiHome, FiKey } from 'react-icons/fi';
 import '../../styles/components/clients/ClientsListe.css';
 
 // ✅ Système modal unifié
@@ -11,17 +11,11 @@ import ModalComponents from '../shared/ModalComponents';
 
 // ✅ Hooks actions
 import { useClientActions } from './hooks/useClientActions';
-import { useFactureActions } from '../factures/hooks/useFactureActions';
-import { usePaiementActions } from '../paiements/hooks/usePaiementActions';
 
 // ✅ Utilitaires
 import { toBoolean, normalizeBooleanFieldsArray } from '../../utils/booleanHelper';
 import { createLogger } from '../../utils/createLogger';
 import { formatMontant } from '../../utils/formatters';
-
-// ✅ Handler de paiement générique
-import { GenericPaymentModalHandler } from '../shared/modals/handlers/GenericPaymentModalHandler';
-import { PAYMENT_MODES } from '../../constants/paiementConstants';
 
 // ✅ Logger créé une seule fois en dehors du composant
 const logger = createLogger('ClientsListe');
@@ -60,7 +54,7 @@ function RentalIcon({ size = 18, etatPaiement = null }) {
 }
 
 function ClientsListe({ 
-    nouveauClientId = null, 
+    nouveauidClient = null, 
     onModifierClient, 
     onAfficherClient, 
     onClientSupprime, 
@@ -80,10 +74,6 @@ function ClientsListe({
         isLoading: actionIsLoading,
         error: actionError
     } = useClientActions();
-
-    // ✅ Hooks actions paiements
-    const factureActions = useFactureActions();
-    const paiementActions = usePaiementActions();
 
     // States
     const [clients, setClients] = useState([]);
@@ -111,7 +101,7 @@ function ClientsListe({
     const normalizeClientsData = React.useCallback((clientsData) => {
         if (!Array.isArray(clientsData)) return clientsData;
         // Normaliser les booléens et mapper loyer_etat_paiement → loyerEtatPaiement
-        const normalized = normalizeBooleanFieldsArray(clientsData, ['estTherapeute', 'aLoyer']);
+        const normalized = normalizeBooleanFieldsArray(clientsData, ['estTherapeute']);
         return normalized.map(cl => ({
             ...cl,
             loyerEtatPaiement: cl.loyerEtatPaiement || null
@@ -125,7 +115,7 @@ function ClientsListe({
             logger.info('📄 Chargement des clients...');
             const data = await chargerClientsApiRef.current();
             const normalizedData = normalizeClientsData(data || []);
-            logger.debug('🔍 CLIENTS:', normalizedData.map(c => ({nom: c.nom, aLoyer: c.aLoyer, type: typeof c.aLoyer})));
+            logger.debug('🔍 CLIENTS:', normalizedData.map(c => ({nom: c.nom, type: typeof c.estTherapeute})));
             setClientsNonFiltres(normalizedData);
             setClients(normalizedData);
             setError(null);
@@ -296,41 +286,6 @@ function ClientsListe({
     };
 
     // ============================================================
-    // 💰 PAIEMENT CLIENT
-    // ============================================================
-
-    const handlePayerClient = useCallback((idClient, client, event) => {
-        if (event) {
-            event.stopPropagation();
-        }
-
-        logger.info(`💰 Ouverture modal de paiement pour client #${idClient}`);
-
-        // Créer le handler de paiement
-        const paymentHandler = new GenericPaymentModalHandler({
-            factureActions,
-            paiementActions,
-            clientActions: {
-                chargerClients: chargerClientsApiRef.current
-            },
-            showCustom,
-            showLoading,
-            formatMontant,
-            formatDate: (date) => new Date(date).toLocaleDateString('fr-CH'),
-            onSetNotification,
-            chargerFactures: null // Pas besoin de recharger les factures ici
-        });
-
-        // Appeler le handler en mode FROM_CLIENT
-        paymentHandler.handle({
-            mode: PAYMENT_MODES.FROM_CLIENT,
-            idClient,
-            nomClient: `${client.prenom} ${client.nom}`,
-            event
-        });
-    }, [factureActions, paiementActions, onSetNotification]);
-
-    // ============================================================
     // UTILITAIRES
     // ============================================================
 
@@ -428,7 +383,7 @@ function ClientsListe({
                                     <div className="cl-client-name-section">
                                         <h3 className="cl-client-name">
                                             {client.prenom} {client.nom}
-                                            {toBoolean(client.aLoyer) && <RentalIcon etatPaiement={client.loyerEtatPaiement} />}
+                                            {client.loyerEtatPaiement && <RentalIcon etatPaiement={client.loyerEtatPaiement} />}
                                         </h3>
                                         <div className="cl-client-badge">
                                             {toBoolean(client.estTherapeute) ? 'Thérapeute' : 'Client'}
@@ -455,18 +410,8 @@ function ClientsListe({
                                     </div>
                                 </div>
                                 
-                                {/* ✅ BOUTONS D'ACTION avec Payer */}
+                                {/* ✅ BOUTONS D'ACTION */}
                                 <div className="cl-card-actions">
-                                    {/* 💰 Bouton Payer - Utilise les styles standards */}
-                                    <button 
-                                        className="bouton-action"
-                                        aria-label="Payer"
-                                        title="Enregistrer un paiement"
-                                        onClick={(e) => handlePayerClient(client.idClient, client, e)}
-                                    >
-                                        <FiDollarSign className="action-pay-icon" />
-                                    </button>
-
                                     {/* Bouton Afficher */}
                                     <button 
                                         className="bouton-action"

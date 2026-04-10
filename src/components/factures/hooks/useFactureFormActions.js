@@ -73,11 +73,14 @@ export const useFactureFormActions = () => {
           lignesEnrichies = factureData.lignes.map(ligne => {
             const service = services_list.find(s => s.idService === ligne.idService);
             const unite = unites_list.find(u => u.idUnite === ligne.idUnite);
+            const uniteFinale = unite || ligne.unite;
 
             return {
               ...ligne,
               service: service || ligne.service,
-              unite: unite || ligne.unite
+              unite: uniteFinale,
+              // ✅ Propager permetMultiplicateur depuis l'unité enrichie
+              permetMultiplicateur: !!(uniteFinale?.permetMultiplicateur || uniteFinale?.permet_multiplicateur),
             };
           });
 
@@ -184,32 +187,6 @@ export const useFactureFormActions = () => {
       return null;
     }
   }, [clientActions, log]);
-
-  /**
-   * Récupère le prochain numéro de facture via useFactureActions
-   * @param {number} annee - Année pour le numéro
-   * @param {Object} setters - Fonctions de mise à jour d'état
-   * @returns {Promise<string>} Prochain numéro de facture
-   */
-  const fetchProchainNumeroFacture = useCallback(async (annee, setters) => {
-    const { setFacture } = setters || {};
-
-    try {
-      log.debug('Récupération prochain numéro facture pour année:', annee);
-      const numero = await factureActions.getProchainNumeroFacture(annee);
-
-      if (numero && setFacture) {
-        setFacture(prev => ({ ...prev, numeroFacture: numero }));
-      }
-
-      log.debug('Prochain numéro:', numero);
-      return numero;
-
-    } catch (error) {
-      log.error('Erreur récupération numéro:', error);
-      return null;
-    }
-  }, [factureActions, log]);
 
   /**
    * Charge la liste des clients via useClientActions
@@ -332,7 +309,6 @@ export const useFactureFormActions = () => {
     // Actions principales
     chargerFacture,
     fetchClientDetails,
-    fetchProchainNumeroFacture,
     chargerClients,
     sauvegarderFacture,
     

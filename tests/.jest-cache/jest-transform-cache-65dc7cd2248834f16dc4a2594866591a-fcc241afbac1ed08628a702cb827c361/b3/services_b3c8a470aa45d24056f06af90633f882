@@ -93,20 +93,20 @@ const mockTarificationService = exports.mockTarificationService = {
   chargerServices: jest.fn().mockResolvedValue([{
     idService: 1,
     nomService: 'Consultation',
-    description: 'Consultation standard'
+    descriptionUnite: 'Consultation standard'
   }, {
     idService: 2,
     nomService: 'Formation',
-    description: 'Formation groupe'
+    descriptionUnite: 'Formation groupe'
   }]),
   chargerUnites: jest.fn().mockResolvedValue([{
     idUnite: 1,
     nomUnite: 'Heure',
-    abreviation: 'h'
+    abreviationUnite: 'h'
   }, {
     idUnite: 2,
     nomUnite: 'Demi-journée',
-    abreviation: '½j'
+    abreviationUnite: '½j'
   }]),
   calculerPrix: jest.fn().mockResolvedValue({
     prixUnitaire: 100,

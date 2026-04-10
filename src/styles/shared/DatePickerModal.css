@@ -1,0 +1,164 @@
+/*
+ * DatePickerModal.css
+ * Calendrier universel — préfixe .dpm-
+ */
+
+/* ── Conteneur principal ─────────────────────────────────────────────────── */
+
+.dpm-calendar {
+    display:        flex;
+    flex-direction: column;
+    align-items:    center;
+    gap:            12px;
+    width:          100%;
+    padding:        4px 0;
+    user-select:    none;
+}
+
+/* ── Navigation mois ─────────────────────────────────────────────────────── */
+
+.dpm-nav {
+    display:         flex;
+    align-items:     center;
+    justify-content: space-between;
+    width:           100%;
+    max-width:       280px;
+    gap:             8px;
+}
+
+.dpm-nav-label {
+    font-size:   15px;
+    font-weight: 700;
+    color:       var(--color-primary, #800000);
+    flex:        1;
+    text-align:  center;
+}
+
+.dpm-nav-btn {
+    width:           30px;
+    height:          30px;
+    border:          1.5px solid var(--color-primary, #800000);
+    background:      white;
+    color:           var(--color-primary, #800000);
+    border-radius:   50%;
+    font-size:       16px;
+    font-weight:     bold;
+    cursor:          pointer;
+    display:         flex;
+    align-items:     center;
+    justify-content: center;
+    line-height:     1;
+    transition:      background 0.15s, color 0.15s;
+    flex-shrink:     0;
+}
+
+.dpm-nav-btn:hover {
+    background: var(--color-primary, #800000);
+    color:      white;
+}
+
+/* ── Grille calendrier ───────────────────────────────────────────────────── */
+
+.dpm-grid {
+    display:               grid;
+    grid-template-columns: repeat(7, 36px);
+    gap:                   2px;
+    justify-content:       center;
+}
+
+/* En-têtes jours */
+.dpm-dow {
+    width:           36px;
+    height:          28px;
+    display:         flex;
+    align-items:     center;
+    justify-content: center;
+    font-size:       11px;
+    font-weight:     600;
+    color:           var(--color-text-light, #999);
+}
+
+/* ── Boutons jour ────────────────────────────────────────────────────────── */
+
+.dpm-day {
+    width:           36px;
+    height:          36px;
+    border:          none;
+    background:      none;
+    border-radius:   50%;
+    font-size:       13px;
+    font-weight:     400;
+    color:           var(--color-text, #333);
+    cursor:          pointer;
+    display:         flex;
+    align-items:     center;
+    justify-content: center;
+    transition:      background 0.12s, color 0.12s;
+    padding:         0;
+    line-height:     1;
+}
+
+.dpm-day:hover:not(:disabled) {
+    background: rgba(128, 0, 0, 0.10);
+    color:      var(--color-primary, #800000);
+}
+
+/* Jours des mois adjacents */
+.dpm-day--adjacent {
+    color: var(--color-text-light, #bbb);
+}
+
+.dpm-day--adjacent:hover:not(:disabled) {
+    background: rgba(128, 0, 0, 0.07);
+    color:      var(--color-primary, #800000);
+}
+
+/* Aujourd'hui */
+.dpm-day--today {
+    font-weight: 700;
+    border:      2px solid var(--color-primary, #800000);
+    color:       var(--color-primary, #800000);
+}
+
+/* Sélectionné — rond bordeaux plein */
+.dpm-day--selected {
+    background:  var(--color-primary, #800000) !important;
+    color:       white !important;
+    font-weight: 600;
+    border:      none !important;
+}
+
+/* Date future autorisée */
+.dpm-day--future {
+    color: var(--color-text-light, #aaa);
+}
+
+/* Date future désactivée */
+.dpm-day--disabled,
+.dpm-day:disabled {
+    opacity: 0.3;
+    cursor:  not-allowed;
+}
+
+/* ── Résumé et hints ─────────────────────────────────────────────────────── */
+
+.dpm-resume {
+    text-align:  center;
+    font-size:   13px;
+    font-weight: 500;
+    color:       var(--color-text, #333);
+    padding:     8px 0 2px;
+    border-top:  1px solid var(--color-border, #eee);
+    width:       100%;
+    max-width:   280px;
+    min-height:  22px;
+}
+
+.dpm-hint {
+    font-size:  11px;
+    color:      var(--color-text-light, #999);
+    font-style: italic;
+    text-align: center;
+    width:      100%;
+    max-width:  280px;
+}

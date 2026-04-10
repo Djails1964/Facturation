@@ -1,9 +1,35 @@
-// src/components/shared/ModalComponents.js - VERSION ÉTENDUE
+// src/components/shared/ModalComponents.js
+//
+// Composants réutilisables pour les modales.
+// Utilise formatters, dateHelpers et dateConstants pour tous les traitements de dates.
+
+import { formatDate }         from '../../utils/formatters';
+import { toIsoString }        from '../../utils/dateHelpers';
+import { DATE_LABELS }        from '../../constants/dateConstants';
+
+// ─── Icône calendrier SVG (FiCalendar — identique au design system) ────────────
+// Utilisée dans tous les champs date des modales HTML.
+const CALENDAR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+    viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+    <line x1="16" y1="2" x2="16" y2="6"></line>
+    <line x1="8" y1="2" x2="8" y2="6"></line>
+    <line x1="3" y1="10" x2="21" y2="10"></line>
+</svg>`;
 
 /**
- * Composants réutilisables pour les modales
- * Évite la duplication de code HTML entre les différentes modales
+ * HTML d'une icône calendrier cliquable pour les champs date des modales HTML.
+ * Utilise la classe .calendar-icon du design system (actionButtons.css + forms.css).
+ * @param {string} triggerId  ID de l'input à déclencher via data-date-trigger
+ * @returns {string} HTML string
  */
+export const createCalendarIcon = (triggerId) => `
+    <div class="calendar-icon" data-date-trigger="${triggerId}"
+         title="${DATE_LABELS.OPEN_CALENDAR}"
+         style="position:absolute;right:10px;top:60%;transform:translateY(-50%);cursor:pointer;z-index:3;pointer-events:auto;color:var(--color-primary);display:flex;align-items:center;">
+        ${CALENDAR_SVG}
+    </div>`;
 
 /**
  * Section détails de la facture (utilisée dans toutes les modales)
@@ -68,40 +94,22 @@ export const createIntroSection = (title, factureNumber) => {
  */
 export const createPieceJointeSection = (pdfExiste, pdfResult, factureData, showPreviewButton = true) => {
     return `
-        <div style="margin: 15px 0; padding: 10px; background-color: ${pdfExiste ? '#f8f9fa' : '#f8d7da'}; border: 1px solid ${pdfExiste ? '#e9ecef' : '#f5c6cb'}; border-radius: 4px;">
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 18px;">${pdfExiste ? '📄' : '❌'}</span>
+        <div class="notification ${pdfExiste ? 'info' : 'error'}" style="margin: 15px 0;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span>${pdfExiste ? '📄' : '❌'}</span>
                     <div>
-                        <strong>Fichier PDF:</strong> Facture_${factureData.numeroFacture}.pdf
-                        <br>
-                        <small style="color: ${pdfExiste ? '#6c757d' : '#721c24'};">
-                            ${pdfExiste 
-                                ? 'Fichier PDF disponible'
-                                : `⚠️ ${pdfResult?.message || 'PDF non trouvé'}`
-                            }
-                        </small>
+                        <strong>Fichier PDF :</strong> Facture_${factureData.numeroFacture}.pdf<br>
+                        <small>${pdfExiste
+                            ? 'Fichier PDF disponible'
+                            : `⚠️ ${pdfResult?.message || 'PDF non trouvé'}`
+                        }</small>
                     </div>
                 </div>
                 ${showPreviewButton ? `
-                <button 
-                    type="button" 
-                    id="previewPdfBtn" 
-                    style="
-                        padding: 8px 16px; 
-                        background-color: ${pdfExiste ? 'var(--color-primary, #721c24)' : '#6c757d'}; 
-                        color: white; 
-                        border: none; 
-                        border-radius: 4px; 
-                        cursor: ${pdfExiste ? 'pointer' : 'not-allowed'};
-                        font-size: 14px;
-                        opacity: ${pdfExiste ? '1' : '0.6'};
-                        transition: background-color 0.2s ease;
-                    "
-                    ${pdfExiste ? `
-                        onmouseover="this.style.backgroundColor='#5a1519'"
-                        onmouseout="this.style.backgroundColor='var(--color-primary, #721c24)'"
-                    ` : 'disabled'}
+                <button type="button" id="previewPdfBtn"
+                    class="btn-primary${pdfExiste ? '' : ' ff-button-disabled'}"
+                    ${pdfExiste ? '' : 'disabled'}
                 >
                     📖 ${pdfExiste ? 'Visualiser' : 'Non disponible'}
                 </button>
@@ -124,27 +132,19 @@ export const createLoadingContent = (message = "Opération en cours...") => {
 };
 
 /**
- * Section d'avertissement générique
+ * Section d'avertissement générique.
+ * Utilise les variables CSS de variables.css (--color-*-bg, --color-*-text, --color-*-border).
  */
 export const createWarningSection = (title, message, type = 'warning') => {
-    const colors = {
-        warning: { bg: '#fff3cd', border: '#ffeeba', text: '#856404' },
-        error: { bg: '#f8d7da', border: '#f5c6cb', text: '#721c24' },
-        info: { bg: '#d1ecf1', border: '#bee5eb', text: '#0c5460' },
-        success: { bg: '#d4edda', border: '#c3e6cb', text: '#155724' }
-    };
-    
-    const color = colors[type] || colors.info;
-    
+    const cssClass = {
+        warning: 'notification warning',
+        error:   'notification error',
+        info:    'notification info',
+        success: 'notification success',
+    }[type] || 'notification info';
+
     return `
-        <div class="modal-${type}" style="
-            margin: 15px 0; 
-            padding: 10px; 
-            border-radius: 4px; 
-            background-color: ${color.bg}; 
-            border: 1px solid ${color.border}; 
-            color: ${color.text};
-        ">
+        <div class="${cssClass}">
             ${title ? `<strong>${title}</strong><br>` : ''}
             ${message}
         </div>
@@ -156,243 +156,49 @@ export const createWarningSection = (title, message, type = 'warning') => {
 // ========================================
 
 /**
- * Champ de date avec modal picker
+ * Champ de date avec icône calendrier pour les modales HTML.
+ * Utilise la classe .input-group.date-input du design system (forms.css).
+ *
+ * @param {string}  id       Nom + ID du champ (utilisé par data-date-trigger)
+ * @param {string}  label    Label affiché
+ * @param {string}  value    Valeur ISO 'YYYY-MM-DD' ou display 'DD.MM.YYYY'
+ * @param {boolean} required Champ obligatoire
+ * @param {Object}  config   { readOnly, helpText }
+ * @returns {string} HTML string
  */
 export const createDateInputWithModal = (id, label, value = '', required = true, config = {}) => {
-    const {
-        readOnly = false,
-        multiSelect = false,
-        minDate = null,
-        maxDate = null,
-        context = 'default',
-        helpText = null
-    } = config;
-    
+    const { readOnly = false, helpText = null } = config;
+
+    // Normaliser la valeur : accepte ISO ou display, affiche toujours DD.MM.YYYY
+    const displayValue = value ? formatDate(value, 'date') : '';
+    // Valeur ISO pour le champ caché (utilisé par useTarifModals/GenericPaymentModalHandler)
+    const isoValue = value ? (toIsoString(new Date(value)) || value) : toIsoString(new Date());
+
     return `
-        <div class="input-group date-input-wrapper">
-            <input 
-                type="text" 
-                name="${id}" 
-                id="${id}"
-                value="${value}"
-                ${required ? 'required' : ''}
-                placeholder=" "
-                ${readOnly ? 'readonly' : ''}
-                data-date-config='${JSON.stringify({
-                    multiSelect,
-                    minDate: minDate ? minDate.toISOString() : null,
-                    maxDate: maxDate ? maxDate.toISOString() : null,
-                    context
-                })}'
-                style="cursor: ${readOnly ? 'default' : 'pointer'};"
-            />
-            <label for="${id}" ${required ? 'class="required"' : ''}>${label}</label>
-            ${!readOnly ? `
-                <span 
-                    class="date-picker-icon"
-                    data-date-trigger="${id}"
-                    title="Ouvrir le calendrier"
-                    style="
-                        position: absolute;
-                        right: 12px;
-                        top: 50%;
-                        transform: translateY(-50%);
-                        cursor: pointer;
-                        font-size: 16px;
-                        color: #666;
-                        user-select: none;
-                        z-index: 1;
-                        transition: color 0.2s ease;
-                    "
-                    onmouseover="this.style.color='var(--color-primary, #800000)'"
-                    onmouseout="this.style.color='#666'"
-                >
-                    📅
-                </span>
-            ` : ''}
-            ${helpText ? `
-                <small style="
-                    display: block;
-                    margin-top: 5px;
-                    color: #666;
-                    font-size: 12px;
-                ">${helpText}</small>
-            ` : ''}
+        <div class="input-group date-input">
+            <div style="position:relative;padding-top:18px;">
+                <input
+                    type="text"
+                    name="${id}"
+                    id="${id}"
+                    value="${displayValue}"
+                    data-iso="${isoValue}"
+                    ${required ? 'required' : ''}
+                    placeholder=" "
+                    ${readOnly ? 'readonly' : ''}
+                    style="padding-right:${readOnly ? '0' : '2.5rem'};width:100%;box-sizing:border-box;"
+                    autocomplete="off"
+                />
+                <label for="${id}" ${required ? 'class="required"' : ''}>${label}</label>
+                ${!readOnly ? createCalendarIcon(id) : ''}
+            </div>
+            ${helpText ? `<small class="field-description">${helpText}</small>` : ''}
         </div>
     `;
 };
 
-/**
- * Section d'information sur les dates sélectionnées
- */
-export const createSelectedDatesInfo = (selectedDates = [], title = "Dates sélectionnées") => {
-    return `
-        <div class="details-container" id="selected-dates-info">
-            <div class="info-row">
-                <div class="info-label">${title}:</div>
-                <div class="info-value" id="selected-count">${selectedDates.length}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Détail:</div>
-                <div class="info-value" id="selected-list">
-                    ${selectedDates.length === 0 
-                        ? 'Aucune date sélectionnée' 
-                        : selectedDates.map(date => 
-                            typeof date === 'string' ? date : date.toLocaleDateString('fr-CH')
-                          ).join(', ')
-                    }
-                </div>
-            </div>
-        </div>
-    `;
-};
 
-/**
- * Container pour DatePicker React
- */
-export const createDatePickerContainer = (config = {}) => {
-    const {
-        multiSelect = false,
-        showInfo = true,
-        initialDates = []
-    } = config;
-    
-    return `
-        <div class="modal-form">
-            <div id="datepicker-container" style="
-                display: flex;
-                justify-content: center;
-                margin: 20px 0;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-                padding: 15px;
-                background: white;
-            ">
-                <!-- Le DatePicker React sera inséré ici -->
-            </div>
-            
-            ${showInfo ? createSelectedDatesInfo(initialDates) : ''}
-        </div>
-    `;
-};
 
-/**
- * Calendrier HTML de fallback (si React DatePicker ne fonctionne pas)
- */
-export const createFallbackCalendar = (year, month, onDateSelect, config = {}) => {
-    const {
-        minDate = null,
-        maxDate = null,
-        selectedDates = [],
-        multiSelect = false
-    } = config;
-    
-    const today = new Date();
-    const monthNames = [
-        'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-        'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
-    ];
-    
-    return `
-        <div class="fallback-calendar" style="
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 15px;
-            background: white;
-            font-family: inherit;
-            max-width: 320px;
-            margin: 0 auto;
-        ">
-            <!-- Header avec navigation -->
-            <div style="
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 15px;
-                padding-bottom: 10px;
-                border-bottom: 1px solid #eee;
-            ">
-                <button 
-                    type="button" 
-                    onclick="navigateMonth(-1)"
-                    style="
-                        background: none;
-                        border: 1px solid #ddd;
-                        border-radius: 4px;
-                        padding: 5px 10px;
-                        cursor: pointer;
-                        font-size: 14px;
-                    "
-                >
-                    ‹
-                </button>
-                <div style="
-                    font-weight: 600;
-                    font-size: 16px;
-                    color: var(--color-primary, #800000);
-                ">
-                    ${monthNames[month]} ${year}
-                </div>
-                <button 
-                    type="button" 
-                    onclick="navigateMonth(1)"
-                    style="
-                        background: none;
-                        border: 1px solid #ddd;
-                        border-radius: 4px;
-                        padding: 5px 10px;
-                        cursor: pointer;
-                        font-size: 14px;
-                    "
-                >
-                    ›
-                </button>
-            </div>
-            
-            <!-- Jours de la semaine -->
-            <div style="
-                display: grid;
-                grid-template-columns: repeat(7, 1fr);
-                gap: 2px;
-                text-align: center;
-                margin-bottom: 10px;
-            ">
-                <div style="font-weight: 600; padding: 8px; color: #666; font-size: 12px;">L</div>
-                <div style="font-weight: 600; padding: 8px; color: #666; font-size: 12px;">M</div>
-                <div style="font-weight: 600; padding: 8px; color: #666; font-size: 12px;">M</div>
-                <div style="font-weight: 600; padding: 8px; color: #666; font-size: 12px;">J</div>
-                <div style="font-weight: 600; padding: 8px; color: #666; font-size: 12px;">V</div>
-                <div style="font-weight: 600; padding: 8px; color: #666; font-size: 12px;">S</div>
-                <div style="font-weight: 600; padding: 8px; color: #666; font-size: 12px;">D</div>
-            </div>
-            
-            <!-- Grille des jours -->
-            <div id="calendar-days" style="
-                display: grid;
-                grid-template-columns: repeat(7, 1fr);
-                gap: 2px;
-                text-align: center;
-            ">
-                <!-- Les jours seront générés dynamiquement -->
-            </div>
-            
-            <!-- Instructions -->
-            <div style="
-                text-align: center;
-                margin-top: 15px;
-                font-size: 12px;
-                color: #666;
-                padding-top: 10px;
-                border-top: 1px solid #eee;
-            ">
-                ${multiSelect 
-                    ? 'Cliquez sur les dates pour les sélectionner/désélectionner'
-                    : 'Cliquez sur une date pour la sélectionner'
-                }
-            </div>
-        </div>
-    `;
-};
 
 /**
  * Formulaire de base avec champ email
@@ -515,21 +321,13 @@ export const createSelect = (id, label, options, selectedValue = '', required = 
  */
 export const createDevBypassSection = (message = "Simuler l'opération sans l'exécuter réellement") => {
     return `
-        <div style="margin: 15px 0; padding: 15px; background-color: #e7f3ff; border: 1px solid #b8daff; border-radius: 4px;">
-            <h4 style="margin: 0 0 10px 0; color: #004085; font-size: 14px;">
-                🛠️ Options de Développement
-            </h4>
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #004085; cursor: pointer;">
-                <input 
-                    type="checkbox" 
-                    name="bypassCapture" 
-                    id="bypassCapture"
-                    style="margin: 0;"
-                />
+        <div class="notification info" style="margin:15px 0;">
+            <h4 style="margin:0 0 8px 0;font-size:14px;">🛠️ Options de Développement</h4>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+                <input type="checkbox" name="bypassCapture" id="bypassCapture" style="margin:0;" />
                 <span>
-                    <strong>Mode simulation</strong>
-                    <br>
-                    <small style="color: #666;">${message}</small>
+                    <strong>Mode simulation</strong><br>
+                    <small style="color:var(--color-text-light,#666);">${message}</small>
                 </span>
             </label>
         </div>
@@ -622,208 +420,9 @@ export const createSimpleModalConfig = (title, facture, options = {}) => {
     };
 };
 
-// ========================================
-// ✅ NOUVELLES CONFIGURATIONS POUR DATES
-// ========================================
 
-/**
- * Configuration modal de sélection de date
- */
-export const createDatePickerModalConfig = (config = {}) => {
-    const {
-        title = "Sélectionner une date",
-        multiSelect = false,
-        initialDates = [],
-        context = 'default',
-        confirmText = "Confirmer la sélection",
-        cancelText = "Annuler",
-        size = "medium"
-    } = config;
-    
-    return {
-        title,
-        size,
-        content: createDatePickerContainer({ 
-            multiSelect, 
-            showInfo: true, 
-            initialDates 
-        }),
-        buttons: createModalButtons({
-            cancelText,
-            submitText: confirmText,
-            submitDisabled: initialDates.length === 0
-        })
-    };
-};
 
-/**
- * Scripts utilitaires pour les modales de dates
- */
-export const createDatePickerScripts = () => {
-    return `
-        <script>
-            // Variables globales pour le calendrier
-            let currentMonth = new Date().getMonth();
-            let currentYear = new Date().getFullYear();
-            let selectedDates = [];
-            let multiSelectMode = false;
-            
-            // Navigation dans le calendrier
-            function navigateMonth(direction) {
-                currentMonth += direction;
-                if (currentMonth > 11) {
-                    currentMonth = 0;
-                    currentYear++;
-                } else if (currentMonth < 0) {
-                    currentMonth = 11;
-                    currentYear--;
-                }
-                generateCalendarDays();
-            }
-            
-            // Gestion des clics sur les dates
-            function handleDateClick(button) {
-                const dateStr = button.getAttribute('data-date');
-                const date = new Date(dateStr);
-                
-                if (multiSelectMode) {
-                    const index = selectedDates.findIndex(d => d.toDateString() === date.toDateString());
-                    if (index >= 0) {
-                        selectedDates.splice(index, 1);
-                        button.style.backgroundColor = 'transparent';
-                        button.style.color = '#333';
-                    } else {
-                        selectedDates.push(date);
-                        button.style.backgroundColor = 'var(--color-primary, #800000)';
-                        button.style.color = 'white';
-                    }
-                } else {
-                    // Désélectionner toutes les autres dates
-                    document.querySelectorAll('[data-date]').forEach(btn => {
-                        btn.style.backgroundColor = 'transparent';
-                        btn.style.color = '#333';
-                    });
-                    
-                    selectedDates = [date];
-                    button.style.backgroundColor = 'var(--color-primary, #800000)';
-                    button.style.color = 'white';
-                }
-                
-                updateSelectedDatesDisplay();
-                updateConfirmButton();
-            }
-            
-            // Mettre à jour l'affichage des dates sélectionnées
-            function updateSelectedDatesDisplay() {
-                const countElement = document.getElementById('selected-count');
-                const listElement = document.getElementById('selected-list');
-                
-                if (countElement) {
-                    countElement.textContent = selectedDates.length;
-                }
-                
-                if (listElement) {
-                    if (selectedDates.length === 0) {
-                        listElement.textContent = 'Aucune date sélectionnée';
-                    } else {
-                        const formattedDates = selectedDates
-                            .sort((a, b) => a - b)
-                            .map(date => date.toLocaleDateString('fr-CH'))
-                            .join(', ');
-                        listElement.textContent = formattedDates;
-                    }
-                }
-            }
-            
-            // Mettre à jour le bouton de confirmation
-            function updateConfirmButton() {
-                const confirmBtn = document.querySelector('[data-action="confirm"]');
-                if (confirmBtn) {
-                    const hasSelection = selectedDates.length > 0;
-                    confirmBtn.disabled = !hasSelection;
-                    
-                    if (hasSelection) {
-                        const baseText = confirmBtn.textContent.replace(/\\s*\\(\\d+\\)\\s*$/, '');
-                        confirmBtn.textContent = baseText + ' (' + selectedDates.length + ')';
-                    }
-                }
-            }
-            
-            // Générer les jours du calendrier
-            function generateCalendarDays() {
-                const container = document.getElementById('calendar-days');
-                if (!container) return;
-                
-                const firstDay = new Date(currentYear, currentMonth, 1);
-                const lastDay = new Date(currentYear, currentMonth + 1, 0);
-                const startDate = new Date(firstDay);
-                startDate.setDate(firstDay.getDate() - firstDay.getDay() + 1);
-                
-                let daysHtml = '';
-                const today = new Date();
-                
-                for (let i = 0; i < 42; i++) {
-                    const currentDate = new Date(startDate);
-                    currentDate.setDate(startDate.getDate() + i);
-                    
-                    const isCurrentMonth = currentDate.getMonth() === currentMonth;
-                    const isToday = currentDate.toDateString() === today.toDateString();
-                    const isSelected = selectedDates.some(d => d.toDateString() === currentDate.toDateString());
-                    
-                    const dayButton = document.createElement('button');
-                    dayButton.type = 'button';
-                    dayButton.setAttribute('data-date', currentDate.toISOString().split('T')[0]);
-                    dayButton.onclick = function() { handleDateClick(this); };
-                    dayButton.textContent = currentDate.getDate();
-                    dayButton.disabled = !isCurrentMonth;
-                    
-                    // Styles
-                    dayButton.style.padding = '8px 4px';
-                    dayButton.style.border = 'none';
-                    dayButton.style.background = isSelected ? 'var(--color-primary, #800000)' : (isCurrentMonth ? 'transparent' : '#f5f5f5');
-                    dayButton.style.color = isSelected ? 'white' : (isCurrentMonth ? '#333' : '#999');
-                    dayButton.style.cursor = isCurrentMonth ? 'pointer' : 'default';
-                    dayButton.style.borderRadius = '4px';
-                    dayButton.style.transition = 'all 0.2s ease';
-                    dayButton.style.fontSize = '13px';
-                    dayButton.style.minHeight = '32px';
-                    
-                    if (isToday) {
-                        dayButton.style.fontWeight = '600';
-                        dayButton.style.border = '2px solid var(--color-primary, #800000)';
-                    }
-                    
-                    // Events hover
-                    if (isCurrentMonth) {
-                        dayButton.addEventListener('mouseover', function() {
-                            if (!this.style.backgroundColor.includes('800000')) {
-                                this.style.backgroundColor = '#e9ecef';
-                            }
-                        });
-                        
-                        dayButton.addEventListener('mouseout', function() {
-                            if (!this.style.backgroundColor.includes('800000')) {
-                                this.style.backgroundColor = isCurrentMonth ? 'transparent' : '#f5f5f5';
-                            }
-                        });
-                    }
-                    
-                    container.appendChild(dayButton);
-                }
-                
-                // Mettre à jour le header
-                const monthNames = [
-                    'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-                    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
-                ];
-                const headerElement = container.parentElement.querySelector('.fallback-calendar > div:first-child > div:nth-child(2)');
-                if (headerElement) {
-                    headerElement.textContent = monthNames[currentMonth] + ' ' + currentYear;
-                }
-            }
-        </script>
-    `;
-};
+
 
 // Export par défaut avec toutes les fonctions
 export default {
@@ -833,18 +432,13 @@ export default {
     createLoadingContent,
     createWarningSection,
     createEmailInput,
-    createPasswordInput,        // ✅ AJOUT ICI
+    createPasswordInput,
     createTextInput,
     createTextarea,
     createSelect,
     createDevBypassSection,
     createModalButtons,
     createSimpleModalConfig,
-    // Fonctions pour les dates
+    createCalendarIcon,
     createDateInputWithModal,
-    createSelectedDatesInfo,
-    createDatePickerContainer,
-    createFallbackCalendar,
-    createDatePickerModalConfig,
-    createDatePickerScripts
 };

@@ -2,10 +2,9 @@
 
 import { FORM_TYPES } from '../../../constants/tarifConstants';
 import ModalComponents from '../../shared/ModalComponents';
-
 import { createLogger } from '../../../utils/createLogger';
-
-import DateService from '../../../utils/DateService';
+import { formatDate } from '../../../utils/formatters';
+import { toIsoString, fromDisplayString, fromIsoString } from '../../../utils/dateHelpers';
 
 const log = createLogger("TarifFormService");
 
@@ -140,6 +139,36 @@ export class TarifFormService {
               false, 
               isReadOnly
             )}
+            ${ModalComponents.createTextInput(
+              'abreviationUnite',
+              'Abréviation',
+              itemData.abreviationUnite || '',
+              'text',
+              false,
+              isReadOnly,
+              'maxlength="2" placeholder="ex: h, DJ" data-validation="unite-abreviation"'
+            )}
+
+            <div class="modal-form-group" style="margin-top: 12px;">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:14px;">
+                <input
+                  type="hidden"
+                  name="permet_multiplicateur"
+                  value="0"
+                />
+                <input
+                  type="checkbox"
+                  name="permet_multiplicateur"
+                  id="permet_multiplicateur"
+                  value="1"
+                  ${itemData.permet_multiplicateur == 1 ? 'checked' : ''}
+                  ${isReadOnly ? 'disabled' : ''}
+                  style="width:16px; height:16px; cursor:pointer; accent-color:var(--color-primary);"
+                />
+                Permet la saisie d'une durée hh:mm sur les lignes de facture
+                <span style="font-size:12px; color:var(--color-text-muted);">(ex&nbsp;: 1h15, 2h30)</span>
+              </label>
+            </div>
             
             <div class="validation-status" id="validation-status" style="
               margin-top: 15px; 
@@ -245,30 +274,30 @@ export class TarifFormService {
               'dateDebutTarifStandard', 
               'Date de début', 
               itemData.dateDebutTarifStandard 
-                ? DateService.formatSingleDate(itemData.dateDebutTarifStandard, 'date')
-                : DateService.formatSingleDate(new Date(), 'date'), 
-              'date', 
-              true, 
+                ? formatDate(itemData.dateDebutTarifStandard, 'date')
+                : formatDate(new Date().toISOString().split('T')[0], 'date'), 
+              true,
               {
-                readOnly: isReadOnly,
+                readOnly:    isReadOnly,
                 multiSelect: false,
-                minDate: null,
-                maxDate: null,
-                context: 'tarif',
-                helpText: 'Date de début de validité du tarif'
-              },
-              'data-validation="tarif-date-debut"'
+                minDate:     null,
+                maxDate:     null,
+                helpText:    'Date de début de validité du tarif'
+              }
             )}
             ${ModalComponents.createDateInputWithModal(
               'dateFinTarifStandard', 
               'Date de fin', 
               itemData.dateFinTarifStandard 
-                ? DateService.formatSingleDate(itemData.dateFinTarifStandard, 'date')
+                ? formatDate(itemData.dateFinTarifStandard, 'date')
                 : '', 
-              'date', 
-              false, 
-              isReadOnly,
-              'data-validation="tarif-date-fin"'
+              false,
+              {
+                readOnly:    isReadOnly,
+                multiSelect: false,
+                minDate:     null,
+                maxDate:     null,
+              }
             )}
             ${ModalComponents.createTextarea(
               'note', 
@@ -292,43 +321,64 @@ export class TarifFormService {
       case FORM_TYPES.TARIF_SPECIAL:
         // ✅ VÉRIFICATION ET SÉCURISATION des données avant .map()
         const clientOptions = (clients && Array.isArray(clients)) 
-          ? clients.map(c => ({ value: c.id, text: `${c.prenom} ${c.nom}` }))
+          ? clients.map(c => ({ value: c.idClient, text: `${c.prenom} ${c.nom}` }))
           : [];
           
         const serviceOptionsSpecial = (services && Array.isArray(services)) 
-          ? services.map(s => ({ value: s.id, text: s.nomService }))
+          ? services.map(s => ({ value: s.idService, text: s.nomService }))
           : [];
-          
-        const uniteOptionsSpecial = (unites && Array.isArray(unites)) 
-          ? unites.map(u => ({ value: u.id, text: u.nomUnite }))
+
+        // Filtrer les unités selon le service déjà sélectionné (mode édition)
+        const selectedServiceId = itemData.idService ? parseInt(itemData.idService) : null;
+        const uniteOptionsSpecial = (unites && Array.isArray(unites) && selectedServiceId)
+          ? unites
+              .filter(u => Array.isArray(u.servicesIds) && u.servicesIds.includes(selectedServiceId))
+              .map(u => ({ value: u.idUnite, text: u.nomUnite }))
           : [];
+
+        // Sérialiser les unités enrichies pour le filtrage dynamique côté DOM
+        const unitesJson = JSON.stringify(
+          (unites && Array.isArray(unites)) ? unites : []
+        ).replace(/"/g, '&quot;');
 
         return `
           <form id="modalForm" class="modal-form" novalidate>
             ${ModalComponents.createSelect(
-              'clientId', 
+              'idClient', 
               'Client', 
               clientOptions,          // ✅ CORRECTION: options en 3ème position
-              itemData.clientId || '',  // ✅ CORRECTION: selectedValue en 4ème position
+              itemData.idClient || '',  // ✅ CORRECTION: selectedValue en 4ème position
               true, 
               isReadOnly
             )}
-            ${ModalComponents.createSelect(
-              'idService', 
-              'Service', 
-              serviceOptionsSpecial,  // ✅ CORRECTION: options en 3ème position
-              itemData.idService || '', // ✅ CORRECTION: selectedValue en 4ème position
-              true, 
-              isReadOnly
-            )}
-            ${ModalComponents.createSelect(
-              'idUnite', 
-              'Unité', 
-              uniteOptionsSpecial,    // ✅ CORRECTION: options en 3ème position
-              itemData.idUnite || '',   // ✅ CORRECTION: selectedValue en 4ème position
-              true, 
-              isReadOnly
-            )}
+            <div class="input-group">
+              <select
+                id="select-idService"
+                name="idService"
+                required
+                data-unites-enrichies="${unitesJson}"
+              >
+                <option value="">Sélectionner un service</option>
+                ${serviceOptionsSpecial.map(opt => 
+                  `<option value="${opt.value}"${String(opt.value) === String(itemData.idService || '') ? ' selected' : ''}>${opt.text}</option>`
+                ).join('')}
+              </select>
+              <label for="select-idService" class="required">Service</label>
+            </div>
+            <div class="input-group">
+              <select
+                id="select-idUnite"
+                name="idUnite"
+                required
+                ${!selectedServiceId ? 'disabled' : ''}
+              >
+                <option value="">${selectedServiceId ? 'Sélectionner une unité' : 'Sélectionner d\'abord un service'}</option>
+                ${uniteOptionsSpecial.map(opt => 
+                  `<option value="${opt.value}"${String(opt.value) === String(itemData.idUnite || '') ? ' selected' : ''}>${opt.text}</option>`
+                ).join('')}
+              </select>
+              <label for="select-idUnite" class="required">Unité</label>
+            </div>
             ${ModalComponents.createTextInput(
               'prixTarifSpecial', 
               'Prix (CHF)', 
@@ -338,23 +388,34 @@ export class TarifFormService {
               isReadOnly,
               'min="0" step="0.01" data-validation="tarif-special-prix"'
             )}
-            ${ModalComponents.createTextInput(
-              'dateDebutTarifSpecial', 
-              'Date de début', 
-              itemData.dateDebutTarifSpecial || new Date().toISOString().split('T')[0], 
-              'date', 
-              true, 
-              isReadOnly,
-              'data-validation="tarif-special-date-debut"'
+            ${ModalComponents.createDateInputWithModal(
+              'dateDebutTarifSpecial',
+              'Date de début',
+              itemData.dateDebutTarifSpecial
+                ? formatDate(itemData.dateDebutTarifSpecial, 'date')
+                : formatDate(new Date().toISOString().split('T')[0], 'date'),
+              true,
+              {
+                readOnly:    isReadOnly,
+                multiSelect: false,
+                minDate:     null,
+                maxDate:     null,
+                helpText:    'Date de début de validité du tarif spécial'
+              }
             )}
-            ${ModalComponents.createTextInput(
-              'dateFinTarifSpecial', 
-              'Date de fin', 
-              itemData.dateFinTarifSpecial || '', 
-              'date', 
-              false, 
-              isReadOnly,
-              'data-validation="tarif-special-date-fin"'
+            ${ModalComponents.createDateInputWithModal(
+              'dateFinTarifSpecial',
+              'Date de fin',
+              itemData.dateFinTarifSpecial
+                ? formatDate(itemData.dateFinTarifSpecial, 'date')
+                : '',
+              false,
+              {
+                readOnly:    isReadOnly,
+                multiSelect: false,
+                minDate:     null,
+                maxDate:     null,
+              }
             )}
             ${ModalComponents.createTextarea(
               'note', 
@@ -506,11 +567,11 @@ export class TarifFormService {
           log.debug(`🔄 Nettoyage date vide: ${field} = "${cleaned[field]}" → null`);
           cleaned[field] = null;
         } else {
-          const dateObj = DateService.fromDisplayFormat(cleaned[field]) || 
-               DateService.fromInputFormat(cleaned[field]) || 
+          const dateObj = fromDisplayString(cleaned[field]) || 
+               fromIsoString(cleaned[field]) || 
                new Date(cleaned[field]);
           if (dateObj && !isNaN(dateObj.getTime())) {
-            cleaned[field] = DateService.toInputFormat(dateObj);
+            cleaned[field] = toIsoString(dateObj);
           }
         }
       }

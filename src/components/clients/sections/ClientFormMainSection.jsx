@@ -13,7 +13,6 @@ function ClientFormMainSection({
   client, 
   handleChange,
   toggleTherapeute,
-  toggleLoyer,
   fieldErrors = {},
   phoneType = null,
   isReadOnly = false,
@@ -138,7 +137,7 @@ function ClientFormMainSection({
         />
       </FormRow>
 
-      {/* Ligne 5 : Switch Therapeute + Switch Loyer */}
+      {/* Ligne 5 : Switch Therapeute */}
       <FormRow>
         <SwitchInputGroup
           id="estTherapeute"
@@ -146,14 +145,6 @@ function ClientFormMainSection({
           label="Thérapeute"
           checked={toBoolean(client.estTherapeute)}
           onChange={toggleTherapeute}
-          disabled={isReadOnly}
-        />
-        <SwitchInputGroup
-          id="aLoyer"
-          name="aLoyer"
-          label="Loyer"
-          checked={toBoolean(client.aLoyer)}
-          onChange={toggleLoyer}
           disabled={isReadOnly}
         />
       </FormRow>

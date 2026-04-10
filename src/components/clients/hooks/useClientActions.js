@@ -104,8 +104,7 @@ export function useClientActions() {
         // Normalisation des booléens avant envoi
         const normalizedData = {
           ...clientData,
-          estTherapeute: toBooleanInt(clientData.estTherapeute),
-          aLoyer: toBooleanInt(clientData.aLoyer)
+          estTherapeute: toBooleanInt(clientData.estTherapeute)
         };
         
         logger.debug('📤 Données normalisées:', normalizedData);
@@ -147,8 +146,7 @@ export function useClientActions() {
         // Normalisation des booléens avant envoi
         const normalizedData = {
           ...clientData,
-          estTherapeute: toBooleanInt(clientData.estTherapeute),
-          aLoyer: toBooleanInt(clientData.aLoyer)
+          estTherapeute: toBooleanInt(clientData.estTherapeute)
         };
         
         logger.debug('📤 Données normalisées pour mise à jour:', normalizedData);

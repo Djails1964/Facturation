@@ -5,6 +5,7 @@
  * ✅ Utilisation des hooks personnalisés
  * ✅ CORRECTION : Classes CSS alignées avec GestionParametres.css
  * ✅ CORRECTION : Props ParametreField alignées avec version du repository
+ * ✅ Import centralisé depuis constants/index.js
  */
 
 import React, { useEffect, useState } from 'react';
@@ -14,6 +15,8 @@ import { useAutoNavigationGuard } from '../../hooks/useAutoNavigationGuard';
 import { useNavigationGuard } from '../../App';
 import { showConfirm } from '../../utils/modalSystem';
 import ParametreField from './fields/ParametreField';
+import MotifsParametreEditor from './fields/MotifsParametreEditor';
+import SalleEditor from './fields/SalleEditor';
 import {
   findParameterValue,
   findParameterYear,
@@ -25,8 +28,10 @@ import {
 } from './helpers/parametreHelpers';
 import {
   PARAMETRE_STATE_MESSAGES,
-  PARAMETRE_BUTTON_TEXTS
-} from '../../constants/parametreConstants';
+  PARAMETRE_BUTTON_TEXTS,
+  getGroupeTitre,
+  getSousGroupeTitre
+} from '../../constants'; // ✅ Import centralisé
 import '../../styles/components/parametres/GestionParametres.css';
 
 const GestionParametres = () => {
@@ -206,18 +211,31 @@ const GestionParametres = () => {
 
   /**
    * Rendu d'un groupe de paramètres
-   * ✅ CORRECTION : Utiliser les bonnes classes CSS
    */
   const renderParametreGroup = (groupeParametre, groupeData) => {
     if (!shouldDisplayGroup(groupeParametre)) return null;
 
     return (
       <div key={groupeParametre} className="parametre-groupe">
-        <h3 className="groupe-titre">{groupeParametre}</h3>
+        <h3 className="groupe-titre">{getGroupeTitre(groupeParametre)}</h3>
         
-        {Object.entries(groupeData).map(([sousGroupeParametre, sousGroupeData]) => (
+        {Object.entries(groupeData).map(([sousGroupeParametre, sousGroupeData]) => {
+          // ✅ Rendu spécial pour Loyer > Motifs : éditeur de motifs dédié
+          if (groupeParametre === 'Loyer' && sousGroupeParametre === 'Motifs') {
+            return (
+              <div key={`${groupeParametre}-${sousGroupeParametre}`} className="parametre-sous-groupe">
+                <h4 className="sous-groupe-titre">{getSousGroupeTitre('Loyer', 'Motifs')}</h4>
+                <MotifsParametreEditor
+                  parametresStructure={parametresStructure}
+                  modifiedValues={modifiedValues}
+                  updateParametreValue={updateParametreValue}
+                />
+              </div>
+            );
+          }
+
+          return (
           <div key={`${groupeParametre}-${sousGroupeParametre}`} className="parametre-sous-groupe">
-            {/* ✅ CORRECTION: Passer le groupeParametre à formatDisplayName */}
             {formatDisplayName(sousGroupeParametre, groupeParametre) && (
               <h4 className="sous-groupe-titre">{formatDisplayName(sousGroupeParametre, groupeParametre)}</h4>
             )}
@@ -299,7 +317,8 @@ const GestionParametres = () => {
               );
             })}
           </div>
-        ))}
+          );
+        })}
       </div>
     );
   };
@@ -329,6 +348,15 @@ const GestionParametres = () => {
             {Object.entries(parametresStructure).map(([groupeParametre, groupeData]) => 
               renderParametreGroup(groupeParametre, groupeData)
             )}
+
+            {/* ✅ Bloc LocationSalle — statique, géré par SalleEditor (table salle) */}
+            <div className="parametre-groupe">
+              <h3 className="groupe-titre">{getGroupeTitre('LocationSalle')}</h3>
+              <div className="parametre-sous-groupe">
+                <h4 className="sous-groupe-titre">{getSousGroupeTitre('LocationSalle', 'Salles')}</h4>
+                <SalleEditor />
+              </div>
+            </div>
 
             <div className="form-actions">
               <button 

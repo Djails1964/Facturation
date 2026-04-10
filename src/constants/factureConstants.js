@@ -4,7 +4,6 @@ export const FORM_MODES = {
   EDIT: 'edit'
 };
 
-// ✅ Bonus : Autres constantes utiles pour les factures
 export const VALIDATION_MESSAGES = {
   NUMERO_REQUIRED: 'Le numéro de facture est obligatoire.',
   CLIENT_REQUIRED: 'Veuillez sélectionner un client.',
@@ -24,4 +23,13 @@ export const FORM_TITLES = {
   CREATE: 'Nouvelle facture',
   EDIT: 'Modification de facture',
   VIEW: 'Détail de facture'
+};
+
+// ✅ TITRES DE COLONNES DU TABLEAU DES FACTURES
+export const COLUMN_LABELS = {
+  NUMERO:  'Numéro de facture',
+  CLIENT:  'Client',
+  DATE:    'Date facture',
+  MONTANT: 'Montant (CHF)',
+  ETAT:    'État',
 };

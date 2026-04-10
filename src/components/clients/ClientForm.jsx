@@ -62,7 +62,7 @@ function ClientForm({
   
   const {
     client, isLoading, isSubmitting, error,
-    handleChange, toggleTherapeute, toggleLoyer, isReadOnly,  // ✅ AJOUT: toggleLoyer
+    handleChange, toggleTherapeute, isReadOnly,
     fieldErrors, phoneType
   } = clientFormState;
 
@@ -177,7 +177,6 @@ function ClientForm({
             client={client}
             handleChange={handleChange}
             toggleTherapeute={toggleTherapeute}
-            toggleLoyer={toggleLoyer}
             fieldErrors={fieldErrors}
             phoneType={phoneType}
             isReadOnly={isReadOnly}

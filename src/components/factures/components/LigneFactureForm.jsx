@@ -1,20 +1,23 @@
 import React from 'react';
 import { FiMove } from 'react-icons/fi';
 import { createLogger } from '../../../utils/createLogger';
+import {
+    CopyActionButton,
+    DeleteActionButton,
+    ToggleActionButton,
+} from '../../ui/buttons/ActionButtons';
 
 // Composant existant (ne change pas)
 import LigneFactureResume from './LigneFactureResume';
 
-// CORRECTION : Import correct depuis FactureUIComponents
-import { 
-    LigneFactureActions, 
-    OrderBadge 
-} from '../../shared/FactureUIComponents';
 
 // Composant des champs avec nouvelle approche
 import LigneFactureFields from './LigneFactureFields';
 
 const log = createLogger("LigneFactureForm");
+
+// Empêche la propagation et la soumission du formulaire parent
+const stopEvent = (e) => { e.stopPropagation(); e.preventDefault(); };
 
 /**
  * Utilitaires pour l'extraction des données depuis les objets enrichis
@@ -138,16 +141,10 @@ function LigneFactureForm({
         hasLineErrors && 'fdf_has-errors'
     ].filter(Boolean).join(' ');
 
-    // Vérification des composants requis
-    const ActionsComponent = LigneFactureActions || DefaultActions;
-    const OrderComponent = OrderBadge || DefaultOrderBadge;
 
     return (
         <div className={containerClasses} {...dragProps}>
-            <OrderComponent 
-                number={noOrdre} 
-                draggable={!readOnly}
-            />
+            <OrderBadge number={noOrdre} draggable={!readOnly} />
 
             {!isOuverte ? (
                 // Mode résumé (ligne fermée) - UTILISE LES OBJETS ENRICHIS
@@ -156,19 +153,23 @@ function LigneFactureForm({
                         {...EnrichedDataExtractor.prepareForResume(ligne)}
                     />
                     
-                    <ActionsComponent
-                        index={index}
-                        readOnly={readOnly}
-                        hasErrors={hasLineErrors}
-                        canDelete={true}
-                        isOpen={false}
-                        onToggle={() => onToggle && onToggle(index)}
-                        onCopy={() => onCopy && onCopy(index)}
-                        onDelete={() => onDelete && onDelete(index)}
-                    />
+                    <div className="fdf_actions_container">
+                        {!readOnly && (
+                            <>
+                                <CopyActionButton tooltip="Copier" onClick={(e) => { stopEvent(e); onCopy && onCopy(index); }} />
+                                <DeleteActionButton tooltip="Supprimer" onClick={(e) => { stopEvent(e); onDelete && onDelete(index); }} />
+                            </>
+                        )}
+                        <ToggleActionButton
+                            isOpen={false}
+                            className={hasLineErrors ? 'fdf_has_error' : ''}
+                            tooltip={hasLineErrors ? 'Erreurs de validation' : 'Ouvrir pour édition'}
+                            onClick={(e) => { stopEvent(e); onToggle && onToggle(index); }}
+                        />
+                    </div>
 
                     {hasLineErrors && !readOnly && (
-                        <div className="fdf_error-indicator" onClick={() => onToggle && onToggle(index)}>
+                        <div className="fdf_error-indicator" onClick={(e) => { stopEvent(e); onToggle && onToggle(index); }}>
                             <span>Champs obligatoires manquants</span>
                         </div>
                     )}
@@ -176,16 +177,24 @@ function LigneFactureForm({
             ) : (
                 // Mode détaillé (ligne ouverte) - PRÉSERVE LES OBJETS ENRICHIS
                 <div className="fdf_line-flex-container">
-                    <ActionsComponent
-                        index={index}
-                        readOnly={readOnly}
-                        hasErrors={hasLineErrors}
-                        canDelete={services && services.length > 1}
-                        isOpen={true}
-                        onCopy={() => onCopy && onCopy(index)}
-                        onDelete={() => onDelete && onDelete(index)}
-                        onToggle={() => onToggle && onToggle(index)}
-                    />
+                    <div className="fdf_actions_container">
+                        {!readOnly && (
+                            <>
+                                <CopyActionButton tooltip="Copier" onClick={(e) => { stopEvent(e); onCopy && onCopy(index); }} />
+                                <DeleteActionButton
+                                    disabled={!(services && services.length > 1)}
+                                    tooltip={services && services.length > 1 ? 'Supprimer' : 'Au moins une ligne requise'}
+                                    onClick={(e) => { stopEvent(e); onDelete && onDelete(index); }}
+                                />
+                            </>
+                        )}
+                        <ToggleActionButton
+                            isOpen={true}
+                            className={hasLineErrors ? 'fdf_has_error' : ''}
+                            tooltip={hasLineErrors ? 'Erreurs de validation' : 'Fermer'}
+                            onClick={(e) => { stopEvent(e); onToggle && onToggle(index); }}
+                        />
+                    </div>
                     
                     <LigneFactureFields
                         ligne={ligne}
@@ -225,68 +234,19 @@ function getUniteName(uniteCode, unites) {
 }
 
 // Composants de fallback si les imports ne fonctionnent pas
-function DefaultOrderBadge({ number, draggable }) {
+// OrderBadge inliné (remplace FactureUIComponents.OrderBadge)
+function OrderBadge({ number, draggable }) {
+    const classes = [
+        'fdf_order-badge',
+        draggable && 'fdf_draggable'
+    ].filter(Boolean).join(' ');
     return (
-        <div className={`fdf_order-badge ${draggable ? 'draggable' : ''}`}>
-            {draggable && <FiMove className="drag-icon" />}
+        <div className={classes} title={draggable ? "Glisser pour déplacer" : ""}>
             {number}
+            {draggable && <FiMove size={8} className="fdf_drag-icon" />}
         </div>
     );
 }
 
-function DefaultActions({ 
-    index, 
-    readOnly, 
-    hasErrors, 
-    canDelete, 
-    isOpen, 
-    onToggle, 
-    onCopy, 
-    onDelete 
-}) {
-    if (readOnly) {
-        return null;
-    }
-
-    return (
-        <div className="fdf_line-actions">
-            <button 
-                className="fdf_btn-small fdf_btn-toggle"
-                onClick={onToggle}
-                title={isOpen ? "Fermer" : "Ouvrir"}
-            >
-                {isOpen ? '▲' : '▼'}
-            </button>
-            
-            {isOpen && (
-                <>
-                    <button 
-                        className="fdf_btn-small fdf_btn-copy"
-                        onClick={onCopy}
-                        title="Copier"
-                    >
-                        📋
-                    </button>
-                    
-                    {canDelete && (
-                        <button 
-                            className="fdf_btn-small fdf_btn-delete"
-                            onClick={onDelete}
-                            title="Supprimer"
-                        >
-                            🗑️
-                        </button>
-                    )}
-                </>
-            )}
-            
-            {hasErrors && (
-                <div className="fdf_error-badge" title="Erreurs de validation">
-                    ⚠️
-                </div>
-            )}
-        </div>
-    );
-}
 
 export default LigneFactureForm;

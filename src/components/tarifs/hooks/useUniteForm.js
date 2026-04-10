@@ -4,17 +4,20 @@ export const useUniteForm = () => {
     const [unite, setUnite] = useState({
         codeUnite: '',
         nomUnite: '',
-        descriptionUnite: ''
+        descriptionUnite: '',
+        abreviationUnite: '',
+        permetMultiplicateur: false
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [validationErrors, setValidationErrors] = useState({});
     
     const handleInputChange = (event) => {
-        const { name, value } = event.target;
+        const { name, value, type, checked } = event.target;
+        const newValue = type === 'checkbox' ? checked : value;
         
         setUnite(prev => ({
             ...prev,
-            [name]: value
+            [name]: newValue
         }));
         
         // Effacer l'erreur de validation pour ce champ
@@ -54,7 +57,9 @@ export const useUniteForm = () => {
         setUnite({
             codeUnite: '',
             nomUnite: '',
-            descriptionUnite: ''
+            descriptionUnite: '',
+            abreviationUnite: '',
+            permetMultiplicateur: false
         });
         setValidationErrors({});
     };

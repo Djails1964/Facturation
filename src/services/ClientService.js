@@ -45,7 +45,7 @@ class ClientService {
       return client;
     }
     
-    return normalizeBooleanFields(client, ['estTherapeute', 'aLoyer']);
+    return normalizeBooleanFields(client, ['estTherapeute']);
   }
 
   /**
@@ -58,7 +58,7 @@ class ClientService {
       return clients;
     }
     
-    return normalizeBooleanFieldsArray(clients, ['estTherapeute', 'aLoyer']);
+    return normalizeBooleanFieldsArray(clients, ['estTherapeute']);
   }
 
   /**
@@ -135,7 +135,6 @@ class ClientService {
       const dataToSend = {
         ...clientData,
         estTherapeute: toBooleanInt(clientData.estTherapeute),
-        aLoyer: toBooleanInt(clientData.aLoyer)
       };
       
       const response = await api.post('client-api.php', dataToSend);
@@ -166,7 +165,6 @@ class ClientService {
       const dataToSend = {
         ...clientData,
         estTherapeute: toBooleanInt(clientData.estTherapeute),
-        aLoyer: toBooleanInt(clientData.aLoyer)
       };
       
       const response = await api.put(`client-api.php?idClient=${idClient}`, dataToSend);

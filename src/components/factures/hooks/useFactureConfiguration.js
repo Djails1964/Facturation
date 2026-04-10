@@ -17,7 +17,7 @@ export function useFactureConfiguration(client, readOnly, tarifData = null) {
 
     const log = createLogger("useFactureConfiguration");
     log.debug(`Entrée dans useFactureConfiguration avec:`, {
-        clientId: client?.idClient,
+        idClient: client?.idClient,
         readOnly,
         hasTarifData: !!tarifData,
         tarifDataLoaded: tarifData?.isLoaded
@@ -184,7 +184,7 @@ export function useFactureConfiguration(client, readOnly, tarifData = null) {
             log.debug('📥 Initialisation configuration depuis tarifData:', {
                 services: services.length,
                 unites: unites.length,
-                clientId: client?.idClient
+                idClient: client?.idClient
             });
 
             // ✅ Création des mappings (plus d'appels API)

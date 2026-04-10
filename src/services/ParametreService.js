@@ -228,19 +228,19 @@ class ParametreService {
    * Récupère un paramètre spécifique avec normalisation
    * @param {string} nomParametre Nom du paramètre
    * @param {string} groupe Groupe du paramètre
-   * @param {string} [sGroupe] Sous-groupe du paramètre
+   * @param {string} [sousGroupeParametre] Sous-groupe du paramètre
    * @param {string} [categorie] Catégorie du paramètre
    * @returns {Promise<Object>} Détails du paramètre avec valeur normalisée
    */
-  async getParametre(nomParametre, groupe, sGroupe = null, categorie = null) {
+  async getParametre(nomParametre, groupe, sousGroupeParametre = null, categorie = null) {
     try {
       const params = {
         nomParametre: nomParametre,
         groupe: groupe
       };
       
-      if (sGroupe) {
-        params.sGroupe = sGroupe;
+      if (sousGroupeParametre) {
+        params.sousGroupeParametre = sousGroupeParametre;
       }
       
       if (categorie) {
@@ -287,6 +287,34 @@ class ParametreService {
   }
 
   /**
+   * Charge tous les paramètres d'un groupe + sous-groupe.
+   * Retourne la structure hiérarchique brute : { Categorie1: [...], Categorie2: [...] }
+   *
+   * @param {string} groupe    - Ex: 'Loyer', 'LocationSalle'
+   * @param {string} sousGroupeParametre   - Ex: 'Motifs', 'Salles'
+   * @returns {Promise<Object>} { success, parametres: { Categorie: [...] } }
+   */
+  async getParametresParSousGroupe(groupe, sousGroupeParametre) {
+    try {
+      const response = await api.get('parametre-api.php', {
+        groupe_parametre: groupe,
+        sousGroupeParametre,
+      });
+
+      if (response && response.success !== false) {
+        const raw = response.parametres ?? {};
+        const normalises = this.normalizeParametresGroup(raw);
+        return { success: true, parametres: normalises };
+      }
+
+      return { success: false, parametres: {}, message: response?.message ?? 'Erreur' };
+    } catch (error) {
+      this.log.error(`Erreur getParametresParSousGroupe(${groupe}, ${sousGroupeParametre}):`, error);
+      return { success: false, parametres: {}, message: error.message };
+    }
+  }
+
+  /**
    * Met à jour un paramètre avec gestion des booléens
    * @param {Object} parametreData Données du paramètre à mettre à jour
    * @returns {Promise<Object>} Résultat de la mise à jour
@@ -322,12 +350,12 @@ class ParametreService {
    * Vérifie si un paramètre booléen est activé
    * @param {string} nomParametre Nom du paramètre
    * @param {string} groupe Groupe du paramètre
-   * @param {string} [sGroupe] Sous-groupe du paramètre
+   * @param {string} [sousGroupeParametre] Sous-groupe du paramètre
    * @returns {Promise<boolean>} True si le paramètre est activé
    */
-  async isParametreActive(nomParametre, groupe, sGroupe = null) {
+  async isParametreActive(nomParametre, groupe, sousGroupeParametre = null) {
     try {
-      const result = await this.getParametre(nomParametre, groupe, sGroupe);
+      const result = await this.getParametre(nomParametre, groupe, sousGroupeParametre);
       
       if (result.success && result.parametre) {
         return toBoolean(result.parametre.valeurParametre);
@@ -344,16 +372,16 @@ class ParametreService {
    * Active ou désactive un paramètre booléen
    * @param {string} nomParametre Nom du paramètre
    * @param {string} groupe Groupe du paramètre
-   * @param {string} sGroupe Sous-groupe du paramètre
+   * @param {string} sousGroupeParametre Sous-groupe du paramètre
    * @param {boolean} activer True pour activer, false pour désactiver
    * @returns {Promise<Object>} Résultat de la mise à jour
    */
-  async toggleParametreBoolean(nomParametre, groupe, sGroupe, activer) {
+  async toggleParametreBoolean(nomParametre, groupe, sousGroupeParametre, activer) {
     try {
       const parametreData = {
         nomParametre: nomParametre,
         groupeParametre: groupe,
-        sousGroupeParametre: sGroupe,
+        sousGroupeParametre: sousGroupeParametre,
         valeurParametre: activer
       };
       

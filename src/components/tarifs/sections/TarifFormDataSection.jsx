@@ -1,10 +1,19 @@
 import React from 'react';
-import SimpleDateInputField from '../../../context/SimpleDateInputField';
+import DateInputField from '../../shared/DateInputField';
+import { formatDate } from '../../../utils/formatters';
+import { toIsoString, fromDisplayString, fromIsoString } from '../../../utils/dateHelpers';
+import { LABELS, VALIDATION_MESSAGES } from '../../../constants/tarifConstants';
 
-const TarifFormDataSection = ({ 
+// Convertit DD.MM.YYYY ou YYYY-MM-DD → ISO YYYY-MM-DD pour le state
+const toIso = (displayVal) => {
+    if (!displayVal) return '';
+    const d = fromDisplayString(displayVal) || fromIsoString(displayVal);
+    return d ? toIsoString(d) : displayVal;
+};
+
+const TarifFormDataSection = ({
     tarif,
     onInputChange,
-    onOpenDateModal,
     services,
     serviceUnites,
     typesTarifs,
@@ -13,8 +22,8 @@ const TarifFormDataSection = ({
 }) => {
     return (
         <div className="tarif-form-section">
-            <h3>Informations du tarif</h3>
-            
+            <h3>{LABELS.SECTION_TARIF}</h3>
+
             {/* Service */}
             <div className="input-group">
                 <select
@@ -26,14 +35,14 @@ const TarifFormDataSection = ({
                     disabled={isReadOnly}
                     className={validationErrors.idService ? 'error' : ''}
                 >
-                    <option value="">Sélectionner un service</option>
+                    <option value="">{LABELS.SELECT_SERVICE}</option>
                     {services.map(service => (
                         <option key={service.idService} value={service.idService}>
                             {service.nomService}
                         </option>
                     ))}
                 </select>
-                <label htmlFor="tarif-service" className="required">Service</label>
+                <label htmlFor="tarif-service" className="required">{LABELS.SERVICE}</label>
                 {validationErrors.idService && (
                     <span className="error-message">{validationErrors.idService}</span>
                 )}
@@ -50,14 +59,14 @@ const TarifFormDataSection = ({
                     disabled={isReadOnly || !tarif.idService}
                     className={validationErrors.idUnite ? 'error' : ''}
                 >
-                    <option value="">Sélectionner une unité</option>
+                    <option value="">{LABELS.SELECT_UNITE}</option>
                     {tarif.idService && serviceUnites[tarif.idService]?.map(unite => (
                         <option key={unite.idUnite} value={unite.idUnite}>
                             {unite.nomUnite}
                         </option>
                     ))}
                 </select>
-                <label htmlFor="tarif-unite" className="required">UnitÃ©</label>
+                <label htmlFor="tarif-unite" className="required">{LABELS.UNITE}</label>
                 {validationErrors.idUnite && (
                     <span className="error-message">{validationErrors.idUnite}</span>
                 )}
@@ -74,14 +83,14 @@ const TarifFormDataSection = ({
                     disabled={isReadOnly}
                     className={validationErrors.typeTarifId ? 'error' : ''}
                 >
-                    <option value="">Sélectionner un type de tarif</option>
+                    <option value="">{LABELS.SELECT_TYPE_TARIF}</option>
                     {typesTarifs.map(typeTarif => (
                         <option key={typeTarif.idTypeTarif} value={typeTarif.idTypeTarif}>
                             {typeTarif.nomTypeTarif}
                         </option>
                     ))}
                 </select>
-                <label htmlFor="tarif-type" className="required">Type de tarif</label>
+                <label htmlFor="tarif-type" className="required">{LABELS.TYPE_TARIF}</label>
                 {validationErrors.idTypeTarif && (
                     <span className="error-message">{validationErrors.idTypeTarif}</span>
                 )}
@@ -102,34 +111,48 @@ const TarifFormDataSection = ({
                     disabled={isReadOnly}
                     className={validationErrors.prixTypeTarif ? 'error' : ''}
                 />
-                <label htmlFor="tarif-prix" className="required">Prix (CHF)</label>
+                <label htmlFor="tarif-prix" className="required">{LABELS.PRIX}</label>
                 {validationErrors.prixTypeTarif && (
                     <span className="error-message">{validationErrors.prixTypeTarif}</span>
                 )}
             </div>
 
             {/* Date début */}
-            <SimpleDateInputField
+            <DateInputField
                 id="tarif-date-debut"
-                label="Date de début"
-                value={tarif.dateDebutTarifStandard || ''}
-                onChange={(e) => onInputChange({ target: { name: 'date_debut', value: e.target.value } })}
+                label={LABELS.DATE_DEBUT}
+                value={formatDate(tarif.dateDebutTarifStandard || '', 'date')}
+                onChange={(displayVal) =>
+                    onInputChange({ target: { name: 'date_debut', value: toIso(displayVal) } })
+                }
+                multiSelect={false}
+                allowFuture={true}
                 required={true}
                 readOnly={isReadOnly}
-                errorMessage={validationErrors.dateDebutTarifStandard}
+                className={validationErrors.dateDebutTarifStandard ? 'error' : ''}
             />
+            {validationErrors.dateDebutTarifStandard && (
+                <span className="error-message">{validationErrors.dateDebutTarifStandard}</span>
+            )}
 
             {/* Date fin */}
-            <SimpleDateInputField
+            <DateInputField
                 id="tarif-date-fin"
-                label="Date de fin (optionnel)"
-                value={tarif.dateFinTarifStandard || ''}
-                onChange={(e) => onInputChange({ target: { name: 'date_fin', value: e.target.value } })}
+                label={LABELS.DATE_FIN}
+                value={formatDate(tarif.dateFinTarifStandard || '', 'date')}
+                onChange={(displayVal) =>
+                    onInputChange({ target: { name: 'date_fin', value: toIso(displayVal) } })
+                }
+                multiSelect={false}
+                allowFuture={true}
                 required={false}
                 readOnly={isReadOnly}
-                errorMessage={validationErrors.dateFinTarifStandard}
+                className={validationErrors.dateFinTarifStandard ? 'error' : ''}
             />
-            
+            {validationErrors.dateFinTarifStandard && (
+                <span className="error-message">{validationErrors.dateFinTarifStandard}</span>
+            )}
+
             {validationErrors.general && (
                 <div className="notification error">
                     {validationErrors.general}

@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { validateFactureLines } from '../utils/factureValidation';
 import { createLogger } from '../../../utils/createLogger';
+import { parseDureeHHMM } from '../../../utils/dateHelpers';
 
 const log = createLogger("useFactureLignes");
 
@@ -97,6 +98,18 @@ const EnrichedObjectManager = {
                 ligneUpdated.uniteEnrichie = valeur;
                 ligneUpdated.uniteCode = valeur.code;
                 ligneUpdated.idUnite = valeur.idUnite || valeur.id;
+                // Propagation du flag multiplicateur depuis l'unité
+                const permetMult = !!(valeur.permet_multiplicateur || valeur.permetMultiplicateur);
+                ligneUpdated.permetMultiplicateur = permetMult;
+                // Si l'unité ne permet plus le multiplicateur, réinitialiser
+                if (!permetMult) {
+                    ligneUpdated.duree = '';
+                    // Restaurer nbSeances comme quantite
+                    if (ligneUpdated.nbSeances !== '') {
+                        ligneUpdated.quantite = ligneUpdated.nbSeances;
+                        ligneUpdated.totalLigne = (parseFloat(ligneUpdated.nbSeances) || 0) * (parseFloat(ligneUpdated.prixUnitaire) || 0);
+                    }
+                }
             }
         }
 
@@ -105,6 +118,17 @@ const EnrichedObjectManager = {
             const quantite = parseFloat(ligneUpdated.quantite) || 0;
             const prix = parseFloat(ligneUpdated.prixUnitaire) || 0;
             ligneUpdated.totalLigne = quantite * prix;
+        }
+
+        // Recalcul si durée hh:mm changée
+        if (champ === 'duree') {
+            const multiplicateur = parseDureeHHMM(valeur);
+            const nbSeances = parseFloat(ligneUpdated.nbSeances) || 0;
+            if (multiplicateur !== null && nbSeances > 0) {
+                const qteReelle = Math.round(nbSeances * multiplicateur * 10000) / 10000;
+                ligneUpdated.quantite = qteReelle;
+                ligneUpdated.totalLigne = qteReelle * (parseFloat(ligneUpdated.prixUnitaire) || 0);
+            }
         }
 
         return ligneUpdated;
@@ -131,7 +155,11 @@ const EnrichedObjectManager = {
             serviceEnrichi: null,
             uniteEnrichie: null,
             serviceTypeCode: '',
-            uniteCode: ''
+            uniteCode: '',
+            // ── Multiplicateur de durée ──────────────────────────────────
+            permetMultiplicateur: false,  // depuis l'unité sélectionnée
+            duree: '',                     // saisie hh:mm ex: "1:15"
+            nbSeances: '',                 // nb de dates = quantite brute
         };
 
         log.debug("defaultService", defaultService);
@@ -195,11 +223,15 @@ const EnrichedObjectManager = {
                     nouvelleLigne.uniteEnrichie = uniteObj;
                     nouvelleLigne.uniteCode = uniteObj.codeUnite || uniteObj.code;
                     nouvelleLigne.idUnite = uniteObj.idUnite || uniteObj.id;
+                    // Sera enrichi après création si nécessaire (dans ajouterLigne)
+                    nouvelleLigne.permetMultiplicateur = !!(uniteObj.permetMultiplicateur || uniteObj.permet_multiplicateur);
+                    if (nouvelleLigne.permetMultiplicateur) nouvelleLigne.duree = '1:00';
 
                     log.debug('✅ Unité par défaut assignée:', {
                         code: nouvelleLigne.uniteCode,
                         nom: uniteObj.nomUnite || uniteObj.nom,
-                        idUnite: nouvelleLigne.idUnite
+                        idUnite: nouvelleLigne.idUnite,
+                        permetMultiplicateur: nouvelleLigne.permetMultiplicateur
                     });
                 } else {
                     log.warn('⚠️ Objet unité non trouvé pour le code:', uniteDefautCode);
@@ -295,6 +327,35 @@ export function useFactureLignes(
             if (index >= 0 && index < nouvelleLignes.length) {
                 const ligneActuelle = nouvelleLignes[index];
                 let ligneUpdated = { ...ligneActuelle };
+
+                // ✅ Support objet pour mise à jour atomique de plusieurs champs
+                // Exemple : modifierLigne(i, { descriptionDates: '...', quantite: 4 })
+                if (typeof champ === 'object' && champ !== null) {
+                    Object.assign(ligneUpdated, champ);
+                    // Recalcul du total si quantité ou prix inclus dans la mise à jour
+                    if ('quantite' in champ || 'prixUnitaire' in champ) {
+                        const quantite = parseFloat(ligneUpdated.quantite) || 0;
+                        const prix = parseFloat(ligneUpdated.prixUnitaire) || 0;
+                        ligneUpdated.totalLigne = quantite * prix;
+                    }
+                    // Recalcul via durée si nbSeances mis à jour (depuis dates)
+                    if ('nbSeances' in champ || 'descriptionDates' in champ) {
+                        const nbSeances = parseFloat(ligneUpdated.nbSeances ?? ligneUpdated.quantite) || 0;
+                        ligneUpdated.nbSeances = nbSeances;
+                        const multiplicateur = parseDureeHHMM(ligneUpdated.duree);
+                        if (ligneUpdated.permetMultiplicateur && multiplicateur !== null && nbSeances > 0) {
+                            const qteReelle = Math.round(nbSeances * multiplicateur * 10000) / 10000;
+                            ligneUpdated.quantite = qteReelle;
+                            ligneUpdated.totalLigne = qteReelle * (parseFloat(ligneUpdated.prixUnitaire) || 0);
+                        } else if (!ligneUpdated.permetMultiplicateur) {
+                            // Pas de multiplicateur : quantite = nbSeances
+                            if (!('quantite' in champ)) ligneUpdated.quantite = nbSeances;
+                            ligneUpdated.totalLigne = (parseFloat(ligneUpdated.quantite) || 0) * (parseFloat(ligneUpdated.prixUnitaire) || 0);
+                        }
+                    }
+                    nouvelleLignes[index] = ligneUpdated;
+                    return nouvelleLignes;
+                }
 
                 // Mise à jour standard
                 ligneUpdated[champ] = valeur;
@@ -398,26 +459,27 @@ export function useFactureLignes(
                             log.debug('✅ Unité minimale créée:', valeur);
                         }
                     } else if (valeur && typeof valeur === 'object') {
-                        // ✅ CORRECTION CRITIQUE: Objet unité complet fourni - REMPLACEMENT COMPLET
-                        ligneUpdated.unite = { ...valeur }; // Nouvel objet complet
-                        ligneUpdated.uniteEnrichie = { ...valeur }; // Nouvel objet complet
+                        ligneUpdated.unite = { ...valeur };
+                        ligneUpdated.uniteEnrichie = { ...valeur };
                         ligneUpdated.uniteCode = valeur.code || valeur.codeUnite;
                         ligneUpdated.idUnite = valeur.idUnite || valeur.id;
-                        log.debug('✅ Unité objet REMPLACÉE complètement:', valeur.nom || valeur.nomUnite, 'ID:', valeur.idUnite);
-                        
-                        // ✅ VÉRIFICATION: S'assurer que les propriétés sont bien mises à jour
-                        log.debug('🔍 Vérification objet unité final:', {
-                            unite: ligneUpdated.unite,
-                            uniteEnrichie: ligneUpdated.uniteEnrichie,
-                            uniteCode: ligneUpdated.uniteCode,
-                            idUnite: ligneUpdated.idUnite
-                        });
+                        // ✅ permetMultiplicateur depuis l'objet unité OU depuis unites complet
+                        const uniteComplete = unites?.find(u => u.idUnite === (valeur.idUnite || valeur.id));
+                        const permetMult = !!(
+                            uniteComplete?.permetMultiplicateur || uniteComplete?.permet_multiplicateur ||
+                            valeur.permetMultiplicateur || valeur.permet_multiplicateur
+                        );
+                        ligneUpdated.permetMultiplicateur = permetMult;
+                        if (!permetMult) { ligneUpdated.duree = ''; }
+                        else if (!ligneUpdated.duree) { ligneUpdated.duree = '1:00'; }
+                        log.debug('✅ Unité REMPLACÉE:', valeur.nom || valeur.nomUnite, 'permetMultiplicateur:', permetMult);
                     } else if (valeur === null) {
-                        // Nettoyage
                         ligneUpdated.unite = null;
                         ligneUpdated.uniteEnrichie = null;
                         ligneUpdated.uniteCode = null;
                         ligneUpdated.idUnite = null;
+                        ligneUpdated.permetMultiplicateur = false;
+                        ligneUpdated.duree = '';
                         log.debug('✅ Unité nettoyée');
                     }
                 }
@@ -443,11 +505,32 @@ export function useFactureLignes(
                     log.debug('✅ idUnite mis à jour et objet synchronisé:', valeur);
                 }
 
-                // Recalcul du totalLigne si quantité ou prix changé
                 if (champ === 'quantite' || champ === 'prixUnitaire') {
                     const quantite = parseFloat(ligneUpdated.quantite) || 0;
                     const prix = parseFloat(ligneUpdated.prixUnitaire) || 0;
                     ligneUpdated.totalLigne = quantite * prix;
+                }
+                if (champ === 'duree') {
+                    const mult = parseDureeHHMM(valeur);
+                    const nb   = parseFloat(ligneUpdated.nbSeances) || 0;
+                    if (mult !== null && nb > 0) {
+                        const qte = Math.round(nb * mult * 10000) / 10000;
+                        ligneUpdated.quantite   = qte;
+                        ligneUpdated.totalLigne = qte * (parseFloat(ligneUpdated.prixUnitaire) || 0);
+                    }
+                }
+                if (champ === 'nbSeances') {
+                    const nb   = parseFloat(valeur) || 0;
+                    ligneUpdated.nbSeances = nb;
+                    const mult = parseDureeHHMM(ligneUpdated.duree);
+                    if (ligneUpdated.permetMultiplicateur && mult !== null && nb > 0) {
+                        const qte = Math.round(nb * mult * 10000) / 10000;
+                        ligneUpdated.quantite   = qte;
+                        ligneUpdated.totalLigne = qte * (parseFloat(ligneUpdated.prixUnitaire) || 0);
+                    } else {
+                        ligneUpdated.quantite   = nb;
+                        ligneUpdated.totalLigne = nb * (parseFloat(ligneUpdated.prixUnitaire) || 0);
+                    }
                 }
 
                 nouvelleLignes[index] = ligneUpdated;
@@ -474,7 +557,6 @@ export function useFactureLignes(
         log.debug('➕ Ajout d\'une nouvelle ligne');
         if (readOnly) return;
 
-        
         log.debug('ajouterLigne - defaultService:', defaultService);
         log.debug('ajouterLigne - defaultUnites:', defaultUnites);
 
@@ -485,19 +567,29 @@ export function useFactureLignes(
                 defaultUnites, 
                 noOrdre
             );
+
+            // ✅ Enrichir permetMultiplicateur depuis le tableau unites complet
+            if (nouvelleLigne.idUnite && unites?.length > 0) {
+                const uniteComplete = unites.find(u => u.idUnite === nouvelleLigne.idUnite);
+                if (uniteComplete) {
+                    const perm = !!(uniteComplete.permetMultiplicateur || uniteComplete.permet_multiplicateur);
+                    nouvelleLigne.permetMultiplicateur = perm;
+                    if (perm && !nouvelleLigne.duree) nouvelleLigne.duree = '1:00';
+                    log.debug('✅ permetMultiplicateur enrichi:', perm, 'pour', uniteComplete.nomUnite);
+                }
+            }
             
             const nouvelleLignes = [...prevLignes, nouvelleLigne];
             
-            // Ouvrir automatiquement la nouvelle ligne
             setLignesOuvertes(prev => ({
                 ...prev,
                 [prevLignes.length]: true
             }));
 
-            log.debug('➕ Nouvelle ligne ajoutée avec objets enrichis:', nouvelleLigne);
+            log.debug('➕ Nouvelle ligne ajoutée:', nouvelleLigne);
             return nouvelleLignes;
         });
-    }, [readOnly]);
+    }, [readOnly, unites]);
 
     /**
      * Supprime une ligne
@@ -681,8 +773,7 @@ export function useFactureLignes(
      * Mise à jour automatique des dates et quantité
      */
     const updateQuantityFromDates = useCallback((index, datesStr, count) => {
-        modifierLigne(index, 'descriptionDates', datesStr);
-        modifierLigne(index, 'quantite', count);
+        modifierLigne(index, { descriptionDates: datesStr, nbSeances: count });
     }, [modifierLigne]);
 
     /**
@@ -750,11 +841,19 @@ export function useFactureLignes(
                             ligneUpdated.uniteEnrichie = { ...valeur };
                             ligneUpdated.uniteCode = valeur.code || valeur.codeUnite;
                             ligneUpdated.idUnite = valeur.idUnite || valeur.id;
+                            const uniteC = unites?.find(u => u.idUnite === (valeur.idUnite || valeur.id));
+                            const perm   = !!(uniteC?.permetMultiplicateur || uniteC?.permet_multiplicateur ||
+                                             valeur.permetMultiplicateur || valeur.permet_multiplicateur);
+                            ligneUpdated.permetMultiplicateur = perm;
+                            if (!perm) { ligneUpdated.duree = ''; }
+                            else if (!ligneUpdated.duree) { ligneUpdated.duree = '1:00'; }
                         } else if (valeur === null) {
                             ligneUpdated.unite = null;
                             ligneUpdated.uniteEnrichie = null;
                             ligneUpdated.uniteCode = null;
                             ligneUpdated.idUnite = null;
+                            ligneUpdated.permetMultiplicateur = false;
+                            ligneUpdated.duree = '';
                         }
                     }
                 });

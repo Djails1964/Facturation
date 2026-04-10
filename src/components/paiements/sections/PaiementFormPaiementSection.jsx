@@ -5,12 +5,12 @@
 // ✅ Les blocs "Détail de la facture" et "Détail du loyer" ont été extraits
 //    dans PaiementFormFactureDetail.jsx et PaiementFormLoyerDetail.jsx.
 
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { usePaiementActions } from '../hooks/usePaiementActions';
 import { createLogger } from '../../../utils/createLogger';
 import DateInputField from '../../shared/DateInputField';
-import DateService from '../../../utils/DateService';
-import { formatMontant } from '../../../utils/formatters';
+import { formatMontant, formatDate } from '../../../utils/formatters';
+import { fromDisplayString, fromIsoString } from '../../../utils/dateHelpers';
 import { SECTION_TITLES, LABELS } from '../../../constants/paiementConstants';
 
 const log = createLogger('PaiementFormPaiementSection');
@@ -48,22 +48,19 @@ const PaiementFormPaiementSection = ({
         }
     }, [factureSelectionnee?.idFacture, isCreate]);
 
-    // ── Gestionnaire date (compatibilité DateInputField DD.MM.YYYY) ──────────
-    const handleDateChange = (valueOrEvent) => {
-        let dateValue = typeof valueOrEvent === 'string'
-            ? valueOrEvent
-            : (valueOrEvent?.target?.value || '');
-
-        if (dateValue && dateValue.includes('.')) {
-            const parts = dateValue.split('.');
-            if (parts.length === 3) {
-                const [day, month, year] = parts;
-                if (year.length === 4) {
-                    dateValue = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-                }
-            }
+    // ── Gestionnaire date ────────────────────────────────────────────────────
+    // DateInputField retourne DD.MM.YYYY (calendrier ou saisie manuelle).
+    // On convertit en ISO YYYY-MM-DD pour le stockage.
+    const handleDateChange = (displayValue) => {
+        if (!displayValue) { onInputChange('datePaiement', ''); return; }
+        const d = fromDisplayString(displayValue) || fromIsoString(displayValue);
+        if (d) {
+            const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            onInputChange('datePaiement', iso);
+        } else {
+            // Saisie en cours — stocker tel quel, validation à la soumission
+            onInputChange('datePaiement', displayValue);
         }
-        onInputChange('datePaiement', dateValue);
     };
 
     // ── Aide montant restant (CREATE + facture sélectionnée) ─────────────────
@@ -85,14 +82,12 @@ const PaiementFormPaiementSection = ({
                     <DateInputField
                         id="datePaiement"
                         label={LABELS.DATE_PAIEMENT}
-                        value={DateService.formatSingleDate(paiement.datePaiement)}
+                        value={formatDate(paiement.datePaiement, 'date')}
                         onChange={handleDateChange}
                         readOnly={disabled}
                         required={!disabled}
                         multiSelect={false}
-                        maxLength={10}
-                        showCharCount={false}
-                        className="required"
+                        allowFuture={false}
                     />
                 </div>
 

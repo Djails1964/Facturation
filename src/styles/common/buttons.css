@@ -1,70 +1,14 @@
 /* 
+ * styles/common/buttons.css
+ * Styles des boutons rectangulaires (formulaires et modales).
+ * Les boutons d'action ronds sont dans actionButtons.css
+ */
+
+/* 
  * Styles communs pour les boutons - VERSION MISE À JOUR
  * Ajout des styles de boutons de formulaires et modales + icône calendrier
  */
 
-/* ========== BOUTONS D'ACTION DE BASE (RONDS) ========== */
-.bouton-action {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--border-radius-circle);
-  background-color: var(--color-background);
-  border: none;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-  position: relative;
-  transition: all var(--transition-speed) var(--transition-ease);
-  box-shadow: var(--box-shadow-off);
-}
-
-.bouton-action:hover {
-  background-color: rgba(128, 0, 32, 0.1);
-  box-shadow: var(--box-shadow-on);
-  transform: scale(1.05);
-}
-
-.bouton-action:active {
-  transform: scale(0.95);
-}
-
-.bouton-action:focus {
-  outline: 2px solid rgba(128, 0, 32, 0.3);
-  outline-offset: 2px;
-}
-
-/* Ajuster le bouton pour qu'il soit légèrement plus petit dans la liste */
-.lf-table-row .bouton-action,
-.paiements-table-body .bouton-action,
-.lf-action-buttons-container .bouton-action {
-  width: 30px;
-  height: 30px;
-}
-
-/* Style pour les boutons désactivés */
-.bouton-desactive {
-  opacity: 0.5;
-  cursor: not-allowed;
-  box-shadow: none !important;
-}
-
-.bouton-desactive:hover {
-  background-color: white !important;
-  box-shadow: none !important;
-  transform: scale(1) !important;
-}
-
-/* Style spécifique pour le bouton de retard */
-.bouton-retard {
-  width: 30px;
-  height: 30px;
-}
-
-.bouton-retard svg {
-  width: 16px;
-  height: 16px;
-}
 
 /* ========== NOUVEAU: BOUTONS DE FORMULAIRES ET MODALES (RECTANGULAIRES) ========== */
 
@@ -180,7 +124,22 @@
   cursor: not-allowed;
 }
 
-/* ========== ICÔNE CALENDRIER POUR DATEPICKER ========== */
+/* ========== MODIFICATEURS DE TAILLE ========== */
+/* S'appliquent en complément de btn-primary, btn-secondary, btn-danger, etc. */
+
+.btn-sm {
+  padding: 5px 10px !important;
+  font-size: 0.8rem !important;
+  min-width: unset !important;
+}
+
+.btn-lg {
+  padding: 14px 28px !important;
+  font-size: 1.1rem !important;
+  min-width: 130px !important;
+}
+
+
 .calendar-icon {
   position: absolute;
   right: 8px;
@@ -543,7 +502,6 @@ input.switch-input:checked + label.switch-toggle::before,
 }
 
 
-
 /* ========== RESPONSIVE ========== */
 @media (max-width: 768px) {
   .floating-button {
@@ -712,61 +670,6 @@ input.switch-input:checked + label.switch-toggle::before,
   max-width: 150px;
 }
 
-.tarif-actions-cell .bouton-action {
-  width: 30px;
-  height: 30px;
-}
-
-/* ========== STYLES POUR LES ICÔNES D'ACTIONS ========== */
-.action-icon {
-  transition: opacity 0.2s ease;
-}
-
-.bouton-action:hover .action-icon {
-  opacity: 0.8;
-}
-
-.bouton-action:active .action-icon {
-  opacity: 0.6;
-}
-
-/* ========== COULEURS HARMONISÉES POUR LES ACTIONS ========== */
-.action-edit-icon {
-  color: var(--color-primary-light, #800020);
-}
-
-.action-delete-icon {
-  color: var(--color-primary-light, #800020);
-}
-
-.action-view-icon {
-  color: var(--color-primary-light, #800020);
-}
-
-.action-copy-icon {
-  color: var(--color-primary-light, #800020);
-}
-
-.action-mail-icon {
-  color: var(--color-primary-light, #800020);
-}
-
-.action-pay-icon {
-  color: var(--color-primary-light, #800020);
-}
-
-.action-print-icon {
-  color: var(--color-primary-light, #800020);
-}
-
-.action-cancel-icon {
-  color: var(--color-primary-light, #800020);
-}
-
-/* ========== ÉTATS DÉSACTIVÉS ========== */
-.bouton-desactive .action-icon {
-  color: #ccc !important;
-}
 
 /* ========== RESPONSIVE POUR LES LISTES DE TARIFS ========== */
 @media (max-width: 768px) {

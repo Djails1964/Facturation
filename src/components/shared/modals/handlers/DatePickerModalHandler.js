@@ -1,678 +1,363 @@
 // src/components/shared/modals/handlers/DatePickerModalHandler.js
-// VERSION CORRIGÉE - Respect du contexte pour les dates futures
+//
+// Calendrier universel de l'application.
+//
+// Contrat :
+//   - Entrée  : strings ISO 'YYYY-MM-DD' (ou tableau vide)
+//   - Sortie  : { action: 'confirm'|'cancel', dates: string[] }  (strings ISO)
+//   - Le formatage (display, compact, enregistrement) est laissé à l'appelant.
+//
+// Usage :
+//   import { showDatePicker } from '.../DatePickerModalHandler';
+//
+//   const result = await showDatePicker({
+//     initialDates: ['2026-01-05'],   // strings ISO
+//     multiSelect:  true,
+//     allowFuture:  false,
+//     title:        'Sélectionner des dates',
+//     anchorRef:    ref,              // optionnel
+//   });
+//   if (result.action === 'confirm') {
+//     const isoStrings = result.dates; // ['2026-01-05', '2026-01-12']
+//   }
+//
+// Dépendances :
+//   - modalSystem.showCustom  → affichage
+//   - calendarHelpers         → construction HTML du calendrier
+//   - dateHelpers             → toIsoString, getDaysInMonth, isSameDay
+//   - dateConstants           → NOMS_MOIS_LONGS, NOMS_JOURS_MIN
 
 import React from 'react';
-import ModalComponents from '../../../shared/ModalComponents';
-import DateService from '../../../../utils/DateService';
-import { 
-    DATE_LABELS, 
-    DATE_VALIDATION_MESSAGES,
-    CONTEXT_CONFIGS 
-} from '../../../../constants/dateConstants';
-import { createLogger } from '../../../../utils/createLogger';
+import { showCustom }          from '../../../../utils/modalSystem';
+import { createLogger }        from '../../../../utils/createLogger';
+import { NOMS_MOIS_LONGS, NOMS_JOURS_MIN } from '../../../../constants/dateConstants';
+import { toIsoString, getDaysInMonth, pad2 } from '../../../../utils/dateHelpers';
+import { formatDate }          from '../../../../utils/formatters';
+import '../../../../styles/shared/DatePickerModal.css';
+
+const log = createLogger('DatePickerModalHandler');
+
+// ─── Helpers internes ─────────────────────────────────────────────────────────
+
+/** Convertit 'YYYY-MM-DD' en objet Date local (sans ambiguïté timezone) */
+function isoToDate(iso) {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, m - 1, d);
+}
+
+/** Retourne 'YYYY-MM-DD' d'aujourd'hui */
+function todayIso() {
+    return toIsoString(new Date());
+}
+
+/** Compare deux strings ISO */
+function isoAfterToday(iso) {
+    return iso > todayIso();
+}
+
+// ─── Construction HTML du calendrier ─────────────────────────────────────────
 
 /**
- * Gestionnaire pour la sélection de dates avec modal unifiée
- * ✅ CORRECTION : Respect du contexte pour les dates futures
+ * Construit le HTML du calendrier navigable (avec nav mois + grille de jours).
+ * Contrairement à buildMiniCalendar (calendrier fixe de saisie rapide),
+ * ce calendrier a une navigation mois/année complète.
+ *
+ * @param {number}   annee
+ * @param {number}   mois        1-12
+ * @param {string[]} selected    Dates ISO sélectionnées
+ * @param {boolean}  allowFuture
+ * @param {boolean}  multiSelect
+ * @returns {string} HTML string
+ */
+function buildCalendarHTML(annee, mois, selected, allowFuture, multiSelect) {
+    const todayStr    = todayIso();
+    const selectedSet = new Set(selected);
+    const nbJours     = getDaysInMonth(annee, mois);
+    const premierJour = (new Date(annee, mois - 1, 1).getDay() + 6) % 7; // lundi=0
+    const moisLabel   = NOMS_MOIS_LONGS[mois - 1] ?? '';
+
+    // Mois adjacents pour les jours de remplissage
+    const moisPrecAnnee   = mois === 1  ? annee - 1 : annee;
+    const moisPrecNum     = mois === 1  ? 12 : mois - 1;
+    const moisSuivAnnee   = mois === 12 ? annee + 1 : annee;
+    const moisSuivNum     = mois === 12 ? 1  : mois + 1;
+    const nbJoursMoisPrec = getDaysInMonth(moisPrecAnnee, moisPrecNum);
+
+    // ── Grille ───────────────────────────────────────────────────────────────
+    let grid = '';
+
+    // En-têtes (L M M J V S D)
+    NOMS_JOURS_MIN.forEach(j => { grid += `<div class="dpm-dow">${j}</div>`; });
+
+    // Jours du mois précédent
+    for (let i = premierJour - 1; i >= 0; i--) {
+        const jour = nbJoursMoisPrec - i;
+        const iso  = `${moisPrecAnnee}-${pad2(moisPrecNum)}-${pad2(jour)}`;
+        const isSel    = selectedSet.has(iso);
+        const isFuture = iso > todayStr;
+        const disabled = isFuture && !allowFuture;
+        const classes  = ['dpm-day', 'dpm-day--adjacent'];
+        if (isSel) classes.push('dpm-day--selected');
+        grid += `<button type="button" class="${classes.join(' ')}"
+                    data-iso="${iso}" ${disabled ? 'disabled' : ''}>${jour}</button>`;
+    }
+
+    // Jours du mois courant
+    for (let j = 1; j <= nbJours; j++) {
+        const iso      = `${annee}-${pad2(mois)}-${pad2(j)}`;
+        const isToday  = iso === todayStr;
+        const isFuture = iso > todayStr;
+        const isSel    = selectedSet.has(iso);
+        const disabled = isFuture && !allowFuture;
+        const classes  = ['dpm-day'];
+        if (isSel)                          classes.push('dpm-day--selected');
+        if (isToday)                        classes.push('dpm-day--today');
+        if (isFuture && !allowFuture)       classes.push('dpm-day--disabled');
+        if (isFuture &&  allowFuture)       classes.push('dpm-day--future');
+        const title = disabled ? 'Date future non autorisée' : isToday ? "Aujourd'hui" : '';
+        grid += `<button type="button" class="${classes.join(' ')}"
+                    data-iso="${iso}"
+                    ${disabled ? 'disabled' : ''}
+                    ${title ? `title="${title}"` : ''}>${j}</button>`;
+    }
+
+    // Jours du mois suivant — compléter la dernière ligne jusqu'à 7
+    const totalCells = premierJour + nbJours;
+    const reste      = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+    for (let j = 1; j <= reste; j++) {
+        const iso      = `${moisSuivAnnee}-${pad2(moisSuivNum)}-${pad2(j)}`;
+        const isSel    = selectedSet.has(iso);
+        const isFuture = iso > todayStr;
+        const disabled = isFuture && !allowFuture;
+        const classes  = ['dpm-day', 'dpm-day--adjacent'];
+        if (isSel) classes.push('dpm-day--selected');
+        grid += `<button type="button" class="${classes.join(' ')}"
+                    data-iso="${iso}" ${disabled ? 'disabled' : ''}>${j}</button>`;
+    }
+
+    // ── Résumé ───────────────────────────────────────────────────────────────
+    const resumeText = selected.length === 0
+        ? 'Aucune date sélectionnée'
+        : selected.length === 1
+            ? formatDate(selected[0], 'date')
+            : `${selected.length} dates sélectionnées`;
+
+    return `
+    <div class="dpm-calendar" data-annee="${annee}" data-mois="${mois}"
+         data-allow-future="${allowFuture}" data-multi="${multiSelect}">
+
+      <div class="dpm-nav">
+        <button type="button" class="dpm-nav-btn" data-dir="-1" title="Mois précédent">‹</button>
+        <span class="dpm-nav-label">${moisLabel} ${annee}</span>
+        <button type="button" class="dpm-nav-btn" data-dir="1" title="Mois suivant">›</button>
+      </div>
+
+      <div class="dpm-grid">${grid}</div>
+
+      <div class="dpm-resume" id="dpm-resume">${resumeText}</div>
+
+      ${!allowFuture ? `<div class="dpm-hint">Seules les dates passées et du jour sont disponibles.</div>` : ''}
+      ${multiSelect  ? `<div class="dpm-hint">Cliquez sur les dates pour les sélectionner / désélectionner.</div>` : ''}
+    </div>`;
+}
+
+// ─── Attachement des événements ───────────────────────────────────────────────
+
+/**
+ * Attache les listeners sur le calendrier injecté dans la modale.
+ * Mutates `state.selected` et met à jour le DOM.
+ *
+ * @param {HTMLElement} container  Conteneur de la modale
+ * @param {{ selected: string[], allowFuture: boolean, multiSelect: boolean }} state
+ */
+function attachCalendarEvents(container, state) {
+    const cal = container.querySelector('.dpm-calendar');
+    if (!cal) return;
+
+    // ── Clic sur un jour ─────────────────────────────────────────────────────
+    cal.addEventListener('click', (e) => {
+        const btn = e.target.closest('.dpm-day');
+        if (!btn || btn.disabled) return;
+
+        const iso = btn.dataset.iso;
+        if (!iso) return;
+
+        if (isoAfterToday(iso) && !state.allowFuture) return;
+
+        if (state.multiSelect) {
+            const idx = state.selected.indexOf(iso);
+            if (idx >= 0) {
+                state.selected.splice(idx, 1);
+            } else {
+                state.selected.push(iso);
+                state.selected.sort();
+            }
+        } else {
+            state.selected.splice(0, state.selected.length, iso);
+        }
+
+        // Mettre à jour les classes des boutons
+        cal.querySelectorAll('.dpm-day').forEach(b => {
+            const d = b.dataset.iso;
+            b.classList.toggle('dpm-day--selected', state.selected.includes(d));
+        });
+
+        // Mettre à jour le résumé
+        const resume = cal.querySelector('#dpm-resume');
+        if (resume) {
+            resume.textContent = state.selected.length === 0
+                ? 'Aucune date sélectionnée'
+                : state.selected.length === 1
+                    ? formatDate(state.selected[0], 'date')
+                    : `${state.selected.length} dates sélectionnées`;
+        }
+
+        // Activer/désactiver le bouton Confirmer
+        const confirmBtn = container.querySelector('[data-action="confirm"]');
+        if (confirmBtn) {
+            confirmBtn.disabled = state.selected.length === 0;
+            confirmBtn.textContent = state.selected.length > 1
+                ? `Confirmer (${state.selected.length})`
+                : 'Confirmer';
+        }
+    });
+
+    // ── Navigation mois ──────────────────────────────────────────────────────
+    cal.addEventListener('click', (e) => {
+        const btn = e.target.closest('.dpm-nav-btn');
+        if (!btn) return;
+        e.stopPropagation();
+
+        let annee = parseInt(cal.dataset.annee, 10);
+        let mois  = parseInt(cal.dataset.mois,  10);
+
+        mois += parseInt(btn.dataset.dir, 10);
+        if (mois > 12) { mois = 1;  annee++; }
+        if (mois < 1)  { mois = 12; annee--; }
+
+        cal.insertAdjacentHTML('afterend',
+            buildCalendarHTML(annee, mois, state.selected, state.allowFuture, state.multiSelect)
+        );
+        cal.remove();
+
+        // Réattacher les events sur le nouveau calendrier
+        attachCalendarEvents(container, state);
+    });
+}
+
+// ─── Fonction publique ────────────────────────────────────────────────────────
+
+/**
+ * Ouvre le sélecteur de dates universel.
+ *
+ * @param {Object}    config
+ * @param {string[]}  [config.initialDates=[]]   Dates ISO pré-sélectionnées
+ * @param {boolean}   [config.multiSelect=false]  Sélection multiple
+ * @param {boolean}   [config.allowFuture=true]   Autoriser les dates futures
+ * @param {string}    [config.title]              Titre de la modale
+ * @param {Object}    [config.anchorRef]          Ref pour positionnement smart
+ *
+ * @returns {Promise<{ action: 'confirm'|'cancel', dates: string[] }>}
+ *          dates = tableau de strings ISO 'YYYY-MM-DD', trié chronologiquement
+ */
+export async function showDatePicker({
+    initialDates = [],
+    multiSelect  = false,
+    allowFuture  = true,
+    title,
+    anchorRef    = null,
+} = {}) {
+    const today = new Date();
+    const moisInit = initialDates.length > 0
+        ? parseInt(initialDates[0].split('-')[1], 10)
+        : today.getMonth() + 1;
+    const anneeInit = initialDates.length > 0
+        ? parseInt(initialDates[0].split('-')[0], 10)
+        : today.getFullYear();
+
+    const titleFinal = title
+        ?? (multiSelect ? 'Sélectionner des dates' : 'Sélectionner une date');
+
+    // État partagé entre le HTML initial et les events
+    const state = {
+        selected:    [...initialDates].sort(),
+        allowFuture,
+        multiSelect,
+    };
+
+    log.debug('📅 showDatePicker', { multiSelect, allowFuture, initialDates });
+
+    const result = await showCustom({
+        title:               titleFinal,
+        size:                'small',
+        position:            anchorRef ? 'smart' : 'center',
+        anchorRef,
+        closeOnEscape:       true,
+        closeOnOverlayClick: false,
+        content: buildCalendarHTML(anneeInit, moisInit, state.selected, allowFuture, multiSelect),
+        buttons: [
+            { text: 'Annuler',    action: 'cancel',  className: 'secondary' },
+            { text: state.selected.length > 1 ? `Confirmer (${state.selected.length})` : 'Confirmer',
+              action: 'confirm', className: 'primary',
+              disabled: state.selected.length === 0 },
+        ],
+        onMount: (container) => {
+            attachCalendarEvents(container, state);
+        },
+    });
+
+    if (result?.action === 'confirm') {
+        log.debug('✅ Dates confirmées:', state.selected);
+        return { action: 'confirm', dates: state.selected };
+    }
+
+    log.debug('↩️ Annulé');
+    return { action: 'cancel', dates: [] };
+}
+
+// ─── Export classe pour compatibilité ascendante ──────────────────────────────
+
+/**
+ * @deprecated Utiliser showDatePicker() directement.
+ * Conservé pour ne pas casser le code existant.
  */
 export class DatePickerModalHandler {
     constructor(dependencies) {
-        this.showCustom = dependencies.showCustom;
-        this.showError = dependencies.showError;
-        this.showLoading = dependencies.showLoading;
-        this.log = createLogger("DatePickerModalHandler");
+        this._showCustom  = dependencies.showCustom  ?? showCustom;
+        this._showError   = dependencies.showError   ?? (() => {});
+        this.log = log;
     }
 
-    /**
-     * Point d'entrée principal pour afficher le sélecteur de dates
-     */
     async handle(config = {}, event = null) {
-        const {
-            initialDates = [],
-            multiSelect = false,
-            maxDate = null, // ✅ CORRECTION : Par défaut null au lieu de new Date()
-            context = 'default',
-            anchorRef = null
-        } = config;
+        const anchorRef = config.anchorRef ?? this._createAnchorRef(event);
+        const context   = config.context ?? 'default';
+        const allowFuture = context === 'payment' ? false
+                          : context === 'invoice'  ? false
+                          : config.allowFuture ?? true;
 
-        this.log.debug('📅 Ouverture du sélecteur de dates:', { 
-            multiSelect, 
-            initialDates: initialDates.length,
-            context,
-            maxDate
+        // Convertir les Date[] en ISO strings si nécessaire
+        const initialDates = (config.initialDates ?? []).map(d =>
+            d instanceof Date ? toIsoString(d) : d
+        ).filter(Boolean);
+
+        const result = await showDatePicker({
+            initialDates,
+            multiSelect:  config.multiSelect  ?? false,
+            allowFuture,
+            title:        config.title,
+            anchorRef,
         });
 
-        const modalAnchorRef = anchorRef || this.createAnchorRef(event);
-
-        try {
-            const validation = this.validateConfig(config);
-            if (!validation.isValid) {
-                await this.showError(validation.error, modalAnchorRef);
-                return { action: 'cancel', dates: [] };
-            }
-
-            // ✅ CORRECTION : Appliquer les règles de contexte après validation
-            const contextConfig = this.getContextConfig(context);
-            const finalConfig = {
-                ...config,
-                maxDate: contextConfig.ALLOW_FUTURE ? null : (maxDate || new Date()),
-                contextConfig
-            };
-
-            const result = await this.showDateSelectionModal(finalConfig);
-
-            this.log.debug('📅 Résultat sélection dates:', result);
-            return result;
-
-        } catch (error) {
-            this.log.error('❌ Erreur dans DatePickerModalHandler:', error);
-            await this.showError(
-                `Erreur lors de la sélection de dates : ${error.message}`,
-                modalAnchorRef
-            );
-            return { action: 'cancel', dates: [] };
-        }
+        // Rétrocompatibilité : convertir ISO → Date[]
+        const dates = result.dates.map(isoToDate);
+        return { action: result.action, dates, count: dates.length };
     }
 
-    /**
-     * Afficher la modal de sélection de dates
-     */
-    async showDateSelectionModal(config) {
-        const { 
-            initialDates, 
-            multiSelect, 
-            title, 
-            confirmText, 
-            contextConfig,
-            anchorRef 
-        } = config;
-
-        let selectedDates = [...initialDates];
-        
-        this.log.debug('📅 Initialisation modal avec dates:', selectedDates.map(d => d.toLocaleDateString('fr-CH')));
-        this.log.debug('📅 Context config:', contextConfig);
-
-        try {
-            const modalResult = await this.showCustom({
-                title,
-                size: 'medium',
-                position: anchorRef ? 'smart' : 'center',
-                anchorRef,
-                content: this.createDatePickerContent(config),
-                buttons: [
-                    {
-                        text: "Annuler",
-                        action: "cancel",
-                        className: "secondary"
-                    },
-                    {
-                        text: confirmText,
-                        action: "confirm",
-                        className: "primary",
-                        disabled: selectedDates.length === 0
-                    }
-                ],
-                onMount: (container) => {
-                    setTimeout(() => {
-                        let workingContainer = container || document.querySelector('.modal-form');
-                        
-                        if (workingContainer) {
-                            this.setupDatePicker(workingContainer, {
-                                ...config,
-                                initialDates: selectedDates,
-                                onDateSelect: (date) => {
-                                    this.log.debug('=== DEBUG onDateSelect ===');
-                                    this.log.debug('📅 Date reçue:', date);
-                                    this.log.debug('📅 selectedDates AVANT:', selectedDates);
-                                    this.log.debug('📅 multiSelect:', multiSelect);
-                                    this.log.debug('📅 contextConfig:', contextConfig);
-                                    
-                                    const newDates = this.handleDateSelect(date, selectedDates, multiSelect, contextConfig);
-                                    
-                                    this.log.debug('📅 selectedDates APRÈS handleDateSelect:', newDates);
-                                    
-                                    selectedDates = newDates;
-                                    
-                                    this.log.debug('📅 selectedDates assigné:', selectedDates);
-                                    this.log.debug('📅 selectedDates.length:', selectedDates.length);
-                                    
-                                    const datePickerModal = workingContainer.closest(".unified-modal-container");
-                                    this.updateSelectedDatesDisplay(datePickerModal, selectedDates);
-                                    this.log.debug('✅ updateSelectedDatesDisplay appelé');
-                                    
-                                    this.updateConfirmButton(datePickerModal, selectedDates, confirmText);
-                                    this.log.debug('✅ updateConfirmButton appelé');
-                                    this.log.debug('========================');
-                                }
-                            });
-                        }
-                    }, 200);
-                }
-            });
-
-            if (modalResult && modalResult.action === 'confirm') {
-                return { action: 'confirm', dates: selectedDates, count: selectedDates.length };
-            }
-            return { action: 'cancel', dates: [], count: 0 };
-
-        } catch (error) {
-            this.log.error('❌ Erreur lors de l\'affichage de la modal:', error);
-            return { action: 'cancel', dates: [], count: 0 };
-        }
-    }
-
-    /**
-     * Créer le contenu HTML de la modal
-     */
-    createDatePickerContent(config) {
-        const { contextConfig } = config;
-        
-        let content = '';
-
-        if (contextConfig && contextConfig.description) {
-            content += ModalComponents.createIntroSection(contextConfig.description);
-        }
-
-        // Container simplifié utilisant les classes CSS
-        content += `
-            <div class="modal-form">
-                <div id="datepicker-container" class="datepicker-container">
-                    <!-- Le DatePicker sera inséré ici -->
-                </div>
-                
-                <div id="selected-dates-info" class="selected-dates-info">
-                    <div class="info-row">
-                        <div class="info-label">Dates sélectionnées:</div>
-                        <div class="info-value" id="selected-count">0</div>
-                    </div>
-                    <div class="info-row">
-                        <div class="info-label">Détail:</div>
-                        <div class="info-value" id="selected-list">Aucune date sélectionnée</div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        if (contextConfig && contextConfig.help) {
-            const helpType = contextConfig.ALLOW_FUTURE ? 'info' : 'warning';
-            content += ModalComponents.createWarningSection(null, contextConfig.help, helpType);
-        }
-
-        return content;
-    }
-
-    /**
-     * Configurer le DatePicker dans la modal
-     */
-    setupDatePicker(container, config) {
-        this.log.debug('🔧 Setup DatePicker avec config:', {
-            context: config.context,
-            allowFuture: config.contextConfig?.ALLOW_FUTURE,
-            maxDate: config.maxDate
-        });
-        
-        let datePickerContainer = container.querySelector('#datepicker-container') || 
-                                document.querySelector('#datepicker-container');
-        
-        if (!datePickerContainer) {
-            this.createFallbackInContainer(container, config);
-            return;
-        }
-
-        datePickerContainer.innerHTML = '';
-        this.renderDatePickerFallback(datePickerContainer, config);
-        this.updateSelectedDatesDisplay(container, config.initialDates);
-    }
-
-    /**
-     * Créer un calendrier de fallback dans le container
-     */
-    createFallbackInContainer(container, config) {
-        if (!container) return;
-
-        let fallbackArea = container.querySelector('.datepicker-fallback-area');
-        if (!fallbackArea) {
-            fallbackArea = document.createElement('div');
-            fallbackArea.className = 'datepicker-fallback-area';
-            container.insertBefore(fallbackArea, container.firstChild);
-        }
-
-        this.renderDatePickerFallback(fallbackArea, config);
-    }
-
-    /**
-     * ✅ CORRECTION : Rendu du calendrier avec respect du contexte
-     */
-    renderDatePickerFallback(container, config) {
-        const { initialDates = [], multiSelect, contextConfig = {} } = config;
-        
-        if (!container) return;
-        
-        // ✅ CORRECTION : Récupérer la configuration du contexte
-        const allowFuture = contextConfig.ALLOW_FUTURE !== false; // Par défaut true sauf si explicitement false
-        
-        this.log.debug('🔧 Rendu calendrier - Allow future:', allowFuture, 'Context:', config.context);
-        
-        // Gestion du mois/année
-        let currentMonth, currentYear;
-        const existingMonth = container.getAttribute('data-current-month');
-        const existingYear = container.getAttribute('data-current-year');
-        
-        if (existingMonth !== null && existingYear !== null) {
-            currentMonth = parseInt(existingMonth);
-            currentYear = parseInt(existingYear);
-        } else {
-            const today = new Date();
-            currentMonth = today.getMonth();
-            currentYear = today.getFullYear();
-            
-            if (initialDates.length > 0) {
-                const firstDate = initialDates[0];
-                currentMonth = firstDate.getMonth();
-                currentYear = firstDate.getFullYear();
-            }
-        }
-        
-        container.setAttribute('data-multi-select', multiSelect.toString());
-        container.setAttribute('data-current-month', currentMonth.toString());
-        container.setAttribute('data-current-year', currentYear.toString());
-        container.setAttribute('data-allow-future', allowFuture.toString()); // ✅ AJOUT
-        
-        const monthNames = [
-            'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-            'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
-        ];
-        
-        const daysHTML = this.generateDaysHTML(currentYear, currentMonth, initialDates, allowFuture);
-        
-        // HTML simplifié utilisant les classes CSS
-        const calendarHTML = `
-            <div class="fallback-calendar">
-                <div class="calendar-header">
-                    <button type="button" class="nav-month-btn nav-previous" data-direction="-1" title="Mois précédent">‹</button>
-                    <div class="month-year-display">${monthNames[currentMonth]} ${currentYear}</div>
-                    <button type="button" class="nav-month-btn nav-next" data-direction="1" title="Mois suivant">›</button>
-                </div>
-                
-                <div class="calendar-weekdays">
-                    <div class="calendar-weekday">L</div>
-                    <div class="calendar-weekday">M</div>
-                    <div class="calendar-weekday">M</div>
-                    <div class="calendar-weekday">J</div>
-                    <div class="calendar-weekday">V</div>
-                    <div class="calendar-weekday">S</div>
-                    <div class="calendar-weekday">D</div>
-                </div>
-                
-                <div class="calendar-days-grid">
-                    ${daysHTML}
-                </div>
-                
-                <div class="calendar-instructions">
-                    ${multiSelect 
-                        ? 'Cliquez sur les dates pour les sélectionner/désélectionner'
-                        : 'Cliquez sur une date pour la sélectionner'
-                    }
-                </div>
-            </div>
-        `;
-        
-        container.innerHTML = calendarHTML;
-        
-        setTimeout(() => {
-            this.initializeCalendarEvents(container, config);
-        }, 100);
-    }
-
-    /**
-     * ✅ CORRECTION : Générer le HTML des jours avec respect du contexte
-     */
-    generateDaysHTML(year, month, selectedDates = [], allowFuture = true) {
-        const firstDay = new Date(year, month, 1);
-        const startDate = new Date(firstDay);
-        const dayOfWeek = firstDay.getDay();
-        const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-        startDate.setDate(firstDay.getDate() + mondayOffset);
-        
-        let daysHtml = '';
-        const today = new Date();
-        const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        
-        this.log.debug('🔧 Génération jours - Allow future:', allowFuture);
-        
-        for (let i = 0; i < 42; i++) {
-            const currentDate = new Date(startDate);
-            currentDate.setDate(startDate.getDate() + i);
-            
-            const isCurrentMonth = currentDate.getMonth() === month;
-            const isToday = this.isSameDay(currentDate, today);
-            const isSelected = selectedDates.some(date => this.isSameDay(date, currentDate));
-            
-            const currentDateOnly = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
-            const isFutureDate = currentDateOnly > todayDateOnly;
-            
-            // ✅ CORRECTION : Désactiver seulement si future ET que le contexte ne l'autorise pas
-            const isDisabled = isFutureDate && !allowFuture;
-            
-            const dayNum = currentDate.getDate();
-            const dateStr = DateService.toInputFormat(currentDate);
-            
-            // Classes CSS au lieu de styles inline
-            let buttonClasses = ['calendar-day-btn'];
-            if (isSelected) buttonClasses.push('selected-date');
-            if (!isCurrentMonth) buttonClasses.push('not-current-month');
-            if (isToday && !isSelected) buttonClasses.push('today');
-            if (isFutureDate && !allowFuture) buttonClasses.push('future-date');
-            if (isFutureDate && allowFuture) buttonClasses.push('future-date-allowed'); // ✅ AJOUT
-            
-            // ✅ CORRECTION : Messages d'aide selon le contexte
-            let titleText = '';
-            if (isFutureDate && !allowFuture) {
-                titleText = 'Date future non autorisée pour les paiements';
-            } else if (isFutureDate && allowFuture) {
-                titleText = 'Date future autorisée pour la facturation';
-            } else if (!isCurrentMonth) {
-                titleText = 'Date du mois précédent/suivant';
-            }
-            
-            daysHtml += `
-                <button 
-                    type="button"
-                    class="${buttonClasses.join(' ')}"
-                    data-date="${dateStr}"
-                    data-calendar-button="true"
-                    data-is-current-month="${isCurrentMonth}"
-                    data-is-selected="${isSelected}"
-                    data-is-future="${isFutureDate}"
-                    data-allow-future="${allowFuture}"
-                    tabindex="${isDisabled ? '-1' : '0'}"
-                    ${isDisabled ? 'disabled' : ''}
-                    title="${titleText}"
-                >
-                    ${dayNum}
-                </button>
-            `;
-        }
-        
-        return daysHtml;
-    }
-
-    /**
-     * ✅ CORRECTION : Initialiser les événements avec respect du contexte
-     */
-    initializeCalendarEvents(container, config) {
-        if (!container) return;
-        
-        const { onDateSelect, multiSelect, contextConfig = {} } = config;
-        const allowFuture = contextConfig.ALLOW_FUTURE !== false;
-        let isSelecting = false;
-        
-        this.log.debug('🔧 Init events - Allow future:', allowFuture);
-        
-        setTimeout(() => {
-            const dayButtons = container.querySelectorAll('.calendar-day-btn');
-            
-            dayButtons.forEach((btn) => {
-                if (btn.disabled) return;
-                
-                const clickHandler = (e) => {
-                    if (isSelecting) return false;
-                    isSelecting = true;
-                    
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
-                    
-                    const dateStr = btn.getAttribute('data-date');
-                    const dateParts = dateStr.split('-');
-                    const date = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
-                    
-                    // ✅ CORRECTION : Vérification des dates futures selon le contexte
-                    const today = new Date();
-                    const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-                    const currentDateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-                    const isFutureDate = currentDateOnly > todayDateOnly;
-                    
-                    if (isFutureDate && !allowFuture) {
-                        this.log.debug('❌ Date future bloquée:', date.toLocaleDateString('fr-CH'));
-                        isSelecting = false;
-                        return false;
-                    }
-                    
-                    this.log.debug('✅ Date sélectionnée:', date.toLocaleDateString('fr-CH'), 'Future:', isFutureDate, 'Allowed:', allowFuture);
-                    
-                    // Gestion de la sélection avec classes CSS
-                    if (!multiSelect || config.context === 'payment') {
-                        // Désélectionner tous les boutons
-                        document.querySelectorAll('.calendar-day-btn').forEach(otherBtn => {
-                            otherBtn.classList.remove('selected-date');
-                            otherBtn.setAttribute('data-is-selected', 'false');
-                        });
-                        
-                        // Sélectionner le bouton cliqué
-                        btn.classList.add('selected-date');
-                        btn.setAttribute('data-is-selected', 'true');
-                    } else {
-                        // Mode multi-sélection
-                        const isCurrentlySelected = btn.classList.contains('selected-date');
-                        if (isCurrentlySelected) {
-                            btn.classList.remove('selected-date');
-                            btn.setAttribute('data-is-selected', 'false');
-                        } else {
-                            btn.classList.add('selected-date');
-                            btn.setAttribute('data-is-selected', 'true');
-                        }
-                    }
-                    
-                    setTimeout(() => {
-                        if (onDateSelect) onDateSelect(date);
-                        isSelecting = false;
-                    }, 10);
-                    
-                    return false;
-                };
-                
-                btn.addEventListener('click', clickHandler, true);
-            });
-            
-            // Événements de navigation
-            const navButtons = container.querySelectorAll('.nav-month-btn');
-            navButtons.forEach(navBtn => {
-                navBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    const direction = parseInt(navBtn.getAttribute('data-direction'));
-                    let currentMonth = parseInt(container.getAttribute('data-current-month'));
-                    let currentYear = parseInt(container.getAttribute('data-current-year'));
-                    
-                    currentMonth += direction;
-                    if (currentMonth > 11) {
-                        currentMonth = 0;
-                        currentYear++;
-                    } else if (currentMonth < 0) {
-                        currentMonth = 11;
-                        currentYear--;
-                    }
-                    
-                    // Préserver les dates sélectionnées
-                    const currentlySelectedDates = [];
-                    const selectedButtons = document.querySelectorAll('.calendar-day-btn.selected-date');
-                    selectedButtons.forEach(btn => {
-                        const dateStr = btn.getAttribute('data-date');
-                        if (dateStr) {
-                            const dateParts = dateStr.split('-');
-                            const year = parseInt(dateParts[0]);
-                            const month = parseInt(dateParts[1]) - 1;
-                            const day = parseInt(dateParts[2]);
-                            currentlySelectedDates.push(new Date(year, month, day));
-                        }
-                    });
-                    
-                    container.setAttribute('data-current-month', currentMonth.toString());
-                    container.setAttribute('data-current-year', currentYear.toString());
-                    
-                    const updatedConfig = { ...config, initialDates: currentlySelectedDates };
-                    this.renderDatePickerFallback(container, updatedConfig);
-                });
-            });
-        }, 50);
-    }
-
-    /**
-     * ✅ CORRECTION : Gestion de sélection avec respect du contexte
-     */
-    handleDateSelect(selectedDate, currentDates, multiSelect, contextConfig = {}) {
-        const allowFuture = contextConfig.ALLOW_FUTURE !== false;
-        const today = new Date();
-        const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-        const isFutureDate = selectedDateOnly > todayDateOnly;
-        
-        // ✅ CORRECTION : Bloquer seulement si future ET contexte ne l'autorise pas
-        if (isFutureDate && !allowFuture) {
-            this.log.debug('❌ Date future refusée dans handleDateSelect');
-            return currentDates;
-        }
-        
-        if (!multiSelect || contextConfig.context === 'payment') {
-            return [selectedDate];
-        }
-
-        const dateExists = currentDates.some(date => DateService.isSameDay(date, selectedDate));
-        if (dateExists) {
-            return currentDates.filter(date => !DateService.isSameDay(date, selectedDate));
-        } else {
-            return [...currentDates, selectedDate];
-        }
-    }
-
-    updateSelectedDatesDisplay(container, selectedDates) {
-        this.log.debug("updateSelectedDatesDisplay - input container : ", container);
-        this.log.debug("updateSelectedDatesDisplay - input selectedDates : ", selectedDates);
-        const displayContainer = container || document.querySelector('.unified-modal-container');
-        this.log.debug("updateSelectedDatesDisplay - displayContainer : ", displayContainer);
-        if (!displayContainer) return;
-        
-        const countElement = displayContainer.querySelector('#selected-count');
-        this.log.debug("updateSelectedDatesDisplay - countElement : ", countElement);
-        const listElement = displayContainer.querySelector('#selected-list');
-        this.log.debug("updateSelectedDatesDisplay - listElement : ", listElement);
-        
-        if (countElement) countElement.textContent = selectedDates.length;
-        
-        if (listElement) {
-            if (selectedDates.length === 0) {
-                listElement.textContent = 'Aucune date sélectionnée';
-            } else {
-                const formattedDates = selectedDates
-                    .sort((a, b) => a - b)
-                    .map(date => date.toLocaleDateString('fr-CH'))
-                    .join(', ');
-                listElement.textContent = formattedDates;
-            }
-        }
-    }
-
-    updateConfirmButton(container, selectedDates, confirmText) {
-        const buttonContainer = container || document.querySelector('.unified-modal-container');
-        if (!buttonContainer) return;
-        
-        const confirmBtn = buttonContainer.querySelector('[data-action="confirm"]');
-        if (!confirmBtn) return;
-        
-        const hasSelection = selectedDates.length > 0;
-        confirmBtn.disabled = !hasSelection;
-        
-        if (hasSelection) {
-            const baseText = confirmText || 'Confirmer la sélection';
-            confirmBtn.textContent = `${baseText} (${selectedDates.length})`;
-        } else {
-            confirmBtn.textContent = confirmText || 'Confirmer la sélection';
-        }
-    }
-
-    /**
-     * ✅ CORRECTION : Valider la configuration sans forcer maxDate
-     */
-    validateConfig(config) {
-        const { minDate, maxDate } = config;
-        
-        if (minDate && maxDate && minDate > maxDate) {
-            return {
-                isValid: false,
-                error: DATE_VALIDATION_MESSAGES.RANGE_ERROR || "Erreur de plage de dates"
-            };
-        }
-        
-        // ✅ CORRECTION : Ne pas forcer maxDate ici, le laisser au contexte
-        return { isValid: true };
-    }
-
-    /**
-     * ✅ CORRECTION : Configuration du contexte avec ALLOW_FUTURE explicite
-     */
-    getContextConfig(context) {
-        const baseConfig = CONTEXT_CONFIGS && CONTEXT_CONFIGS[context.toUpperCase()] ? 
-            CONTEXT_CONFIGS[context.toUpperCase()] : {};
-        
-        const configs = {
-            payment: {
-                ...baseConfig,
-                TITLE: "Sélectionner la date de paiement",
-                CONFIRM_TEXT: "Confirmer cette date",
-                description: "Sélectionnez la date du paiement",
-                help: "Les dates futures ne sont pas autorisées pour les paiements.",
-                ALLOW_FUTURE: false, // ✅ EXPLICITE
-                context: 'payment'
-            },
-            invoice: {
-                ...baseConfig,
-                TITLE: "Sélectionner les dates", 
-                CONFIRM_TEXT: "Confirmer la sélection",
-                description: "Sélectionnez la date de facturation",
-                help: "Les dates futures ne sont pas autorisées pour la facturation.",
-                ALLOW_FUTURE: false, // ✅ EXPLICITE
-                context: 'invoice'
-            },
-            default: {
-                ...baseConfig,
-                TITLE: "Sélectionner une date",
-                CONFIRM_TEXT: "Confirmer la sélection",
-                description: "Sélectionnez une date",
-                help: null,
-                ALLOW_FUTURE: true, // ✅ EXPLICITE
-                context: 'default'
-            }
-        };
-        
-        const result = configs[context] || configs.default;
-        this.log.debug('📋 Config pour contexte', context, ':', result);
-        return result;
-    }
-
-    /**
-     * Utilitaires
-     */
-    isSameDay(date1, date2) {
-        if (!date1 || !date2) return false;
-        return (
-            date1.getDate() === date2.getDate() &&
-            date1.getMonth() === date2.getMonth() &&
-            date1.getFullYear() === date2.getFullYear()
-        );
-    }
-
-    /**
-     * Créer une référence d'ancrage pour le positionnement
-     */
-    createAnchorRef(event) {
+    _createAnchorRef(event) {
         if (!event) return null;
-        const anchorRef = React.createRef();
-        if (event.currentTarget) {
-            anchorRef.current = event.currentTarget;
-        }
-        return anchorRef;
+        const ref = React.createRef();
+        if (event.currentTarget) ref.current = event.currentTarget;
+        return ref;
     }
 }
 

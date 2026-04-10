@@ -14,7 +14,7 @@ export const useFactureInitialization = (mode, idFacture, factureActions) => {
     isProcessing: false
   });
 
-  const { chargerFacture, fetchProchainNumeroFacture, chargerClients, setFacture, setIsLoading, getFormData } = factureActions;
+  const { chargerFacture, chargerClients, setFacture, setIsLoading, getFormData } = factureActions;
 
   // ✅ EFFET UNIQUE simplifié avec protection totale
   useEffect(() => {
@@ -61,6 +61,7 @@ export const useFactureInitialization = (mode, idFacture, factureActions) => {
 
         if (currentMode === FORM_MODES.CREATE) {
           // ✅ MODE CREATION
+          // numeroFacture est vide — il sera alloué par le backend à la sauvegarde
           console.log('🆕 Initialisation mode création');
           const today = new Date();
           setFacture(prev => ({
@@ -70,8 +71,6 @@ export const useFactureInitialization = (mode, idFacture, factureActions) => {
             idClient: null,
             lignes: []
           }));
-          
-          await fetchProchainNumeroFacture(today.getFullYear());
           
         } else if ((currentMode === FORM_MODES.VIEW || currentMode === FORM_MODES.EDIT) && currentId) {
           // ✅ MODE VIEW/EDIT avec ID

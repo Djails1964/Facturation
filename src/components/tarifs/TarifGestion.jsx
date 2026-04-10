@@ -16,6 +16,7 @@ import TarifAuthorization from './components/TarifAuthorization';
 import { createLogger } from '../../utils/createLogger';
 
 import '../../styles/components/tarifs/TarifGestion.css';
+import SectionTitle from '../shared/SectionTitle';
 
 const TarifGestion = ({ 
   initialSection = 'services',
@@ -152,18 +153,13 @@ const TarifGestion = ({
   // Rendu principal
   return (
     <div className="content-section-container">
-      <div className="content-section-title">
-        <h2>Gestion des tarifs</h2>
-        
-        {/* Informations utilisateur en mode dev */}
-        {process.env.NODE_ENV === 'development' && gestionState.userInfo && gestionState.isAuthorized && (
-          <div style={{ fontSize: '0.8em', color: '#666', marginBottom: '10px' }}>
-            Connecté en tant que: <strong>{gestionState.userInfo.username}</strong> (rôle: <strong>{gestionState.userInfo.role}</strong>)
-          </div>
-        )}
-        
-        {/* Les messages sont maintenant gérés par NotificationService via useEffect */}
-      </div>
+      <SectionTitle>Gestion des tarifs</SectionTitle>
+      {/* Informations utilisateur en mode dev */}
+      {process.env.NODE_ENV === 'development' && gestionState.userInfo && gestionState.isAuthorized && (
+        <div style={{ fontSize: '0.8em', color: 'var(--color-text-light)', marginBottom: '10px' }}>
+          Connecté en tant que: <strong>{gestionState.userInfo.username}</strong> (rôle: <strong>{gestionState.userInfo.role}</strong>)
+        </div>
+      )}
       
       <div className="tarif-gestion-container">
       {/* Afficher le loader seulement si pas de données */}

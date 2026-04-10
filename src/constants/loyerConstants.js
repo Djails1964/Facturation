@@ -41,12 +41,12 @@ export const COLUMN_LABELS = {
     NUMERO: 'Numéro',
     CLIENT: 'Client',
     PERIODE: 'Période',
-    MONTANT_TOTAL: 'Montant total',
+    MONTANT_TOTAL: 'Montant total (CHF)',
     MONTANT_PAYE: 'Payé',
     MONTANT_RESTANT: 'Restant',
-    STATUT: 'Statut',
+    STATUT: 'État',
     ETATS_PAIEMENT: 'État paiement',
-    ACTIONS: 'Actions',
+    ACTIONS: '',
     DATE_CREATION: 'Date de création',
     DUREE: 'Durée',
     MOTIF: 'Motif'
@@ -94,21 +94,6 @@ export const TABLE_COLUMNS_CONFIG = {
     }
 };
 
-export const MOIS_ANNEE = [
-    { numero: 1,  nom: 'Janvier',   nomCourt: 'Jan' },
-    { numero: 2,  nom: 'Février',   nomCourt: 'Fév' },
-    { numero: 3,  nom: 'Mars',      nomCourt: 'Mar' },
-    { numero: 4,  nom: 'Avril',     nomCourt: 'Avr' },
-    { numero: 5,  nom: 'Mai',       nomCourt: 'Mai' },
-    { numero: 6,  nom: 'Juin',      nomCourt: 'Jun' },
-    { numero: 7,  nom: 'Juillet',   nomCourt: 'Jul' },
-    { numero: 8,  nom: 'Août',      nomCourt: 'Aoû' },
-    { numero: 9,  nom: 'Septembre', nomCourt: 'Sep' },
-    { numero: 10, nom: 'Octobre',   nomCourt: 'Oct' },
-    { numero: 11, nom: 'Novembre',  nomCourt: 'Nov' },
-    { numero: 12, nom: 'Décembre',  nomCourt: 'Déc' }
-];
-
 export const DUREES_LOYER = [
     { value: 1, label: '1 mois' },
     { value: 3, label: '3 mois (trimestre)' },
@@ -118,10 +103,6 @@ export const DUREES_LOYER = [
     { value: 36, label: '36 mois (3 ans)' }
 ];
 
-export const MOTIFS_LOYER_DEFAUT = [
-    "Location d'un cabinet de consultation",
-    "Location d'une salle de thérapie",
-    "Location d'un espace de coworking",
-    "Location d'un bureau individuel",
-    "Location d'une salle de formation"
-];
+// Les motifs de loyer sont gérés dans les paramètres de l'application.
+// groupe='Loyer', sous_groupe='Motifs', categorie='Cabinet'|'Salle'
+// Utiliser useMotifsLoyer() pour les charger dynamiquement.

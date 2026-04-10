@@ -188,7 +188,7 @@ class PaiementService {
           idPaiement: paiement.idPaiement,
           idFacture: paiement.idFacture,
           numeroFacture: paiement.numeroFacture,
-          idClient: paiement.id_client,
+          idClient: paiement.idClient,
           nomClient: paiement.nom_client,
           datePaiement: paiement.datePaiement,
           montantPaye: parseFloat(paiement.montantPaye),

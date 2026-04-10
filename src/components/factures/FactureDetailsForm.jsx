@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 import '../../styles/components/factures/FactureDetailsForm.css';
-import { useTraceUpdate } from '../../useTraceUpdate';
 import { createLogger } from '../../utils/createLogger';
 
 // Hook principal refactorisé
@@ -80,8 +79,6 @@ function FactureDetailsForm({
         hasTarifData: !!tarifData,
         tarifDataLoaded: tarifData?.isLoaded
     });
-
-    useTraceUpdate({ onLignesChange, client, readOnly, tarifData }, 'FactureDetailsForm');
 
     const {
         // États principaux

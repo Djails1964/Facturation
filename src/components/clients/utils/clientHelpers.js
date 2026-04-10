@@ -89,7 +89,6 @@ export function getFormData(client) {
     telephone: client.telephone || '',
     email: client.email || '',
     estTherapeute: Boolean(client.estTherapeute),
-    aLoyer: Boolean(client.aLoyer)
   };
 }
 
@@ -131,9 +130,8 @@ export function normalizeClientForAPI(client) {
     // Nettoyer l'email
     email: (client.email || '').trim().toLowerCase(),
     
-    // S'assurer que estTherapeute et aLoyer sont des booléens
-    estTherapeute: Boolean(client.estTherapeute),
-    aLoyer: Boolean(client.aLoyer)
+    // S'assurer que estTherapeute est un booléen
+    estTherapeute: Boolean(client.estTherapeute)
   };
 }
 
@@ -206,7 +204,7 @@ export function getMissingFields(client) {
 /**
  * Générer un ID temporaire pour les nouveaux clients
  */
-export function generateTempClientId() {
+export function generateTempidClient() {
   return `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
@@ -218,7 +216,7 @@ export function hasClientChanges(clientA, clientB) {
   
   const fieldsToCompare = [
     'titre', 'nom', 'prenom', 'rue', 'numero', 
-    'codePostal', 'localite', 'telephone', 'email', 'estTherapeute', 'aLoyer'
+    'codePostal', 'localite', 'telephone', 'email', 'estTherapeute'
   ];
   
   return fieldsToCompare.some(field => {
@@ -248,7 +246,6 @@ export function createClientSummary(client) {
     telephone: client.telephone || 'non renseigné',
     adresse: formatAdresseComplete(client) || 'non renseignée',
     estTherapeute: Boolean(client.estTherapeute),
-    aLoyer: Boolean(client.aLoyer),
     isComplete: isClientComplete(client)
   };
 }

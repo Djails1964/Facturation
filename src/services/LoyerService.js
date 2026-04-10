@@ -26,7 +26,7 @@ class LoyerService {
 
   /**
    * Charge tous les loyers
-   * @param {Object} filtres - Filtres optionnels { id_client, annee, statut }
+   * @param {Object} filtres - Filtres optionnels { idClient, annee, statut }
    * @returns {Promise<Array>} - Liste des loyers
    */
   async chargerLoyers(filtres = {}) {
@@ -35,7 +35,7 @@ class LoyerService {
       let url = 'loyer-api.php';
       const params = new URLSearchParams();
       
-      if (filtres.id_client) params.append('id_client', filtres.id_client);
+      if (filtres.idClient) params.append('idClient', filtres.idClient);
       if (filtres.annee)     params.append('annee',     filtres.annee);
       if (filtres.statut)    params.append('statut',    filtres.statut);
       
@@ -71,13 +71,9 @@ class LoyerService {
     if (!idLoyer) throw new Error('ID loyer requis');
 
     try {
-      // Vérifier le cache (sauf si forceRefresh demandé)
-      if (!forceRefresh && this._cacheLoyer[idLoyer]) {
-        this.log.debug('📦 Loyer trouvé en cache:', idLoyer);
-        return this._cacheLoyer[idLoyer];
-      }
-
-      this.log.debug('🔍 Récupération du loyer:', idLoyer);
+      // ✅ Toujours récupérer depuis l'API pour avoir les données fraîches
+      // (dates décodées, nomUnite, etc. — le cache peut contenir des données incomplètes)
+      this.log.debug('🔍 Récupération du loyer depuis API:', idLoyer);
       const response = await api.get(`loyer-api.php?id=${idLoyer}`);
       
       if (response && response.loyer) {
@@ -182,8 +178,30 @@ class LoyerService {
   }
 
   /**
+   * Lie une facture générée à un loyer.
+   * @param {number} idLoyer
+   * @param {number} idFacture
+   * @returns {Promise<Object>}
+   */
+  async lierFacture(idLoyer, idFacture) {
+    try {
+      this.log.debug('🔗 Liaison loyer → facture:', { idLoyer, idFacture });
+      const response = await api.put(
+        `loyer-api.php?id=${idLoyer}&action=lier_facture`,
+        { id_facture: idFacture }
+      );
+      // Invalider le cache pour ce loyer
+      delete this._cacheLoyer[idLoyer];
+      return response;
+    } catch (error) {
+      this.log.error('Erreur liaison loyer-facture:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Génère le prochain numéro de loyer pour un client
-   * Format: LOY-{id_client}-{seq}
+   * Format: LOY-{idClient}-{seq}
    * Exemple: LOY-12-001, LOY-12-002
    * 
    * @param {number} idClient - ID du client (OBLIGATOIRE)
@@ -197,7 +215,7 @@ class LoyerService {
     try {
       this.log.debug('🔢 Génération du numéro de loyer pour client:', idClient);
       
-      const response = await api.get(`loyer-api.php?action=generer_numero&id_client=${idClient}`);
+      const response = await api.get(`loyer-api.php?action=generer_numero&idClient=${idClient}`);
       
       if (response && response.numero_loyer) {
         this.log.info('✅ Numéro généré:', response.numero_loyer);

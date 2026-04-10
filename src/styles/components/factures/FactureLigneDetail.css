@@ -1,13 +1,12 @@
 /* Styles pour FactureLigneDetail */
-@import './_base.css';
 
 .fdf_line-container {
     position: relative;
     background-color: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: var(--facture-border-radius);
-    padding: var(--facture-spacing-md);
-    transition: box-shadow var(--facture-transition-speed);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    padding: var(--spacing-md);
+    transition: box-shadow var(--transition-speed);
 }
 
 .fdf_line-container:hover {
@@ -15,14 +14,14 @@
 }
 
 .fdf_line-container.fdf_has-errors {
-    border-color: var(--facture-color-danger);
+    border-color: var(--color-error-text);
 }
 
 .fdf_order-badge {
     position: absolute;
     top: -10px;
     left: -10px;
-    background-color: var(--facture-color-primary);
+    background-color: var(--color-primary);
     color: white;
     width: 25px;
     height: 25px;
@@ -37,31 +36,33 @@
 .fdf_line-flex-container {
     display: flex;
     flex-direction: column;
-    gap: var(--facture-spacing-md);
+    gap: var(--spacing-md);
 }
 
 .fdf_actions_container {
     display: flex;
     justify-content: flex-end;
-    gap: var(--facture-spacing-sm);
+    gap: var(--spacing-sm);
 }
 
-.fdf_action_btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: var(--facture-spacing-xs);
-    border-radius: var(--facture-border-radius);
-    transition: background-color var(--facture-transition-speed);
+/* Surcharge locale des boutons d'action dans le contexte des lignes
+   Ne redéfinit PAS border-radius, width, height — gérés par buttons.css */
+.fdf_actions_container .bouton-action {
+  border: 2px solid var(--color-primary-light, var(--color-primary-light));
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.fdf_action_btn:hover {
-    background-color: rgba(128, 0, 0, 0.1);
+.fdf_actions_container .bouton-action:hover:not(.bouton-desactive) {
+  background-color: #f8f8f8;
+  box-shadow: 0 2px 5px rgba(128, 0, 32, 0.3);
+  transform: translateY(-1px);
 }
 
-.fdf_action_btn.fdf_disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
+/* Bouton toggle en erreur */
+.fdf_actions_container .bouton-action.fdf_has_error {
+  border-color: var(--color-error-text, var(--color-error-text));
+  background-color: rgba(211, 47, 47, 0.1);
 }
 
 .fdf_floating-label-input {
@@ -72,22 +73,22 @@
     position: absolute;
     top: 10px;
     left: 0;
-    transition: all var(--facture-transition-speed);
+    transition: all var(--transition-speed);
     pointer-events: none;
-    color: #666;
+    color: var(--color-text-light);
 }
 
 .fdf_floating-label-input.has-value label,
 .fdf_floating-label-input:focus-within label {
     top: -12px;
     font-size: 0.8rem;
-    color: var(--facture-color-primary);
+    color: var(--color-primary);
 }
 
 .fdf_error-message {
-    color: var(--facture-color-danger);
+    color: var(--color-error-text);
     font-size: 0.8rem;
-    margin-top: var(--facture-spacing-xs);
+    margin-top: var(--spacing-xs);
 }
 
 .fdf_clipboard-icon {
@@ -96,9 +97,9 @@
     top: 50%;
     transform: translateY(-50%);
     cursor: pointer;
-    color: var(--facture-color-primary);
+    color: var(--color-primary);
     opacity: 0.7;
-    transition: opacity var(--facture-transition-speed);
+    transition: opacity var(--transition-speed);
 }
 
 .fdf_clipboard-icon:hover {
@@ -114,13 +115,13 @@
 .fdf_char-limit-info {
     text-align: right;
     font-size: 0.7rem;
-    margin-top: var(--facture-spacing-xs);
+    margin-top: var(--spacing-xs);
 }
 
 /* Responsive */
 @media (max-width: 768px) {
     .fdf_line-container {
-        padding: var(--facture-spacing-sm);
+        padding: var(--spacing-sm);
     }
 
     .fdf_actions_container {

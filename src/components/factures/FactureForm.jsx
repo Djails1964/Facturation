@@ -2,7 +2,7 @@
 // ✅ VERSION REFACTORISÉE - Reçoit tarifData depuis FactureGestion
 // ✅ Passe tarifData à FactureDetailsForm
 // ✅ NOUVEAU: Gestion dynamique du numéro de facture selon l'année de la date
-// ✅ UTILISE DateService.getYearFromDate() pour l'extraction de l'année
+// ✅ Utilise getYearFromDate (dateHelpers) et formatDate (formatters)
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useFactureForm } from './hooks/useFactureForm';
@@ -14,12 +14,13 @@ import { FactureFormButtons } from './components/FactureFormButtons';
 import { getTitreFormulaire, getFormContainerClass, getSubmitButtonText } from './utils/factureHelpers';
 import { validateFactureLines } from './utils/factureValidation';
 import { FORM_MODES } from '../../constants/factureConstants';
-import { formatMontant } from '../../utils/formatters';
-import DateService from '../../utils/DateService';
+import { formatMontant, formatDate } from '../../utils/formatters';
+import { getYearFromDate } from '../../utils/dateHelpers';
 import FactureHeader from './components/FactureHeader';
 import FactureDetailsForm from './FactureDetailsForm';
 import FactureTotauxDisplay from './components/FactureTotauxDisplay';
 import FactureHistoriquePaiements from './components/FactureHistoriquePaiements';
+import SectionTitle from '../shared/SectionTitle';
 import '../../styles/components/factures/FactureForm.css';
 import { createLogger } from '../../utils/createLogger';
 
@@ -63,11 +64,8 @@ function FactureForm({
     type: 'warning'
   });
 
-  // ✅ NOUVEAU: Référence pour suivre l'année précédente de la date de facture
+  // Référence pour suivre l'année de la date de facture (détection de changements)
   const previousYearRef = useRef(null);
-  
-  // ✅ NOUVEAU: Flag pour éviter les appels multiples lors de l'initialisation
-  const isInitializingRef = useRef(true);
 
   // Hook d'initialisation
   const {
@@ -79,7 +77,6 @@ function FactureForm({
         setClientLoading, setClientData
       })
     }),
-    fetchProchainNumeroFacture: (annee) => formActions.fetchProchainNumeroFacture(annee, { setFacture }),
     chargerClients: () => {},
     setFacture,
     setIsLoading,
@@ -147,64 +144,37 @@ function FactureForm({
   // ✅ NOUVEAU: Effet pour initialiser l'année de référence une fois la facture chargée
   useEffect(() => {
     if (isFullyInitialized && facture.dateFacture && previousYearRef.current === null) {
-      const year = DateService.getYearFromDate(facture.dateFacture);
+      const year = getYearFromDate(facture.dateFacture);
       if (year) {
         previousYearRef.current = year;
-        isInitializingRef.current = false;
         log.debug('📅 Année de référence initialisée:', year);
       }
     }
   }, [isFullyInitialized, facture.dateFacture, log]);
 
-  // Gestionnaires pour les changements de formulaire
-  const handleNumeroFactureChange = (value) => {
-    if (isReadOnly) return;
-    setFacture(prev => ({ ...prev, numeroFacture: value }));
-  };
+  // ✅ Le numéro de facture est en lecture seule dans tous les modes —
+  //    il est alloué par le backend lors de la création.
+  const handleNumeroFactureChange = () => {};
 
-  // ✅ NOUVEAU: Fonction pour récupérer un nouveau numéro de facture
-  const fetchNewInvoiceNumber = useCallback(async (newYear) => {
-    try {
-      log.debug('🔄 Récupération du nouveau numéro de facture pour l\'année:', newYear);
-      await formActions.fetchProchainNumeroFacture(newYear, { setFacture });
-      log.debug('✅ Nouveau numéro de facture récupéré pour l\'année:', newYear);
-    } catch (err) {
-      log.error('❌ Erreur lors de la récupération du nouveau numéro de facture:', err);
-    }
-  }, [formActions, setFacture, log]);
-
-  // ✅ MODIFIÉ: Gestionnaire de changement de date avec mise à jour du numéro de facture si l'année change
+  // ✅ MODIFIÉ: Gestionnaire de changement de date — sans mise à jour du numéro de facture
   const handleDateFactureChange = useCallback((value) => {
     if (isReadOnly) return;
-    
-    // ✅ Utilisation de DateService.getYearFromDate() au lieu d'une fonction locale
-    const newYear = DateService.getYearFromDate(value);
-    const oldYear = previousYearRef.current;
-    
+
+    const newYear = getYearFromDate(value);
+
     log.debug('📅 Changement de date de facture:', {
       nouvelleDate: value,
       nouvelleAnnee: newYear,
-      ancienneAnnee: oldYear,
-      isInitializing: isInitializingRef.current
     });
-    
+
     // Mettre à jour la date dans le formulaire
     setFacture(prev => ({ ...prev, dateFacture: value }));
-    
-    // ✅ Vérifier si l'année a changé et qu'on n'est pas en phase d'initialisation
-    if (newYear && oldYear && newYear !== oldYear && !isInitializingRef.current) {
-      log.debug('🔄 Année changée de', oldYear, 'vers', newYear, '- Récupération d\'un nouveau numéro de facture');
-      
-      // Mettre à jour l'année de référence
-      previousYearRef.current = newYear;
-      
-      // Récupérer le nouveau numéro de facture pour la nouvelle année
-      fetchNewInvoiceNumber(newYear);
-    } else if (newYear && !oldYear) {
-      // Première initialisation de l'année (si elle n'était pas définie avant)
+
+    // Garder previousYearRef à jour (utilisé ailleurs pour détection de changements)
+    if (newYear) {
       previousYearRef.current = newYear;
     }
-  }, [isReadOnly, setFacture, fetchNewInvoiceNumber, log]);
+  }, [isReadOnly, setFacture, log]);
 
   const handleClientChange = (value) => {
     if (isReadOnly) return;
@@ -381,7 +351,7 @@ function FactureForm({
         <div className={getFormContainerClass(mode)}>
           
           {/* En-tête avec titre */}
-          <h2 className="form-title">{getTitreFormulaire(mode, facture)}</h2>
+          <SectionTitle>{getTitreFormulaire(mode, facture)}</SectionTitle>
 
           {/* ✅ Bandeaux d'état (Annulée, Payée) */}
           <FactureStateBanners mode={mode} facture={facture} />
@@ -439,7 +409,7 @@ function FactureForm({
               etat={facture.etat}
               idFacture={idFacture || facture.idFacture}
               formatMontant={formatMontant}
-              formatDate={DateService.formatSingleDate}
+              formatDate={(date) => formatDate(date, 'date')}
             />
           )}
 
@@ -473,7 +443,7 @@ function FactureForm({
           <div>isFullyInitialized: {isFullyInitialized ? 'Oui' : 'Non'}</div>
           <div>canDetectChanges: {canDetectChanges() ? 'Oui' : 'Non'}</div>
           <div>tarifData loaded: {tarifData?.isLoaded ? 'Oui' : 'Non'}</div>
-          <div>Année date facture: {DateService.getYearFromDate(facture.dateFacture) || 'N/A'}</div>
+          <div>Année date facture: {getYearFromDate(facture.dateFacture) || 'N/A'}</div>
           <div>Année référence: {previousYearRef.current || 'N/A'}</div>
         </div>
       )}

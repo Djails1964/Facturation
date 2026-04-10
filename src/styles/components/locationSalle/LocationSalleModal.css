@@ -1,0 +1,491 @@
+/*
+ * LocationSalleModal.css
+ * Styles de la modal de saisie des locations de salle.
+ *
+ * CE FICHIER ne redéfinit PAS ce qui existe déjà :
+ *   - Couleurs / espacements → variables.css  (--color-*, --spacing-*, --border-radius-*)
+ *   - Feedback messages      → .modal-error/.modal-success (modals.css) inspirent les modificateurs
+ *   - Tokens badges          → --badge-* et --color-*-bg/text/border (variables.css)
+ *
+ * Préfixe BEM : .lsm-  (Location Salle Modal)
+ */
+
+/* ============================================================
+   EN-TÊTE CONTEXTUEL
+   Extension de .details-container (modals.css) avec grille 3 colonnes
+   ============================================================ */
+
+.lsm-header {
+    background-color: #f9f9f9;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-sm) var(--spacing-lg);
+}
+
+.lsm-header__field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* Reprend visuellement .info-label (modals.css) */
+.lsm-header__label {
+    font-size: 11px;
+    color: var(--color-text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+/* Reprend visuellement .info-value (modals.css) */
+.lsm-header__value {
+    font-size: 14px;
+    color: var(--color-text);
+    font-weight: 600;
+}
+
+.lsm-header__value--action {
+    font-size: 13px;
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+/* ============================================================
+   FORMULAIRE
+   ============================================================ */
+
+.lsm-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.lsm-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Reprend .form-label (forms.css) */
+.lsm-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.lsm-optional {
+    font-weight: 400;
+    color: var(--color-text-light);
+    font-size: 12px;
+}
+
+.lsm-unite {
+    font-weight: 400;
+    color: var(--color-text-light);
+    font-size: 12px;
+}
+
+/* ── Radio-buttons (salle / type) ───────────────────────────── */
+
+.lsm-radio-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.lsm-radio-btn {
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 1.5px solid var(--color-border);
+    background: white;
+    color: var(--color-text-light);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all var(--transition-speed) var(--transition-ease);
+}
+
+.lsm-radio-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.lsm-radio-btn.active {
+    border-color: var(--color-primary);
+    background: #fdf0f0;
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+/* ── Inputs ─────────────────────────────────────────────────── */
+
+/* Reprend .form-input (forms.css) */
+.lsm-input,
+.lsm-textarea {
+    padding: 7px 10px;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--color-text);
+    outline: none;
+    transition: border-color var(--transition-speed) var(--transition-ease);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.lsm-input:focus,
+.lsm-textarea:focus {
+    border-color: var(--color-primary);
+}
+
+.lsm-textarea {
+    resize: vertical;
+    min-height: 58px;
+}
+
+
+/*
+ * ── Actions (Annuler / Ajouter / Enregistrer) ────────────────
+ * Utilisent .modal-actions + .btn .btn-primary / .btn-secondary
+ * définis dans buttons.css — rien à redéfinir ici.
+ *
+ * ── Bouton Supprimer ─────────────────────────────────────────
+ * Spécifique à cette modal (rouge outline), défini ci-dessous.
+ */
+
+.lsm-btn-delete {
+    background: none;
+    border: 1px solid #dc3545;
+    color: #dc3545;
+    border-radius: var(--border-radius-sm);
+    padding: 5px 14px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all var(--transition-speed) var(--transition-ease);
+}
+
+.lsm-btn-delete:hover:not(:disabled) {
+    background: #fdf0f0;
+}
+
+.lsm-btn-delete:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* ============================================================
+   FEEDBACK
+   Reprend les tokens de .modal-error/.modal-success (modals.css)
+   ============================================================ */
+
+.lsm-feedback {
+    min-height: 24px;
+}
+
+.lsm-feedback__msg {
+    border-radius: var(--border-radius-sm);
+    padding: 7px 12px;
+    font-size: 13px;
+}
+
+.lsm-feedback__msg--info {
+    background: var(--color-info-bg);
+    color: var(--color-info-text);
+    border: 1px solid var(--color-info-border);
+}
+
+.lsm-feedback__msg--success {
+    background: var(--color-success-bg);
+    color: var(--color-success-text);
+    border: 1px solid var(--color-success-border);
+}
+
+.lsm-feedback__msg--warning {
+    background: var(--color-warning-bg);
+    color: var(--color-warning-text);
+    border: 1px solid var(--color-warning-border);
+}
+
+.lsm-feedback__msg--error {
+    background: var(--color-error-bg);
+    color: var(--color-error-text);
+    border: 1px solid var(--color-error-border);
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 600px) {
+    .lsm-header {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .lsm-header__field:last-child {
+        grid-column: 1 / -1;
+    }
+
+    .lsm-radio-group {
+        flex-direction: column;
+    }
+
+    .lsm-radio-btn {
+        text-align: center;
+    }
+}
+
+/* ── Layout type + calendrier côte à côte ─────────────────────── */
+
+.lsm-type-cal-row {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+.lsm-type-col {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+}
+
+.lsm-cal-col {
+    flex: 0 0 auto;
+    margin-left: auto;
+}
+
+/* ── Select type de location ──────────────────────────────────── */
+
+.lsm-type-select {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--color-text);
+    background: white;
+    cursor: pointer;
+    outline: none;
+    transition: border-color var(--transition-speed);
+}
+
+.lsm-type-select:focus {
+    border-color: var(--color-primary);
+}
+
+/* ── Mini-calendrier ──────────────────────────────────────────── */
+
+.lsm-cal {
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    overflow: hidden;
+    background: white;
+    user-select: none;
+}
+
+.lsm-cal-header {
+    background: var(--color-primary, #800000);
+    color: white;
+    text-align: center;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.lsm-cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    padding: 6px;
+}
+
+.lsm-cal-dow {
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--color-text-light);
+    padding: 2px 0 4px;
+    text-transform: uppercase;
+}
+
+.lsm-cal-empty {
+    /* case vide avant le 1er du mois */
+}
+
+.lsm-day {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--color-text);
+    font-size: 11px;
+    font-family: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.12s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: auto;
+}
+
+.lsm-day:hover {
+    background: rgba(128, 0, 0, 0.08);
+    color: var(--color-primary);
+}
+
+.lsm-day--selected {
+    background: var(--color-primary, #800000);
+    color: white;
+    font-weight: 700;
+}
+
+.lsm-day--selected:hover {
+    background: #660000;
+    color: white;
+}
+
+/* Compteur de dates */
+.lsm-dates-count {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-primary);
+    margin-left: 8px;
+    font-style: normal;
+}
+
+@media (max-width: 500px) {
+    .lsm-type-cal-row { flex-direction: column; }
+}
+
+/* ── Navigation mois (flèches ← →) ───────────────────────────── */
+
+.lsm-header__field--periode .lsm-header__label {
+    display: block;
+    margin-bottom: 2px;
+}
+
+.lsm-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Les boutons utilisent .bouton-action (buttons.css) — pas de redéfinition.
+   On surcharge seulement le disabled qui n'est pas géré par bouton-action. */
+.lsm-nav .bouton-action:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* ── Copie lors de la navigation ───────────────────────────────────────────── */
+ 
+/* Label checkbox "Recopier vers le mois cible" — sous les boutons ← → */
+.lsm-nav-copy-label {
+  display:      flex;
+  align-items:  center;
+  gap:          6px;
+  margin-top:   6px;
+  cursor:       pointer;
+  user-select:  none;
+}
+ 
+.lsm-nav-copy-label .lsm-checkbox {
+  width:  14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: var(--color-primary, #800000);
+  flex-shrink: 0;
+}
+ 
+.lsm-nav-copy-text {
+  font-size:   0.78rem;
+  color:       var(--color-text-light, #666);
+  line-height: 1.2;
+  transition:  color 0.15s;
+}
+ 
+.lsm-nav-copy-label:has(.lsm-checkbox:checked) .lsm-nav-copy-text {
+  color:       var(--color-primary, #800000);
+  font-weight: 500;
+}
+
+/* Rangée de boutons "← Copier" / "Copier →" sous la nav ← mois → */
+.lsm-nav-copy-row {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  gap:             4px;
+  margin-top:      5px;
+  width:           100%;
+}
+ 
+.lsm-nav-copy-sep {
+  flex: 1;
+}
+ 
+.lsm-nav-copy-placeholder {
+  display: inline-block;
+  width:   60px;
+}
+ 
+.lsm-nav-copy-btn {
+  display:       inline-flex;
+  align-items:   center;
+  gap:           4px;
+  padding:       2px 8px;
+  font-size:     0.72rem;
+  font-weight:   500;
+  color:         var(--color-primary, #800000);
+  background:    rgba(128, 0, 0, 0.06);
+  border:        1px solid rgba(128, 0, 0, 0.25);
+  border-radius: 12px;
+  cursor:        pointer;
+  white-space:   nowrap;
+  transition:    background 0.15s, color 0.15s, border-color 0.15s;
+  line-height:   1.4;
+}
+ 
+.lsm-nav-copy-btn:hover {
+  background:   rgba(128, 0, 0, 0.14);
+  border-color: var(--color-primary, #800000);
+}
+ 
+.lsm-nav-copy-btn:active {
+  background: rgba(128, 0, 0, 0.22);
+}
+
+/* ── Durée + Nb séances (empilés, pleine largeur) ──────────────────────────── */
+
+/* Résumé du calcul durée (ex: "4 × 1:15 = 5h00") */
+.lsm-duree-calcul {
+    font-size: 11px;
+    color: var(--color-primary);
+    font-weight: 600;
+    margin-top: 3px;
+    display: block;
+    min-height: 14px;
+}
+
+/* Message d'erreur format durée */
+.lsm-field-error {
+    font-size: 11px;
+    color: #dc3545;
+    margin-top: 2px;
+}
+
+/* Les classes lsm-inline-inputs et lsm-inline-field ne sont plus utilisées
+   mais conservées ici au cas où */
+.lsm-inline-inputs { display: flex; gap: 10px; }
+.lsm-inline-field  { display: flex; flex-direction: column; gap: 4px; flex: 1; }

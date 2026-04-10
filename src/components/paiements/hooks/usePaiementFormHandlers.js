@@ -3,11 +3,10 @@
 import React, { useCallback } from 'react';
 import modalSystem from '../../../utils/modalSystem';
 import DatePickerModalHandler from '../../shared/modals/handlers/DatePickerModalHandler';
-import DateService from '../../../utils/DateService';
+import { toIsoString, fromIsoString, getTodayIso, isStrictlyFuture } from '../../../utils/dateHelpers';
 import { createLogger } from '../../../utils/createLogger';
 import { 
     FORM_MODES, 
-    VALIDATION_MESSAGES, 
     NOTIFICATIONS, 
     PAIEMENT_DATE_CONFIG,
     DEFAULT_VALUES  // ✅ AJOUTÉ 
@@ -111,7 +110,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
                 idFacture: '',
                 idLoyer: '',
                 montantPaye: '',
-                datePaiement: DateService.getTodayInputFormat(),
+                datePaiement: getTodayIso(),
                 methodePaiement: DEFAULT_VALUES.METHODE_PAIEMENT,
                 commentaire: prev.commentaire || ''
             }));
@@ -139,7 +138,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
                     ...prev,
                     idFacture: value,
                     montantPaye: '',
-                    datePaiement: DateService.getTodayInputFormat(),
+                    datePaiement: getTodayIso(),
                     methodePaiement: DEFAULT_VALUES.METHODE_PAIEMENT
                 }));
                 chargerDetailFacture(value);
@@ -185,7 +184,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
             
             let initialDates = [];
             if (paiement.datePaiement) {
-                const parsedDate = DateService.fromInputFormat(paiement.datePaiement);
+                const parsedDate = fromIsoString(paiement.datePaiement);
                 if (parsedDate) {
                     initialDates = [parsedDate];
                 }
@@ -195,7 +194,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
                 initialDates: initialDates,
                 multiSelect: false,
                 minDate: null,
-                maxDate: DateService.getToday(),
+                maxDate: getTodayIso(),
                 title: PAIEMENT_DATE_CONFIG.TITLE,
                 confirmText: PAIEMENT_DATE_CONFIG.CONFIRM_TEXT,
                 context: 'payment',
@@ -207,7 +206,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
             if (result.action === 'confirm' && result.dates.length > 0) {
                 const selectedDate = result.dates[0];
                 
-                if (DateService.isStrictlyFuture(selectedDate)) {
+                if (isStrictlyFuture(selectedDate)) {
                     await modalSystem.warning(
                         'Les dates futures ne sont pas autorisées pour les paiements.',
                         'Date non valide'
@@ -215,7 +214,7 @@ export const usePaiementFormHandlers = (formState, formLogic, formValidation) =>
                     return;
                 }
                 
-                const dateString = DateService.toInputFormat(selectedDate);
+                const dateString = toIsoString(selectedDate);
                 handleInputChange('datePaiement', dateString);
             }
             

@@ -27,12 +27,6 @@ const useFactureFormValidation = (initialErrors = {}) => {
         let error = null;
         
         switch (fieldName) {
-            case 'numeroFacture':
-                if (!value) {
-                    error = 'Le numéro de facture est requis';
-                }
-                break;
-                
             case 'idClient':
                 error = FactureValidationRules.clientRequired(value);
                 break;
@@ -202,7 +196,6 @@ const useFactureFormValidation = (initialErrors = {}) => {
         
         // Marquer tous les champs comme touchés
         setTouched({
-            numeroFacture: true,
             idClient: true,
             dateFacture: true
         });

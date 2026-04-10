@@ -17,7 +17,7 @@ export function useLoyerActions() {
 
   /**
    * Charge tous les loyers
-   * @param {Object} filtres - Filtres optionnels { id_client, annee, statut }
+   * @param {Object} filtres - Filtres optionnels { idClient, annee, statut }
    * @returns {Promise<Array>} Liste des loyers
    */
   const chargerLoyers = async (filtres = {}) => {
@@ -168,6 +168,27 @@ export function useLoyerActions() {
   };
 
   /**
+   * Lie une facture générée à un loyer.
+   * @param {number} idLoyer
+   * @param {number} idFacture
+   */
+  const lierFacture = async (idLoyer, idFacture) => {
+    logger.info(`🔗 Liaison loyer #${idLoyer} → facture #${idFacture}`);
+    return executeApi(
+      async () => {
+        const result = await loyerService.lierFacture(idLoyer, idFacture);
+        logger.debug('✅ Liaison enregistrée:', result);
+        return result;
+      },
+      () => { logger.info(`✅ Loyer #${idLoyer} lié à la facture #${idFacture}`); },
+      (error) => {
+        logger.error(`❌ Erreur liaison loyer-facture:`, error);
+        throw error;
+      }
+    );
+  };
+
+  /**
    * ✅ CORRIGÉ: Génère le prochain numéro de loyer pour un client
    * @param {number} idClient - ID du client (OBLIGATOIRE)
    * @returns {Promise<string>} Numéro de loyer (ex: "LOY-12-003")
@@ -235,6 +256,7 @@ export function useLoyerActions() {
     createLoyer,
     updateLoyer,
     deleteLoyer,
+    lierFacture,
     genererNumeroLoyer,
     genererConfirmationPDF,
 

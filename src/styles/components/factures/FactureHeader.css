@@ -73,7 +73,7 @@
   
   .facture-header-input input:focus,
   .facture-header-input select:focus {
-    border-bottom: 2px solid #800000;
+    border-bottom: 2px solid var(--color-primary);
   }
   
   /* Labels flottants */
@@ -82,7 +82,7 @@
     top: 10px;
     left: 0;
     font-size: 16px;
-    color: #666;
+    color: var(--color-text-light);
     transition: all 0.3s ease;
     pointer-events: none;
   }
@@ -92,13 +92,13 @@
   .facture-header-input select:not([value=""]) + label {
     top: -12px;
     font-size: 12px;
-    color: #800000;
+    color: var(--color-primary);
     font-weight: 500;
   }
   
   .facture-header-input label.required::after {
     content: " *";
-    color: #800000;
+    color: var(--color-primary);
   }
   
   /* Styles pour les selects */
@@ -120,7 +120,7 @@
     right: 1.5rem;
     top: 0.8rem;
     font-size: 0.75rem;
-    color: #666;
+    color: var(--color-text-light);
   }
   
   .facture-header-input small {
@@ -137,27 +137,12 @@
     font-size: 16px;
     border-bottom: 1px solid #eee;
     margin-bottom: 5px;
-    color: #333;
+    color: var(--color-text);
   }
 
   /* Style pour le champ de date avec icône calendrier */
   .facture-header-input {
     position: relative;
-  }
-
-  .facture-calendar-icon {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    cursor: pointer;
-    font-size: 16px;
-    color: #800020;
-    transition: opacity 0.2s ease;
-  }
-
-  .facture-calendar-icon:hover {
-    opacity: 0.8;
   }
 
   /* Ajuster la largeur du champ de date pour l'icône */
@@ -182,7 +167,6 @@
   /* Pas de padding, pas de background, pas de border */
 }
 
-
 /* ✅ Styles pour l'historique des paiements */
 .facture-paiements-titre {
   display: flex;
@@ -195,18 +179,8 @@
 }
 
 .facture-paiements-icon {
-  color: #28a745;
+  color: var(--color-success-text);
   font-size: 16px;
-}
-
-.facture-paiements-loading {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
-  font-size: 12px;
-  color: #6c757d;
-  font-weight: normal;
 }
 
 .loading-spin {
@@ -248,7 +222,7 @@
 }
 
 .paiement-icon-inline {
-  color: #6c757d;
+  color: var(--color-text-light);
   font-size: 14px;
   flex-shrink: 0;
 }
@@ -286,12 +260,6 @@
 }
 
 /* Message vide */
-.facture-paiements-vide-simple {
-  padding: 20px;
-  text-align: center;
-  color: #6c757d;
-  font-style: italic;
-}
 
 /* ✅ Responsive design */
 @media (max-width: 768px) {
