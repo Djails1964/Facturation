@@ -3,13 +3,15 @@
 //
 // Logique extraite dans des hooks dédiés :
 //   - useLocationSalleData       → chargement, detailMap, clientsAffiches, clientsDispo, totauxMois
-//   - useGenererLoyer            → génération/mise à jour d'un loyer annuel depuis les locations
+//   - useGenererFactureUtilisation → génération/mise à jour d'une facture directement depuis la location
+//   - useGenererConfirmationForfait → idem pour les confirmations de paiement (contrats au forfait)
 //   - useLocationSalleCopie      → copie inter-années
 //   - LocationSalleModalHandler  → modal de saisie des locations
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { useLocationSalleData }   from './hooks/useLocationSalleData';
-import { useGenererLoyer }        from './hooks/useGenererLoyer';
+import { useGenererFactureUtilisation }   from './hooks/useGenererFactureUtilisation';
+import { useGenererConfirmationForfait }  from './hooks/useGenererConfirmationForfait';
 import { useLocationSalleCopie }  from './hooks/useLocationSalleCopie';
 import { LocationSalleModalHandler } from './modals/handlers/LocationSalleModalHandler';
 import { DeleteActionButton, LoyerActionButton, ToggleActionButton } from '../ui/buttons/ActionButtons';
@@ -17,6 +19,7 @@ import { useNotifications }       from '../../services/NotificationService';
 import { showConfirm }            from '../../utils/modalSystem';
 import { createLogger }           from '../../utils/createLogger';
 import { NOMS_MOIS_COURTS, NOMS_MOIS_LONGS } from '../../constants/dateConstants';
+import { LIBELLES_VERROU_FACTURE_LOCATION } from '../../constants/loyerConstants';
 import '../../styles/components/locationSalle/LocationSalleGestion.css';
 import '../../styles/components/locationSalle/LocationSalleModal.css';
 import SectionTitle from '../shared/SectionTitle';
@@ -30,26 +33,48 @@ export default function LocationSalleGestion() {
     // ── État UI ───────────────────────────────────────────────────────────────
     const [annee,          setAnnee]          = useState(anneeCourrante);
     const [clientAAjouter, setClientAAjouter] = useState('');
+    const [salleAAjouter,  setSalleAAjouter]  = useState('');
+    const [typeAAjouter,   setTypeAAjouter]   = useState('');
     const [ajoutEnCours,   setAjoutEnCours]   = useState(false);
     const [panneauCopie,   setPanneauCopie]   = useState(false);
     const [clientsOuverts, setClientsOuverts] = useState(new Set());
+    const [tooltip,        setTooltip]        = useState({ visible: false, text: '', x: 0, y: 0 });
+
+    const handleMouseEnter = useCallback((e, text) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        setTooltip({ visible: true, text, x: rect.left + rect.width / 2, y: rect.top - 10 });
+    }, []);
+    const handleMouseLeave = useCallback(() => {
+        setTooltip({ visible: false, text: '', x: 0, y: 0 });
+    }, []);
 
     // ── Données + données dérivées ────────────────────────────────────────────
     const {
         contrats, details, clients, loading, error,
-        salles, services, motifsParSalle,
+        salles, services, motifsParSalle, typesContrat,
         detailMap, clientsAffiches, clientsDispo, totauxMois,
         chargerDonnees, chargerUnites, styleForSalle,
         locationActions,
     } = useLocationSalleData(annee);
 
     // ── Génération loyer ──────────────────────────────────────────────────────
-    const { genererLoyer } = useGenererLoyer(details, annee);
+    const { genererFacture }      = useGenererFactureUtilisation(details, annee, contrats);
+    const { genererConfirmation } = useGenererConfirmationForfait(details, annee, contrats);
+    const genererDocument = useCallback((client, idContrat) => {
+        const contratObj = contrats.find(c => c.idContrat === idContrat);
+        return contratObj?.estForfait
+            ? genererConfirmation(client, idContrat)
+            : genererFacture(client, idContrat);
+    }, [contrats, genererFacture, genererConfirmation]);
 
     // ── Copie inter-années ────────────────────────────────────────────────────
     const copie = useLocationSalleCopie(annee, contrats, details, clients, locationActions, chargerDonnees);
 
     // ── Modal handler ─────────────────────────────────────────────────────────
+    // Conteneur externe pour éviter le stale closure sur motifsParSalle
+    const motifsRef = useRef({});
+    motifsRef.current = motifsParSalle;
+
     const modalHandler = useMemo(() => new LocationSalleModalHandler({
         locationSalleActions: locationActions,
         onSetNotification:    (msg, type) => type === 'error' ? showError(msg) : showSuccess(msg),
@@ -57,18 +82,27 @@ export default function LocationSalleGestion() {
         fetchDetails:         (a) => locationActions.fetchDetails(a),
         services,
         chargerUnites,
-        getMotifs:            (salleNom) => motifsParSalle[salleNom] ?? { motifs: [], motifDefaut: '' },
-    }), [locationActions, showSuccess, showError, chargerDonnees, services, chargerUnites, motifsParSalle]);
+        getMotifs:            (idTypeContrat) => {
+            const map = motifsRef.current;
+            const result = map[idTypeContrat] ?? map[String(idTypeContrat)] ?? { motifs: [], motifDefaut: '' };
+            log.debug('🔍 getMotifs idTypeContrat:', idTypeContrat, 'motifDefaut:', result.motifDefaut, 'motifs:', result.motifs?.length);
+            return result;
+        },
+    }), [locationActions, showSuccess, showError, chargerDonnees, services, chargerUnites]); // eslint-disable-line
 
     // ── Handlers contrats ─────────────────────────────────────────────────────
 
-    const ajouterContrat = async (idClientParam) => {
-        const idClient = idClientParam || parseInt(clientAAjouter, 10);
-        if (!idClient) return;
+    const ajouterContrat = async () => {
+        const idClient       = parseInt(clientAAjouter, 10);
+        const idSalle        = parseInt(salleAAjouter, 10);
+        const idTypeContrat  = parseInt(typeAAjouter, 10);
+        if (!idClient || !idSalle || !idTypeContrat) return;
         setAjoutEnCours(true);
         try {
-            await locationActions.creerContrat(idClient, annee);
+            await locationActions.creerContrat(idClient, annee, idSalle, idTypeContrat);
             setClientAAjouter('');
+            setSalleAAjouter('');
+            setTypeAAjouter('');
             setClientsOuverts(prev => new Set([...prev, idClient]));
             await chargerDonnees();
             showSuccess('Contrat ajouté');
@@ -100,10 +134,17 @@ export default function LocationSalleGestion() {
 
     // ── Handlers UI ───────────────────────────────────────────────────────────
 
-    const handleCellClick = useCallback((idContrat, clientId, clientNom, estTherapeute, moisIdx, detailExistant, event) => {
-        const clientObj = { id: clientId, nom: clientNom, idContrat, estTherapeute };
+    const handleCellClick = useCallback((idContrat, clientId, clientNom, estTherapeute, moisIdx, detailExistant, event, idTypeContrat, nomSalleContrat, idSalleContrat) => {
+        const contratObj   = contrats.find(c => c.idContrat === idContrat);
+        const motifContrat = contratObj?.motif ?? null;
+        const clientObj = {
+            id: clientId, nom: clientNom, idContrat, estTherapeute, motifContrat,
+            nomSalle:      nomSalleContrat  ?? contratObj?.nomSalle      ?? null,
+            idSalle:       idSalleContrat   ?? contratObj?.idSalle       ?? null,
+            idTypeContrat: idTypeContrat    ?? contratObj?.idTypeContrat ?? null,
+        };
         modalHandler.handle(clientObj, moisIdx + 1, annee, detailExistant ?? null, event, details);
-    }, [modalHandler, annee, details]);
+    }, [modalHandler, annee, details, contrats]);
 
     const toggleClient = useCallback((idClient) => {
         setClientsOuverts(prev => {
@@ -113,11 +154,30 @@ export default function LocationSalleGestion() {
         });
     }, []);
 
-    const libelleContrat = (contrat, index) =>
-        contrat.libelle || `Contrat ${index + 1}`;
+    const libelleContrat = (contrat, index) => {
+        if (index === 0) log.debug('🔍 contrat[0]:', JSON.stringify(contrat));
+        if (contrat.libelle) return contrat.libelle;
+        const nomSalle = contrat.nomSalle
+            || salles.find(s => s.id === contrat.idSalle)?.nom
+            || null;
+        if (nomSalle) return nomSalle;
+        if (contrat.nomTypeContrat) return contrat.nomTypeContrat;
+        return `Contrat ${index + 1}`;
+    };
+
+    // ✅ Message précis du verrou loyer, selon la vraie raison (facture dans
+    // un état qui bloque la modification, ou paiement direct sans facture)
+    // plutôt qu'un message générique parlant toujours de "paiement".
+    const raisonVerrouFacture = (contrat) => {
+        if (!contrat.factureVerrouille) return null;
+        const libelle = LIBELLES_VERROU_FACTURE_LOCATION[contrat.factureVerrouilleRaison]
+            ?? 'La facture liée ne peut plus être modifiée';
+        return `Non modifiable — ${libelle}`;
+    };
 
     // ── Rendu ─────────────────────────────────────────────────────────────────
     return (
+        <>
         <div className="loyer-gestion-container">
             <div className="content-section-container">
 
@@ -279,58 +339,105 @@ export default function LocationSalleGestion() {
                                                             <span className="ls-contrat-libelle">
                                                                 {libelleContrat(contrat, ci2)}
                                                             </span>
-                                                            <LoyerActionButton
-                                                                onClick={() => genererLoyer(client, contrat.idContrat)}
-                                                                tooltip="Générer un loyer"
-                                                                className="ls-btn-loyer"
-                                                                size="sm"
-                                                            />
-                                                            <DeleteActionButton
-                                                                onClick={() => retirerContrat(client, contrat.idContrat, libelleContrat(contrat, ci2))}
-                                                                tooltip="Retirer ce contrat"
-                                                                className="ls-btn-retirer"
-                                                                size="sm"
-                                                            />
+                                                            {(() => {
+                                                                const aDesDetails = details.some(d => d.idContrat === contrat.idContrat);
+                                                                const verrouille  = contrat.factureVerrouille;
+                                                                const peutGenerer = aDesDetails && !verrouille;
+                                                                const libelleDocument = contrat.estForfait ? 'une confirmation' : 'une facture';
+                                                                const tooltipLoyer = verrouille
+                                                                    ? raisonVerrouFacture(contrat)
+                                                                    : aDesDetails ? `Générer ${libelleDocument}` : "Aucune location saisie pour ce contrat";
+                                                                return (
+                                                                    <span
+                                                                        style={{ display: 'inline-flex', cursor: peutGenerer ? 'pointer' : 'not-allowed' }}
+                                                                        onMouseEnter={(e) => handleMouseEnter(e, tooltipLoyer)}
+                                                                        onMouseLeave={handleMouseLeave}
+                                                                    >
+                                                                        <LoyerActionButton
+                                                                            onClick={() => { if (peutGenerer) genererDocument(client, contrat.idContrat); }}
+                                                                            className="ls-btn-loyer"
+                                                                            size="sm"
+                                                                            disabled={!peutGenerer}
+                                                                            style={{ pointerEvents: peutGenerer ? 'auto' : 'none' }}
+                                                                        />
+                                                                    </span>
+                                                                );
+                                                            })()}
+                                                            <span
+                                                                style={{ display: 'inline-flex', cursor: contrat.factureVerrouille ? 'not-allowed' : 'pointer' }}
+                                                                onMouseEnter={(e) => handleMouseEnter(e, contrat.factureVerrouille
+                                                                    ? raisonVerrouFacture(contrat)
+                                                                    : "Retirer ce contrat")}
+                                                                onMouseLeave={handleMouseLeave}
+                                                            >
+                                                                <DeleteActionButton
+                                                                    onClick={() => { if (!contrat.factureVerrouille) retirerContrat(client, contrat.idContrat, libelleContrat(contrat, ci2)); }}
+                                                                    className="ls-btn-retirer"
+                                                                    size="sm"
+                                                                    disabled={contrat.factureVerrouille}
+                                                                    style={{ pointerEvents: contrat.factureVerrouille ? 'none' : 'auto' }}
+                                                                />
+                                                            </span>
                                                         </div>
                                                     </td>
 
                                                     {NOMS_MOIS_COURTS.map((_, mi) => {
                                                         const key  = `${contrat.idContrat}-${mi + 1}`;
                                                         const locs = detailMap[key] ?? [];
+                                                        const verrouille = contrat.factureVerrouille;
+
+                                                        // Contrat au forfait (confirmation) = une seule location par mois
+                                                        const monoLocation   = !!contrat.estForfait;
+                                                        const moisDejaOccupe = monoLocation && locs.length > 0;
+
                                                         return (
-                                                            <td key={mi} className="ls-td-cell"
-                                                                title={locs.length
+                                                            <td key={mi} className={`ls-td-cell${verrouille ? ' ls-td-cell--verrouille' : ''}`}
+                                                                title={verrouille
+                                                                    ? raisonVerrouFacture(contrat)
+                                                                    : locs.length
                                                                     ? locs.map(l => {
-                                                                        const q = l.quantite % 1 === 0 ? Math.trunc(l.quantite) : l.quantite;
-                                                                        return `${l.salle} — ${q}${l.abreviationUnite ?? l.nomUnite ?? ''}`;
+                                                                        const abrevTip = l.abreviationUnite ?? l.nomUnite ?? '';
+                                                                        const qTip = l.quantite % 1 === 0 ? Math.trunc(l.quantite) : l.quantite;
+                                                                        return `${l.salle} — ${qTip}${abrevTip}`;
                                                                       }).join('\n')
                                                                     : `Ajouter — ${NOMS_MOIS_LONGS[mi]} ${annee}`}
-                                                                onClick={e => handleCellClick(
-                                                                    contrat.idContrat, client.id, client.nom, client.estTherapeute, mi, locs[0] ?? null, e
-                                                                )}
+                                                                onClick={e => { if (!verrouille) handleCellClick(
+                                                                    contrat.idContrat, client.id, client.nom, client.estTherapeute, mi,
+                                                                    moisDejaOccupe ? locs[0] : (locs[0] ?? null),
+                                                                    e, contrat.idTypeContrat, contrat.nomSalle, contrat.idSalle
+                                                                ); }}
                                                             >
                                                                 {locs.length > 0 ? (
                                                                     <div className="ls-badges">
                                                                         {locs.map(loc => {
                                                                             const st    = styleForSalle(loc.salle);
                                                                             const abrev = loc.abreviationUnite ?? loc.nomUnite ?? '';
+                                                                            const qAff = loc.quantite % 1 === 0 ? Math.trunc(loc.quantite) : loc.quantite;
+                                                                            const badgeTitle = verrouille
+                                                                                ? raisonVerrouFacture(contrat)
+                                                                                : (loc.permetMultiplicateur && loc.duree && loc.nbSeances != null)
+                                                                                ? `${loc.salle} — ${loc.nbSeances} séance(s) × ${loc.duree} = ${loc.quantite}${abrev} — modifier`
+                                                                                : `${loc.salle} — modifier`;
                                                                             return (
-                                                                                <span key={loc.id} className="ls-badge"
-                                                                                    style={{ color: st.color, background: st.bg, borderColor: st.border }}
-                                                                                    title={`${loc.salle} — modifier`}
-                                                                                    onClick={e => { e.stopPropagation(); handleCellClick(contrat.idContrat, client.id, client.nom, client.estTherapeute, mi, loc, e); }}
+                                                                                <span key={loc.id} className={`ls-badge${verrouille ? ' ls-badge--verrouille' : ''}`}
+                                                                                    style={{ color: st.color, background: st.bg, borderColor: st.border, cursor: verrouille ? 'not-allowed' : 'pointer' }}
+                                                                                    title={badgeTitle}
+                                                                                    onClick={e => { e.stopPropagation(); if (!verrouille) handleCellClick(contrat.idContrat, client.id, client.nom, client.estTherapeute, mi, loc, e, contrat.idTypeContrat, contrat.nomSalle, contrat.idSalle); }}
                                                                                 >
-                                                                                    {loc.quantite % 1 === 0 ? Math.trunc(loc.quantite) : loc.quantite}{abrev}
+                                                                                    {qAff}{abrev}
                                                                                 </span>
                                                                             );
                                                                         })}
-                                                                        <button type="button" className="ls-add-mini"
-                                                                            title="Ajouter une autre salle ce mois"
-                                                                            onClick={e => { e.stopPropagation(); handleCellClick(contrat.idContrat, client.id, client.nom, client.estTherapeute, mi, null, e); }}
-                                                                        >+</button>
+                                                                        {/* Bouton + masqué pour les salles sans facturation à l'utilisation si mois déjà occupé, ou si loyer verrouillé */}
+                                                                        {!moisDejaOccupe && !verrouille && (
+                                                                            <button type="button" className="ls-add-mini"
+                                                                                title="Ajouter une autre salle ce mois"
+                                                                                onClick={e => { e.stopPropagation(); handleCellClick(contrat.idContrat, client.id, client.nom, client.estTherapeute, mi, null, e, contrat.idTypeContrat, contrat.nomSalle, contrat.idSalle); }}
+                                                                            >+</button>
+                                                                        )}
                                                                     </div>
                                                                 ) : (
-                                                                    <span className="ls-add-dot">+</span>
+                                                                    !verrouille && <span className="ls-add-dot">+</span>
                                                                 )}
                                                             </td>
                                                         );
@@ -356,29 +463,75 @@ export default function LocationSalleGestion() {
                     </div>
                 )}
 
-                {/* Barre ajout client */}
+                {/* Barre ajout contrat */}
                 <div className="ls-add-client-bar">
-                    {clientsDispo.length > 0 ? (
+                    {clientsDispo.length > 0 && salles.length > 0 && typesContrat.length > 0 ? (
                         <>
-                            <label className="ls-add-client-label">Ajouter un client :</label>
+                            <label className="ls-add-client-label">Nouveau contrat :</label>
+
+                            {/* Client */}
                             <select className="ls-select" value={clientAAjouter}
                                 onChange={e => setClientAAjouter(e.target.value)} disabled={ajoutEnCours}>
-                                <option value="">— Sélectionner —</option>
+                                <option value="">— Client —</option>
                                 {clientsDispo.map(c => (
                                     <option key={c.idClient} value={c.idClient}>{c.prenom} {c.nom}</option>
                                 ))}
                             </select>
+
+                            {/* Salle */}
+                            <select className="ls-select" value={salleAAjouter}
+                                onChange={e => { setSalleAAjouter(e.target.value); setTypeAAjouter(''); }}
+                                disabled={ajoutEnCours}>
+                                <option value="">— Salle —</option>
+                                {salles.filter(s => s.actif !== false).map(s => (
+                                    <option key={s.id} value={s.id}>{s.nom}</option>
+                                ))}
+                            </select>
+
+                            {/* Type de contrat — filtré selon type_client_requis vs client sélectionné */}
+                            <select className="ls-select" value={typeAAjouter}
+                                onChange={e => setTypeAAjouter(e.target.value)}
+                                disabled={ajoutEnCours || !clientAAjouter}>
+                                <option value="">— Type —</option>
+                                {typesContrat
+                                    .filter(t => {
+                                        if (!t.typeClientRequis) return true;
+                                        const client = clientsDispo.find(c => String(c.idClient) === String(clientAAjouter));
+                                        if (!client) return true;
+                                        if (t.typeClientRequis === 'therapeute') return !!client.estTherapeute;
+                                        return true;
+                                    })
+                                    .map(t => (
+                                        <option key={t.id} value={t.id}>{t.nom}</option>
+                                    ))
+                                }
+                            </select>
+
                             <button type="button" className="btn btn-primary btn-sm"
-                                onClick={() => ajouterContrat()} disabled={!clientAAjouter || ajoutEnCours}>
+                                onClick={ajouterContrat}
+                                disabled={!clientAAjouter || !salleAAjouter || !typeAAjouter || ajoutEnCours}>
                                 {ajoutEnCours ? 'Ajout…' : 'Ajouter'}
                             </button>
                         </>
                     ) : (
-                        <span className="ls-add-client-info">Aucun client disponible.</span>
+                        <span className="ls-add-client-info">
+                            {loading ? 'Chargement…' : 'Aucun client, salle ou type de contrat disponible.'}
+                        </span>
                     )}
                 </div>
 
             </div>
         </div>
+
+        {/* Tooltip cursor */}
+        {tooltip.visible && (
+            <div className="cursor-tooltip" style={{
+                left: tooltip.x, top: tooltip.y,
+                position: 'fixed', zIndex: 10000, pointerEvents: 'none',
+            }}>
+                {tooltip.text}
+            </div>
+        )}
+        </>
     );
 }

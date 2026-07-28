@@ -28,7 +28,6 @@ export const PARAMETRE_TYPES = {
   BOOLEAN: 'boolean',
   SELECT: 'select',
   YEAR: 'year',
-  MOTIFS_LOYER: 'motifs_loyer',   // liste de motifs éditables individuellement
 };
 
 // ========== MESSAGES DE SUCCÈS ==========
@@ -84,9 +83,17 @@ export const PARAMETRE_METADATA = {
     libelle: 'Prochain numéro de facture',
     description: ''
   },
+  'Prochain Numéro Confirmation': {
+    libelle: 'Prochain numéro de confirmation',
+    description: 'Numérotation distincte pour les confirmations de paiement (contrats au forfait)'
+  },
   'outputDir': {
     libelle: 'Destination des factures PDF',
     description: 'Chemin destination factures PDF depuis BackendUrl'
+  },
+  'outputDirConfirmation': {
+    libelle: 'Destination des confirmations PDF',
+    description: 'Chemin destination des confirmations de paiement (contrats au forfait) depuis BackendUrl'
   },
   'Banque': {
     libelle: 'Nom de la banque',
@@ -124,22 +131,23 @@ export const PARAMETRE_METADATA = {
     libelle: 'Texte du courriel',
     description: 'Texte du courriel, proposition 2'
   },
-  // ── Loyer / Motifs ──────────────────────────────────────────────────────────
+  // ── LocationSalle / Motifs (liés au service tarifaire = la salle) ────────────
+  // La catégorie correspond au nom de la salle (ex: 'Cabinet', 'Salle')
   'motifs|Cabinet': {
-    libelle: 'Motifs de loyer — Cabinet',
-    description: 'Liste des motifs disponibles pour les locations de cabinet'
+    libelle: 'Motifs de location — Cabinet',
+    description: 'Liste des motifs disponibles pour les locations du cabinet'
   },
   'motifs|Salle': {
-    libelle: 'Motifs de loyer — Salle',
-    description: 'Liste des motifs disponibles pour les locations de salle'
+    libelle: 'Motifs de location — Salle',
+    description: 'Liste des motifs disponibles pour les locations de la salle'
   },
   'motif_defaut|Cabinet': {
     libelle: 'Motif par défaut — Cabinet',
-    description: 'Motif pré-sélectionné pour les locations de cabinet'
+    description: 'Motif pré-sélectionné pour les locations du cabinet'
   },
   'motif_defaut|Salle': {
     libelle: 'Motif par défaut — Salle',
-    description: 'Motif pré-sélectionné pour les locations de salle'
+    description: 'Motif pré-sélectionné pour les locations de la salle'
   },
 
   // ── LocationSalle > Salles ───────────────────────────────────────────────
@@ -154,22 +162,14 @@ export const PARAMETRE_METADATA = {
   'type_client_requis': {
     libelle: 'Location ouverte à :',
     description: 'Laisser vide = tous les clients. Ex : therapeute'
-  },
-  'type_document': {
-    libelle: 'Document généré',
-    description: 'Type de document produit lors d\'une location de cette salle'
   }
 };
 
 // ========== OPTIONS DE SÉLECTION PAR PARAMÈTRE ==========
-/**
- * Options fixes pour les paramètres de type select dont les choix
- * sont définis statiquement (sans appel API).
- */
 export const PARAMETRE_SELECT_OPTIONS = {
-  'type_document': [
-    { value: 'facture',       label: 'Facture' },
-    { value: 'confirmation',  label: 'Confirmation de paiement' }
+  'typeClientRequis': [
+    { value: '',            label: 'Tous les clients' },
+    { value: 'therapeute',  label: 'Thérapeutes uniquement' }
   ]
 };
 
@@ -205,7 +205,6 @@ export const PARAMETRE_GROUPE_TITRES = {
   'Facture':            'Facturation',
   'RelationsBancaires': 'Relations bancaires',
   'Email':              'Courriel',
-  'Loyer':              'Loyers',
   'LocationSalle':      'Location de salles',
   'General':            'Général'
 };
@@ -217,10 +216,10 @@ export const PARAMETRE_GROUPE_TITRES = {
  * Valeur = libellé affiché (chaîne vide = pas de titre h4 rendu).
  */
 export const PARAMETRE_SOUS_GROUPE_TITRES = {
-  'Loyer|Motifs':               'Motifs de location',
-  'Loyer|Général':              '',
-  'LocationSalle|Salles':       'Salles',
-  'LocationSalle|Général':      '',
+  'LocationSalle|Motifs':               'Motifs de location',
+  'LocationSalle|Salles':               'Salles',
+  'LocationSalle|TypesContrat':         'Types de contrat de location',
+  'LocationSalle|Général':              '',
   'Email|Corps':                'Texte du courriel',
   'Facture|Général':            '',
   'RelationsBancaires|Général': ''

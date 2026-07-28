@@ -1,8 +1,10 @@
 import React from 'react';
-import { FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
+import { ICONS } from '../../ui/buttons';
+import { createLogger } from '../../../utils/createLogger';
 import { FORM_MODES } from '../../../constants/factureConstants';
-// ✅ AJOUT: Import du formatter centralisé
-import DateService from '../../../utils/DateService';
+import { formatDate } from '../../../utils/formatters';
+
+const log = createLogger('FactureStateBanners');
 
 export const FactureStateBanners = ({ mode, facture }) => {
   if (mode !== FORM_MODES.VIEW) return null;
@@ -11,15 +13,15 @@ export const FactureStateBanners = ({ mode, facture }) => {
     <>
       {facture.etat === 'Annulée' && facture.date_annulation && (
         <div className="ff-facture-annulee-banner">
-          <FiAlertCircle size={20} />
-          <span>Facture annulée le {DateService.formatSingleDate(facture.date_annulation)}</span>
+          <ICONS.ERROR size={20} />
+          <span>Facture annulée le {formatDate(facture.date_annulation)}</span>
         </div>
       )}
 
       {facture.etat === 'Payée' && facture.date_paiement && (
         <div className="ff-facture-payee-banner">
-          <FiCheckCircle size={20} />
-          <span>Facture payée le {DateService.formatSingleDate(facture.date_paiement)}</span>
+          <ICONS.SUCCESS size={20} />
+          <span>Facture payée le {formatDate(facture.date_paiement)}</span>
         </div>
       )}
     </>

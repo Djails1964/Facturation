@@ -20,6 +20,8 @@ export const useFactureFilters = (facturesNonFiltrees, chargerFactures, anneeSel
     const [clients, setClients] = useState([]);
     const [clientSelectionne, setClientSelectionne] = useState('');
     const [etatSelectionne, setEtatSelectionne] = useState('Sans annulées'); // ✅ Valeur par défaut
+    // ✅ Filtre type de document : 'facture' | 'confirmation' | '' (les deux, par défaut)
+    const [typeSelectionne, setTypeSelectionne] = useState('');
     const [isLoadingClients, setIsLoadingClients] = useState(false);
 
     // ✅ Ref pour éviter les appels multiples
@@ -27,6 +29,13 @@ export const useFactureFilters = (facturesNonFiltrees, chargerFactures, anneeSel
     const clientsLoadedRef = useRef(false);
 
     // Listes pour les filtres
+    // ✅ Type de document : factures à l'utilisation vs confirmations de
+    // paiement (contrats au forfait) — basé sur facture.estForfait.
+    const types = useMemo(() => [
+        { value: 'facture', label: 'Factures' },
+        { value: 'confirmation', label: 'Confirmations' }
+    ], []);
+
     const etats = useMemo(() => [
         { value: 'Sans annulées', label: 'Sans annulées' },
         { value: 'Tous les états', label: 'Tous les états' },
@@ -88,6 +97,15 @@ export const useFactureFilters = (facturesNonFiltrees, chargerFactures, anneeSel
         let resultats = [...facturesNonFiltrees];
         log.debug('📊 Filtrage - Factures initiales:', resultats.length);
         
+        // ✅ Filtrer par type de document (facture / confirmation / tous)
+        if (typeSelectionne === 'facture') {
+            resultats = resultats.filter(facture => !facture.estForfait);
+            log.debug('📊 Après filtre type "facture":', resultats.length);
+        } else if (typeSelectionne === 'confirmation') {
+            resultats = resultats.filter(facture => !!facture.estForfait);
+            log.debug('📊 Après filtre type "confirmation":', resultats.length);
+        }
+
         // Filtrer par client
         if (clientSelectionne) {
             resultats = resultats.filter(facture => 
@@ -117,7 +135,7 @@ export const useFactureFilters = (facturesNonFiltrees, chargerFactures, anneeSel
         }
         
         return resultats;
-    }, [clientSelectionne, etatSelectionne, facturesNonFiltrees]);
+    }, [typeSelectionne, clientSelectionne, etatSelectionne, facturesNonFiltrees]);
 
     // useEffect(() => {
     //     appliquerFiltres();
@@ -134,6 +152,10 @@ export const useFactureFilters = (facturesNonFiltrees, chargerFactures, anneeSel
         setClientSelectionne(e.target.value);
     }, []);
 
+    const handleTypeChange = useCallback((e) => {
+        setTypeSelectionne(e.target.value);
+    }, []);
+
     const handleEtatChange = useCallback((e) => {
         setEtatSelectionne(e.target.value);
     }, []);
@@ -144,12 +166,15 @@ export const useFactureFilters = (facturesNonFiltrees, chargerFactures, anneeSel
         anneeSelectionnee: anneeSelectionneeFromParent, // ✅ Retourner celle du parent
         clientSelectionne,
         etatSelectionne,
+        typeSelectionne,
         filteredFactures,
         etats,
+        types,
         anneesOptions,
         handleAnneeChange,
         handleClientChange,
         handleEtatChange,
+        handleTypeChange,
         chargerClients
     };
 };

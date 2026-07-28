@@ -15,6 +15,7 @@ import { LABELS_ETATS_PAIEMENT } from '../../constants/loyerConstants';
 import { ViewActionButton, EditActionButton, DeleteActionButton, PayActionButton, PdfActionButton, FactureActionButton } from '../ui/buttons';
 import { COLUMN_LABELS } from '../../constants/loyerConstants';
 import { useSalleActions } from '../parametres/hooks/useSalleActions';
+import { toBoolean } from '../../utils/booleanHelper';
 import '../../styles/components/loyers/LoyersListe.css';
 import SectionTitle from '../shared/SectionTitle';
 
@@ -43,9 +44,9 @@ function LoyersListe({
     const [error, setError] = useState(null);
     const [loyerSelectionne, setLoyerSelectionne] = useState(null);
     const [showFilters, setShowFilters] = useState(false);
-    // Map idService → typeDocument ('facture' | 'confirmation')
+    // Map idService → facturationUtilisation (bool)
     // Chargée une fois au montage depuis la table salle
-    const [typeDocumentParService, setTypeDocumentParService] = useState({});
+    const [factUtilParService, setFactUtilParService] = useState({});
     
     // Refs pour éviter les recharges multiples
     const isLoadingLoyersRef = useRef(false);
@@ -99,10 +100,10 @@ function LoyersListe({
         listerSalles().then(salles => {
             const map = {};
             (salles ?? []).forEach(s => {
-                if (s.idService) map[s.idService] = s.typeDocument ?? 'facture';
+                if (s.idService) map[s.idService] = toBoolean(s.facturationUtilisation);
             });
-            setTypeDocumentParService(map);
-            logger.debug('✅ Map typeDocument par service:', map);
+            setFactUtilParService(map);
+            logger.debug('✅ Map facturationUtilisation par service:', map);
         }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -239,37 +240,47 @@ function LoyersListe({
         {
             label: COLUMN_LABELS.CLIENT,
             field: 'client',
-            flex: '1',
-            minWidth: '180px',
+            flex: '1 1 160px',
+            minWidth: '140px',
             render: (loyer) => loyer.nomCompletClient || 
                                `${loyer.prenomClient} ${loyer.nomClient}`
         },
         {
+            label: 'Location',
+            field: 'nomService',
+            flex: '1 1 140px',
+            minWidth: '120px',
+            render: (loyer) => loyer.nomService || '—'
+        },
+        {
             label: COLUMN_LABELS.PERIODE,
             field: 'periode',
-            flex: '0 0 20%',
-            minWidth: '200px',
-            render: (loyer) => (
-                <>
-                    {formatDate(loyer.periodeDebut)}
-                    {' → '}
-                    {formatDate(loyer.periodeFin)}
-                </>
-            )
+            flex: '0 0 160px',
+            minWidth: '150px',
+            align: 'center',
+            render: (loyer) => {
+                // Format compact : "01.2026 → 12.2026"
+                const fmt = (iso) => {
+                    if (!iso) return '—';
+                    const [y, m] = iso.split('-');
+                    return `${m}.${y}`;
+                };
+                return `${fmt(loyer.periodeDebut)} → ${fmt(loyer.periodeFin)}`;
+            }
         },
         {
             label: COLUMN_LABELS.MONTANT_TOTAL,
             field: 'loyerMontantTotal',
-            flex: '0 0 15%',
-            minWidth: '130px',
+            flex: '0 0 105px',
+            minWidth: '95px',
             align: 'right',
             render: (loyer) => formatMontant(loyer.loyerMontantTotal)
         },
         {
             label: 'État paiement',
             field: 'etatPaiement',
-            flex: '0 0 14%',
-            minWidth: '120px',
+            flex: '0 0 115px',
+            minWidth: '105px',
             align: 'center',
             render: (loyer) => {
                 const etat = loyer.etatPaiement || '';
@@ -283,50 +294,64 @@ function LoyersListe({
         {
             label: COLUMN_LABELS.ACTIONS,
             field: 'actions',
-            flex: '0 0 240px',
-            minWidth: '240px',
-            maxWidth: '240px',
+            flex: '0 0 200px',
+            minWidth: '200px',
+            maxWidth: '200px',
             className: 'actions-cell',
             render: (loyer) => {
-                const estNonPaye = (loyer.etatPaiement) === 'non_paye';
-                const aFacture  = !!loyer.idFacture;
-                const etatFact  = loyer.factureEtat || null;
-
-                // 🔍 DEBUG TEMPORAIRE
-                if (aFacture) {
-                    logger.debug('[LoyersListe] loyer avec facture:', {
-                        numeroLoyer: loyer.numeroLoyer,
-                        idFacture: loyer.idFacture,
-                        factureEtat: loyer.factureEtat,
-                        etatFact,
-                        keys: Object.keys(loyer).filter(k => k.toLowerCase().includes('fact') || k.toLowerCase().includes('etat'))
-                    });
-                }
+                const estNonPaye           = loyer.etatPaiement === 'non_paye';
+                const aFacture             = !!loyer.idFacture;
+                const etatFact             = loyer.factureEtat || null;
+                const estGenereParLocation = !!loyer.idContratLocation;
 
                 // ── Règles métier ───────────────────────────────────────────
-                // Sans facture liée : règle classique (non payé = modifiable/supprimable)
-                // Avec facture liée :
-                //   En attente | Éditée → modifiable ET supprimable
-                //   Autres états        → ni modifiable ni supprimable
-                const factureModifiable = !aFacture
-                    ? estNonPaye
-                    : (etatFact === 'En attente' || etatFact === 'Éditée');
+                // Facture payée/partiellement payée → lecture seule
+                // Sans facture : modifiable si non payé
+                // Avec facture en attente/éditée : modifiable
+                // Généré depuis une location → modifiable (montants ajustables),
+                //   mais non supprimable (suppression via la location de salle)
+                const facturePayeeOuPartielle = aFacture && (
+                    etatFact === 'Payée' || etatFact === 'Partiellement payée'
+                );
 
-                const factureSuppr = !aFacture
-                    ? estNonPaye
-                    : (etatFact === 'En attente' || etatFact === 'Éditée');
+                // Base commune (facture/paiement) — utilisée telle quelle pour
+                // la suppression (voir LoyerControleur::supprimerLoyer), et
+                // restreinte en plus pour la modification (voir ci-dessous).
+                const canModifierBase = !facturePayeeOuPartielle
+                    && (!aFacture ? estNonPaye : (etatFact === 'En attente' || etatFact === 'Éditée'));
 
-                const tooltipModifier = factureModifiable
+                // ✅ Un loyer généré depuis une location ne doit plus être
+                // modifiable manuellement (cf. garde-fou dans
+                // LoyerControleur::modifierLoyer) : les modifications doivent
+                // se faire sur la location, puis le loyer est régénéré.
+                const canModifier  = canModifierBase && !estGenereParLocation;
+
+                // ✅ Alignée sur les règles backend (LoyerControleur::supprimerLoyer) :
+                // la suppression suit les mêmes conditions que canModifierBase
+                // (facture En attente/Éditée ou pas de paiement direct enregistré).
+                // Un loyer généré depuis une location reste supprimable ; le
+                // backend gère la facture liée (suppression ou annulation).
+                const canSupprimer = canModifierBase;
+
+                const canGenerer = !facturePayeeOuPartielle;
+
+                const tooltipModifier = canModifier
                     ? 'Modifier'
-                    : aFacture
-                        ? `Non modifiable (facture ${etatFact ?? 'liée'})`
-                        : 'Non modifiable (paiement enregistré)';
+                    : estGenereParLocation
+                        ? 'Non modifiable — généré depuis une location, modifiez la location puis régénérez le loyer'
+                        : facturePayeeOuPartielle
+                            ? `Lecture seule — facture ${etatFact}`
+                            : aFacture
+                                ? `Non modifiable (facture ${etatFact ?? 'liée'})`
+                                : 'Non modifiable (paiement enregistré)';
 
-                const tooltipSupprimer = factureSuppr
+                const tooltipSupprimer = canSupprimer
                     ? 'Supprimer'
-                    : aFacture
-                        ? `Non supprimable (facture ${etatFact ?? 'liée'})`
-                        : 'Non supprimable (paiement enregistré)';
+                    : facturePayeeOuPartielle
+                        ? `Suppression impossible — facture ${etatFact}`
+                        : aFacture
+                            ? `Non supprimable (facture ${etatFact ?? 'liée'})`
+                            : 'Non supprimable (paiement enregistré)';
                 return (
                 <>
                     <ViewActionButton
@@ -335,16 +360,16 @@ function LoyersListe({
                         onMouseLeave={handleMouseLeave}
                     />
                     <EditActionButton
-                        disabled={!factureModifiable}
-                        onClick={(e) => { e.stopPropagation(); onModifierLoyer(loyer.idLoyer); }}
+                        disabled={!canModifier}
+                        tooltip={tooltipModifier}
+                        onClick={(e) => { e.stopPropagation(); if (canModifier) onModifierLoyer(loyer.idLoyer); }}
                         onMouseEnter={(e) => handleMouseEnter(e, tooltipModifier)}
                         onMouseLeave={handleMouseLeave}
                     />
-                    {/* ✅ Paiement direct masqué si le loyer génère une facture —
-                        le paiement doit se faire sur la facture correspondante */}
+                    {/* Paiement direct : uniquement si pas facturation à l'utilisation */}
                     {(() => {
-                        const typeDoc = typeDocumentParService[loyer.idService] ?? 'facture';
-                        if (typeDoc !== 'facture') {
+                        const estFactUtil = !toBoolean(loyer.estForfait); // ✅ est_forfait du type de contrat (listerLoyers ne sélectionne pas type_document, mais bien est_forfait)
+                        if (!estFactUtil) {
                             return (
                                 <PayActionButton
                                     onClick={(e) => { e.stopPropagation(); if (onSaisirPaiement) onSaisirPaiement(loyer.idLoyer); }}
@@ -356,24 +381,34 @@ function LoyersListe({
                         return null;
                     })()}
                     {loyer.idService && onGenererDocument && (() => {
-                        const typeDoc = typeDocumentParService[loyer.idService] ?? 'facture';
-                        return typeDoc === 'confirmation' ? (
+                        const estFactUtil = !toBoolean(loyer.estForfait); // ✅ est_forfait du type de contrat (listerLoyers ne sélectionne pas type_document, mais bien est_forfait)
+                        const factPayeeOuPartielle = aFacture && (
+                            etatFact === 'Payée' || etatFact === 'Partiellement payée'
+                        );
+                        const tooltipFacture = factPayeeOuPartielle
+                            ? `Génération impossible — facture ${etatFact}`
+                            : 'Générer une facture';
+                        // facturationUtilisation → bouton facture / sinon → confirmation PDF
+                        return estFactUtil ? (
+                            <FactureActionButton
+                                disabled={factPayeeOuPartielle}
+                                tooltip={tooltipFacture}
+                                onClick={(e) => { e.stopPropagation(); if (!factPayeeOuPartielle) onGenererDocument(loyer); }}
+                                onMouseEnter={(e) => handleMouseEnter(e, tooltipFacture)}
+                                onMouseLeave={handleMouseLeave}
+                            />
+                        ) : (
                             <PdfActionButton
                                 onClick={(e) => { e.stopPropagation(); onGenererDocument(loyer); }}
                                 onMouseEnter={(e) => handleMouseEnter(e, 'Confirmation de paiement PDF')}
                                 onMouseLeave={handleMouseLeave}
                             />
-                        ) : (
-                            <FactureActionButton
-                                onClick={(e) => { e.stopPropagation(); onGenererDocument(loyer); }}
-                                onMouseEnter={(e) => handleMouseEnter(e, 'Générer une facture')}
-                                onMouseLeave={handleMouseLeave}
-                            />
                         );
                     })()}
                     <DeleteActionButton
-                        disabled={!factureSuppr}
-                        onClick={(e) => { e.stopPropagation(); handleSupprimer(loyer.idLoyer, loyer.numeroLoyer); }}
+                        disabled={!canSupprimer}
+                        tooltip={tooltipSupprimer}
+                        onClick={(e) => { e.stopPropagation(); if (canSupprimer) handleSupprimer(loyer.idLoyer, loyer.numeroLoyer); }}
                         onMouseEnter={(e) => handleMouseEnter(e, tooltipSupprimer)}
                         onMouseLeave={handleMouseLeave}
                     />
@@ -381,7 +416,7 @@ function LoyersListe({
                 );
             }
         }
-    ], [handleMouseEnter, handleMouseLeave, handleSupprimer, onAfficherLoyer, onModifierLoyer, onSaisirPaiement, onGenererDocument, typeDocumentParService]);
+    ], [handleMouseEnter, handleMouseLeave, handleSupprimer, onAfficherLoyer, onModifierLoyer, onSaisirPaiement, onGenererDocument, factUtilParService]);
 
     // Rendu du tooltip
     const TooltipComponent = () => {

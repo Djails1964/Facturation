@@ -27,9 +27,33 @@ export const FORM_TITLES = {
 
 // ✅ TITRES DE COLONNES DU TABLEAU DES FACTURES
 export const COLUMN_LABELS = {
-  NUMERO:  'Numéro de facture',
+  NUMERO:  'N° facture',
   CLIENT:  'Client',
   DATE:    'Date facture',
-  MONTANT: 'Montant (CHF)',
+  MONTANT: 'Montant',
   ETAT:    'État',
+};
+
+// ✅ Libellé court par état — réutilisable pour composer n'importe quel
+// tooltip de facture (Payer, Supprimer/Annuler, Envoyer, etc.).
+export const LIBELLES_ETAT_FACTURE = {
+  'En attente':            'Facture en attente',
+  'Éditée':                'Facture éditée',
+  'Envoyée':               'Facture envoyée',
+  'Retard':                'Facture en retard',
+  'Payée':                 'Facture payée',
+  'Partiellement payée':   'Facture partiellement payée',
+  'Annulée':               'Facture annulée',
+};
+
+// ✅ Libellé affiché (tooltip + notification) quand l'état de la facture
+// bloque la modification OU l'impression — les deux actions partagent
+// exactement les mêmes états autorisés (En attente / Éditée), donc le même
+// regroupement simplifié. Les états absents retombent sur un message
+// générique — voir FactureActions.jsx.
+export const LIBELLES_ETAT_BLOQUANT_MODIFICATION = {
+  'Envoyée':               'Facture envoyée',
+  'Retard':                'Facture envoyée',
+  'Payée':                 'Facture avec paiements',
+  'Partiellement payée':   'Facture avec paiements',
 };

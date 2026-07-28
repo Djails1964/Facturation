@@ -24,7 +24,7 @@ export const ActionButton = ({
     <button 
       className={buttonClass}
       onClick={!disabled ? onClick : undefined}
-      disabled={disabled}
+      aria-disabled={disabled}
       title={tooltip}
       {...props}
     >
@@ -219,6 +219,7 @@ export const LoyerActionButton = ({ onClick, disabled, ...props }) => (
   />
 );
 
+
 // Boutons de formulaire (style existant)
 export const SaveButton = ({ children, ...props }) => (
   <FormButton 
@@ -337,4 +338,26 @@ export const FloatingAddButton = ({ onClick, tooltip = 'Ajouter' }) => (
     <span>+</span>
     <div className="floating-tooltip">{tooltip}</div>
   </div>
-);  
+);
+
+export const UserCheckActionButton = ({ onClick, disabled, ...props }) => (
+  <ActionButton
+    icon={ICONS.USER_CHECK}
+    iconClass="action-user-check-icon"
+    onClick={onClick}
+    disabled={disabled}
+    tooltip="Activer le compte"
+    {...props}
+  />
+);
+
+export const UserXActionButton = ({ onClick, disabled, ...props }) => (
+  <ActionButton
+    icon={ICONS.USER_X}
+    iconClass="action-user-x-icon"
+    onClick={onClick}
+    disabled={disabled}
+    tooltip="Désactiver le compte"
+    {...props}
+  />
+);

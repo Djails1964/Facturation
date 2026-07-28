@@ -2,7 +2,7 @@
 
 import { FORM_TYPES } from '../../../constants/tarifConstants';
 import { createLogger } from '../../../utils/createLogger';
-import DateService from '../../../utils/DateService';
+import { fromDisplayString, fromIsoString } from '../../../utils/dateHelpers';
 
 const log = createLogger("TarifValidationService");
 
@@ -337,8 +337,8 @@ export class TarifValidationService {
     
     // Validation des dates
     if (formData.dateDebutTarifStandard) {
-      const dateDebut = DateService.fromDisplayFormat(formData.dateDebutTarifStandard) || 
-                    DateService.fromInputFormat(formData.dateDebutTarifStandard);
+      const dateDebut = fromDisplayString(formData.dateDebutTarifStandard) || 
+                    fromIsoString(formData.dateDebutTarifStandard);
       if (dateDebut) {
         const aujourd = new Date();
         aujourd.setHours(0, 0, 0, 0);
@@ -350,10 +350,10 @@ export class TarifValidationService {
     }
     
     if (formData.dateFinTarifStandard && formData.dateDebutTarifStandard) {
-      const dateDebut = DateService.fromDisplayFormat(formData.dateDebutTarifStandard) || 
-                        DateService.fromInputFormat(formData.dateDebutTarifStandard);
-      const dateFin = DateService.fromDisplayFormat(formData.dateFinTarifStandard) || 
-                      DateService.fromInputFormat(formData.dateFinTarifStandard);
+      const dateDebut = fromDisplayString(formData.dateDebutTarifStandard) || 
+                        fromIsoString(formData.dateDebutTarifStandard);
+      const dateFin = fromDisplayString(formData.dateFinTarifStandard) || 
+                      fromIsoString(formData.dateFinTarifStandard);
       
       if (dateDebut && dateFin && dateFin <= dateDebut) {
         errors.dateFin = 'La date de fin doit être postérieure à la date de début';

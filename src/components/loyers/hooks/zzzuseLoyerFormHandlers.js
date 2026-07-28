@@ -4,7 +4,8 @@
 import { useState, useCallback } from 'react';
 import { fromIsoString,
           addMonths,
-          getYearFromDate
+          getYearFromDate,
+          parseDureeHHMM
         } from '../../../utils/dateHelpers';
 import { toBooleanInt } from '../../../utils/booleanHelper';
 import { createLogger } from '../../../utils/createLogger';
@@ -25,15 +26,34 @@ export function useLoyerFormHandlers({
 
   const handleChange = useCallback((field, value) => {
     setLoyer(prev => ({ ...prev, [field]: value }));
-    if (fieldErrors[field]) {
-      setFieldErrors(prev => { const e = { ...prev }; delete e[field]; return e; });
-    }
-  }, [fieldErrors, setLoyer, setFieldErrors]);
+  }, [setLoyer]);
 
   const handleMontantMensuelChange = useCallback((index, valeur) => {
     setLoyer(prev => {
       const m = [...prev.montantsMensuels];
       m[index] = { ...m[index], montant: valeur === '' ? '' : valeur };
+      return { ...prev, montantsMensuels: m };
+    });
+  }, [setLoyer]);
+
+  const handleDureeChange = useCallback((index, duree) => {
+    setLoyer(prev => {
+      const m = [...prev.montantsMensuels];
+      const mult = parseDureeHHMM(duree);
+      const nb   = parseFloat(m[index].nbSeances) || 0;
+      const qte  = mult !== null && nb > 0 ? Math.round(nb * mult * 10000) / 10000 : m[index].quantite;
+      m[index] = { ...m[index], duree, ...(qte !== m[index].quantite ? { quantite: qte } : {}) };
+      return { ...prev, montantsMensuels: m };
+    });
+  }, [setLoyer]);
+
+  const handleNbSeancesChange = useCallback((index, nbSeances) => {
+    setLoyer(prev => {
+      const m    = [...prev.montantsMensuels];
+      const nb   = parseFloat(nbSeances) || 0;
+      const mult = parseDureeHHMM(m[index].duree);
+      const qte  = mult !== null && nb > 0 ? Math.round(nb * mult * 10000) / 10000 : nb;
+      m[index] = { ...m[index], nbSeances, quantite: qte };
       return { ...prev, montantsMensuels: m };
     });
   }, [setLoyer]);
@@ -50,10 +70,6 @@ export function useLoyerFormHandlers({
 
   const validateForm = useCallback(() => {
     const errors = {};
-    if (!loyer.idClient)                          errors.idClient     = 'Client requis';
-    if (!loyer.motif)                             errors.motif        = 'Motif requis';
-    if (!loyer.periodeDebut)                      errors.periodeDebut = 'Date de début requise';
-    if (!loyer.dureeMois || loyer.dureeMois <= 0) errors.dureeMois    = 'Durée requise';
     if (!loyer.loyerMontantTotal || loyer.loyerMontantTotal <= 0)
       errors.loyerMontantTotal = 'Le montant total doit être supérieur à 0';
     setFieldErrors(errors);
@@ -66,9 +82,29 @@ export function useLoyerFormHandlers({
     setIsSaving(true);
     setError(null);
     try {
-      const dateDebut = fromIsoString(loyer.periodeDebut);
+      // Calculer périodeDebut/Fin depuis les mois ayant un montant
+      const moisAvecMontant = loyer.montantsMensuels.filter(m => parseFloat(m.montant) > 0);
+      let periodeDebut = loyer.periodeDebut;
+      let periodeFin   = loyer.periodeFin;
+      let dureeMois    = loyer.dureeMois;
+      if (moisAvecMontant.length > 0) {
+        const sorted = [...moisAvecMontant].sort((a, b) =>
+          (a.annee !== b.annee ? a.annee - b.annee : a.numeroMois - b.numeroMois)
+        );
+        const premier = sorted[0];
+        const dernier = sorted[sorted.length - 1];
+        periodeDebut = `${premier.annee}-${String(premier.numeroMois).padStart(2,'0')}-01`;
+        // Dernier jour du dernier mois
+        const dernierJour = new Date(dernier.annee, dernier.numeroMois, 0);
+        periodeFin   = `${dernier.annee}-${String(dernier.numeroMois).padStart(2,'0')}-${String(dernierJour.getDate()).padStart(2,'0')}`;
+        dureeMois    = sorted.length;
+      }
+      const dateDebut = fromIsoString(periodeDebut);
       const loyerData = {
         ...loyer,
+        periodeDebut,
+        periodeFin,
+        dureeMois,
         idClient:               parseInt(loyer.idClient, 10),
         loyerMontantTotal:      parseFloat(loyer.loyerMontantTotal),
         afficher_dates_paiement: toBooleanInt(loyer.afficherDatesPaiement),
@@ -82,20 +118,17 @@ export function useLoyerFormHandlers({
             loyerAnnee:         anneeMois,
             idUnite:            m.idUnite            ?? null,
             loyerDetailMontant: m.montant === '' ? 0 : parseFloat(m.montant),
+            quantite:           m.quantite            != null ? parseFloat(m.quantite) : null,
+            duree:              m.duree               ?? null,
+            nbSeances:          m.nbSeances           != null ? parseInt(m.nbSeances, 10) : null,
+            description:        m.description         ?? null,
             estPaye:            toBooleanInt(m.estPaye || false),
             datePaiement:       m.datePaiement || null,
           };
         }),
       };
 
-      if (mode === FORM_MODES.CREATE) {
-        const result = await createLoyer(loyerData);
-        logger.info('✅ Loyer créé:', result);
-        resetChanges();
-        unregisterGuard(guardId);
-        if (onLoyerCreated) onLoyerCreated(result.idLoyer || result.id);
-        else if (onRetourListe) onRetourListe();
-      } else {
+      if (mode === FORM_MODES.EDIT) {
         await updateLoyer(idLoyer, loyerData);
         logger.info('✅ Loyer modifié');
         resetChanges();
@@ -121,6 +154,8 @@ export function useLoyerFormHandlers({
     montantMensuelFixe, setMontantMensuelFixe,
     handleChange,
     handleMontantMensuelChange,
+    handleDureeChange,
+    handleNbSeancesChange,
     appliquerMontantFixe,
     validateForm,
     handleSubmit,

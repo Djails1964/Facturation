@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { FiMove, FiClipboard } from 'react-icons/fi';
+import { ICONS } from '../../ui/buttons';
+import { createLogger } from '../../../utils/createLogger';
 import {
     CopyActionButton,
     DeleteActionButton,
@@ -14,6 +15,8 @@ import '../../../styles/components/factures/FactureLigneDetail.css';
 /**
  * Composant de sélection de service pour une ligne de facture
  */
+const log = createLogger('FactureLigneDetail');
+
 const ServiceSelect = ({ 
     ligne = {}, 
     index, 
@@ -168,7 +171,7 @@ const DescriptionInput = ({
                     Description <span className="fdf_required">*</span>
                 </label>
 
-                <FiClipboard
+                <ICONS.CLIPBOARD
                     className={`fdf_clipboard-icon ${isClipboardDisabled ? 'fdf_icon-disabled' : ''}`}
                     onClick={() => !isClipboardDisabled && insertUniteNameInDescription && insertUniteNameInDescription(index)}
                     title={isClipboardDisabled ? "Veuillez d'abord sélectionner une unité" : "Copier le nom de l'unité en FAUX de description"}
@@ -270,7 +273,7 @@ const FactureLigneDetail = ({
                 title={!readOnly ? "Glisser pour déplacer" : ""}
             >
                 {ligne.noOrdre || index + 1}
-                {!readOnly && <FiMove size={8} className="fdf_drag-icon" />}
+                {!readOnly && <ICONS.MOVE size={8} className="fdf_drag-icon" />}
             </div>
 
             <div className="fdf_line-flex-container">

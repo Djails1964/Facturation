@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import DateService from './DateService';
+import { parseDatesFromCompact, formatDatesCompact } from './formatters';
 
 /**
  * Hook personnalisé pour gérer les dates sélectionnées
@@ -27,7 +27,7 @@ export const useDateSelection = (onChange, initialFormattedDates = '', updateQua
 
     // Analyser une chaîne formatée pour extraire les dates
     const parseDatesFromString = useCallback((formattedString) => {
-        return DateService.parseDatesFromCompact(formattedString);
+        return parseDatesFromCompact(formattedString);
     }, []);
 
     // Initialiser les dates sélectionnées à partir d'une chaîne formatée
@@ -39,7 +39,7 @@ export const useDateSelection = (onChange, initialFormattedDates = '', updateQua
 
     // Formater les dates sélectionnées en chaîne
     const formatDatesForDescription = useCallback((dates = selectedDates) => {
-        return DateService.formatDatesCompact(dates);
+        return formatDatesCompact(dates);
     }, [selectedDates]);
 
     // Gérer la confirmation des dates sélectionnées

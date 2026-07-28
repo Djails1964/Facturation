@@ -62,8 +62,10 @@ function _calcQuantiteReelle(container) {
     const duree          = dureeInput?.value?.trim() ?? '';
     const nbSeances      = parseFloat(nbSeancesInput?.value) || 0;
     const mult           = parseDureeHHMM(duree);
+    // ✅ quantite = nb_séances directement — le multiplicateur de durée est
+    // appliqué au calcul du montant du loyer, pas ici (voir useGenererLoyer.js)
     if (mult !== null && nbSeances > 0) {
-        return Math.round(nbSeances * mult * 10000) / 10000;
+        return nbSeances;
     }
     return null;
 }
@@ -125,23 +127,27 @@ export class LocationSalleModalHandler {
                 const locationCourante = locationCourante_mut;
                 const moisCourant      = moisCourant_mut;
 
-                const sallesAutorisees = salles.filter(s =>
-                    clientSatisfaitRestriction(client, s.typeClientRequis ?? s.type_client_requis ?? null)
-                );
-                const salleDefaut = locationCourante
-                    ? salles.find(s => s.nom === locationCourante.salle) ?? sallesAutorisees[0] ?? salles[0]
-                    : sallesAutorisees[0] ?? salles[0];
+                // ✅ Salle fixée par le contrat (client.nomSalle) — pas de choix utilisateur
+                const salleContrat = client.nomSalle ?? null;
+                const salleDefaut  = locationCourante
+                    ? salles.find(s => s.nom === locationCourante.salle) ?? salles.find(s => s.nom === salleContrat) ?? salles[0]
+                    : salles.find(s => s.nom === salleContrat) ?? salles[0];
 
-                const categorieSalle = locationCourante?.salle ?? salleDefaut?.nom ?? null;
+                // ✅ Catégorie de motifs depuis le type de contrat (pas depuis la salle)
+                const categoriePourMotifs = client.idTypeContrat ?? null;
 
                 const [unites, { motifs, motifDefaut }] = await Promise.all([
                     this._chargerUnitesParSalle(salleDefaut, services),
-                    Promise.resolve(this._getMotifs(categorieSalle)),
+                    Promise.resolve(this._getMotifs(categoriePourMotifs)),
                 ]);
+
+                // Motif : depuis le contrat (priorité) ou depuis les paramètres de la salle
+                const motifContrat = client.motifContrat ?? null;
 
                 const navResult = await this._showSaisieModal(
                     client, moisCourant, annee, salles, unites, services,
-                    locationCourante, anchorRef, tousDetailsMut, motifs, motifDefaut
+                    locationCourante, anchorRef, tousDetailsMut, motifs,
+                    motifContrat ?? motifDefaut, motifContrat
                 );
 
                 if (!navResult?.nav) break;
@@ -232,19 +238,22 @@ export class LocationSalleModalHandler {
 
     // ── Modal de saisie ───────────────────────────────────────────────────────
 
-    async _showSaisieModal(client, mois, annee, salles, unites, services, locationExistante, anchorRef, tousDetails = [], motifs = [], motifDefaut = '') {
+    async _showSaisieModal(client, mois, annee, salles, unites, services, locationExistante, anchorRef, tousDetails = [], motifs = [], motifDefaut = '', motifContrat = null) {
         const isEditing = !!locationExistante;
         const title     = isEditing ? 'Modifier la location' : 'Nouvelle location';
 
         // Trouver l'objet salle courante pour transmettre idUniteDefaut au builder
-        const salleNomCourant  = locationExistante?.salle ?? salles.find(s =>
+        // ✅ Priorité : 1) salle du détail existant (édition) 2) salle du contrat
+        // (client.nomSalle) 3) première salle autorisée pour ce client — le fallback
+        // générique ne doit servir que si le contrat n'a pas de salle définie.
+        const salleNomCourant  = locationExistante?.salle ?? client?.nomSalle ?? salles.find(s =>
             clientSatisfaitRestriction(client, s.typeClientRequis ?? s.type_client_requis ?? null)
         )?.nom ?? salles[0]?.nom ?? '';
         const salleObjCourant  = salles.find(s => s.nom === salleNomCourant) ?? null;
 
         const result = await showCustom({
             title,
-            content:             buildModalContent(client, mois, annee, salles, unites, locationExistante, motifs, motifDefaut, salleObjCourant),
+            content:             buildModalContent(client, mois, annee, salles, unites, locationExistante, motifs, motifDefaut, salleObjCourant, motifContrat),
             anchorRef,
             size:                'medium',
             position:            'smart',
@@ -286,7 +295,21 @@ export class LocationSalleModalHandler {
         });
 
         if (!result || result.action === 'cancel' || result.action === 'close') return;
-        if (result.action === 'delete') { await this._executeDelete(locationExistante); return; }
+        if (result.action === 'delete') {
+            const propagerDelete = result.data?.['lsm-propager'] === '1';
+            const salleDelete    = result.data?.['lsm-salle']    ?? locationExistante?.salle ?? '';
+            const typeDelete     = result.data?.['lsm-type']     ?? '';
+            const idUniteDelete  = typeDelete ? parseInt(typeDelete, 10) || null : null;
+            await this._executeDelete(locationExistante, {
+                propager:  propagerDelete,
+                salle:     salleDelete,
+                idUnite:   idUniteDelete,
+                tousDetails,
+                client,
+                annee,
+            });
+            return;
+        }
 
         // Navigation mois précédent/suivant
         const navDir = result.data?.['lsm-nav'];
@@ -325,10 +348,12 @@ export class LocationSalleModalHandler {
         const nbSeances   = result.data?.['lsm-nb-seances'] ? parseInt(result.data['lsm-nb-seances'], 10) || null : null;
         let   dates       = [];
         try { dates = JSON.parse(result.data?.['lsm-dates'] ?? '[]'); } catch { dates = []; }
-        // Quantité : si mode durée, calculer depuis nb séances × durée ; sinon lire le champ
+        // ✅ Quantité = nb_séances directement (le multiplicateur de durée est
+        // appliqué au moment du calcul du montant du loyer, pas ici) — voir
+        // useGenererLoyer.js. Sinon (unité non horaire), lire le champ Quantité.
         const mult = duree ? parseDureeHHMM(duree) : null;
         const quantite = (mult !== null && nbSeances)
-            ? Math.round(nbSeances * mult * 10000) / 10000
+            ? nbSeances
             : parseFloat(result.data?.['lsm-quantite'] || '1');
 
         const moisCiblesRaw = result.data?.['lsm-mois-cibles'] ?? '';
@@ -338,11 +363,15 @@ export class LocationSalleModalHandler {
 
         if (!salle)  { this.onSetNotification?.('Veuillez sélectionner une salle.', 'error'); return; }
         if (!type)   { this.onSetNotification?.('Veuillez sélectionner un type de location.', 'error'); return; }
-        if (!motif)  { this.onSetNotification?.('Veuillez sélectionner un motif.', 'error'); return; }
+        // Motif : requis si pas encore défini sur le contrat
+        const motifContratActuel = client?.motifContrat ?? null;
+        if (!motif && !motifContratActuel)  { this.onSetNotification?.('Veuillez sélectionner un motif.', 'error'); return; }
+        const motifEffectif = motif || motifContratActuel;
         if (isNaN(quantite) || quantite <= 0) { this.onSetNotification?.('La quantité doit être supérieure à 0.', 'error'); return; }
 
         await this._executeSave({
-            client, mois, annee, salle, type, abrev, idService, quantite, motif,
+            client, mois, annee, salle, type, abrev, idService, quantite,
+            motif: motifEffectif,
             description, dates, locationExistante, propager, tousDetails, moisCibles,
             duree, nbSeances,
         });
@@ -460,7 +489,7 @@ export class LocationSalleModalHandler {
                     const label   = u.nomUnite ?? u.nom_unite ?? u.codeUnite ?? '';
                     const abrev   = getAffichageUnite(u);
                     const idSvc   = String(u.idService ?? u.id_service ?? '');
-                    const permMul = (u.permetMultiplicateur || u.permet_multiplicateur) ? '1' : '0';
+                    const permMul = (u.permetMultiplicateur) ? '1' : '0';
                     return `<option value="${id}" data-abrev="${abrev}" data-service="${idSvc}" data-nom="${label}" data-permet-multiplicateur="${permMul}">${label}${abrev ? ` (${abrev})` : ''}</option>`;
                 }).join('');
             }
@@ -475,7 +504,7 @@ export class LocationSalleModalHandler {
             if (serviceInput) serviceInput.value = uniteDefautNouv ? String(uniteDefautNouv.idService ?? uniteDefautNouv.id_service ?? '') : '';
             if (uniteLabel)   uniteLabel.textContent = abrevInput?.value ? `(${abrevInput.value})` : '';
             // Basculer Quantité ↔ Durée selon la nouvelle unité par défaut
-            const permetMultNouv   = !!(uniteDefautNouv?.permetMultiplicateur || uniteDefautNouv?.permet_multiplicateur);
+            const permetMultNouv   = !!(uniteDefautNouv?.permetMultiplicateur);
             const quantiteBlocSalle = container.querySelector('#lsm-quantite-block');
             const dureeBlocSalle    = container.querySelector('#lsm-duree-block');
             if (quantiteBlocSalle) quantiteBlocSalle.style.display = permetMultNouv ? 'none' : '';
@@ -561,6 +590,7 @@ export class LocationSalleModalHandler {
         const buildPayload = (moisCible) => {
             let datesCibles   = null;
             let quantiteCible = quantite;
+            let nbSeancesCible = nbSeances;
 
             if (regles.length > 0) {
                 if (moisCible === mois) {
@@ -570,9 +600,19 @@ export class LocationSalleModalHandler {
                     datesCibles     = calculees.length > 0 ? calculees : null;
                     if (datesCibles) {
                         const estWeekend = regles.some(r => r.dow === 6 || r.dow === 0);
-                        quantiteCible    = estWeekend
+                        const nbDates    = estWeekend
                             ? Math.round(datesCibles.length / 2) || 1
                             : datesCibles.length;
+
+                        if (duree) {
+                            // ✅ Unité horaire : nb séances = nb dates, quantite = nb séances
+                            // (le multiplicateur de durée est appliqué au calcul du montant
+                            // du loyer, pas ici — voir useGenererLoyer.js)
+                            nbSeancesCible = nbDates;
+                            quantiteCible  = nbDates;
+                        } else {
+                            quantiteCible = nbDates;
+                        }
                     }
                 }
             }
@@ -590,7 +630,7 @@ export class LocationSalleModalHandler {
                 description: description || null,
                 dates:       datesCibles,
                 duree:       duree || null,
-                nbSeances:   nbSeances || null,
+                nbSeances:   nbSeancesCible || null,
             };
         };
 
@@ -701,18 +741,44 @@ export class LocationSalleModalHandler {
 
     // ── Suppression ───────────────────────────────────────────────────────────
 
-    async _executeDelete(locationExistante) {
+    async _executeDelete(locationExistante, contexte = {}) {
+        const { propager = false, salle = '', idUnite = null, tousDetails = [], client = null, annee = null } = contexte;
+
+        // Trouver toutes les locations à supprimer si propagation cochée
+        let aSuppri = [locationExistante];
+        if (propager && salle && idUnite && client && tousDetails.length > 0) {
+            aSuppri = tousDetails.filter(d =>
+                d.idContrat === locationExistante.idContrat &&
+                d.salle     === salle                       &&
+                d.idUnite   === idUnite
+            );
+            if (aSuppri.length === 0) aSuppri = [locationExistante];
+        }
+
+        const nbMois = aSuppri.length;
+        const message = nbMois > 1
+            ? `Supprimer les ${nbMois} locations de "${salle}" (${locationExistante.abreviationUnite || locationExistante.nomUnite || ''}) sur toute l'année ${annee} pour ce client ?
+
+Cela supprimera les mois : ${aSuppri.map(d => getNomMois(d.mois)).join(', ')}.`
+            : 'Confirmer la suppression de cette location de salle ?';
+
         const confirmed = await showConfirm({
-            title:       'Supprimer la location',
-            message:     'Confirmer la suppression de cette location de salle ?',
+            title:       nbMois > 1 ? `Supprimer ${nbMois} locations` : 'Supprimer la location',
+            message,
             confirmText: 'Supprimer',
             cancelText:  'Annuler',
             type:        'warning',
         });
         if (!confirmed || confirmed.action !== 'confirm') return;
+
         try {
-            await this.locationActions.supprimerDetail(locationExistante.id);
-            this.onSetNotification?.('Location supprimée avec succès', 'success');
+            for (const loc of aSuppri) {
+                await this.locationActions.supprimerDetail(loc.id);
+            }
+            const msg = nbMois > 1
+                ? `${nbMois} locations supprimées (${salle})`
+                : 'Location supprimée avec succès';
+            this.onSetNotification?.(msg, 'success');
             await this.chargerLocations();
         } catch (err) {
             this.log.error('❌ Erreur suppression:', err);

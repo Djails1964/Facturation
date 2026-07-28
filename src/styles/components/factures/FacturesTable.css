@@ -10,7 +10,9 @@
 .factures-client-cell  { flex: 1.5;     min-width: 150px; }
 .factures-date-cell    { flex: 0.8;     min-width: 100px; }
 .factures-montant-cell { flex: 0.8;     min-width: 100px; justify-content: flex-end; }
-.factures-etat-cell    { flex: 1;       min-width: 100px; }
+/* État : flex pour que le badge reste compact et ne prenne pas toute la largeur */
+.factures-etat-cell    { flex: 0 0 130px; min-width: 130px; display: flex; align-items: center; }
+.factures-etat-cell .etat-badge { flex-shrink: 0; }
 
 /* ── En-tête triable ─────────────────────────────────────────────────────── */
 .factures-sort-header {

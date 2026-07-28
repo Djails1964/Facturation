@@ -106,21 +106,6 @@ export {
 } from './clientConstants';
 
 // ================================
-// LOYERS
-// ================================
-export {
-  // MOIS_ANNEE est exporté depuis dateConstants — pas besoin de le ré-exporter ici
-  FORM_MODES as LOYER_FORM_MODES,
-  STATUTS_LOYER,
-  ETATS_PAIEMENT as LOYER_ETATS_PAIEMENT,
-  LABELS_STATUTS,
-  LABELS_ETATS_PAIEMENT,
-  COLUMN_LABELS as LOYER_COLUMN_LABELS,
-  TABLE_COLUMNS_CONFIG as LOYER_TABLE_COLUMNS_CONFIG,
-  DUREES_LOYER
-} from './loyerConstants';
-
-// ================================
 // UTILISATEURS
 // ================================
 export {

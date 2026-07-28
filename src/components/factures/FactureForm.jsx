@@ -16,6 +16,7 @@ import { validateFactureLines } from './utils/factureValidation';
 import { FORM_MODES } from '../../constants/factureConstants';
 import { formatMontant, formatDate } from '../../utils/formatters';
 import { getYearFromDate } from '../../utils/dateHelpers';
+import { NOMS_MOIS_LONGS } from '../../constants/dateConstants';
 import FactureHeader from './components/FactureHeader';
 import FactureDetailsForm from './FactureDetailsForm';
 import FactureTotauxDisplay from './components/FactureTotauxDisplay';
@@ -23,6 +24,121 @@ import FactureHistoriquePaiements from './components/FactureHistoriquePaiements'
 import SectionTitle from '../shared/SectionTitle';
 import '../../styles/components/factures/FactureForm.css';
 import { createLogger } from '../../utils/createLogger';
+
+// ✅ Affichage en lecture seule du détail mensuel d'une confirmation de
+// paiement (facture_detail_mensuel) — utilisé à la place de
+// FactureDetailsForm (qui lit lignesfacture, toujours vide pour ce type
+// de facture). Une confirmation est toujours générée depuis une location
+// (jamais saisie manuellement ici), donc pas besoin d'édition de lignes.
+// ✅ Sous-tableau (une colonne) pour l'affichage 2-colonnes du détail
+// mensuel. Utilise les classes CSS génériques (etat-badge de layout.css,
+// variables de variables.css via ff-details-mensuels.css) au lieu de
+// styles inline.
+function TableDetailMensuel({ items, modifiable = false, detailsModifies = {}, onDetailChange }) {
+  return (
+    <table className="ff-details-mensuels-table">
+      <thead>
+        <tr>
+          <th>Mois</th>
+          <th className="ff-col-right">Montant</th>
+          <th className="ff-col-right">Paiement</th>
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((d, index) => {
+          const nomMois = NOMS_MOIS_LONGS[(d.mois ?? 1) - 1] ?? `Mois ${d.mois}`;
+          const idDetail = d.idDetail ?? index;
+          // ✅ fieldMappings.js a un alias montantMensuel: 'montant' (utilisé
+          // ailleurs, ex. écran Loyers) qui prend le dessus sur la conversion
+          // inverse — la clé arrive donc en montantMensuel, pas en montant.
+          const montantOriginal = d.montantMensuel ?? d.montant ?? 0;
+          const montantAffiche  = detailsModifies[idDetail]?.montant ?? montantOriginal;
+
+          return (
+            <tr key={idDetail}>
+              <td>
+                <div className="ff-mois-nom">{nomMois} {d.annee}</div>
+              </td>
+              <td className="ff-col-right ff-col-nowrap">
+                {modifiable ? (
+                  <input
+                    type="number"
+                    step="0.05"
+                    min="0"
+                    className="ff-mois-montant-input"
+                    value={montantAffiche}
+                    onChange={(e) => onDetailChange(idDetail, e.target.value)}
+                  />
+                ) : (
+                  `${formatMontant(montantOriginal)} CHF`
+                )}
+              </td>
+              <td className="ff-col-right ff-col-nowrap">
+                {d.estPaye ? (
+                  <span className="etat-badge etat-payee badge-small">
+                    Payé le {formatDate(d.datePaiement, 'date')}
+                  </span>
+                ) : (
+                  <span className="etat-badge etat-attente badge-small">Non payé</span>
+                )}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+function FactureDetailsMensuelsDisplay({
+  detailsMensuels, modifiable = false, detailsModifies = {}, onDetailChange,
+  description = '', onDescriptionChange,
+}) {
+  if (!detailsMensuels || detailsMensuels.length === 0) {
+    return (
+      <div className="fdf_facture-details-form">
+        <div className="fdf_no-lines"><p>Aucun détail mensuel trouvé</p></div>
+      </div>
+    );
+  }
+
+  // ✅ Deux colonnes : première moitié / seconde moitié des mois présents
+  const milieu = Math.ceil(detailsMensuels.length / 2);
+  const colonneGauche = detailsMensuels.slice(0, milieu);
+  const colonneDroite = detailsMensuels.slice(milieu);
+
+  return (
+    <div className="fdf_facture-details-form">
+      <div className="fdf_lignes-detail-titre">Détail mensuel</div>
+
+      {/* ✅ Description unique, commune à tous les mois — reflète le
+          fonctionnement d'une ligne de facture standard (une description
+          pour toute la ligne, quelle que soit la quantité de sous-éléments).
+          Même style que les champs de FactureHeader.jsx (ligne inférieure
+          uniquement + label flottant), via placeholder=" " qui pilote
+          :not(:placeholder-shown) en CSS, sans state JS supplémentaire. */}
+      {modifiable ? (
+        <div className="ff-description-mensuelle-field">
+          <input
+            type="text"
+            id="descriptionMensuelle"
+            value={description}
+            placeholder=" "
+            onChange={(e) => onDescriptionChange(e.target.value)}
+          />
+          <label htmlFor="descriptionMensuelle">Description</label>
+        </div>
+      ) : (
+        description && <div className="ff-description-mensuelle">{description}</div>
+      )}
+
+      <div className="ff-details-mensuels-grid">
+        <TableDetailMensuel items={colonneGauche} modifiable={modifiable} detailsModifies={detailsModifies} onDetailChange={onDetailChange} />
+        <TableDetailMensuel items={colonneDroite} modifiable={modifiable} detailsModifies={detailsModifies} onDetailChange={onDetailChange} />
+      </div>
+    </div>
+  );
+}
 
 function FactureForm({
   mode = FORM_MODES.VIEW,
@@ -55,6 +171,80 @@ function FactureForm({
 
   // ✅ Hook des actions - autonome, ne reçoit plus de services
   const formActions = useFactureFormActions();
+
+  // ✅ Confirmation de paiement (contrat au forfait) : détail mensuel
+  // (facture_detail_mensuel) au lieu de lignes (lignesfacture, vide ici).
+  // Basé sur estForfait (type_contrat_location.est_forfait, source de
+  // vérité côté backend) plutôt que sur la présence de detailsMensuels —
+  // sinon un detailsMensuels vide par bug/timing ferait retomber à tort sur
+  // l'affichage facture standard, sans révéler l'anomalie.
+  // ✅ Déclaré AVANT modificationRestreinte, qui s'appuie dessus.
+  const estConfirmation = !!facture.estForfait;
+
+  // ✅ Facture liée à une location de salle, en édition : seules
+  // date_facture, ristourne et descriptions de lignes restent modifiables
+  // (client/reste des lignes verrouillés, comme en lecture seule) — voir
+  // FactureControleur::modifierAttributsLimites. Plus de loyer
+  // intermédiaire : le lien se fait directement via id_contrat_location.
+  // ✅ estConfirmation est utilisé en secours de idContratLocation : une
+  // confirmation est TOUJOURS générée depuis une location (jamais saisie
+  // manuellement, cf. commentaire de FactureDetailsMensuelsDisplay plus bas ;
+  // estForfait lui-même dépend d'une jointure sur id_contrat_location côté
+  // backend). Ce filet de sécurité protège contre toute perte de
+  // idContratLocation en cours de propagation frontend.
+  const modificationRestreinte = mode === FORM_MODES.EDIT && (!!facture.idContratLocation || estConfirmation);
+  const clientEtLignesVerrouilles = isReadOnly || modificationRestreinte;
+  // ✅ Descriptions de lignes modifiées en mode restreint : { idLigne: description }
+  const [descriptionsModifiees, setDescriptionsModifiees] = useState({});
+  const handleDescriptionLigneChange = useCallback((idLigne, value) => {
+    setDescriptionsModifiees(prev => ({ ...prev, [idLigne]: value }));
+  }, []);
+  // ✅ Aucune ligne ne doit avoir une description vide en mode restreint
+  // (même règle que pour une modification complète) — utilisé pour désactiver
+  // le bouton "Modifier" tant que ce n'est pas respecté.
+  const toutesDescriptionsRemplies = !modificationRestreinte || estConfirmation || (facture.lignes || []).every((ligne, index) => {
+    const idLigne = ligne.idLigne ?? index;
+    const valeur  = descriptionsModifiees[idLigne] ?? ligne.description ?? '';
+    return valeur.trim().length > 0;
+  });
+
+  // ✅ Description unique du détail mensuel (confirmation), commune à tous
+  // les mois — miroir de la description d'une ligne de facture standard.
+  // null = pas encore touchée par l'utilisateur → on affiche l'originale.
+  const [descriptionMensuelleModifiee, setDescriptionMensuelleModifiee] = useState(null);
+  const handleDescriptionMensuelleChange = useCallback((value) => {
+    setDescriptionMensuelleModifiee(value);
+  }, []);
+  // ✅ Toutes les lignes de facture_detail_mensuel partagent la même
+  // description à la création — on se base sur la première comme valeur
+  // d'origine.
+  const descriptionMensuelleOriginale = (facture.detailsMensuels || [])[0]?.description ?? '';
+  const descriptionMensuelleAffichee = descriptionMensuelleModifiee ?? descriptionMensuelleOriginale;
+  const descriptionMensuelleValide = !modificationRestreinte || !estConfirmation || descriptionMensuelleAffichee.trim().length > 0;
+
+  // ✅ Montant modifié en mode restreint (confirmation) : { idDetail: montant }
+  const [detailsMensuelsModifies, setDetailsMensuelsModifies] = useState({});
+  const handleDetailMensuelChange = useCallback((idDetail, value) => {
+    setDetailsMensuelsModifies(prev => ({ ...prev, [idDetail]: { montant: value } }));
+  }, []);
+  // ✅ Chaque mois doit conserver un montant strictement positif — utilisé
+  // pour désactiver le bouton "Modifier" tant que ce n'est pas respecté.
+  const tousMontantsMensuelsValides = !modificationRestreinte || !estConfirmation || (facture.detailsMensuels || []).every((d, index) => {
+    const idDetail = d.idDetail ?? index;
+    const original = d.montantMensuel ?? d.montant ?? 0;
+    const valeur   = detailsMensuelsModifies[idDetail]?.montant ?? original;
+    return parseFloat(valeur) > 0;
+  });
+  // ✅ Somme des montants mensuels (édités ou originaux) — utilisée pour que
+  // le total affiché reflète les modifications en cours en mode restreint.
+  const montantBrutMensuelEdite = (facture.detailsMensuels || []).reduce((somme, d, index) => {
+    const idDetail = d.idDetail ?? index;
+    const original = d.montantMensuel ?? d.montant ?? 0;
+    const valeur   = detailsMensuelsModifies[idDetail]?.montant ?? original;
+    return somme + (parseFloat(valeur) || 0);
+  }, 0);
+
+  const isFormValidFinal = isFormValid && toutesDescriptionsRemplies && tousMontantsMensuelsValides && descriptionMensuelleValide;
 
   // État pour les modales d'erreur (non liées à la navigation)
   const [confirmModal, setConfirmModal] = useState({
@@ -177,14 +367,14 @@ function FactureForm({
   }, [isReadOnly, setFacture, log]);
 
   const handleClientChange = (value) => {
-    if (isReadOnly) return;
+    if (clientEtLignesVerrouilles) return;
     setFacture(prev => ({ ...prev, idClient: value }));
     formActions.fetchClientDetails(value, { setClientLoading, setClientData });
   };
 
   const handleLignesChange = (nouvLignes) => {
     log.debug('🔍 handleLignesChange appelé:', nouvLignes);
-    if (isReadOnly) return;
+    if (clientEtLignesVerrouilles) return;
     
     const validationResult = validateFactureLines(nouvLignes);
     log.debug('✅ Validation:', validationResult);
@@ -244,7 +434,42 @@ function FactureForm({
   // Gestionnaire de soumission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!isFormValid || isReadOnly) return;
+    if (!isFormValidFinal || isReadOnly) return;
+
+    // ✅ Description obligatoire pour chaque ligne, y compris en
+    // modification restreinte (l'utilisateur peut la vider via le champ
+    // éditable du bloc résumé — on bloque la sauvegarde dans ce cas).
+    if (modificationRestreinte && !estConfirmation) {
+      const ligneVide = (facture.lignes || []).find((ligne, index) => {
+        const idLigne = ligne.idLigne ?? index;
+        const valeur  = descriptionsModifiees[idLigne] ?? ligne.description ?? '';
+        return !valeur.trim();
+      });
+      if (ligneVide) {
+        setError('La description ne peut pas être vide sur une ligne.');
+        return;
+      }
+    }
+
+    // ✅ Montant strictement positif obligatoire pour chaque mois, et
+    // description non vide (partagée par tous les mois), en modification
+    // restreinte d'une confirmation.
+    if (modificationRestreinte && estConfirmation) {
+      if (!descriptionMensuelleAffichee.trim()) {
+        setError('La description ne peut pas être vide.');
+        return;
+      }
+      const moisInvalide = (facture.detailsMensuels || []).find((d, index) => {
+        const idDetail = d.idDetail ?? index;
+        const original = d.montantMensuel ?? d.montant ?? 0;
+        const valeur   = detailsMensuelsModifies[idDetail]?.montant ?? original;
+        return !(parseFloat(valeur) > 0);
+      });
+      if (moisInvalide) {
+        setError('Le montant doit être supérieur à 0 pour chaque mois.');
+        return;
+      }
+    }
 
     try {
       setIsSubmitting(true);
@@ -263,17 +488,51 @@ function FactureForm({
         }
       }
 
-      // ✅ Construction de l'objet factureData
-      const factureData = {
-        idFacture: facture.idFacture,
-        numeroFacture: facture.numeroFacture,
-        dateFacture: facture.dateFacture || new Date().toISOString().split('T')[0],
-        idClient: facture.idClient,
-        montantTotal: facture.totalFacture,  // ✅ Total brut
-        ristourne: facture.ristourne || 0,   // ✅ Ristourne
-        lignes: facture.lignes,
-        clientNom: clientNom
-      };
+      // ✅ Construction de l'objet factureData (modificationRestreinte
+      // calculée au niveau du composant, cf. plus haut)
+      const factureData = modificationRestreinte && estConfirmation
+        ? {
+            idFacture: facture.idFacture,
+            dateFacture: facture.dateFacture || new Date().toISOString().split('T')[0],
+            ristourne: facture.ristourne || 0,
+            modification_limitee: true,
+            // ✅ Description + montant de chaque mois — tableau
+            // [{ id_detail, montant, description }, ...]. La description est
+            // unique et partagée : on envoie la même valeur pour chaque
+            // ligne (miroir du fonctionnement d'une ligne de facture standard).
+            details_mensuels: (facture.detailsMensuels || []).map((d, index) => {
+              const idDetail = d.idDetail ?? index;
+              const original = d.montantMensuel ?? d.montant ?? 0;
+              const montant  = detailsMensuelsModifies[idDetail]?.montant ?? original;
+              return {
+                id_detail: idDetail,
+                montant: parseFloat(montant),
+                description: descriptionMensuelleAffichee,
+              };
+            }),
+          }
+        : modificationRestreinte
+        ? {
+            idFacture: facture.idFacture,
+            dateFacture: facture.dateFacture || new Date().toISOString().split('T')[0],
+            ristourne: facture.ristourne || 0,
+            modification_limitee: true,
+            // ✅ Descriptions de lignes modifiées (uniquement, rien d'autre sur
+            // la ligne) — tableau [{ id_ligne, description }, ...]
+            descriptions_lignes: Object.entries(descriptionsModifiees).map(
+              ([idLigne, description]) => ({ id_ligne: Number(idLigne), description })
+            ),
+          }
+        : {
+            idFacture: facture.idFacture,
+            numeroFacture: facture.numeroFacture,
+            dateFacture: facture.dateFacture || new Date().toISOString().split('T')[0],
+            idClient: facture.idClient,
+            montantTotal: facture.totalFacture,  // ✅ Total brut
+            ristourne: facture.ristourne || 0,   // ✅ Ristourne
+            lignes: facture.lignes,
+            clientNom: clientNom
+          };
 
       log.debug('📤 Données envoyées à sauvegarderFacture:', factureData);
       log.debug('📊 Détails financiers:', {
@@ -363,6 +622,7 @@ function FactureForm({
             idClient={facture.idClient}
             clients={clients}
             readOnly={isReadOnly}
+            clientReadOnly={clientEtLignesVerrouilles}
             clientsLoading={clientsLoading}
             onNumeroFactureChange={handleNumeroFactureChange}
             onDateFactureChange={handleDateFactureChange}
@@ -373,27 +633,51 @@ function FactureForm({
             etatAffichage={facture.etatAffichage}
             idFacture={idFacture || facture.idFacture}
             factureData={facture}
+            motif={facture.motif || null}
           />
           
           {/* Détails de la facture si client chargé */}
           {clientData && (
             <>
               <div className="ff-facture-details-container">
-                <FactureDetailsForm
-                  onLignesChange={handleLignesChange}
-                  lignesInitiales={facture.lignes || []}
-                  client={clientData}
-                  readOnly={isReadOnly}
-                  isModification={mode === FORM_MODES.EDIT}
-                  preserveExistingLines={mode === FORM_MODES.EDIT}
-                  onResetRistourne={resetRistourne}
-                  tarifData={tarifData}  // ✅ NOUVEAU : Passer tarifData
-                />
+                {estConfirmation ? (
+                  <FactureDetailsMensuelsDisplay
+                    detailsMensuels={facture.detailsMensuels}
+                    modifiable={modificationRestreinte}
+                    detailsModifies={detailsMensuelsModifies}
+                    onDetailChange={handleDetailMensuelChange}
+                    description={descriptionMensuelleAffichee}
+                    onDescriptionChange={handleDescriptionMensuelleChange}
+                  />
+                ) : (
+                  <FactureDetailsForm
+                    onLignesChange={handleLignesChange}
+                    lignesInitiales={facture.lignes || []}
+                    client={clientData}
+                    readOnly={clientEtLignesVerrouilles}
+                    isModification={mode === FORM_MODES.EDIT}
+                    preserveExistingLines={mode === FORM_MODES.EDIT}
+                    onResetRistourne={resetRistourne}
+                    tarifData={tarifData}  // ✅ NOUVEAU : Passer tarifData
+                    // ✅ Facture liée à une location : seule la description de
+                    // chaque ligne reste éditable, dans le bloc résumé.
+                    descriptionSeuleModifiable={modificationRestreinte}
+                    descriptionsModifiees={descriptionsModifiees}
+                    onDescriptionLigneChange={handleDescriptionLigneChange}
+                  />
+                )}
               </div>
               
               <div className="ff-facture-totals-container">
                 <FactureTotauxDisplay
-                  lignes={facture.lignes}
+                  // ✅ Confirmation de paiement : lignesfacture est toujours
+                  // vide (le détail réel est dans facture_detail_mensuel).
+                  // On passe une "ligne virtuelle" reprenant montantBrut pour
+                  // que le calcul existant (somme des totalLigne) reste
+                  // correct sans modifier FactureTotauxDisplay.jsx.
+                  lignes={estConfirmation
+                    ? [{ totalLigne: modificationRestreinte ? montantBrutMensuelEdite : (facture.montantBrut ?? 0) }]
+                    : facture.lignes}
                   ristourneInitiale={facture.ristourne}
                   readOnly={isReadOnly}
                   onChange={handleRistourneChange}
@@ -417,7 +701,7 @@ function FactureForm({
           <FactureFormButtons
             mode={mode}
             isSubmitting={isSubmitting}
-            isFormValid={isFormValid}
+            isFormValid={isFormValidFinal}
             getSubmitButtonText={getSubmitButtonText}
             onSubmit={handleSubmit}
             onCancel={handleCancel}

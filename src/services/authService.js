@@ -38,7 +38,7 @@ const authService = {
     if (!Array.isArray(users)) return users;
     
     const booleanFields = [
-      'actif', 'est_admin', 'est_gestionnaire', 'est_employe',
+      'actif', 'compte_actif', 'est_admin', 'est_gestionnaire', 'est_employe',
       'peut_modifier', 'peut_supprimer', 'peut_creer',
       'notifications_email', 'premiere_connexion'
     ];

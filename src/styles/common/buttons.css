@@ -376,6 +376,7 @@
   width: 44px;
   height: 24px;
   flex-shrink: 0;
+  overflow: hidden; /* empêche switch-toggle absolu de déborder */
 }
 
 /* Input checkbox caché */

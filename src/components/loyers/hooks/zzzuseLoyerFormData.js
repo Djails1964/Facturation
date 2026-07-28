@@ -12,6 +12,7 @@ import { showConfirm } from '../../../utils/modalSystem';
 import { toBoolean } from '../../../utils/booleanHelper';
 import { createLogger } from '../../../utils/createLogger';
 import { FORM_MODES } from '../../../constants/loyerConstants';
+import { UNSAVED_CHANGES_CONFIRM_CONFIG, UNSAVED_CHANGES_MESSAGES } from '../../../constants/appConstants';
 
 const logger = createLogger('LoyerForm');
 
@@ -27,22 +28,26 @@ function normaliserligne(m) {
     }
   }
   return {
-    idLoyerDetail:    m.idLoyerDetail    ?? m.id_loyer_detail  ?? null,
-    mois:             m.loyerMois        ?? m.loyer_mois,
-    numeroMois:       m.loyerNumeroMois  ?? m.loyer_numero_mois,
-    annee:            m.loyerAnnee       ?? m.loyer_annee,
-    idUnite:          m.idUnite          ?? m.id_unite          ?? null,
-    nomUnite:         m.nomUnite         ?? m.nom_unite          ?? null,
-    abreviationUnite: m.abreviationUnite ?? m.abreviation_unite  ?? null,
-    codeUnite:        m.codeUnite        ?? m.code_unite         ?? null,
-    idService:        m.idService        ?? m.id_service         ?? null,
-    nomService:       m.nomService       ?? m.nom_service        ?? null,
-    motif:            m.motif            ?? null,
-    quantite:         m.quantite != null ? parseFloat(m.quantite) : null,
+    idLoyerDetail:       m.idLoyerDetail    ?? null,
+    mois:                m.loyerMois,
+    numeroMois:          m.loyerNumeroMois,
+    annee:               m.loyerAnnee,
+    idUnite:             m.idUnite          ?? null,
+    nomUnite:            m.nomUnite         ?? null,
+    abreviationUnite:    m.abreviationUnite ?? null,
+    codeUnite:           m.codeUnite        ?? null,
+    idService:           m.idService        ?? null,
+    nomService:          m.nomService       ?? null,
+    motif:               m.motif            ?? null,
+    quantite:            m.quantite         != null ? parseFloat(m.quantite) : null,
+    // ✅ Champs multiplicateur de durée
+    duree:               m.duree            ?? null,
+    nbSeances:           m.nbSeances        != null ? parseInt(m.nbSeances, 10) : null,
+    permetMultiplicateur: !!(m.permetMultiplicateur),
     montant,
-    estPaye:          m.estPaye  || false,
-    datePaiement:     m.datePaiement || null,
-    paiements:        m.paiements   || [],
+    estPaye:             m.estPaye  || false,
+    datePaiement:        m.datePaiement || null,
+    paiements:           m.paiements   || [],
     dates,
   };
 }
@@ -50,6 +55,7 @@ function normaliserligne(m) {
 const LOYER_VIDE = {
   numeroLoyer:          '',
   idClient:             '',
+  anneeLoyer:           new Date().getFullYear() - 1,
   periodeDebut:         '',
   periodeFin:           '',
   dureeMois:            12,
@@ -63,8 +69,9 @@ export function useLoyerFormData({ mode, idLoyer, isReadOnly, isSaving, onRetour
   const { registerGuard, unregisterGuard } = useNavigationGuard();
   const guardId = `loyer-form-${idLoyer || 'new'}`;
 
-  const { getLoyer, createLoyer, updateLoyer, genererNumeroLoyer } = useLoyerActions();
-  const { motifs: motifsDisponibles } = useMotifsLoyer(null);
+  const { getLoyer, updateLoyer } = useLoyerActions();
+  const [categorieMotifs, setCategorieMotifs] = useState(null); // chargé dynamiquement selon le type de contrat
+  const { motifs: motifsDisponibles, motifDefaut } = useMotifsLoyer(categorieMotifs);
 
   const initRef = useRef({ hasInitialized: false, currentMode: null, currentId: null, isProcessing: false });
 
@@ -104,13 +111,9 @@ export function useLoyerFormData({ mode, idLoyer, isReadOnly, isSaving, onRetour
     const handle = async (event) => {
       if (!event.detail?.callback) return;
       try {
-        const result = await showConfirm({
-          title: 'Modifications non sauvegardées',
-          message: 'Vous avez des modifications non sauvegardées. Souhaitez-vous vraiment quitter sans sauvegarder ?',
-          confirmText: 'Quitter sans sauvegarder',
-          cancelText: "Continuer l'édition",
-          type: 'warning', size: 'medium',
-        });
+        const result = await showConfirm(
+            UNSAVED_CHANGES_CONFIRM_CONFIG(UNSAVED_CHANGES_MESSAGES.LOYER)
+          );
         if (result.action === 'confirm') {
           resetChanges();
           unregisterGuard(guardId);
@@ -147,8 +150,19 @@ export function useLoyerFormData({ mode, idLoyer, isReadOnly, isSaving, onRetour
           dureeMois:             loyerData.dureeMois     || 12,
           motif:                 loyerData.motif         || '',
           description:           loyerData.description   || null,
-          idService:             loyerData.idService     ?? loyerData.id_service ?? null,
-          idFacture:             loyerData.idFacture     ?? loyerData.id_facture ?? null,
+          idService:             loyerData.idService             ?? null,
+          idFacture:             loyerData.idFacture             ?? null,
+          idContratLocation:     loyerData.idContratLocation     ?? null,
+          idSalle:               loyerData.idSalle               ?? null,
+          nomSalle:              loyerData.nomSalle              ?? null,
+          idTypeContrat:         loyerData.idTypeContrat         ?? null,
+          nomTypeContrat:        loyerData.nomTypeContrat        ?? null,
+          estForfait:            loyerData.estForfait            ?? null,
+          typeDocument:          loyerData.typeDocument          ?? null,
+          categorieMotifsContrat: loyerData.categorieMotifsContrat ?? null,
+          idUnite:               loyerData.idUnite               ?? null,
+          nomUnite:              loyerData.nomUnite              ?? null,
+          nomService:            loyerData.nomService            ?? null,
           loyerStatut:           loyerData.loyerStatut   || 'actif',
           loyerMontantTotal:     parseFloat(loyerData.loyerMontantTotal) || 0,
           montantsMensuels:      loyerData.montantsMensuels || [],
@@ -163,6 +177,11 @@ export function useLoyerFormData({ mode, idLoyer, isReadOnly, isSaving, onRetour
         }
 
         setLoyer(donnees);
+
+        // ✅ Mettre à jour la catégorie de motifs selon le type de contrat du loyer
+        if (donnees.categorieMotifsContrat) {
+          setCategorieMotifs(donnees.categorieMotifsContrat);
+        }
 
         if (mode === FORM_MODES.EDIT) {
           setInitialFormData({
@@ -190,28 +209,6 @@ export function useLoyerFormData({ mode, idLoyer, isReadOnly, isSaving, onRetour
     charger();
   }, [mode, idLoyer]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Numéro auto en CREATE
-  useEffect(() => {
-    if (mode !== FORM_MODES.CREATE) return;
-    const gen = async () => {
-      try {
-        const numero = await genererNumeroLoyer(new Date().getFullYear());
-        setLoyer(prev => ({ ...prev, numeroLoyer: numero }));
-      } catch (err) {
-        logger.error('❌ Erreur génération numéro:', err);
-        setError('Impossible de générer le numéro de loyer');
-      }
-    };
-    gen();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Initialisation détection changements en CREATE
-  useEffect(() => {
-    if (mode !== FORM_MODES.CREATE || isFullyInitialized) return;
-    setInitialFormData({ idClient: '', periodeDebut: '', dureeMois: 12, motif: '', montantsMensuels: [] });
-    setIsFullyInitialized(true);
-  }, [mode, isFullyInitialized]);
-
   return {
     loyer, setLoyer,
     isLoading,
@@ -219,11 +216,12 @@ export function useLoyerFormData({ mode, idLoyer, isReadOnly, isSaving, onRetour
     fieldErrors, setFieldErrors,
     isFullyInitialized,
     motifsDisponibles,
+    setCategorieMotifs,
     hasUnsavedChanges,
     requestNavigation,
     resetChanges,
     unregisterGuard,
     guardId,
-    getLoyer, createLoyer, updateLoyer,
+    getLoyer, updateLoyer,
   };
 }

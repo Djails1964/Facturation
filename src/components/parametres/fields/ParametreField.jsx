@@ -48,17 +48,17 @@ const ParametreField = ({
       .then(data => {
         const services = data?.services ?? [];
         setSelectOptions(services.map(s => ({
-          value: s.nomService ?? s.nom_service ?? '',
-          label: s.nomService ?? s.nom_service ?? '',
+          value: s.nomService ?? '',
+          label: s.nomService ?? '',
         })));
       })
       .catch(() => setSelectOptions([]))
       .finally(() => setSelectLoading(false));
   }, [inputType]);
   
-  // ✅ L'année est nécessaire pour tous les paramètres de numéro de facture
-  const needsYear = (groupeParametre === 'Facture' || groupeParametre === 'Facturation') && 
-                     parametre.nomParametre === 'Prochain Numéro Facture';
+  // ✅ L'année est nécessaire pour tous les paramètres de numéro (facture ET confirmation)
+  const needsYear = (groupeParametre === 'Facture' || groupeParametre === 'Facturation') &&
+                     ['Prochain Numéro Facture', 'Prochain Numéro Confirmation'].includes(parametre.nomParametre);
   
   // ✅ Générer la liste des années (1 passée + actuelle + 8 futures)
   const generateYearOptions = () => {
@@ -78,7 +78,7 @@ const ParametreField = ({
   const isSelect   = inputType === PARAMETRE_TYPES.SELECT;
   
   // ✅ Récupérer le libellé depuis les constantes
-  // Pour les paramètres génériques (label, nom_service dans LocationSalle), la clé METADATA
+  // Pour les paramètres génériques (label, nomService dans LocationSalle), la clé METADATA
   // n'inclut pas la catégorie — on ne la passe que si la clé avec catégorie existe.
   const resolveLibelle = (nom, cat) => {
     if (!cat || cat === 'Default') return getParametreLibelle(nom, undefined);

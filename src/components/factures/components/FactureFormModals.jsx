@@ -1,5 +1,9 @@
 import React, { useEffect } from 'react';
+import { createLogger } from '../../../utils/createLogger';
 import { showConfirm, showError, showWarning, showInfo } from '../../../utils/modalSystem';
+import { UNSAVED_CHANGES_CONFIRM_CONFIG, UNSAVED_CHANGES_MESSAGES } from '../../../constants/appConstants';
+
+const log = createLogger('FactureFormModals');
 
 export const FactureFormModals = ({
   showUnsavedModal,
@@ -16,19 +20,14 @@ export const FactureFormModals = ({
   // ✅ VRAIE CONFIRMATION = 2 boutons
   useEffect(() => {
     if (showUnsavedModal) {
-      showConfirm({
-        title: 'Modifications non sauvegardées',
-        message: 'Vous avez des modifications non sauvegardées dans le formulaire de facture. Souhaitez-vous vraiment quitter sans sauvegarder ?',
-        confirmText: 'Quitter sans sauvegarder',
-        cancelText: 'Continuer l\'édition',
-        type: 'warning'
-      }).then((result) => {
-        if (result.action === 'confirm') {
-          confirmNavigation();
-        } else {
-          cancelNavigation();
-        }
-      });
+      showConfirm(UNSAVED_CHANGES_CONFIRM_CONFIG(UNSAVED_CHANGES_MESSAGES.FACTURE))
+        .then((result) => {
+          if (result.action === 'confirm') {
+            confirmNavigation();
+          } else {
+            cancelNavigation();
+          }
+        });
     }
   }, [showUnsavedModal, confirmNavigation, cancelNavigation]);
 
@@ -36,19 +35,14 @@ export const FactureFormModals = ({
   // ✅ VRAIE CONFIRMATION = 2 boutons
   useEffect(() => {
     if (showGlobalModal) {
-      showConfirm({
-        title: 'Modifications non sauvegardées',
-        message: 'Vous avez des modifications non sauvegardées dans le formulaire de facture. Souhaitez-vous vraiment quitter sans sauvegarder ?',
-        confirmText: 'Quitter sans sauvegarder',
-        cancelText: 'Continuer l\'édition',
-        type: 'warning'
-      }).then((result) => {
-        if (result.action === 'confirm') {
-          onConfirmGlobal();
-        } else {
-          onCancelGlobal();
-        }
-      });
+      showConfirm(UNSAVED_CHANGES_CONFIRM_CONFIG(UNSAVED_CHANGES_MESSAGES.FACTURE))
+        .then((result) => {
+          if (result.action === 'confirm') {
+            onConfirmGlobal();
+          } else {
+            onCancelGlobal();
+          }
+        });
     }
   }, [showGlobalModal, onConfirmGlobal, onCancelGlobal]);
 

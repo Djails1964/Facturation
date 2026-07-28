@@ -216,7 +216,7 @@ function convertRequestDataRecursively(data, context = null) {
   // Propriétés spécifiques qui contiennent des données imbriquées
   const nestedDataProperties = [
     'lignes', 'lines', 'items', 'data', 'services', 'unites', 
-    'clients', 'factures', 'paiements', 'details', 'loyers',
+    'clients', 'factures', 'paiements', 'details',
     // ✅ NOUVEAU: Propriétés pour données enrichies
     'unites_liees', 'unitesLiees', 'unite_defaut', 'uniteDefaut',
     'types_tarifs', 'typesTarifs'
@@ -545,9 +545,7 @@ function convertApiResponse(data, context = null) {
 
   const parametreProperties = ['parametres', 'parametre'];
 
-  const loyerProperties = ['loyers', 'loyer', 'montants_mensuels', 'montantsMensuels'];
-
-  const locationSalleProperties = ['contrats', 'details', 'salles'];
+  const locationSalleProperties = ['contrats', 'details', 'salles', 'types', 'motifs'];
 
   // ✅ AJOUT: Propriété spécifique aux lignes de facture
   const lignesProperties = ['lignes'];
@@ -569,7 +567,6 @@ function convertApiResponse(data, context = null) {
     ...parametreProperties,
     ...tarifEnrichedProperties,
     ...clientProperties,
-    ...loyerProperties,
     ...locationSalleProperties
   ];
   

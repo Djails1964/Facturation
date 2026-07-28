@@ -1,12 +1,11 @@
 // src/components/paiements/PaiementForm.jsx
-// Architecture en 6 sections :
+// Architecture en 5 sections :
 //
-//   1. PaiementFormHeader          — titre + client + référence facture/loyer
+//   1. PaiementFormHeader          — titre + client + référence facture
 //   2. PaiementFormPaiementSection — date, montant, méthode, commentaire
 //   3. PaiementFormFactureDetail   — détail facture (EDIT/VIEW si paiement.idFacture)
-//   4. PaiementFormLoyerDetail     — détail loyer   (EDIT/VIEW si paiement.idLoyer)
-//   5. PaiementFormSystemInfoSection — historique et infos système
-//   6. PaiementFormActions         — boutons
+//   4. PaiementFormSystemInfoSection — historique et infos système
+//   5. PaiementFormActions         — boutons
 
 import React, { useCallback } from 'react';
 
@@ -14,11 +13,8 @@ import React, { useCallback } from 'react';
 import PaiementFormHeader            from './sections/PaiementFormHeader';
 import PaiementFormBadge             from './sections/PaiementFormBadge';
 import PaiementFormFactureSection    from './sections/PaiementFormFactureSection';
-import PaiementFormOnglets           from './sections/PaiementFormOnglets';
-import PaiementFormLoyerSection      from './sections/PaiementFormLoyerSection';
 import PaiementFormPaiementSection   from './sections/PaiementFormPaiementSection';
 import PaiementFormFactureDetail     from './sections/PaiementFormFactureDetail';
-import PaiementFormLoyerDetail       from './sections/PaiementFormLoyerDetail';
 import PaiementFormSystemInfoSection from './sections/PaiementFormSystemInfoSection';
 import PaiementFormActions           from './sections/PaiementFormActions';
 
@@ -68,19 +64,11 @@ function PaiementForm({
         clients,
         clientsLoading,
         clientSelectionne,
-        typeOnglet,
-        setTypeOnglet,
-        loyers,
-        loyersLoading,
-        loyerSelectionne,
-        moisSelectionnes,
-        setMoisSelectionnes,
     } = formState;
 
     const {
         handleInputChange,
         handleSubmit,
-        handleLoyerSubmit,
         handleCancel,
         handleAnnuler: handleAnnulerPaiement,
     } = formHandlers;
@@ -94,9 +82,8 @@ function PaiementForm({
     }, [mode, isPaiementAnnule, isEdit]);
 
     // ── Nature du paiement (EDIT/VIEW) ─────────────────────────────────────────
-    // En EDIT/VIEW le paiement est chargé : on lit idLoyer / idFacture directement.
-    const estPaiementLoyer   = !isCreate && !!paiement.idLoyer;
-    const estPaiementFacture = !isCreate && !!paiement.idFacture && !estPaiementLoyer;
+    // En EDIT/VIEW le paiement est chargé : on lit idFacture directement.
+    const estPaiementFacture = !isCreate && !!paiement.idFacture;
 
     // ── Chargement ──────────────────────────────────────────────────────────────
     if (isLoading) {
@@ -151,8 +138,8 @@ function PaiementForm({
                     {/* ════════════════════════════════════════════════════════
                         MODE CREATE
                         Étape 1 : sélection client
-                        Étape 2 : onglets Facture | Loyer
-                        Étape 3 : saisie selon onglet actif
+                        Étape 2 : sélection facture
+                        Étape 3 : saisie du paiement
                         ════════════════════════════════════════════════════════ */}
                     {isCreate && (
                         <>
@@ -172,59 +159,32 @@ function PaiementForm({
 
                             {/* Étape 2 + 3 : après choix du client */}
                             {paiement.idClient && (
-                                <>
-                                    <PaiementFormOnglets
-                                        typeOnglet={typeOnglet}
-                                        onChangeOnglet={setTypeOnglet}
+                                <div className="pf-facture-section">
+                                    {/* Sélection de la facture */}
+                                    <PaiementFormFactureSection
+                                        isCreate
+                                        paiement={paiement}
+                                        onInputChange={handleInputChange}
+                                        clients={[]}
+                                        clientsLoading={false}
+                                        clientSelectionne={clientSelectionne}
+                                        factures={factures}
+                                        facturesLoading={facturesLoading}
+                                        factureSelectionnee={factureSelectionnee}
+                                        hideClientSelect
                                     />
-
-                                    {/* ── Onglet Facture ── */}
-                                    {typeOnglet === 'facture' && (
-                                        <div className="pf-facture-section">
-                                            {/* Sélection de la facture */}
-                                            <PaiementFormFactureSection
-                                                isCreate
-                                                paiement={paiement}
-                                                onInputChange={handleInputChange}
-                                                clients={[]}
-                                                clientsLoading={false}
-                                                clientSelectionne={clientSelectionne}
-                                                factures={factures}
-                                                facturesLoading={facturesLoading}
-                                                factureSelectionnee={factureSelectionnee}
-                                                hideClientSelect
-                                            />
-                                            {/* Saisie paiement (après choix de la facture) */}
-                                            {paiement.idFacture && (
-                                                <PaiementFormPaiementSection
-                                                    paiement={paiement}
-                                                    onInputChange={handleInputChange}
-                                                    isReadOnly={false}
-                                                    isPaiementAnnule={false}
-                                                    factureSelectionnee={factureSelectionnee}
-                                                    isCreate
-                                                />
-                                            )}
-                                        </div>
+                                    {/* Saisie paiement (après choix de la facture) */}
+                                    {paiement.idFacture && (
+                                        <PaiementFormPaiementSection
+                                            paiement={paiement}
+                                            onInputChange={handleInputChange}
+                                            isReadOnly={false}
+                                            isPaiementAnnule={false}
+                                            factureSelectionnee={factureSelectionnee}
+                                            isCreate
+                                        />
                                     )}
-
-                                    {/* ── Onglet Loyer ── */}
-                                    {typeOnglet === 'loyer' && (
-                                        <div className="pf-loyer-section">
-                                            <PaiementFormLoyerSection
-                                                paiement={paiement}
-                                                onInputChange={handleInputChange}
-                                                loyers={loyers}
-                                                loyersLoading={loyersLoading}
-                                                loyerSelectionne={loyerSelectionne}
-                                                moisSelectionnes={moisSelectionnes}
-                                                setMoisSelectionnes={setMoisSelectionnes}
-                                                isSubmitting={isSubmitting}
-                                                onSubmit={handleLoyerSubmit}
-                                            />
-                                        </div>
-                                    )}
-                                </>
+                                </div>
                             )}
                         </>
                     )}
@@ -251,14 +211,7 @@ function PaiementForm({
                                 />
                             )}
 
-                            {/* SECTION 4 — Détail du loyer lié */}
-                            {estPaiementLoyer && (
-                                <PaiementFormLoyerDetail
-                                    paiement={paiement}
-                                />
-                            )}
-
-                            {/* SECTION 5 — Informations système */}
+                            {/* SECTION 4 — Informations système */}
                             <PaiementFormSystemInfoSection
                                 logsInfo={logsInfo}
                                 paiement={paiement}
@@ -267,7 +220,7 @@ function PaiementForm({
                         </>
                     )}
 
-                    {/* SECTION 6 — Boutons d'actions */}
+                    {/* SECTION 5 — Boutons d'actions */}
                     <PaiementFormActions
                         mode={mode}
                         isSubmitting={isSubmitting}

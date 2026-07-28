@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FiFile, FiCreditCard, FiDollarSign, FiClock } from 'react-icons/fi';
+import { ICONS } from '../../ui/buttons';
+import { createLogger } from '../../../utils/createLogger';
 import { getBadgeClasses, formatEtatText, formatDate } from '../../../utils/formatters';
 import { toIsoString } from '../../../utils/dateHelpers';
 import { showDatePicker } from '../../shared/modals/handlers/DatePickerModalHandler';
-import DateInputField from '../../shared/DateInputField';
+import { CalendarIcon } from '../../ui/buttons';
 import { ValidationError } from '../../shared/forms/FormField';
 import '../../../styles/components/factures/FactureHeader.css';
+
+const log = createLogger('FactureHeader');
 
 /**
  * Composant d'en-tête de facture standardisé
@@ -17,6 +20,10 @@ function FactureHeader({
   idClient = '',
   clients = [],
   readOnly = false,
+  // ✅ Verrouillage indépendant du champ Client (facture liée à un loyer :
+  // Date/Ristourne restent modifiables mais pas Client). Par défaut,
+  // s'aligne sur readOnly pour ne rien changer aux usages existants.
+  clientReadOnly = null,
   clientsLoading = false,
   onNumeroFactureChange,
   onDateFactureChange,
@@ -28,14 +35,15 @@ function FactureHeader({
   idFacture = null,
   factureData = null,
   // ✅ AJOUT: Props pour les erreurs de validation unifiées
-  errors = {}
+  errors = {},
+  motif = null,
 }) {
     // Debug détaillé des props reçues
-    console.log(`[HEADER] FactureHeader initialisé - mode: ${mode}, état: ${etat}, etatAffichage: ${etatAffichage}, idFacture: ${idFacture}`);
-    console.log(`[HEADER] FactureHeader initialisé - numeroFacture: ${numeroFacture}, dateFacture: ${dateFacture}, idClient: ${idClient}`);
+    log.debug(`Initialisé - mode: ${mode}, état: ${etat}, etatAffichage: ${etatAffichage}, idFacture: ${idFacture}`);
+    log.debug(`Initialisé - numeroFacture: ${numeroFacture}, dateFacture: ${dateFacture}, idClient: ${idClient}`);
     
     if (process.env.NODE_ENV === 'development') {
-      console.log('[HEADER] Props complètes:', {
+      log.debug('Props complètes:', {
         numeroFacture,
         dateFacture,
         idClient,
@@ -78,7 +86,7 @@ function FactureHeader({
   // Effect pour surveiller les changements de props
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
-      console.log('[HEADER] Props mises à jour:', {
+      log.debug('Props mises à jour:', {
         numeroFacture,
         dateFacture,
         idClient,
@@ -86,9 +94,6 @@ function FactureHeader({
       });
     }
   }, [numeroFacture, dateFacture, idClient]);
-
-  // Le numéro de facture est attribué par le backend — jamais modifiable
-  const handleNumeroFactureChange = () => {};
 
   const handleDateFactureChange = (e) => {
     if (readOnly) return;
@@ -115,14 +120,14 @@ function FactureHeader({
 
   // Affichage conditionnel pour debug
   if (process.env.NODE_ENV === 'development' && mode === 'view' && !numeroFacture && !dateFacture) {
-    console.warn('[HEADER] Mode VIEW sans données - possible problème de timing');
+    log.warn('Mode VIEW sans données - possible problème de timing');
   }
 
   return (
     <div className="facture-header-container">
       
-      {/* Badge d'état utilise etatAUtiliser (etatAffichage en priorité) */}
-      {readOnly && etatAUtiliser && (
+      {/* Badge d'état — visible dans les deux modes (identique à la vue) */}
+      {etatAUtiliser && (
         <div className="facture-header-etat-simple">
           <span className={getBadgeClasses(etatAUtiliser)}>
             {formatEtatText(etatAUtiliser)}
@@ -130,52 +135,21 @@ function FactureHeader({
         </div>
       )}
 
-      {/* LIGNE 1 : Client (create/edit) ou Numéro + Date (view) */}
+      {/* LIGNE 1 : Numéro de facture (jamais modifiable) + Date de facture */}
       <div className="facture-header-row">
 
-        {readOnly ? (
-          // ── Mode lecture : numéro de facture ──────────────────────────────
-          <div className="facture-header-column">
-            <div className={getNumeroFactureInputClass()}>
-              <input
-                type="text"
-                id="numeroFacture"
-                value={numeroFacture}
-                onChange={handleNumeroFactureChange}
-                disabled={true}
-                placeholder=" "
-              />
-              <label htmlFor="numeroFacture">Numéro de facture</label>
+        <div className="facture-header-column">
+          <div className={getNumeroFactureInputClass()}>
+            {/* ✅ Toujours en lecture seule (jamais éditable) — même style que
+                Date/Client en visualisation (.facture-header-readonly-field),
+                plutôt qu'un <input disabled> qui se rend légèrement différemment
+                selon les navigateurs et causait un désalignement vertical. */}
+            <div className="facture-header-readonly-field">
+              {numeroFacture}
             </div>
+            <label htmlFor="numeroFacture">Numéro de facture</label>
           </div>
-        ) : (
-          // ── Mode saisie : sélection client ────────────────────────────────
-          <div className="facture-header-column">
-            <div className={getClientInputClass()}>
-              <select
-                id="clientSelect"
-                value={idClient || ''}
-                onChange={handleClientChange}
-                onFocus={() => setClientFocused(true)}
-                onBlur={() => setClientFocused(false)}
-                disabled={clientsLoading}
-                required
-                aria-invalid={!!errors.idClient}
-                aria-describedby={errors.idClient ? 'idClient-error' : undefined}
-              >
-                <option value="">Sélectionnez un client</option>
-                {clients.map(client => (
-                  <option key={client.idClient} value={client.idClient}>
-                    {client.nom} {client.prenom}
-                  </option>
-                ))}
-              </select>
-              <label htmlFor="clientSelect" className="required">Client</label>
-              {clientsLoading && <span className="loading-indicator">Chargement...</span>}
-              <ValidationError message={errors.idClient} />
-            </div>
-          </div>
-        )}
+        </div>
 
         {/* Colonne date de facture */}
         <div className="facture-header-column facture-date-column">
@@ -185,26 +159,39 @@ function FactureHeader({
                 {formatDate(dateFacture, 'date')}
               </div>
             ) : (
-              <DateInputField
+              // ✅ Input natif au même style que Numéro/Client (pas de
+              // DateInputField, dont le systeme fdf_floating-label-input
+              // interne créait une double structure de label/padding
+              // incompatible avec .facture-header-input, causant un
+              // désalignement vertical). Ouvre le même sélecteur de dates
+              // via handleOpenDatePicker (showDatePicker), en lecture seule
+              // au clavier — la saisie se fait uniquement via le calendrier.
+              <input
+                type="text"
                 id="dateFacture"
-                label="Date de facture"
                 value={formatDate(dateFacture, 'date')}
-                onChange={(displayVal) => {
-                  const { fromDisplayString, fromIsoString } = require('../../../utils/dateHelpers');
-                  const d = fromDisplayString(displayVal) || fromIsoString(displayVal);
-                  if (d) onDateFactureChange?.(toIsoString(d));
-                  else   onDateFactureChange?.(displayVal);
-                }}
-                multiSelect={false}
-                allowFuture={false}
+                onChange={() => {}}
+                onClick={handleOpenDatePicker}
+                readOnly
                 required
+                placeholder=" "
+                style={{ cursor: 'pointer', paddingRight: '35px' }}
                 className={errors.dateFacture ? 'has-error' : ''}
               />
+            )}
+            <label htmlFor="dateFacture" className={!readOnly ? 'required' : undefined}>Date de facture</label>
+            {!readOnly && (
+              <span
+                style={{ position: 'absolute', right: 0, top: 8, cursor: 'pointer' }}
+                onClick={handleOpenDatePicker}
+              >
+                <CalendarIcon size={18} />
+              </span>
             )}
             {!readOnly && <ValidationError message={errors.dateFacture} />}
           </div>
 
-          {/* Bouton document si présent et en mode lecture */}
+          {/* Bouton document si présent — uniquement en lecture seule */}
           {readOnly && documentPath && (
             <button
               type="button"
@@ -222,31 +209,72 @@ function FactureHeader({
                   window.open(blobUrl, '_blank');
                   setTimeout(() => window.URL.revokeObjectURL(blobUrl), 60000);
                 } catch (error) {
-                  console.error('Erreur ouverture document:', error);
+                  log.error('Erreur ouverture document:', error);
                   alert("Impossible d'ouvrir le document: " + error.message);
                 }
               }}
               title="Ouvrir le document joint"
             >
-              <FiFile size={20} color="#800000" />
+              <ICONS.FILE size={20} color="#800000" />
             </button>
           )}
         </div>
       </div>
 
-      {/* LIGNE 2 : Client en mode lecture, vide en mode saisie */}
-      {readOnly && (
+      {/* LIGNE 2 : Client — toujours affiché, éditable seulement hors lecture seule */}
+      <div className="facture-header-row">
+        <div className="facture-header-column">
+          <div className={getClientInputClass()}>
+            {(clientReadOnly ?? readOnly) ? (
+              <>
+                <div className="facture-header-readonly-field">
+                  {idClient ? (
+                    clients?.find(c => String(c.idClient) === String(idClient))
+                      ? `${clients.find(c => String(c.idClient) === String(idClient)).nom} ${clients.find(c => String(c.idClient) === String(idClient)).prenom || ''}`
+                      : `Client ID: ${idClient}`
+                  ) : 'Aucun client sélectionné'}
+                </div>
+                <label htmlFor="clientSelect">Client</label>
+              </>
+            ) : (
+              <>
+                <select
+                  id="clientSelect"
+                  value={idClient || ''}
+                  onChange={handleClientChange}
+                  onFocus={() => setClientFocused(true)}
+                  onBlur={() => setClientFocused(false)}
+                  disabled={clientsLoading}
+                  required
+                  aria-invalid={!!errors.idClient}
+                  aria-describedby={errors.idClient ? 'idClient-error' : undefined}
+                >
+                  <option value="">Sélectionnez un client</option>
+                  {clients.map(client => (
+                    <option key={client.idClient} value={client.idClient}>
+                      {client.nom} {client.prenom}
+                    </option>
+                  ))}
+                </select>
+                <label htmlFor="clientSelect" className="required">Client</label>
+                {clientsLoading && <span className="loading-indicator">Chargement...</span>}
+                <ValidationError message={errors.idClient} />
+              </>
+            )}
+          </div>
+        </div>
+        <div className="facture-header-column" />
+      </div>
+
+      {/* LIGNE 3 : Motif (si présent) — toujours affiché, jamais modifiable */}
+      {motif && (
         <div className="facture-header-row">
-          <div className="facture-header-column">
-            <div className={getClientInputClass()}>
+          <div className="facture-header-column facture-header-column--motif">
+            <div className="facture-header-input focused">
               <div className="facture-header-readonly-field">
-                {idClient ? (
-                  clients?.find(c => String(c.idClient) === String(idClient))
-                    ? `${clients.find(c => String(c.idClient) === String(idClient)).nom} ${clients.find(c => String(c.idClient) === String(idClient)).prenom || ''}`
-                    : `Client ID: ${idClient}`
-                ) : 'Aucun client sélectionné'}
+                {motif}
               </div>
-              <label htmlFor="clientSelect">Client</label>
+              <label>Motif</label>
             </div>
           </div>
           <div className="facture-header-column" />

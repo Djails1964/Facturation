@@ -52,8 +52,14 @@ export class DeleteModalHandler {
             montantTotal: facture.montantTotal
         });
         
+        // ✅ Confirmation de paiement (contrat au forfait) : vocabulaire d'état
+        // différent des factures standard (Non payé / Partiellement payée /
+        // Payée) — même logique que FactureActions.jsx (canCancel).
+        const estConfirmation = !!facture.estForfait;
         const canDelete = facture.etat === 'En attente';
-        const canCancel = ['Envoyée', 'Éditée', 'Retard', 'Partiellement payée'].includes(facture.etat);
+        const canCancel = estConfirmation
+            ? facture.etat === 'Non payé'
+            : ['Envoyée', 'Éditée', 'Retard', 'Partiellement payée'].includes(facture.etat);
         
         this.log.debug('🔍 Permissions:', { canDelete, canCancel, etat: facture.etat });
         

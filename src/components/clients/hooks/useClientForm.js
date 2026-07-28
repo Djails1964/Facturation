@@ -184,13 +184,9 @@ export const useClientForm = (mode, idClient) => {
    * @returns {boolean} - true si valide
    */
   const validateEmailField = useCallback((email) => {
-    if (!email) {
-      setFieldErrors(prev => ({ ...prev, email: null }));
-      return true;
-    }
+    // ✅ Email obligatoire — plus de raccourci "vide = valide"
+    const result = validateEmail(email, true);
 
-    const result = validateEmail(email);
-    
     setFieldErrors(prev => ({
       ...prev,
       email: result.isValid ? null : result.error

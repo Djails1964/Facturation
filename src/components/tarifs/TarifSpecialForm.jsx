@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import ConfirmationModal from '../shared/ConfirmationModal';
+import { showConfirm } from '../../utils/modalSystem';
 import TarifFormHeader from './sections/TarifFormHeader';
 import TarifFormBadge from './sections/TarifFormBadge';
 import TarifSpecialFormDataSection from './sections/TarifSpecialFormDataSection';
@@ -8,7 +8,8 @@ import { useTarifSpecialForm } from './hooks/useTarifSpecialForm';
 import { useTarifSpecialFormLogic } from './hooks/useTarifSpecialFormLogic';
 import { useTarifSpecialFormValidation } from './hooks/useTarifSpecialFormValidation';
 import { useTarifSpecialFormHandlers } from './hooks/useTarifSpecialFormHandlers';
-import { FORM_MODES, FORM_TITLES, LOADING_MESSAGES } from '../../constants/tarifConstants';
+import { FORM_MODES, LOADING_MESSAGES } from '../../constants/tarifConstants';
+import { UNSAVED_CHANGES_CONFIRM_CONFIG, UNSAVED_CHANGES_MESSAGES } from '../../constants/appConstants';
 // import '../../styles/components/tarifs/TarifForm.css';
 
 function TarifSpecialForm({ 
@@ -23,7 +24,6 @@ function TarifSpecialForm({
     loadUnitesByService  
 }) {
     
-    // Hooks personnalisés pour la logique métier
     const formState = useTarifSpecialForm({ 
         mode, 
         tarifSpecialId, 
@@ -38,17 +38,38 @@ function TarifSpecialForm({
     const formLogic = useTarifSpecialFormLogic(formState);
     const formValidation = useTarifSpecialFormValidation(formState);
     const formHandlers = useTarifSpecialFormHandlers(formState, formLogic, formValidation);
-    
-    // Enregistrer les guards et événements (même logique que TarifForm)
+
+    // Intercepter les navigations externes (menu, etc.)
     useEffect(() => {
-        if (formState.canDetectChanges()) {
-            const guardFunction = async () => {
-                return formState.hasUnsavedChanges;
-            };
-            formState.registerGuard(formState.guardId, guardFunction);
-            return () => formState.unregisterGuard(formState.guardId);
-        }
-    }, [formState.canDetectChanges, formState.hasUnsavedChanges, formState.guardId]);
+        if (mode === FORM_MODES.VIEW || !formState.hasUnsavedChanges) return;
+
+        const handleNavigationBlocked = async (event) => {
+            if (!event.detail?.callback) return;
+            try {
+                const result = await showConfirm(
+                    UNSAVED_CHANGES_CONFIRM_CONFIG(UNSAVED_CHANGES_MESSAGES.TARIF)
+                );
+                if (result.action === 'confirm') {
+                    formState.resetChanges();
+                    event.detail.callback();
+                }
+            } catch (error) {
+                console.error('❌ Erreur modal navigation globale:', error);
+            }
+        };
+
+        window.addEventListener('navigation-blocked', handleNavigationBlocked);
+        return () => window.removeEventListener('navigation-blocked', handleNavigationBlocked);
+    }, [mode, formState.hasUnsavedChanges, formState.resetChanges]);
+
+    // Cleanup au démontage
+    useEffect(() => {
+        return () => {
+            if (mode !== FORM_MODES.VIEW) {
+                formState.resetChanges();
+            }
+        };
+    }, [mode]);
     
     // Titre du formulaire
     const getTitre = () => {
@@ -75,7 +96,6 @@ function TarifSpecialForm({
         return dateDebut <= today && (!dateFin || dateFin >= today);
     };
     
-    // Rendu conditionnel pour le chargement
     if (formState.isLoading) {
         return (
             <div className="content-section-container">
@@ -122,31 +142,6 @@ function TarifSpecialForm({
                     />
                 </div>
             </form>
-
-            {/* Modals identiques à TarifForm */}
-            <ConfirmationModal
-                isOpen={formState.showUnsavedModal}
-                title="Modifications non sauvegardées"
-                message="Vous avez des modifications non sauvegardées dans le formulaire de tarif spécial. Souhaitez-vous vraiment quitter sans sauvegarder ?"
-                type="warning"
-                onConfirm={formState.confirmNavigation}
-                onCancel={formState.cancelNavigation}
-                confirmText="Quitter sans sauvegarder"
-                cancelText="Continuer l'édition"
-                singleButton={false}
-            />
-
-            <ConfirmationModal
-                isOpen={formState.showGlobalModal}
-                title="Modifications non sauvegardées"
-                message="Vous avez des modifications non sauvegardées dans le formulaire de tarif spécial. Souhaitez-vous vraiment quitter sans sauvegarder ?"
-                type="warning"
-                onConfirm={formHandlers.handleConfirmGlobalNavigation}
-                onCancel={formHandlers.handleCancelGlobalNavigation}
-                confirmText="Quitter sans sauvegarder"
-                cancelText="Continuer l'édition"
-                singleButton={false}
-            />
         </div>
     );
 }

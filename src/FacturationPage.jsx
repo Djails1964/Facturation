@@ -2,14 +2,12 @@
 /**
  * Page principale de facturation avec sections multiples
  * ✅ Intégration du nouveau Dashboard
- * ✅ Intégration de la gestion des Loyers
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import ClientGestion from './components/clients/ClientGestion';
 import FactureGestion from './components/factures/FactureGestion';
 import LocationSalleGestion from './components/locationSalle/LocationSalleGestion';
-import LoyerGestion from './components/loyers/LoyerGestion';
 import PaiementGestion from './components/paiements/PaiementGestion';
 import TarifGestion from './components/tarifs/TarifGestion';
 import DashboardWrapper from './components/dashboard/DashboardWrapper';
@@ -30,7 +28,6 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
   const [factureCreatedId, setFactureCreatedId] = useState(null);
   const [factureCreatedAnnee, setFactureCreatedAnnee] = useState(null);
   const [paiementCreatedId, setPaiementCreatedId] = useState(null);
-  const [loyerCreatedId, setLoyerCreatedId] = useState(null);
   const [tarifIntegration, setTarifIntegration] = useState({
     selectedService: null,
     selectedTarif: null,
@@ -69,20 +66,6 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
     setActiveSection('paiements');
   };
 
-  const handleLoyerCreated = (idLoyer) => {
-    setLoyerCreatedId(idLoyer);
-    setActiveSection('loyers');
-  };
-
-  // ✅ Navigation vers les factures après génération depuis un loyer
-  // anneeFacture est fourni par useFactureFromLoyer via result.anneeFacture
-  const handleFactureCreatedFromLoyer = useCallback((idFacture, anneeFacture) => {
-    log.info('➡️ Navigation vers factures après génération depuis loyer, id:', idFacture, 'année:', anneeFacture);
-    setFactureCreatedId(idFacture);
-    setFactureCreatedAnnee(anneeFacture ?? null);
-    setActiveSection('factures');
-  }, [log]);
-
   // Fonction protégée pour changer de section
   const handleSectionChange = (newSection) => {
     interceptNavigation(
@@ -107,9 +90,6 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
         }
         if (newSection !== 'paiements') {
           setPaiementCreatedId(null);
-        }
-        if (newSection !== 'loyers') {
-          setLoyerCreatedId(null);
         }
       },
       `menu-${newSection}`
@@ -170,20 +150,6 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
       case 'location-salle':
         return <LocationSalleGestion />;
       
-      case 'nouveau-loyer':
-        return <LoyerGestion
-          section="nouveau"
-          onLoyerCreated={handleLoyerCreated}
-        />;
-      
-      case 'loyers':
-        return <LoyerGestion
-          section="liste"
-          idLoyer={loyerCreatedId}
-          onSectionChange={() => setLoyerCreatedId(null)}
-          onFactureGeneree={handleFactureCreatedFromLoyer}
-        />;
-      
       case 'clients':
         return <ClientGestion
           section="liste"
@@ -235,18 +201,6 @@ const FacturationPage = ({ userContext, initialSection = 'factures' }) => {
               </span>
             </li>
             
-            {/* ✅ NOUVEAU: Loyers juste après Factures */}
-            <li
-              className={activeSection === 'loyers' ? 'active' : ''}
-              onClick={() => handleSectionChange('loyers')}
-              title="Gestion des loyers"
-            >
-              <span className="menu-label">
-                <span className="menu-icon">🏠</span>
-                <span>Loyers</span>
-              </span>
-            </li>
-
             {/* Locations de salle */}
             <li
               className={activeSection === 'location-salle' ? 'active' : ''}

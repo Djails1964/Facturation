@@ -63,12 +63,12 @@ class FactureService {
     }
     
     // Logique de déduction basée sur les données
-    if (facture.date_paiement) {
+    if (facture.datePaiement) {
       return 'Payée';
-    } else if (facture.date_annulation) {
+    } else if (facture.dateAnnulation) {
       return 'Annulée';
     } else {
-      return toBoolean(facture.est_imprimee) ? 'Éditée' : 'En attente';
+      return toBoolean(facture.estImprimee) ? 'Éditée' : 'En attente';
     }
   }
 
@@ -82,7 +82,7 @@ class FactureService {
     
    
     // Si la facture est "Envoyée" et pas encore payée, vérifier le retard
-    if (etatBase === 'Envoyée' && !facture.date_paiement && await this._estEnRetard(facture)) {
+    if (etatBase === 'Envoyée' && !facture.datePaiement && await this._estEnRetard(facture)) {
       return 'Retard';
     }
     
@@ -95,12 +95,12 @@ class FactureService {
    * @returns {Promise<boolean>} - True si en retard
    */
   async _estEnRetard(facture) {
-    if (!facture.date_facture || facture.date_paiement || facture.date_annulation) {
-      this.log.debug(`📅 Facture ${facture.numeroFacture || facture.idFacture} - Pas de retard: date_facture=${facture.date_facture}, date_paiement=${facture.date_paiement}, date_annulation=${facture.date_annulation}`);
+    if (!facture.dateFacture || facture.datePaiement || facture.dateAnnulation) {
+      this.log.debug(`📅 Facture ${facture.numeroFacture || facture.idFacture} - Pas de retard: dateFacture=${facture.dateFacture}, datePaiement=${facture.datePaiement}, dateAnnulation=${facture.dateAnnulation}`);
       return false;
     }
     
-    const dateFacture = new Date(facture.date_facture);
+    const dateFacture = new Date(facture.dateFacture);
     const aujourdhui = new Date();
     const diffTemps = aujourdhui.getTime() - dateFacture.getTime();
     const diffJours = Math.ceil(diffTemps / (1000 * 3600 * 24));
@@ -205,7 +205,7 @@ class FactureService {
   normalizeFacture(facture) {
     if (!facture || typeof facture !== 'object') return facture;
     
-    const booleanFields = ['est_imprimee', 'est_envoyee', 'est_annulee', 'est_payee'];
+    const booleanFields = ['estImprimee', 'estEnvoyee', 'estAnnulee', 'estPayee'];
     return normalizeBooleanFields(facture, booleanFields);
   }
 
@@ -217,7 +217,7 @@ class FactureService {
   normalizeFactures(factures) {
     if (!Array.isArray(factures)) return factures;
     
-    const booleanFields = ['est_imprimee', 'est_envoyee', 'est_annulee', 'est_payee'];
+    const booleanFields = ['estImprimee', 'estEnvoyee', 'estAnnulee', 'estPayee'];
     return normalizeBooleanFieldsArray(factures, booleanFields);
   }
 
@@ -325,15 +325,18 @@ class FactureService {
         const facturesNormalisees = this.normalizeFactures(facturesData);
 
         const facturesTriees = facturesNormalisees.sort((a, b) => {
-          // Extraire les parties du numéro de facture (format: "001.2024")
-          const partsA = a.numeroFacture ? a.numeroFacture.split('.') : ['0', '0'];
-          const partsB = b.numeroFacture ? b.numeroFacture.split('.') : ['0', '0'];
-          
-          const numSeqA = parseInt(partsA[0]) || 0;  // Numéro séquentiel (ex: 001)
-          const anneeA = parseInt(partsA[1]) || 0;    // Année (ex: 2024)
-          
-          const numSeqB = parseInt(partsB[0]) || 0;
-          const anneeB = parseInt(partsB[1]) || 0;
+          // ✅ Numéro au format "NNN.AAAA", éventuellement préfixé
+          // ("F-NNN.AAAA" / "C-NNN.AAAA" — voir allouerNumeroFacture côté
+          // backend). Regex sur la fin de la chaîne : robuste au préfixe,
+          // plus fiable qu'un split('.') qui casserait dessus.
+          const matchA = a.numeroFacture ? a.numeroFacture.match(/(\d+)\.(\d+)$/) : null;
+          const matchB = b.numeroFacture ? b.numeroFacture.match(/(\d+)\.(\d+)$/) : null;
+
+          const numSeqA = matchA ? parseInt(matchA[1]) : 0;  // Numéro séquentiel (ex: 001)
+          const anneeA  = matchA ? parseInt(matchA[2]) : 0;   // Année (ex: 2024)
+
+          const numSeqB = matchB ? parseInt(matchB[1]) : 0;
+          const anneeB  = matchB ? parseInt(matchB[2]) : 0;
           
           // Trier d'abord par année (décroissant = plus récent en premier)
           if (anneeA !== anneeB) {
@@ -348,6 +351,13 @@ class FactureService {
         const facturesAdaptees = facturesTriees.map(facture => ({
           idFacture: facture.idFacture,
           numeroFacture: facture.numeroFacture,
+          // ✅ Nécessaire pour FactureActions.jsx (estLieeAUnLoyer) — sans ce
+          // champ, le bouton "Modifier" reste actif pour les factures générées
+          // depuis un loyer, alors que la modification directe est bloquée
+          // côté backend (FactureControleur::modifierFacture).
+          idContratLocation: facture.idContratLocation ?? null,
+          // ✅ Source de vérité facture standard / confirmation de paiement.
+          estForfait: !!facture.estForfait,
           client: {
             idClient: facture.idClient,
             prenom: facture.prenom,
@@ -356,15 +366,14 @@ class FactureService {
           },
           montantTotal: parseFloat(facture.montantTotal),
           etat: this._determinerEtatFacture(facture), // État de base uniquement
-          date_facture: facture.dateFacture,
           dateFacture: facture.dateFacture,
-          date_paiement: facture.datePaiement,
-          date_annulation: facture.dateAnnulation,
+          datePaiement: facture.datePaiement,
+          dateAnnulation: facture.dateAnnulation,
           // Propriétés booléennes normalisées
-          est_imprimee: toBoolean(facture.est_imprimee),
-          est_envoyee: toBoolean(facture.est_envoyee),
-          est_annulee: toBoolean(facture.est_annulee),
-          est_payee: toBoolean(facture.est_payee)
+          estImprimee: toBoolean(facture.estImprimee),
+          estEnvoyee: toBoolean(facture.estEnvoyee),
+          estAnnulee: toBoolean(facture.estAnnulee),
+          estPayee: toBoolean(facture.estPayee)
         }));
         
         // ✅ ENRICHISSEMENT AUTOMATIQUE avec état d'affichage calculé dynamiquement
@@ -424,7 +433,13 @@ class FactureService {
           if (factureNormalisee.factfilename) {
               // ✅ CORRECTION: Utiliser l'endpoint API dédié pour servir les PDF
               // Cela garantit que l'authentification est vérifiée
-              documentPath = apiUrl('document-api.php', { facture: factureNormalisee.factfilename });
+              // ✅ Le préfixe du nom de fichier (ConfirmationPaiement_/Facture_)
+              // indique quel dossier de stockage interroger côté document-api.php.
+              const params = { facture: factureNormalisee.factfilename };
+              if (factureNormalisee.factfilename.startsWith('ConfirmationPaiement_')) {
+                  params.type = 'confirmation';
+              }
+              documentPath = apiUrl('document-api.php', params);
               this.log.debug('Chemin du document de facture (via API):', documentPath);
           }
 
@@ -436,10 +451,14 @@ class FactureService {
               numeroFacture: factureNormalisee.numeroFacture || '',
               dateFacture: factureNormalisee.dateFacture || '',
               idClient: factureNormalisee.idClient,
+              // ✅ Nécessaire pour savoir si cette facture a été générée depuis
+              // un loyer (verrouillage client/lignes en édition, cf. FactureForm.jsx)
+              idContratLocation: factureNormalisee.idContratLocation ?? null,
               montantTotal: parseFloat(factureNormalisee.montantTotal || 0),
               ristourne: parseFloat(factureNormalisee.ristourne || 0),
               montantBrut: parseFloat(factureNormalisee.montantBrut || 0),
               totalAvecRistourne: parseFloat(factureNormalisee.montantTotal || 0) - parseFloat(factureNormalisee.ristourne || 0),
+              motif: factureNormalisee.motif || null,
               
               // Données des paiements multiples
               montantPayeTotal: parseFloat(factureNormalisee.montantPayeTotal || 0),
@@ -461,19 +480,25 @@ class FactureService {
                   duree: ligne.duree || null,
                   nbSeances: ligne.nbSeances != null ? parseFloat(ligne.nbSeances) : null,
                   // permetMultiplicateur sera résolu par useFactureFormActions via l'unité enrichie
-                  permetMultiplicateur: !!(ligne.permetMultiplicateur || ligne.permet_multiplicateur),
+                  permetMultiplicateur: !!(ligne.permetMultiplicateur),
               })),
+              // ✅ Détail mensuel figé (confirmations de paiement, contrats au
+              // forfait) — tableau vide pour une facture standard.
+              detailsMensuels: factureNormalisee.detailsMensuels || [],
+              // ✅ Source de vérité pour distinguer facture standard /
+              // confirmation de paiement (type_contrat_location.est_forfait).
+              estForfait: !!factureNormalisee.estForfait,
               etat: this._determinerEtatBase(factureNormalisee), // État de base uniquement
               documentPath: documentPath,
               factfilename: factureNormalisee.factfilename || null,
-              date_annulation: factureNormalisee.date_annulation || null,
-              date_paiement: factureNormalisee.date_paiement || null,
+              dateAnnulation: factureNormalisee.dateAnnulation || null,
+              datePaiement: factureNormalisee.datePaiement || null,
               
               // Propriétés booléennes normalisées
-              est_imprimee: toBoolean(factureNormalisee.est_imprimee),
-              est_envoyee: toBoolean(factureNormalisee.est_envoyee),
-              est_annulee: toBoolean(factureNormalisee.est_annulee),
-              est_payee: toBoolean(factureNormalisee.est_payee),
+              estImprimee: toBoolean(factureNormalisee.estImprimee),
+              estEnvoyee: toBoolean(factureNormalisee.estEnvoyee),
+              estAnnulee: toBoolean(factureNormalisee.estAnnulee),
+              estPayee: toBoolean(factureNormalisee.estPayee),
               client: factureNormalisee.nom ? {
                   idClient: factureNormalisee.idClient,
                   prenom: factureNormalisee.prenom,

@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { showConfirm } from '../utils/modalSystem';
 import { createLogger } from '../utils/createLogger';
+import { UNSAVED_CHANGES_CONFIRM_CONFIG } from '../constants/appConstants';
 
 /**
  * Hook personnalisé pour détecter les modifications non sauvegardées
@@ -201,16 +202,7 @@ export const useUnsavedChanges = (
     if (hasUnsavedChanges && !isSaving) {
       log.debug('🎭 MODAL UNIFIÉE - Affichage modal pour modifications non sauvegardées');
       
-      const modalConfig = {
-        title: "Modifications non sauvegardées",
-        message: "Vous avez des modifications non sauvegardées. Souhaitez-vous vraiment quitter sans sauvegarder ?",
-        confirmText: "Quitter sans sauvegarder",
-        cancelText: "Continuer l'édition",
-        type: 'warning',
-        size: 'medium'
-      };
-
-      showConfirm(modalConfig)
+      showConfirm(UNSAVED_CHANGES_CONFIRM_CONFIG())
         .then((result) => {
           if (result.action === 'confirm') {
             log.debug('✅ MODAL UNIFIÉE - Navigation confirmée par l\'utilisateur');

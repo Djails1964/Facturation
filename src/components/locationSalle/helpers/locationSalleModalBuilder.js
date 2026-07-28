@@ -130,7 +130,7 @@ export function buildTypeSelect(unites, selectedTypeId) {
         const label   = u.nomUnite ?? u.nom_unite ?? u.codeUnite ?? '';
         const abrev   = getAffichageUnite(u);
         const idSvc   = String(u.idService ?? u.id_service ?? '');
-        const permMul = (u.permetMultiplicateur || u.permet_multiplicateur) ? '1' : '0';
+        const permMul = (u.permetMultiplicateur) ? '1' : '0';
         const sel     = id === String(selectedTypeId ?? '') ? ' selected' : '';
         return `<option value="${id}" data-abrev="${abrev}" data-service="${idSvc}" data-nom="${label}" data-permet-multiplicateur="${permMul}"${sel}>${label}${abrev ? ` (${abrev})` : ''}</option>`;
     }).join('');
@@ -142,11 +142,11 @@ export function buildTypeSelect(unites, selectedTypeId) {
 /**
  * Construit le formulaire de saisie d'une location.
  */
-export function buildFormHTML(annee, mois, salles, unites, locationExistante, motifs = [], motifDefaut = '', client = null, salleObj = null) {
+export function buildFormHTML(annee, mois, salles, unites, locationExistante, motifs = [], motifDefaut = '', client = null, salleObj = null, motifContrat = null) {
     const sallesAutorisees = salles.filter(s =>
         clientSatisfaitRestriction(client, s.typeClientRequis ?? s.type_client_requis ?? null)
     );
-    const defaultSalle       = locationExistante?.salle ?? sallesAutorisees[0]?.nom ?? salles[0]?.nom ?? '';
+    const defaultSalle       = locationExistante?.salle ?? salleObj?.nom ?? sallesAutorisees[0]?.nom ?? salles[0]?.nom ?? '';
     // Cherche l'unité par défaut via 1) isDefaultPourService 2) idUniteDefaut de la salle 3) première unité
     const idUniteDefautSalle  = salleObj?.idUniteDefaut ?? salleObj?.id_unite_defaut ?? null;
     const uniteDefaut         = unites.find(u => u.isDefaultPourService || u.is_default_pour_service)
@@ -157,7 +157,12 @@ export function buildFormHTML(annee, mois, salles, unites, locationExistante, mo
         ? String(locationExistante.idUnite)
         : (uniteDefaut ? String(uniteDefaut.idUnite ?? '') : '');
     const defaultQuantite    = locationExistante?.quantite    ?? '';
-    const defaultMotif       = locationExistante?.motif       ?? motifDefaut ?? '';
+    // Motif : depuis le contrat (source unique) > locationExistante > motifDefaut param
+    const defaultMotif       = motifContrat
+                            ?? locationExistante?.motif
+                            ?? motifDefaut
+                            ?? '';
+    const motifDejaDefini    = !!(motifContrat);
     const defaultDescription = locationExistante?.description ?? '';
     const defaultDates       = locationExistante?.dates
         ? (Array.isArray(locationExistante.dates)
@@ -167,7 +172,7 @@ export function buildFormHTML(annee, mois, salles, unites, locationExistante, mo
     const defaultUnite       = unites.find(u => String(u.idUnite ?? '') === String(defaultType));
     const defaultAbrev       = defaultUnite ? getAffichageUnite(defaultUnite) : '';
     const defaultService     = defaultUnite ? String(defaultUnite.idService ?? defaultUnite.id_service ?? '') : '';
-    const defaultPermetMult  = !!(defaultUnite?.permetMultiplicateur || defaultUnite?.permet_multiplicateur);
+    const defaultPermetMult  = !!(defaultUnite?.permetMultiplicateur);
     // duree/nbSeances : lire depuis locationExistante, fallback '1:00' seulement si unité horaire
     const defaultDuree       = locationExistante?.duree
                             ?? (defaultPermetMult ? '1:00' : '');
@@ -205,12 +210,10 @@ export function buildFormHTML(annee, mois, salles, unites, locationExistante, mo
     return `
     <form id="lsm-form" class="lsm-form">
 
-      <!-- Salle -->
+      <!-- Salle (fixe — définie par le contrat) -->
       <div class="lsm-field-group">
         <label class="lsm-label">Salle</label>
-        <div class="lsm-radio-group" id="lsm-salles">
-          ${buildSalleRadios(salles, defaultSalle, client)}
-        </div>
+        <div class="lsm-salle-fixe">${defaultSalle}</div>
         <input type="hidden" name="lsm-salle" id="lsm-salle-value" value="${defaultSalle}" />
       </div>
 
@@ -278,11 +281,18 @@ export function buildFormHTML(annee, mois, salles, unites, locationExistante, mo
 
       </div>
 
-      <!-- Motif -->
+      <!-- Motif (niveau contrat — commun à toutes les locations du client) -->
       <div class="lsm-field-group">
-        <label class="lsm-label lsm-label--required" for="lsm-motif">Motif</label>
-        <select id="lsm-motif" name="lsm-motif" class="lsm-select" required>
-          <option value="">— Sélectionnez un motif —</option>
+        <label class="lsm-label ${motifDejaDefini ? '' : 'lsm-label--required'}" for="lsm-motif">
+          Motif
+          <span class="lsm-optional">
+            ${motifDejaDefini
+              ? '(commun à toutes les locations du client)'
+              : '(sera appliqué à toutes les locations du client)'}
+          </span>
+        </label>
+        <select id="lsm-motif" name="lsm-motif" class="lsm-select" ${motifDejaDefini ? '' : 'required'}>
+          ${motifDejaDefini ? '' : '<option value="">— Sélectionnez un motif —</option>'}
           ${motifs.map(m => `<option value="${m}"${m === defaultMotif ? ' selected' : ''}>${m}</option>`).join('\n          ')}
         </select>
       </div>
@@ -309,10 +319,10 @@ export function buildFormHTML(annee, mois, salles, unites, locationExistante, mo
 /**
  * Assemble le contenu complet du modal de saisie.
  */
-export function buildModalContent(client, mois, annee, salles, unites, locationExistante, motifs = [], motifDefaut = '', salleObj = null) {
+export function buildModalContent(client, mois, annee, salles, unites, locationExistante, motifs = [], motifDefaut = '', salleObj = null, motifContrat = null) {
     return `
     <div class="location-salle-modal">
       ${buildContextHeader(client, mois, annee, locationExistante)}
-      ${buildFormHTML(annee, mois, salles, unites, locationExistante, motifs, motifDefaut, client, salleObj)}
+      ${buildFormHTML(annee, mois, salles, unites, locationExistante, motifs, motifDefaut, client, salleObj, motifContrat)}
     </div>`;
 }

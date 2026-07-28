@@ -54,12 +54,31 @@ const GENERIC_MAPPINGS = {
 const FACTURATION_MAPPINGS = {
   // Facture
   idFacture: 'id_facture',
-  idLoyer: 'id_loyer',   // ✅ Non null si cette facture a été générée depuis un loyer
+  // ✅ Lien direct vers le contrat de location qui a généré cette facture
+  // (facture standard ou confirmation) — architecture post-suppression du
+  // loyer intermédiaire (migrations 043/046). Pilote la "modification
+  // restreinte" (FactureForm.jsx, FactureActions.jsx) : sans ce mapping,
+  // le champ reste en snake_case côté frontend (id_contrat_location) et
+  // facture.idContratLocation est undefined, désactivant silencieusement
+  // toute la restriction.
+  idContratLocation: 'id_contrat_location',
+  // ✅ detailsMensuels : détail figé des confirmations de paiement
+  // (facture_detail_mensuel) — tableau vide pour une facture standard.
+  detailsMensuels: 'details_mensuels',
+  // ✅ est_paye/date_paiement de chaque ligne de facture_detail_mensuel
+  // (badge "Payé"/"Non payé" par mois dans FactureForm.jsx) — distinct de
+  // paiement.datePaiement (PAIEMENT_MAPPINGS), qui reste la valeur gagnante
+  // en cas d'ambiguïté puisque les deux pointent vers 'date_paiement'.
+  estPaye: 'est_paye',
   numeroFacture: 'numero_facture',
   dateFacture: 'date_facture',
   dateEcheance: 'date_echeance',
   dateDernierPaiement: 'date_dernier_paiement',
   dateEdition: 'date_edition',
+  // ✅ Calculé côté backend (date_edition IS NOT NULL) — voir
+  // FactureControleur::listerFactures/getFactureParId. Utilisé par
+  // FactureActions.jsx pour le workflow des confirmations (impression → email).
+  estImprimee: 'est_imprimee',
   dateEnvoi: 'date_envoi',
   montantHt: 'montant_ht',
   montantTva: 'montant_tva',
@@ -214,91 +233,7 @@ const CLIENT_MAPPINGS = {
   modePaiementPrefere: 'mode_paiement_prefere',
   languePrefere: 'langue_prefere',
   deviseDefaut: 'devise_defaut',
-  aLoyer: 'a_loyer',
-  loyerEtatPaiement: 'loyer_etat_paiement',
-};
-
-// ================================
-// MAPPINGS LOYERS (Table loyer séparée)
-// ================================
-
-/**
- * ✅ Mappings pour la table loyer (séparée de facture)
- * Structure: table loyer + table loyer_detail
- * Numérotation: LOY-{id_client}-{seq} (gérée en PHP)
- */
-const LOYER_MAPPINGS = {
-  // ✅ Identifiants (table loyer)
-  idLoyer: 'id_loyer',
-  numeroLoyer: 'numero_loyer',
-  numeroSequence: 'numero_sequence',
-  idContratLocation: 'id_contrat_location',
-  
-  // ✅ Relation client
-  idClient: 'id_client',
-  prenomClient: 'prenom_client',
-  nomClient: 'nom_client',
-  nomCompletClient: 'nom_complet_client',
-  emailClient: 'email_client',
-  telephoneClient: 'telephone_client',
-  rueClient: 'rue_client',
-  numeroClient: 'numero_client',
-  codePostalClient: 'code_postal_client',
-  localiteClient: 'localite_client',
-  
-  // ✅ Dates
-  dateCreationLoyer: 'date_creation_loyer',
-  periodeDebut: 'periode_debut',
-  periodeFin: 'periode_fin',
-  
-  // ✅ Durée et description
-  dureeMois: 'duree_mois',
-  motif: 'motif',
-  description: 'description',
-  idFacture: 'id_facture',  // ✅ Facture générée depuis ce loyer (null si paiement direct)
-  factureEtat: 'facture_etat', // ✅ État de la facture liée (null si pas de facture)
-  afficherDatesPaiement: 'afficher_dates_paiement',
-  
-  // ✅ Montants
-  loyerMontantTotal: 'loyer_montant_total',
-  montantMensuelMoyen: 'montant_mensuel_moyen',
-  loyerMontantPaye: 'loyer_montant_paye',
-  montantRestant: 'montant_restant',
-  soldeRestant: 'solde_restant',
-  pourcentagePaye: 'pourcentage_paye',
-  
-  // ✅ États
-  loyerStatut: 'loyer_statut',  // actif, termine, suspendu, annule
-  etatPaiement: 'etat_paiement',  // non_paye, partiellement_paye, paye
-  moisPayes: 'mois_payes',
-  totalMois: 'total_mois',
-  
-  // ✅ Détails mensuels (table loyer_detail)
-  idLoyerDetail: 'id_loyer_detail',
-  loyerMois: 'loyer_mois',
-  loyerNumeroMois: 'loyer_numero_mois',
-  loyerAnnee: 'loyer_annee',
-  idUnite:           'id_unite',
-  quantite:          'quantite',
-  loyerDetailMontant: 'loyer_detail_montant',
-  dates:             'dates',
-  loyerDetailPaye: 'loyer_detail_paye',
-  montantMensuel: 'montant',  // Alias
-  montantsMensuels: 'montants_mensuels',  // Array côté frontend
-  estPaye: 'est_paye',
-  datePaiement: 'date_paiement',
-  // ✅ Infos unité et service (JOINs dans getLoyerParId)
-  nomUnite:         'nom_unite',
-  abreviationUnite: 'abreviation_unite',
-  codeUnite:        'code_unite',
-  idService:        'id_service',
-  nomService:       'nom_service',
-  
-  // ✅ Métadonnées
-  dateCreation: 'date_creation',
-  dateModification: 'date_modification',
-  createurId: 'createur_id',
-  modificateurId: 'modificateur_id'
+  estTherapeute: 'est_therapeute',
 };
 
 // ================================
@@ -316,6 +251,16 @@ const LOCATION_SALLE_MAPPINGS = {
   idClient:       'id_client',
   nomClient:      'nom_client',
   annee:          'annee',
+  nomSalle:       'nom_salle',
+
+  // Type de contrat (type_contrat_location)
+  idTypeContrat:      'id_type_contrat',
+  nomTypeContrat:     'nom_type_contrat',
+  estForfait:         'est_forfait',
+  typeDocument:       'type_document',
+  typeClientRequis:   'type_client_requis',
+  categorieMotifs:    'categorie_motifs',
+  typesContrat:       'types_contrat',
 
   // Détail
   idDetail:       'id_detail',
@@ -332,15 +277,34 @@ const LOCATION_SALLE_MAPPINGS = {
   quantite:       'quantite',
 
   // Table salle (entité propre)
-  nomService:          'nom_service',
-  typeClientRequis:    'type_client_requis',
-  typeDocument:        'type_document',
+  nomService:     'nom_service',
+
+  // ✅ Verrou facture (calculé dans listerContrats — CASE SQL sur
+  // facture.id_contrat_location, plus de loyer intermédiaire)
+  factureVerrouille: 'facture_verrouille',
+  factureVerrouilleRaison: 'facture_verrouille_raison', // 'facture' | null
+  factureEtat: 'facture_etat',
 
   // Métadonnées
   createdAt:      'created_at',
   updatedAt:      'updated_at',
   createdBy:      'created_by',
   updatedBy:      'updated_by',
+};
+
+// ================================
+// MAPPINGS MOTIFS DE LOCATION
+// ================================
+
+const MOTIF_LOCATION_MAPPINGS = {
+  id:              'id',
+  idTypeContrat:   'id_type_contrat',
+  libelle:         'libelle',
+  estDefaut:       'est_defaut',
+  actif:           'actif',
+  ordre:           'ordre',
+  createdAt:       'created_at',
+  updatedAt:       'updated_at',
 };
 
 // ================================
@@ -493,7 +457,6 @@ const ALL_MAPPINGS = {
   ...FACTURATION_MAPPINGS,
   ...TARIFICATION_MAPPINGS,
   ...PAIEMENT_MAPPINGS,
-  ...LOYER_MAPPINGS,
   ...LOCATION_SALLE_MAPPINGS,
   ...CLIENT_MAPPINGS,
   ...USER_MAPPINGS,
@@ -530,24 +493,21 @@ const CONTEXT_MAPPINGS = {
     ...GENERIC_MAPPINGS,
     ...PAIEMENT_MAPPINGS,
     ...FACTURATION_MAPPINGS,
-    ...CLIENT_MAPPINGS,
-    ...LOYER_MAPPINGS
+    ...CLIENT_MAPPINGS
   },
 
-  // Contexte loyer
-  loyer: {
-    ...GENERIC_MAPPINGS,
-    ...LOYER_MAPPINGS,
-    ...CLIENT_MAPPINGS,
-    ...FACTURATION_MAPPINGS
-  },
-  
   // Contexte location de salle
   locationSalle: {
     ...GENERIC_MAPPINGS,
     ...LOCATION_SALLE_MAPPINGS,
     ...CLIENT_MAPPINGS,
     ...TARIFICATION_MAPPINGS,  // pour abreviationUnite, nomUnite, idUnite...
+  },
+
+  // Contexte motifs de location
+  motifLocation: {
+    ...GENERIC_MAPPINGS,
+    ...MOTIF_LOCATION_MAPPINGS,
   },
 
   // Contexte administration
@@ -684,9 +644,10 @@ const API_ENDPOINTS_MAPPING = {
     'client-api.php', 
     'facture-api.php',
     'paiement-api.php',
-    'loyer-api.php',
     'location-salle-api.php',
     'salle-api.php',
+    'type-contrat-location-api.php',
+    'motif-location-api.php',
     'user-api.php',
     'parametre-api.php'
   ],
@@ -702,9 +663,10 @@ const API_ENDPOINTS_MAPPING = {
     'client-api.php': 'client',
     'facture-api.php': 'facturation',
     'paiement-api.php': 'paiement',
-    'loyer-api.php': 'loyer',
     'location-salle-api.php': 'locationSalle',
     'salle-api.php': 'locationSalle',
+    'type-contrat-location-api.php': 'locationSalle',
+    'motif-location-api.php': 'motifLocation',
     'user-api.php': 'admin',
     'parametre-api.php': 'parametres'
   },
@@ -770,7 +732,6 @@ export {
   FACTURATION_MAPPINGS,
   TARIFICATION_MAPPINGS,
   PAIEMENT_MAPPINGS,
-  LOYER_MAPPINGS,
   LOCATION_SALLE_MAPPINGS,
   CLIENT_MAPPINGS,
   USER_MAPPINGS,
@@ -811,7 +772,6 @@ export default {
   FACTURATION_MAPPINGS,
   TARIFICATION_MAPPINGS,
   PAIEMENT_MAPPINGS,
-  LOYER_MAPPINGS,
   LOCATION_SALLE_MAPPINGS,
   CLIENT_MAPPINGS,
   USER_MAPPINGS,

@@ -1,5 +1,17 @@
-import React, { useState } from 'react';
-import { FiEdit, FiEye, FiPrinter, FiTrash2, FiDollarSign, FiCopy, FiMail } from 'react-icons/fi';
+import React from 'react';
+import { createLogger } from '../../utils/createLogger';
+import { LIBELLES_ETAT_BLOQUANT_MODIFICATION, LIBELLES_ETAT_FACTURE } from '../../constants/factureConstants';
+import {
+    ViewActionButton,
+    EditActionButton,
+    PrintActionButton,
+    CopyActionButton,
+    MailActionButton,
+    PayActionButton,
+    DeleteActionButton,
+} from '../ui/buttons';
+
+const log = createLogger('FactureActions');
 
 const FactureActions = ({
     facture,
@@ -13,236 +25,182 @@ const FactureActions = ({
     onSupprimerFacture,
     onSetNotification
 }) => {
-    // ✅ CORRECTION: Extraction robuste de l'ID
     const idFacture = facture.idFacture || facture.id;
-    const { etat } = facture;
-    
-    // État pour gérer le tooltip
-    const [tooltip, setTooltip] = useState({
-        visible: false,
-        text: '',
-        x: 0,
-        y: 0
-    });
-    
-    // Conditions d'activation des boutons
-    // ✅ Une facture liée à un loyer ne peut pas être modifiée directement —
-    //    passer par la modification du loyer pour régénérer la facture.
-    const estLieeAUnLoyer = !!(facture.idLoyer);
-    const canModify = !estLieeAUnLoyer && ['En attente', 'Éditée'].includes(etat);
-    const canSendEmail = etat === 'Éditée';
-    const canPay = ['Envoyée', 'Retard', 'Partiellement payée'].includes(etat);
-    const canDelete = etat === 'En attente';
-    const canCancel = ['Envoyée', 'Éditée', 'Retard'].includes(etat);
-    const canPrint = ['En attente', 'Éditée'].includes(etat);
+    const { etat }  = facture;
 
-    // Gestion du tooltip collé au curseur
-    const handleMouseEnter = (event, text) => {
-        setTooltip({
-            visible: true,
-            text: text,
-            x: event.clientX,
-            y: event.clientY - 40 // 40px au-dessus du curseur
-        });
-    };
+    // ── Règles métier ─────────────────────────────────────────────────────────
+    const estLieeAUneLocation = !!(facture.idContratLocation);
+    // ✅ Confirmation de paiement (contrat au forfait) : vocabulaire d'état
+    // différent des factures standard (Non payé / Partiellement payée /
+    // Payée — pas de En attente/Éditée). Voir FactureForm.jsx (estConfirmation).
+    const estConfirmation = !!facture.estForfait;
+    // ✅ L'état de la facture prime sur la liaison à la location pour
+    // déterminer la raison affichée : un état comme "Payée" ou "Envoyée"
+    // bloque de toute façon la modification, indépendamment de la location.
+    const etatPermetModification = estConfirmation
+        ? etat === 'Non payé'
+        : ['En attente', 'Éditée'].includes(etat);
+    // ✅ Une facture liée à une location reste modifiable si l'état le permet,
+    // mais seuls certains champs le sont réellement (client/reste verrouillés
+    // côté FactureForm.jsx) : date_facture, ristourne et descriptions de
+    // lignes pour une facture standard (FactureControleur::modifierAttributsLimites) ;
+    // date_facture et description/montant du détail mensuel pour une
+    // confirmation, tant qu'aucun paiement n'a été enregistré
+    // (FactureControleur::modifierAttributsLimitesConfirmation).
+    const canModify = etatPermetModification;
 
-    const handleMouseMove = (event, text) => {
-        setTooltip(prev => ({
-            ...prev,
-            x: event.clientX,
-            y: event.clientY - 40
-        }));
-    };
+    // ✅ Règles spécifiques aux confirmations (contrat au forfait) :
+    // - Payer : tant que non soldée ("Non payé" ou "Partiellement payée" —
+    //   permet de régler le solde restant en plusieurs fois).
+    // - Annuler : uniquement tant qu'aucun paiement n'existe ("Non payé").
+    //   Dès qu'un paiement existe (Partiellement payée/Payée), plus d'annulation.
+    // - Imprimer : uniquement une fois la confirmation soldée ("Payée").
+    // - Envoyer par email : uniquement si soldée ET déjà imprimée au moins
+    //   une fois (estImprimee, calculé à partir de date_edition — voir
+    //   FactureControleur::listerFactures/getFactureParId) — l'email envoie
+    //   le PDF déjà généré. Workflow distinct de la facture standard, qui
+    //   se base sur l'état 'Éditée' plutôt que sur ce flag directement.
+    const canPrint     = estConfirmation ? etat === 'Payée' : ['En attente', 'Éditée'].includes(etat);
+    const canSendEmail = estConfirmation ? (etat === 'Payée' && !!facture.estImprimee) : etat === 'Éditée';
+    const canPay       = estConfirmation ? ['Non payé', 'Partiellement payée'].includes(etat) : ['Envoyée', 'Retard', 'Partiellement payée'].includes(etat);
+    const canDelete    = etat === 'En attente';
+    const canCancel    = estConfirmation ? etat === 'Non payé' : ['Envoyée', 'Éditée', 'Retard'].includes(etat);
 
-    const handleMouseLeave = () => {
-        setTooltip({
-            visible: false,
-            text: '',
-            x: 0,
-            y: 0
-        });
-    };
+    // ── Tooltips ──────────────────────────────────────────────────────────────
+    const tooltipModifier = canModify
+        ? (estConfirmation
+            ? 'Modifier (date et détail mensuel uniquement)'
+            : estLieeAUneLocation ? 'Modifier (date, ristourne et descriptions uniquement)' : 'Modifier la facture')
+        : (LIBELLES_ETAT_BLOQUANT_MODIFICATION[etat]
+            ? `${LIBELLES_ETAT_BLOQUANT_MODIFICATION[etat]} — Modification impossible`
+            : 'Modification impossible');
 
-    // Composant Tooltip
-    const TooltipComponent = () => {
-        if (!tooltip.visible) return null;
-
-        return (
-            <div 
-                className="cursor-tooltip"
-                style={{
-                    left: tooltip.x,
-                    top: tooltip.y,
-                    position: 'fixed',
-                    zIndex: 10000,
-                    pointerEvents: 'none'
-                }}
-            >
-                {tooltip.text}
-            </div>
-        );
-    };
+    const tooltipSupprimer = canDelete
+        ? 'Supprimer la facture'
+        : canCancel
+            ? 'Annuler la facture'
+            : `${LIBELLES_ETAT_FACTURE[etat] ?? 'Facture'} — Action impossible`;
 
     return (
-        <>
-            <div className="table-cell actions-cell" style={style}>
-                {/* Bouton Afficher */}
-                <button 
-                    className="bouton-action"
-                    aria-label="Afficher la facture"
-                    onMouseEnter={(e) => handleMouseEnter(e, 'Afficher la facture')}
-                    onMouseMove={(e) => handleMouseMove(e, 'Afficher la facture')}
-                    onMouseLeave={handleMouseLeave}
-                    onClick={(e) => {
-                        e.stopPropagation();
+        <div className="table-cell actions-cell" style={style}>
 
-                        onAfficherFacture(idFacture);
-                    }}
-                >
-                    <FiEye size={16} color="#800000" />
-                </button>
+            <ViewActionButton
+                tooltip="Afficher la facture"
+                onClick={(e) => { e.stopPropagation(); onAfficherFacture(idFacture); }}
+            />
 
-                {/* Bouton Modifier */}
-                <button 
-                    className={`bouton-action ${!canModify ? 'bouton-desactive' : ''}`}
-                    aria-label="Modifier la facture"
-                    disabled={!canModify}
-                    onMouseEnter={(e) => handleMouseEnter(e,
-                        canModify
-                            ? 'Modifier la facture'
-                            : estLieeAUnLoyer
-                                ? 'Modification via le loyer uniquement'
-                                : 'Modification impossible'
-                    )}
-                    onMouseMove={(e) => handleMouseMove(e,
-                        canModify
-                            ? 'Modifier la facture'
-                            : estLieeAUnLoyer
-                                ? 'Modification via le loyer uniquement'
-                                : 'Modification impossible'
-                    )}
-                    onMouseLeave={handleMouseLeave}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        if (canModify) {
-                            onModifierFacture(idFacture);
-                        } else if (estLieeAUnLoyer) {
-                            onSetNotification('Cette facture est liée à un loyer. Modifiez le loyer pour mettre à jour la facture.', 'warning');
-                        } else {
-                            onSetNotification('Seules les factures en attente et éditée peuvent être modifiées', 'error');
-                        }
-                    }}
-                >
-                    <FiEdit size={16} color={canModify ? "#800020" : "#ccc"} />
-                </button>
-                
-                {/* Bouton Imprimer */}
-                <button 
-                    className={`bouton-action ${!canPrint ? 'bouton-desactive' : ''}`}
-                    aria-label="Imprimer la facture"
-                    disabled={!canPrint}
-                    onMouseEnter={(e) => handleMouseEnter(e, canPrint ? 'Imprimer la facture' : 'Impression impossible')}
-                    onMouseMove={(e) => handleMouseMove(e, canPrint ? 'Imprimer la facture' : 'Impression impossible')}
-                    onMouseLeave={handleMouseLeave}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        if (canPrint) {
-                            onImprimerFacture(idFacture, e);
-                        } else {
-                            onSetNotification('Seules les factures en attente et éditée peuvent être imprimées', 'error');
-                        }
-                    }}
-                >
-                    <FiPrinter size={16} color={canPrint ? "#800020" : "#ccc"} />
-                </button>
-                
-                {/* Bouton Copier */}
-                <button 
-                    className="bouton-action"
-                    aria-label="Copier la facture"
-                    onMouseEnter={(e) => handleMouseEnter(e, 'Copier la facture')}
-                    onMouseMove={(e) => handleMouseMove(e, 'Copier la facture')}
-                    onMouseLeave={handleMouseLeave}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onCopierFacture(idFacture, e);
-                    }}
-                >
-                    <FiCopy size={16} color="#800020" />
-                </button>
+            <EditActionButton
+                disabled={!canModify}
+                tooltip={tooltipModifier}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    if (canModify) {
+                        onModifierFacture(idFacture);
+                    } else {
+                        onSetNotification(
+                            LIBELLES_ETAT_BLOQUANT_MODIFICATION[etat]
+                                ? `${LIBELLES_ETAT_BLOQUANT_MODIFICATION[etat]} — modification impossible`
+                                : 'Modification impossible',
+                            'error'
+                        );
+                    }
+                }}
+            />
 
-                {/* Bouton Envoyer par email */}
-                <button 
-                    className={`bouton-action ${!canSendEmail ? 'bouton-desactive' : ''}`}
-                    aria-label="Envoyer la facture par email"
-                    disabled={!canSendEmail}
-                    onMouseEnter={(e) => handleMouseEnter(e, canSendEmail ? 'Envoyer la facture par email' : 'Envoi impossible')}
-                    onMouseMove={(e) => handleMouseMove(e, canSendEmail ? 'Envoyer la facture par email' : 'Envoi impossible')}
-                    onMouseLeave={handleMouseLeave}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        if (!canSendEmail) {
-                            onSetNotification('Seules les factures éditées peuvent être envoyées par email', 'error');
-                            return;
-                        }
-                        onEnvoyerFacture(idFacture, e);
-                    }}
-                >
-                    <FiMail size={16} color={canSendEmail ? "#800020" : "#ccc"} />
-                </button>
-                
-                {/* Bouton Payer */}
-                <button 
-                    className={`bouton-action ${!canPay ? 'bouton-desactive' : ''}`}
-                    aria-label="Payer la facture"
-                    disabled={!canPay}
-                    onMouseEnter={(e) => handleMouseEnter(e, canPay ? 'Payer la facture' : 'Paiement impossible')}
-                    onMouseMove={(e) => handleMouseMove(e, canPay ? 'Payer la facture' : 'Paiement impossible')}
-                    onMouseLeave={handleMouseLeave}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        if (!canPay) {
-                            onSetNotification('Seules les factures envoyées, en retard ou partiellement payées peuvent être payées', 'error');
-                            return;
-                        }
-                        onPayerFacture(idFacture, e);
-                    }}
-                >
-                    <FiDollarSign size={16} color={canPay ? "#800020" : "#ccc"} />
-                </button>
+            <PrintActionButton
+                disabled={!canPrint}
+                tooltip={canPrint
+                    ? 'Imprimer la facture'
+                    : estConfirmation
+                        ? 'Impression possible une fois la confirmation soldée (tous les paiements saisis)'
+                        : (LIBELLES_ETAT_BLOQUANT_MODIFICATION[etat]
+                            ? `${LIBELLES_ETAT_BLOQUANT_MODIFICATION[etat]} — Impression impossible`
+                            : 'Impression impossible')}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    if (canPrint) {
+                        onImprimerFacture(idFacture, e);
+                    } else {
+                        onSetNotification(
+                            estConfirmation
+                                ? 'Cette confirmation ne peut être imprimée que lorsqu\'elle est soldée (tous les paiements saisis)'
+                                : (LIBELLES_ETAT_BLOQUANT_MODIFICATION[etat]
+                                    ? `${LIBELLES_ETAT_BLOQUANT_MODIFICATION[etat]} — impression impossible`
+                                    : 'Seules les factures en attente et éditée peuvent être imprimées'),
+                            'error'
+                        );
+                    }
+                }}
+            />
 
-                {/* Bouton Supprimer/Annuler */}
-                <button 
-                    className={`bouton-action ${!(canDelete || canCancel) ? 'bouton-desactive' : ''}`}
-                    aria-label={canDelete ? 'Supprimer la facture' : canCancel ? 'Annuler la facture' : 'Action impossible'}
-                    disabled={!(canDelete || canCancel)}
-                    onMouseEnter={(e) => handleMouseEnter(e, 
-                        canDelete ? 'Supprimer la facture' : 
-                        canCancel ? 'Annuler la facture' : 
-                        'Action impossible'
-                    )}
-                    onMouseMove={(e) => handleMouseMove(e, 
-                        canDelete ? 'Supprimer la facture' : 
-                        canCancel ? 'Annuler la facture' : 
-                        'Action impossible'
-                    )}
-                    onMouseLeave={handleMouseLeave}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        if (!canDelete && !canCancel) {
-                            onSetNotification('Cette facture ne peut pas être supprimée ou annulée', 'error');
-                            return;
-                        }
-                        onSupprimerFacture(idFacture);
-                    }}
-                >
-                    <FiTrash2 size={16} color={(canDelete || canCancel) ? "#800020" : "#ccc"} />
-                </button>
-            </div>
-            
-            {/* Tooltip Component */}
-            <TooltipComponent />
-        </>
+            <CopyActionButton
+                tooltip="Copier la facture"
+                onClick={(e) => { e.stopPropagation(); onCopierFacture(idFacture, e); }}
+            />
+
+            <MailActionButton
+                disabled={!canSendEmail}
+                tooltip={canSendEmail
+                    ? 'Envoyer la facture par email'
+                    : estConfirmation
+                        ? (etat !== 'Payée'
+                            ? 'Envoi possible une fois la confirmation soldée et imprimée'
+                            : 'Envoi possible une fois la confirmation imprimée')
+                        : `${LIBELLES_ETAT_FACTURE[etat] ?? 'Facture'} — Envoi impossible`}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    if (!canSendEmail) {
+                        onSetNotification(
+                            estConfirmation
+                                ? 'Cette confirmation ne peut être envoyée qu\'une fois soldée et imprimée'
+                                : `${LIBELLES_ETAT_FACTURE[etat] ?? 'Facture'} — seules les factures éditées peuvent être envoyées par email`,
+                            'error'
+                        );
+                        return;
+                    }
+                    onEnvoyerFacture(idFacture, e);
+                }}
+            />
+
+            <PayActionButton
+                disabled={!canPay}
+                tooltip={canPay
+                    ? 'Payer la facture'
+                    : estConfirmation
+                        ? 'Paiement impossible : cette confirmation est déjà soldée'
+                        : `${LIBELLES_ETAT_FACTURE[etat] ?? 'Facture'} — Paiement impossible`}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    if (!canPay) {
+                        onSetNotification(
+                            estConfirmation
+                                ? 'Cette confirmation est déjà soldée et ne peut plus recevoir de paiement'
+                                : `${LIBELLES_ETAT_FACTURE[etat] ?? 'Facture'} — seules les factures envoyées, en retard ou partiellement payées peuvent être payées`,
+                            'error'
+                        );
+                        return;
+                    }
+                    onPayerFacture(idFacture, e);
+                }}
+            />
+
+            <DeleteActionButton
+                disabled={!(canDelete || canCancel)}
+                tooltip={tooltipSupprimer}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    if (!canDelete && !canCancel) {
+                        onSetNotification(
+                            `${LIBELLES_ETAT_FACTURE[etat] ?? 'Facture'} — ne peut pas être supprimée ou annulée`,
+                            'error'
+                        );
+                        return;
+                    }
+                    onSupprimerFacture(idFacture);
+                }}
+            />
+
+        </div>
     );
 };
 

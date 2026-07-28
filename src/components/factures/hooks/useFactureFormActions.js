@@ -103,6 +103,10 @@ export const useFactureFormActions = () => {
         numeroFacture: factureData.numeroFacture,
         dateFacture: factureData.dateFacture,
         idClient: factureData.idClient,
+        // ✅ Nécessaire pour savoir si cette facture a été générée depuis
+        // une location de salle (verrouillage client/lignes en édition,
+        // cf. FactureForm.jsx) — plus de loyer intermédiaire.
+        idContratLocation: factureData.idContratLocation ?? null,
         montantTotal: factureData.montantTotal,
         montantFacture: factureData.montantTotal,
         montantBrut: factureData.montantBrut,
@@ -113,6 +117,13 @@ export const useFactureFormActions = () => {
         totalAvecRistourne: totalNet,
         totalBrut: totalBrut,
         lignes: lignesEnrichies,
+        // ✅ Détail mensuel figé (confirmations de paiement, contrats au
+        // forfait) — tableau vide pour une facture standard "à l'utilisation".
+        detailsMensuels: factureData.detailsMensuels ?? [],
+        // ✅ Source de vérité pour distinguer facture standard / confirmation
+        // de paiement — dérivé de type_contrat_location.est_forfait côté
+        // backend, PAS de la présence de lignes/detailsMensuels.
+        estForfait: !!factureData.estForfait,
         etat: factureData.etat,
         etatAffichage: factureData.etatAffichage,
         dateEcheance: factureData.dateEcheance,

@@ -1,191 +1,204 @@
 // src/components/users/UserListTable.jsx
-/**
- * Tableau d'affichage de la liste des utilisateurs
-*/
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { ICONS } from '../ui/buttons';
 import { createLogger } from '../../utils/createLogger';
-import { FiUser, FiShield } from 'react-icons/fi';
+import UnifiedTable from '../shared/tables/UnifiedTable';
+import UnifiedFilter from '../shared/filters/UnifiedFilter';
 import {
-  EditActionButton,
-  ViewActionButton,
-  DeleteActionButton
+    ViewActionButton,
+    EditActionButton,
+    DeleteActionButton,
+    UserCheckActionButton,
+    UserXActionButton,
 } from '../ui/buttons';
-import {
-  isCompteActif,
-  getUserRoleClass,
-  getFullName
-} from './helpers/userHelpers';
-import { 
-  getBadgeClasses, 
-  formatEtatText 
-} from '../../utils/formatters';
+import { isCompteActif, getFullName } from './helpers/userHelpers';
+import { getBadgeClasses, formatEtatText } from '../../utils/formatters';
 import { USER_STATE_MESSAGES } from '../../constants/userConstants';
 import '../../styles/components/users/UserListTable.css';
 
-/**
- * Tableau d'affichage de la liste des utilisateurs
- * Affiche les utilisateurs avec leurs informations et actions (voir, modifier, supprimer)
- * Supporte la sélection de lignes et le logging des interactions
- *
- * @param {Array} users - Liste des utilisateurs à afficher
- * @param {boolean} loading - Indique si le chargement est en cours
- * @param {string} error - Message d'erreur si applicable
- * @param {Object} currentUser - Utilisateur connecté (pour vérifier les permissions)
- * @param {Function} onView - Callback pour voir un utilisateur
- * @param {Function} onEdit - Callback pour modifier un utilisateur
- * @param {Function} onDelete - Callback pour supprimer un utilisateur
- */
+const { USER: UserIcon, SHIELD: ShieldIcon } = ICONS;
+
+const log = createLogger('UserListTable');
+
+const COLUMN_DEFS = [
+    { label: 'Username',    field: 'username', sortKey: 'username', flex: '0 0 130px', minWidth: '110px' },
+    { label: 'Nom complet', field: 'nom',      sortKey: 'nom',      flex: '1',         minWidth: '140px' },
+    { label: 'Email',       field: 'email',    sortKey: 'email',    flex: '1.2',       minWidth: '160px' },
+    { label: 'Rôle',        field: 'role',     sortKey: 'role',     flex: '0 0 130px', minWidth: '110px' },
+    { label: 'Statut',      field: 'statut',   sortKey: 'statut',   flex: '0 0 90px',  minWidth: '80px',  align: 'center' },
+    { label: '',            field: 'actions',                       flex: '0 0 180px', minWidth: '180px', className: 'actions-cell' },
+];
+
 const UserListTable = ({
-  users = [],
-  loading = false,
-  error = null,
-  currentUser,
-  onView,
-  onEdit,
-  onDelete
+    users = [],
+    loading = false,
+    error = null,
+    onView, onEdit, onDelete, onToggleActif,
 }) => {
-  const log = createLogger('UserListTable');
-  const [selectedUserId, setSelectedUserId] = useState(null);
+    log.debug('Rendu tableau', { userCount: users.length, loading });
 
-  log.debug('Rendu tableau', { userCount: users.length, loading, hasError: !!error });
+    // ── Tri ───────────────────────────────────────────────────────────────────
+    const [sortConfig, setSortConfig] = useState({ key: 'username', direction: 'asc' });
 
-  // Gère la sélection/déselection d'une ligne
-  const handleRowClick = (userId) => {
-    const newSelectedId = selectedUserId === userId ? null : userId;
-    log.debug('Sélection ligne utilisateur', { userId, selected: newSelectedId !== null });
-    setSelectedUserId(newSelectedId);
-  };
+    const handleSort = (key) => {
+        setSortConfig(prev => ({
+            key,
+            direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
+        }));
+    };
 
-  // Affichage : État de chargement
-  if (loading) {
-    log.debug('État chargement tableau');
-    return (
-      <div className="users-loading-message">
-        {USER_STATE_MESSAGES.LOADING}
-      </div>
-    );
-  }
+    // ── Filtres ───────────────────────────────────────────────────────────────
+    const [showFilters,  setShowFilters]  = useState(false);
+    const [filters,      setFilters]      = useState({ username: '', nom: '', role: '', statut: '' });
 
-  // Affichage : État d'erreur
-  if (error) {
-    log.warn('Erreur affichage tableau', { error });
-    return (
-      <div className="users-error-message">
-        {error}
-      </div>
-    );
-  }
+    const rolesOptions = useMemo(() =>
+        [...new Set(users.map(u => u.role).filter(Boolean))].sort()
+            .map(r => ({ value: r, label: r })),
+    [users]);
 
-  // Affichage : Liste vide
-  if (!users || users.length === 0) {
-    log.debug('Tableau vide');
-    return (
-      <div className="users-empty-message">
-        {USER_STATE_MESSAGES.EMPTY}
-      </div>
-    );
-  }
+    const usernameOptions = useMemo(() =>
+        [...new Set(users.map(u => u.username).filter(Boolean))].sort()
+            .map(v => ({ value: v, label: v })),
+    [users]);
 
-  // Handlers pour les actions
-  const handleViewClick = (userObj) => {
-    log.info('Affichage utilisateur', { userId: userObj.id_utilisateur, username: userObj.username });
-    onView?.(userObj);
-  };
+    const nomOptions = useMemo(() =>
+        [...new Set(users.map(u => getFullName(u)).filter(Boolean))].sort()
+            .map(v => ({ value: v, label: v })),
+    [users]);
 
-  const handleEditClick = (userObj) => {
-    log.info('Modification utilisateur', { userId: userObj.id_utilisateur, username: userObj.username });
-    onEdit?.(userObj);
-  };
+    const filterOptions = useMemo(() => ({
+        username: usernameOptions,
+        nom:      nomOptions,
+        role:     rolesOptions,
+        statut:   [{ value: 'Actif', label: 'Actif' }, { value: 'Inactif', label: 'Inactif' }],
+    }), [usernameOptions, nomOptions, rolesOptions]);
 
-  const handleDeleteClick = (userObj) => {
-    log.info('Suppression utilisateur', { userId: userObj.id_utilisateur, username: userObj.username });
-    onDelete?.(userObj);
-  };
+    const handleFilterChange = (field, value) =>
+        setFilters(prev => ({ ...prev, [field]: value }));
 
-  // Déterminer le statut de l'utilisateur
-  const getUserStatus = (user) => {
-    return isCompteActif(user.compte_actif) ? 'Actif' : 'Inactif';
-  };
+    const handleResetFilters = () => setFilters({ username: '', nom: '', role: '', statut: '' });
 
-  return (
-    <div className="users-table">
-      {/* En-tête du tableau */}
-      <div className="users-table-header">
-        <div className="users-header-cell">Username</div>
-        <div className="users-header-cell">Nom complet</div>
-        <div className="users-header-cell">Email</div>
-        <div className="users-header-cell">Rôle</div>
-        <div className="users-header-cell">Statut</div>
-        <div className="users-header-cell">Actions</div>
-      </div>
+    // ── Données filtrées + triées ─────────────────────────────────────────────
+    const processedUsers = useMemo(() => {
+        let result = [...users];
 
-      {/* Corps du tableau */}
-      <div className="users-table-body">
-        {users.map((user) => {
-          const userStatus = getUserStatus(user);
-          const isInactive = !isCompteActif(user);
-          
-          return (
-            <div
-              key={user.id_utilisateur}
-              className={`users-table-row ${selectedUserId === user.id_utilisateur ? 'users-selected' : ''} ${
-                isInactive ? 'users-inactive' : ''
-              }`}
-              onClick={() => handleRowClick(user.id_utilisateur)}
+        if (filters.username) result = result.filter(u => u.username === filters.username);
+        if (filters.nom)      result = result.filter(u => getFullName(u) === filters.nom);
+        if (filters.role)   result = result.filter(u => u.role === filters.role);
+        if (filters.statut) {
+            const wantActif = filters.statut === 'Actif';
+            result = result.filter(u => isCompteActif(u.compte_actif) === wantActif);
+        }
+
+        result.sort((a, b) => {
+            const dir = sortConfig.direction === 'asc' ? 1 : -1;
+            let aVal, bVal;
+            switch (sortConfig.key) {
+                case 'nom':    aVal = getFullName(a); bVal = getFullName(b); break;
+                case 'statut': aVal = isCompteActif(a.compte_actif) ? 'Actif' : 'Inactif';
+                               bVal = isCompteActif(b.compte_actif) ? 'Actif' : 'Inactif'; break;
+                default:       aVal = a[sortConfig.key] ?? ''; bVal = b[sortConfig.key] ?? '';
+            }
+            return String(aVal).localeCompare(String(bVal), 'fr') * dir;
+        });
+
+        return result;
+    }, [users, filters, sortConfig]);
+
+    // ── Colonnes : headers triables + renders ─────────────────────────────────
+    const columns = useMemo(() => COLUMN_DEFS.map(col => {
+        // Label triable
+        const label = col.sortKey ? (
+            <span
+                className="table-sort-header"
+                onClick={(e) => { e.stopPropagation(); handleSort(col.sortKey); }}
             >
-              {/* Username */}
-              <div className="users-table-cell users-username-cell">
-                <FiUser size={16} />
-                <span>{user.username}</span>
-              </div>
-
-              {/* Nom complet */}
-              <div className="users-table-cell users-name-cell">
-                {getFullName(user)}
-              </div>
-
-              {/* Email */}
-              <div className="users-table-cell users-email-cell">
-                {user.email}
-              </div>
-
-              {/* Rôle */}
-              <div className="users-table-cell users-role-cell">
-                <FiShield size={14} />
-                <span>{user.role || 'Non défini'}</span>
-              </div>
-
-              {/* ✅ Statut avec Badge - utilise getBadgeClasses() et formatEtatText() */}
-              <div className="users-table-cell users-status-cell">
-                <span className={getBadgeClasses(userStatus)}>
-                  {formatEtatText(userStatus)}
+                <span>{col.label}</span>
+                <span className={`sort-icon ${sortConfig.key === col.sortKey ? 'sort-active' : 'sort-inactive'}`}>
+                    {sortConfig.key === col.sortKey
+                        ? (sortConfig.direction === 'asc' ? '↑' : '↓')
+                        : '⇅'}
                 </span>
-              </div>
+            </span>
+        ) : col.label;
 
-              {/* Actions */}
-              <div className="users-table-cell users-actions-cell">
-                <div className="users-action-buttons">
-                  <ViewActionButton
-                    onClick={() => handleViewClick(user)}
-                    disabled={false}
-                  />
-                  <EditActionButton
-                    onClick={() => handleEditClick(user)}
-                    disabled={false}
-                  />
-                  <DeleteActionButton
-                    onClick={() => handleDeleteClick(user)}
-                    disabled={false}
-                  />
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+        // Render par colonne
+        let render;
+        switch (col.field) {
+            case 'username':
+                render = (u) => (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <UserIcon size={14} />{u.username}
+                    </span>
+                );
+                break;
+            case 'nom':
+                render = (u) => getFullName(u);
+                break;
+            case 'email':
+                render = (u) => u.email;
+                break;
+            case 'role':
+                render = (u) => (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <ShieldIcon size={13} />{u.role || 'Non défini'}
+                    </span>
+                );
+                break;
+            case 'statut':
+                render = (u) => {
+                    const status = isCompteActif(u.compte_actif) ? 'Actif' : 'Inactif';
+                    return <span className={getBadgeClasses(status)}>{formatEtatText(status)}</span>;
+                };
+                break;
+            case 'actions':
+                render = (u) => {
+                    const actif = isCompteActif(u.compte_actif);
+                    return (
+                        <>
+                            <ViewActionButton onClick={(e) => { e.stopPropagation(); onView?.(u); }} />
+                            <EditActionButton onClick={(e) => { e.stopPropagation(); onEdit?.(u); }} />
+                            {actif
+                                ? <UserXActionButton    tooltip="Désactiver le compte" onClick={(e) => { e.stopPropagation(); onToggleActif?.(u, false); }} />
+                                : <UserCheckActionButton tooltip="Activer le compte"    onClick={(e) => { e.stopPropagation(); onToggleActif?.(u, true);  }} />
+                            }
+                            <DeleteActionButton onClick={(e) => { e.stopPropagation(); onDelete?.(u); }} />
+                        </>
+                    );
+                };
+                break;
+            default:
+                render = null;
+        }
+
+        return { ...col, label, render };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }), [sortConfig, onView, onEdit, onDelete, onToggleActif]);
+
+    return (
+        <div>
+            <UnifiedFilter
+                filterType="utilisateurs"
+                filterOptions={filterOptions}
+                filters={filters}
+                onFilterChange={handleFilterChange}
+                onResetFilters={handleResetFilters}
+                showFilters={showFilters}
+                onToggleFilters={() => setShowFilters(s => !s)}
+                totalCount={users.length}
+                filteredCount={processedUsers.length}
+            />
+            <UnifiedTable
+                columns={columns}
+                data={processedUsers}
+                isLoading={loading}
+                error={error}
+                emptyMessage={USER_STATE_MESSAGES.EMPTY}
+                getRowId={(u) => u.id_utilisateur}
+            />
+        </div>
+    );
 };
 
 export default UserListTable;

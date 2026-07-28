@@ -166,12 +166,6 @@
  * On ajoute seulement les variantes de couleurs spécifiques au contexte.
  */
 
-.pv-badge-loyer {
-    background-color: var(--color-info-bg);
-    color: var(--color-info-text);
-    border-color: var(--color-info-border);
-}
-
 .pv-badge-facture {
     background-color: var(--color-neutral-bg);
     color: var(--color-neutral-text);
@@ -261,7 +255,6 @@
         border: 1px solid var(--color-text);
     }
 
-    .pv-badge-loyer,
     .pv-badge-facture {
         border-width: 2px;
         font-weight: 700;

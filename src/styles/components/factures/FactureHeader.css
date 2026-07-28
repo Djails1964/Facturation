@@ -63,6 +63,11 @@
     width: 100%;
     padding: 10px 0;
     font-size: 16px;
+    /* ✅ line-height explicite — un <input> et un <div> calculent un
+       line-height "normal" différent par défaut, ce qui désalignait la
+       hauteur de contenu entre .facture-header-readonly-field (div) et
+       ce champ (input). Doit rester identique aux deux endroits. */
+    line-height: 1.5;
     border: none;
     border-bottom: 1px solid #ccc;
     background-color: transparent;
@@ -130,13 +135,20 @@
     margin-top: 5px;
   }
   
-  /* Champ en lecture seule pour le client */
+  /* Champ en lecture seule (ex: date de facture en visualisation) —
+     aligné avec les <input> classiques : même padding, même couleur de
+     ligne, pas de margin-bottom propre (déjà géré par le wrapper parent
+     .facture-header-input qui a margin-bottom: 25px). */
   .facture-header-readonly-field {
     width: 100%;
     padding: 10px 0;
     font-size: 16px;
-    border-bottom: 1px solid #eee;
-    margin-bottom: 5px;
+    /* ✅ Même valeur explicite que .facture-header-input input, pour que
+       le div (Numéro/Client/Date en vue) et l'input (Date en édition)
+       aient exactement la même hauteur de contenu. */
+    line-height: 1.5;
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 0;
     color: var(--color-text);
   }
 

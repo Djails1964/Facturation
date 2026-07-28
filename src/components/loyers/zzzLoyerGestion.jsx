@@ -10,6 +10,7 @@ import { useNotifications } from '../../services/NotificationService';
 import { showCustom } from '../../utils/modalSystem';
 import { getTodayIso } from '../../utils/dateHelpers';
 import SalleService from '../../services/SalleService';
+import { toBoolean } from '../../utils/booleanHelper';
 import '../../styles/components/loyers/LoyerPaymentModal.css';
 
 function LoyerGestion({ 
@@ -40,7 +41,9 @@ function LoyerGestion({
     const [clientsLoading, setClientsLoading] = useState(false);
     const [clientError,    setClientError]    = useState(null);
 
-    // Clé pour forcer le rechargement de LoyersListe après un succès PDF
+    // Map idService → facturationUtilisation (chargée une fois)
+    const [factUtilParService, setFactUtilParService] = useState({});
+
     const [listeKey, setListeKey] = useState(0);
     
     // Ref anti-double chargement
@@ -62,8 +65,9 @@ function LoyerGestion({
     const { genererFactureDepuisLoyer } = useFactureFromLoyer();
 
     /**
-     * Génère le bon document selon le paramètre type_document de la salle.
-     * SalleService.getTypeDocument(idService) → 'facture' | 'confirmation'
+     * Génère le bon document selon le type de contrat de location (est_forfait).
+     * loyer.typeDocument === 'facture'      → facture (location à l'utilisation)
+     * loyer.typeDocument === 'confirmation' → confirmation de paiement PDF (forfait)
      */
     const handleGenererDocument = useCallback(async (loyer) => {
         const client    = clients.find(c => c.id === loyer.idClient)
@@ -71,11 +75,14 @@ function LoyerGestion({
         const annee     = new Date(loyer.periodeDebut).getFullYear();
         const idService = parseInt(loyer.idService, 10);
 
-        // Une seule requête : SELECT type_document FROM salle WHERE id_service = ?
-        const typeDocument = await SalleService.getTypeDocument(idService);
-        log.debug(`📄 type_document salle (service ${idService}) : ${typeDocument}`);
+        // ✅ Basé sur le type de contrat (type_contrat_location.est_forfait,
+        // exposé via v_loyers_complets.type_document) — pas sur le paramètre
+        // de facturation à l'utilisation de la salle, qui ne reflète pas le
+        // type de contrat réellement choisi pour ce loyer.
+        const estFactUtil = !toBoolean(loyer.estForfait); // ✅ idem listerLoyers : est_forfait fiable, type_document non sélectionné
+        log.debug(`📄 typeDocument du loyer #${loyer.idLoyer} : ${loyer.typeDocument} (service ${idService})`);
 
-        if (typeDocument === 'confirmation') {
+        if (!estFactUtil) {
             try {
                 await handleGenererConfirmationPDF(loyer.idLoyer);
             } catch (e) {
@@ -154,7 +161,7 @@ function LoyerGestion({
                 showError(e.message || 'Erreur lors de la génération de la facture');
             }
         }
-    }, [clients, genererFactureDepuisLoyer, handleGenererConfirmationPDF, showSuccess, showError, onFactureGeneree]);
+    }, [clients, factUtilParService, genererFactureDepuisLoyer, handleGenererConfirmationPDF, showSuccess, showError, onFactureGeneree]);
 
     // ── Effets de synchronisation ───────────────────────────────────
     useEffect(() => {
@@ -195,10 +202,8 @@ function LoyerGestion({
             log.debug('✅ Clients chargés depuis API:', clientsData.length);
             log.debug('📊 Données clients brutes:', clientsData);
             
-            // ✅ En mode modifier/afficher : tous les clients sans filtre
-            //    Le client du loyer doit toujours être disponible même si
-            //    aLoyer n'est pas à jour en base.
-            // ✅ En mode liste/création : seulement les clients avec loyer actif
+            // ✅ En mode modifier/afficher/nouveau : tous les clients sans filtre
+            // ✅ En mode liste : seulement les clients avec loyer actif
             const estEnModification = vue === 'modifier' || vue === 'afficher';
             const clientsFiltres = estEnModification
                 ? (clientsData || [])
@@ -221,8 +226,18 @@ function LoyerGestion({
         chargerClients('liste');
     }, [chargerClients]);
 
-    // Recharger les clients quand on navigue vers 'afficher' ou 'modifier'
-    // pour s'assurer que le client d'un loyer nouvellement créé est dans la liste
+    // Charger la map idService → facturationUtilisation une fois au montage
+    useEffect(() => {
+        SalleService.lister().then(salles => {
+            const map = {};
+            (salles ?? []).forEach(s => {
+                if (s.idService) map[s.idService] = toBoolean(s.facturationUtilisation);
+            });
+            setFactUtilParService(map);
+        }).catch(() => {});
+    }, []);
+
+    // Recharger les clients quand on navigue vers 'afficher', 'modifier' ou 'nouveau'
     useEffect(() => {
         if (activeView === 'afficher' || activeView === 'modifier') {
             chargerClients(activeView);
@@ -231,26 +246,12 @@ function LoyerGestion({
     }, [activeView, selectedLoyerId]);
 
     // ── Gestionnaires de navigation ─────────────────────────────────
-    const handleNouveauLoyer = useCallback(() => {
-        log.debug('➕ Nouveau loyer demandé');
-        setActiveView('nouveau');
-        setSelectedLoyerId(null);
-    }, []);
-
     const handleRetourListe = useCallback(() => {
         log.debug('🔙 Retour à la liste des loyers');
         setActiveView('liste');
         setSelectedLoyerId(null);
         if (onRetour) onRetour();
     }, [onRetour]);
-
-    const handleLoyerCreated = useCallback((nouveauLoyer) => {
-        log.debug('✅ Loyer créé:', nouveauLoyer);
-        showSuccess(`Loyer ${nouveauLoyer.numeroLoyer} créé avec succès`);
-        setActiveView('liste');
-        setSelectedLoyerId(nouveauLoyer.idLoyer);
-        if (onLoyerCreated) onLoyerCreated(nouveauLoyer);
-    }, [onLoyerCreated, showSuccess]);
 
     const handleModifierLoyer = useCallback((idLoyer) => {
         log.debug('✏️ Modification du loyer:', idLoyer);
@@ -276,17 +277,6 @@ function LoyerGestion({
     // ── Rendu conditionnel ──────────────────────────────────────────
     const renderContent = () => {
         switch (activeView) {
-            case 'nouveau':
-                return (
-                    <LoyerForm 
-                        mode={LOYER_FORM_MODES.CREATE}
-                        onRetourListe={handleRetourListe} 
-                        onLoyerCreated={handleLoyerCreated}
-                        clients={clients}
-                        clientsLoading={clientsLoading}
-                        onRechargerClients={chargerClients}
-                    />
-                );
             case 'modifier':
                 return (
                     <LoyerForm 
@@ -318,7 +308,6 @@ function LoyerGestion({
                         onAfficherLoyer={handleAfficherLoyer}
                         onLoyerSupprime={handleLoyerSupprime}
                         initialFilter={initialFilter}
-                        onNouveauLoyer={handleNouveauLoyer}
                         onSaisirPaiement={handleSaisirPaiement}
                         onGenererDocument={handleGenererDocument}
                         impressionEnCours={impressionEnCours}
@@ -330,14 +319,6 @@ function LoyerGestion({
     return (
         <div className="loyer-gestion-container">
             {renderContent()}
-            
-            {/* Bouton flottant pour ajouter un nouveau loyer (visible uniquement en mode liste) */}
-            {activeView === 'liste' && (
-                <div className="floating-button" onClick={handleNouveauLoyer}>
-                    <span>+</span>
-                    <div className="floating-tooltip">Nouveau loyer</div>
-                </div>
-            )}
         </div>
     );
 }

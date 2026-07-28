@@ -1,5 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { showConfirm } from '../../../utils/modalSystem';
 import { FORM_MODES } from '../../../constants/tarifConstants';
+import { UNSAVED_CHANGES_CONFIRM_CONFIG, UNSAVED_CHANGES_MESSAGES } from '../../../constants/appConstants';
+import { createLogger } from '../../../utils/createLogger';
+
+const log = createLogger('useTarifSpecialForm');
 
 /**
  * Hook pour gérer le formulaire de tarif spécial
@@ -33,10 +38,6 @@ export const useTarifSpecialForm = ({
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-    const [showUnsavedModal, setShowUnsavedModal] = useState(false);
-    const [showGlobalModal, setShowGlobalModal] = useState(false);
-    const [globalNavigationCallback, setGlobalNavigationCallback] = useState(null);
-    const [guardId] = useState(`tarif-special-form-${Date.now()}`);
     
     // ✅ MODIFIÉ: serviceUnites local uniquement (pour le filtre par service)
     const [serviceUnites, setServiceUnites] = useState({});
@@ -47,15 +48,14 @@ export const useTarifSpecialForm = ({
     const isView = mode === FORM_MODES.VIEW;
     const isReadOnly = isView;
 
-    console.log('useTarifSpecialForm - mode:', mode, 'tarifSpecialId:', tarifSpecialId);
-    console.log('useTarifSpecialForm - clients:', clients);
+    log.debug('mode:', mode, 'tarifSpecialId:', tarifSpecialId);
     
     // ✅ SIMPLIFIÉ: Chargement initial sans duplication
     useEffect(() => {
         const initializeForm = async () => {
             try {
 
-                console.log('Initialisation du formulaire de tarif spécial avec:', {
+                log.debug('Initialisation du formulaire de tarif spécial avec:', {
                     mode,
                     tarifSpecialId,
                     clients,
@@ -63,12 +63,11 @@ export const useTarifSpecialForm = ({
                 });
                 setIsLoading(true);
                 
-                // ✅ IMPORTANT: Vérifier que les données sont disponibles
                 if (!clients || clients.length === 0) {
-                    console.warn('⚠️ useTarifSpecialForm: Clients non disponibles');
+                    log.warn('⚠️ Clients non disponibles');
                 }
                 if (!services || services.length === 0) {
-                    console.warn('⚠️ useTarifSpecialForm: Services non disponibles');
+                    log.warn('⚠️ Services non disponibles');
                 }
                 
                 // Charger le tarif spécial si mode edit/view
@@ -77,7 +76,7 @@ export const useTarifSpecialForm = ({
                 }
                 
             } catch (error) {
-                console.error('❌ Erreur initialisation:', error);
+                log.error('❌ Erreur initialisation:', error);
                 setError('Erreur lors du chargement des données');
             } finally {
                 setIsLoading(false);
@@ -90,35 +89,29 @@ export const useTarifSpecialForm = ({
     // ✅ CONSERVÉ: Chargement des unités spécifiques à un service
     const loadServiceUnites = async (idService) => {
         if (!loadUnitesByService) {
-            console.error('❌ loadUnitesByService non fourni');
+            log.error('❌ loadUnitesByService non fourni');
             return;
         }
-        
         try {
             await loadUnitesByService(idService);
         } catch (error) {
-            console.error('❌ Erreur chargement unités service:', error);
+            log.error('❌ Erreur chargement unités service:', error);
         }
     };
     
     // ✅ REFACTORISÉ: Chargement d'un tarif spécial avec tarifActions
     const loadTarifSpecial = async (id) => {
         if (!tarifActions) {
-            console.error('❌ tarifActions non fourni');
+            log.error('❌ tarifActions non fourni');
             setError('Actions de tarification non disponibles');
             return;
         }
-        
         try {
-            // ✅ NOUVEAU: Utilisation de tarifActions.getTarifsSpeciaux au lieu de tarificationService.getTarifSpecial
             const tarifsSpeciaux = await tarifActions.getTarifsSpeciaux({ id });
-            
-            // getTarifsSpeciaux retourne un tableau, prendre le premier élément
             const tarifSpecialData = Array.isArray(tarifsSpeciaux) && tarifsSpeciaux.length > 0 ? tarifsSpeciaux[0] : null;
             
             if (tarifSpecialData) {
                 setTarifSpecial(tarifSpecialData);
-                // Charger les unités pour le service sélectionné
                 if (tarifSpecialData.idService) {
                     await loadServiceUnites(tarifSpecialData.idService);
                 }
@@ -126,7 +119,7 @@ export const useTarifSpecialForm = ({
                 throw new Error('Tarif spécial non trouvé');
             }
         } catch (error) {
-            console.error('❌ Erreur chargement tarif spécial:', error);
+            log.error('❌ Erreur chargement tarif spécial:', error);
             setError('Erreur lors du chargement du tarif spécial');
         }
     };
@@ -134,29 +127,35 @@ export const useTarifSpecialForm = ({
     // Gestion des changements
     const canDetectChanges = () => !isView;
     
-    const registerGuard = (id, guardFunction) => {
-        console.log('Guard registered:', id);
+    const registerGuard = (id) => {
+        log.debug('Guard registered:', id);
     };
     
     const unregisterGuard = (id) => {
-        console.log('Guard unregistered:', id);
+        log.debug('Guard unregistered:', id);
     };
     
     const resetChanges = () => {
         setHasUnsavedChanges(false);
     };
-    
-    const confirmNavigation = () => {
-        setShowUnsavedModal(false);
-        setHasUnsavedChanges(false);
-        if (onRetourListe) {
-            onRetourListe();
+
+    // Demande de navigation avec confirmation si modifications non sauvegardées
+    const requestNavigation = useCallback(async (navigationFn) => {
+        if (!hasUnsavedChanges) {
+            navigationFn?.();
+            return;
         }
-    };
-    
-    const cancelNavigation = () => {
-        setShowUnsavedModal(false);
-    };
+        const result = await showConfirm(
+            UNSAVED_CHANGES_CONFIRM_CONFIG(UNSAVED_CHANGES_MESSAGES.TARIF)
+        );
+        if (result.action === 'confirm') {
+            log.debug('✅ Navigation confirmée');
+            setHasUnsavedChanges(false);
+            navigationFn?.();
+        } else {
+            log.debug('❌ Navigation annulée');
+        }
+    }, [hasUnsavedChanges]);
     
     return {
         // États principaux
@@ -169,23 +168,13 @@ export const useTarifSpecialForm = ({
         setIsSubmitting,
         hasUnsavedChanges,
         setHasUnsavedChanges,
-        showUnsavedModal,
-        setShowUnsavedModal,
-        showGlobalModal,
-        setShowGlobalModal,
-        globalNavigationCallback,
-        setGlobalNavigationCallback,
-        guardId,
         
-        // ✅ MODIFIÉ: Données reçues en props
+        // Données reçues en props
         clients,
         services,
         serviceUnites,
         
-        // ✅ SUPPRIMÉ: clientsLoading, servicesLoading
-        // Ces états sont maintenant dans useTarifGestionState
-        
-        // ✅ NOUVEAU: Exposer tarifActions pour les autres hooks
+        // Exposer tarifActions pour les autres hooks
         tarifActions,
         
         // États dérivés
@@ -199,11 +188,8 @@ export const useTarifSpecialForm = ({
         registerGuard,
         unregisterGuard,
         resetChanges,
-        confirmNavigation,
-        cancelNavigation,
-        loadServiceUnites
-        
-        // ✅ SUPPRIMÉ: loadClients, loadServices
-        // Ces fonctions sont maintenant dans useTarifGestionState
+        requestNavigation,
+        loadServiceUnites,
+        onRetourListe,
     };
 };

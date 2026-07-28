@@ -3,7 +3,7 @@
 //   – titre du formulaire (existant)
 //   – badge état (existant mais inutilisé → activé)
 //   – nom du client  ]  affichés en EDIT/VIEW uniquement,
-//   – référence facture ou loyer ]  invisibles en CREATE (données inconnues)
+//   – référence facture ]  invisibles en CREATE (données inconnues)
 
 import { getBadgeClasses, formatEtatText, formatDate } from '../../../utils/formatters';
 import SectionTitle from '../../shared/SectionTitle';
@@ -14,27 +14,19 @@ const PaiementFormHeader = ({ titre, paiement = {}, etat }) => {
     // PaiementService remonte le nom dans nomClient (à confirmer selon mapping)
     const nomClient = paiement.nomClient || null;
 
-    // ── Type de paiement (facture ou loyer) ───────────────────────────────────
-    const estLoyer   = !!paiement.idLoyer;
-    const estFacture = !!paiement.idFacture && !estLoyer;
+    // ── Type de paiement (facture) ─────────────────────────────────────────────
+    const estFacture = !!paiement.idFacture;
 
     // ── Référence ─────────────────────────────────────────────────────────────
-    const refLabel  = estFacture ? 'Facture' : estLoyer ? 'Loyer' : null;
+    const refLabel  = estFacture ? 'Facture' : null;
     const refValeur = estFacture
         ? (paiement.numeroFacture || null)
-        : estLoyer
-            ? (paiement.numeroLoyer || null)
-            : null;
+        : null;
 
-    // Complément date facture ou période loyer
+    // Complément date facture
     const refComplement = estFacture && paiement.dateFacture
         ? formatDate(paiement.dateFacture, 'date')
-        : estLoyer && (paiement.periodeDebut || paiement.periodeFin)
-            ? [
-                paiement.periodeDebut ? formatDate(paiement.periodeDebut, 'date') : null,
-                paiement.periodeFin   ? formatDate(paiement.periodeFin, 'date')   : null,
-              ].filter(Boolean).join(' → ')
-            : null;
+        : null;
 
     const afficherMeta = nomClient || refValeur;
 

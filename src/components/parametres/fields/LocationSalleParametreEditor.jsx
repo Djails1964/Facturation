@@ -27,7 +27,6 @@ const SalleBloc = ({
     modifiedValues,
     updateParametreValue,
     servicesActifs,
-    servicesDejaUtilises,
 }) => {
     const getValue = (nomParametre) => {
         const id = generateParametreId(GROUPE, SOUS_GROUPE, categorie, nomParametre);
@@ -48,11 +47,13 @@ const SalleBloc = ({
         });
     };
 
-    const nomSalle           = getValue('label') || categorie;
-    const nomService         = getValue('nom_service');
-    const typeClient         = getValue('type_client_requis');
-    const typeDocument       = getValue('type_document');
-    const serviceSelectionne = servicesActifs.find(s => s.nomService === nomService);
+    const nomSalle              = getValue('label') || categorie;
+    const nomService            = getValue('nomService');
+    const typeClient            = getValue('typeClientRequis');
+    const typeDocument          = getValue('typeDocument');
+    const facturationUtilisation = getValue('facturationUtilisation') === '1'
+                                || getValue('facturationUtilisation') === true;
+
 
     return (
         <div className="motifs-categorie-bloc">
@@ -71,23 +72,14 @@ const SalleBloc = ({
                     <select
                         className="ls-salle-select"
                         value={nomService}
-                        onChange={e => handleChange('nom_service', e.target.value)}
+                        onChange={e => handleChange('nomService', e.target.value)}
                     >
                         <option value="">— aucun —</option>
-                        {servicesActifs.map(s => {
-                            const dejaUtilise = servicesDejaUtilises.has(s.idService)
-                                && s.idService !== serviceSelectionne?.idService;
-                            return (
-                                <option
-                                    key={s.idService}
-                                    value={s.nomService}
-                                    disabled={dejaUtilise}
-                                    title={dejaUtilise ? 'Déjà associé à une autre salle' : ''}
-                                >
-                                    {s.nomService}{dejaUtilise ? ' (déjà utilisé)' : ''}
-                                </option>
-                            );
-                        })}
+                        {servicesActifs.map(s => (
+                            <option key={s.idService} value={s.nomService}>
+                                {s.nomService}
+                            </option>
+                        ))}
                     </select>
                     <span className="ls-salle-desc">
                         Service utilisé pour calculer le prix de la location
@@ -102,7 +94,7 @@ const SalleBloc = ({
                         className="ls-salle-input"
                         value={typeClient}
                         placeholder="Laisser vide = tous les clients. Ex : therapeute"
-                        onChange={e => handleChange('type_client_requis', e.target.value)}
+                        onChange={e => handleChange('typeClientRequis', e.target.value)}
                     />
                     <span className="ls-salle-desc">
                         Laisser vide = tous les clients. Ex : therapeute
@@ -115,15 +107,46 @@ const SalleBloc = ({
                     <select
                         className="ls-salle-select"
                         value={typeDocument}
-                        onChange={e => handleChange('type_document', e.target.value)}
+                        onChange={e => handleChange('typeDocument', e.target.value)}
                     >
                         <option value="">— choisir —</option>
-                        {PARAMETRE_SELECT_OPTIONS['type_document'].map(opt => (
+                        {PARAMETRE_SELECT_OPTIONS['typeDocument'].map(opt => (
                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                         ))}
                     </select>
                     <span className="ls-salle-desc">
                         Type de document produit lors d'une location de cette salle
+                    </span>
+                </div>
+
+                {/* Facturation à l'utilisation */}
+                <div className="ls-salle-field">
+                    <div className="input-group-switch">
+                        <div className="switch-field-content">
+                            <span className="switch-field-label">
+                                Facturation à l'utilisation
+                            </span>
+                            <div className="switch-container">
+                                <input
+                                    type="checkbox"
+                                    id={`facturation-utilisation-${categorie}`}
+                                    className="switch-input"
+                                    checked={facturationUtilisation}
+                                    onChange={e => handleChange(
+                                        'facturationUtilisation',
+                                        e.target.checked ? '1' : '0'
+                                    )}
+                                />
+                                <label
+                                    htmlFor={`facturation-utilisation-${categorie}`}
+                                    className="switch-toggle"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <span className="ls-salle-desc">
+                        Activé : location facturée à l'utilisation (heures, journées…) → génère une facture.
+                        Désactivé : loyer mensuel fixe → génère une confirmation de paiement.
                     </span>
                 </div>
 
@@ -156,21 +179,7 @@ const LocationSalleParametreEditor = ({ parametresStructure, modifiedValues, upd
         return Object.keys(sallesData).sort();
     }, [parametresStructure]);
 
-    // Set des idService déjà associés (pour désactiver les doublons)
-    const servicesDejaUtilises = useMemo(() => {
-        const set = new Set();
-        categories.forEach(cat => {
-            const raw    = parametresStructure?.[GROUPE]?.[SOUS_GROUPE]?.[cat] ?? [];
-            const params = Array.isArray(raw) ? raw : [raw];
-            const id     = generateParametreId(GROUPE, SOUS_GROUPE, cat, 'nom_service');
-            const nomSvc = modifiedValues[id]?.valeurParametre
-                        ?? params.find(p => p.nomParametre === 'nom_service')?.valeurParametre
-                        ?? '';
-            const svc = servicesActifs.find(s => s.nomService === nomSvc);
-            if (svc) set.add(svc.idService);
-        });
-        return set;
-    }, [categories, parametresStructure, modifiedValues, servicesActifs]);
+    // Plusieurs salles peuvent partager le même service tarifaire — pas de restriction
 
     if (categories.length === 0) {
         return <p className="motifs-vide">Aucune salle configurée.</p>;
@@ -189,7 +198,6 @@ const LocationSalleParametreEditor = ({ parametresStructure, modifiedValues, upd
                         modifiedValues={modifiedValues}
                         updateParametreValue={updateParametreValue}
                         servicesActifs={servicesActifs}
-                        servicesDejaUtilises={servicesDejaUtilises}
                     />
                 );
             })}

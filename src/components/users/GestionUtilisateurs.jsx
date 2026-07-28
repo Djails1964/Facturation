@@ -5,7 +5,7 @@
  * ✅ Bouton FAB (Floating Action Button) en bas de page
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import '../../styles/components/users/GestionUtilisateurs.css';
 
@@ -53,7 +53,8 @@ function GestionUtilisateurs() {
     users,
     loading,
     error,
-    fetchUsers
+    fetchUsers,
+    updateUser,
   } = useUsers();
 
   const { showSuccess, showError, showWarning } = useNotifications();
@@ -143,6 +144,23 @@ function GestionUtilisateurs() {
   };
 
   /**
+   * Active ou désactive un compte utilisateur
+   */
+  const handleToggleActif = async (userData, actif) => {
+    if (!canManage) {
+      showError(USER_ERROR_MESSAGES.ACCESS_DENIED);
+      return;
+    }
+    try {
+      await updateUser(userData.id_utilisateur, { compte_actif: actif });
+      showSuccess(actif ? 'Compte activé avec succès' : 'Compte désactivé avec succès');
+      fetchUsers();
+    } catch (e) {
+      showError(e.message || 'Erreur lors de la modification du compte');
+    }
+  };
+
+  /**
    * Gère la suppression (affiche modal de confirmation)
    */
   const handleSupprimer = (userData) => {
@@ -204,33 +222,6 @@ function GestionUtilisateurs() {
     setCurrentUserData(null);
   };
 
-  /**
-   * Gère la sauvegarde du formulaire (création/modification)
-   */
-  const handleSauvegarder = async (formData) => {
-    log.info('Sauvegarde formulaire utilisateur', { 
-      mode: currentMode,
-      userId: currentUserId 
-    });
-
-    try {
-      if (currentMode === USER_FORM_MODES.CREATE) {
-        log.debug('Création nouvel utilisateur');
-        showSuccess(USER_SUCCESS_MESSAGES.USER_CREATED);
-      } else if (currentMode === USER_FORM_MODES.EDIT) {
-        log.debug('Modification utilisateur', { userId: currentUserId });
-        showSuccess(USER_SUCCESS_MESSAGES.USER_UPDATED);
-      }
-
-      // Recharger la liste et revenir
-      await fetchUsers();
-      handleRetourListe();
-    } catch (err) {
-      log.error('Erreur lors de la sauvegarde', { error: err.message });
-      showError(USER_ERROR_MESSAGES.SAVE_FAILED);
-    }
-  };
-
   // ========== RENDU ==========
 
   return (
@@ -250,6 +241,7 @@ function GestionUtilisateurs() {
             onView={handleVoir}
             onEdit={handleModifier}
             onDelete={handleSupprimer}
+            onToggleActif={handleToggleActif}
           />
 
           {/* ✅ BOUTON FLOTTANT - Nouveau utilisateur (comme PaiementGestion) */}

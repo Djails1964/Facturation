@@ -62,67 +62,61 @@
 }
 
 /* ===================================================================
-   MONTANTS MENSUELS - Labels toujours en position haute
+   MONTANTS MENSUELS
+   Utilise .input-group de forms.css — labels flottants conformes
    =================================================================== */
 
-.montants-mensuels-grid {
+/* Grille des mois */
+.loyer-mois-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 15px;
-  margin-bottom: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0 20px;
+  margin-bottom: 10px;
 }
 
-/* Item de montant mensuel avec label fixe en haut */
-.montant-mensuel-item {
+/* Chaque mois : pas de padding custom, .input-group gère l'espacement */
+.loyer-mois-item {
+  /* vide intentionnellement */
+}
+
+/* Suffixe (CHF, séances…) dans un .input-group */
+.input-group--currency {
   position: relative;
-  padding-top: 18px; /* Espace pour le label fixe */
 }
 
-/* Label TOUJOURS en position haute pour les mois */
-.montant-mensuel-item label {
-  position: absolute;
-  left: 0;
-  top: 0;
-  font-size: 12px;
-  color: var(--color-primary);
-  font-weight: 500;
-  pointer-events: none;
-  /* PAS de transition - toujours en haut */
+.input-group--currency input {
+  padding-right: 52px; /* espace pour le suffixe */
 }
 
-/* Input avec currency CHF */
-.input-with-currency {
-  position: relative;
-  width: 100%;
-}
-
-.input-with-currency input {
-  width: 100%;
-  padding: 10px 45px 10px 0;
-  border: none;
-  border-bottom: 1px solid #ccc;
-  background-color: transparent;
-  font-size: 14px;
-  transition: border-color 0.3s;
-  outline: none;
-}
-
-.input-with-currency input::placeholder {
-  color: transparent;
-}
-
-.input-with-currency input:focus {
-  border-bottom: 2px solid var(--color-primary);
-}
-
-.input-with-currency .currency {
+.input-suffix {
   position: absolute;
   right: 0;
-  top: 10px;
+  bottom: 12px; /* aligné avec le texte de l'input */
   color: #666;
   font-size: 13px;
   font-weight: 500;
   pointer-events: none;
+  white-space: nowrap;
+}
+
+/* Ligne durée × total pour les mois avec multiplicateur */
+.loyer-mois-multiplicateur {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  margin-top: -8px; /* rapproche des champs précédents */
+}
+
+.loyer-mois-multiplicateur .input-group {
+  flex: 1;
+  margin-bottom: 20px;
+}
+
+/* Nom de l'unité dans le label */
+.loyer-mois-type {
+  font-weight: 400;
+  color: var(--color-text-light);
+  font-size: 11px;
 }
 
 /* ============================================================
@@ -216,7 +210,7 @@
 }
 
 /* ===================================================================
-   MONTANT FIXE - Ligne avec champ + bouton alignés en bas
+   LIGNE MONTANT FIXE — champ input-group + bouton alignés
    =================================================================== */
 
 .loyer-montant-fixe-row {
@@ -276,6 +270,38 @@
   color: #666;
 }
 
+/* ===================================================================
+   ENTÊTE LOYER — grille 2 colonnes
+   Utilisé par LoyerFormEntete.jsx
+   =================================================================== */
+ 
+.loyer-entete {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 20px; /* même que .form-row */
+  row-gap: 0;       /* .input-group a déjà margin-bottom:20px */
+}
+ 
+/* Cellule vide ligne 3 colonne droite (quand pas de switch) */
+.loyer-entete__vide {
+  visibility: hidden;
+  pointer-events: none;
+}
+ 
+/* Bandeau informatif loyer généré */
+.loyer-info-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 10px 14px;
+  background-color: var(--color-info-bg, #e8f4fd);
+  border: 1px solid var(--color-info-border, #b8d9f5);
+  border-radius: var(--border-radius-sm, 4px);
+  color: var(--color-info-text, #1a6fa8);
+  font-size: 13px;
+}
+ 
 
 /* ===================================================================
    RESPONSIVE
@@ -291,17 +317,29 @@
     gap: 0;
   }
   
-  .montants-mensuels-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 10px;
+  .loyer-mois-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 0 10px;
   }
-  
+
+  .loyer-mois-multiplicateur {
+    flex-direction: column;
+    gap: 0;
+  }
+
   .loyer-form-actions {
     flex-direction: column-reverse;
   }
   
   .loyer-form-actions button {
     width: 100%;
+  }
+
+  .loyer-entete {
+    grid-template-columns: 1fr;
+  }
+  .loyer-entete__vide {
+    display: none;
   }
 }
 
@@ -359,4 +397,33 @@
     color: var(--color-primary, #800000);
     font-size: 12px;
     font-weight: 600;
+}
+/* ── Période compacte (lecture seule) ────────────────────────────────────── */
+.loyer-periode-readonly {
+  position: relative;
+  min-width: 140px;
+}
+
+.loyer-periode-readonly label {
+  position: absolute;
+  top: 6px;
+  left: 12px;
+  font-size: 11px;
+  color: var(--color-text-light);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  pointer-events: none;
+}
+
+.loyer-periode-value {
+  padding: 28px 12px 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  background: var(--color-bg-disabled, #f5f5f5);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--border-radius-sm);
+  white-space: nowrap;
+  letter-spacing: 0.3px;
 }

@@ -52,6 +52,8 @@ function UniteDetailBlock({ unite }) {
           <thead>
             <tr>
               <th>Mois</th>
+              {unite.permetMultiplicateur && <th className="text-right">Durée</th>}
+              {unite.permetMultiplicateur && <th className="text-right">Séances</th>}
               <th className="text-right">Qté</th>
               <th className="text-right">Montant</th>
               <th>Jours de location</th>
@@ -61,6 +63,12 @@ function UniteDetailBlock({ unite }) {
             {unite.mois.map((m, mi) => (
               <tr key={mi} className={m.estPaye ? 'loyer-detail-row--paye' : ''}>
                 <td>{m.mois} {m.annee}</td>
+                {unite.permetMultiplicateur && (
+                  <td className="text-right">{m.duree ?? '—'}</td>
+                )}
+                {unite.permetMultiplicateur && (
+                  <td className="text-right">{m.nbSeances != null ? m.nbSeances : '—'}</td>
+                )}
                 <td className="text-right">
                   {m.quantite != null
                     ? `${Number.isInteger(m.quantite) ? m.quantite : m.quantite.toFixed(1)}${abrev ? ` ${abrev}` : ''}`
@@ -106,6 +114,10 @@ function grouperParServiceUnite(montantsMensuels, loyerMotif, loyerDescription) 
       });
     }
     svc.unites.get(ku).mois.push(m);
+    // Propager permetMultiplicateur au niveau de l'unité si disponible
+    if (m.permetMultiplicateur) {
+      svc.unites.get(ku).permetMultiplicateur = true;
+    }
   });
   return [...servicesMap.values()];
 }

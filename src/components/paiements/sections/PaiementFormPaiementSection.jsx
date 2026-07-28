@@ -1,9 +1,7 @@
 // src/components/paiements/sections/PaiementFormPaiementSection.jsx
 // Section commune "Détails du paiement" : date, montant, méthode, commentaire.
-// Identique qu'il s'agisse d'un paiement de facture ou de loyer.
 //
-// ✅ Les blocs "Détail de la facture" et "Détail du loyer" ont été extraits
-//    dans PaiementFormFactureDetail.jsx et PaiementFormLoyerDetail.jsx.
+// ✅ Le bloc "Détail de la facture" a été extrait dans PaiementFormFactureDetail.jsx.
 
 import { useEffect } from 'react';
 import { usePaiementActions } from '../hooks/usePaiementActions';

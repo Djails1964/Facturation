@@ -9,11 +9,11 @@ const log = createLogger('UnifiedFilter');
 
 /**
  * Composant de filtre unifiié réutilisable
- * Supporte : factures, paiements, services, unites, types-tarifs, tarifs-standards, tarifs-speciaux, loyers
+ * Supporte : factures, paiements, services, unites, types-tarifs, tarifs-standards, tarifs-speciaux
  */
 const UnifiedFilter = ({
   // Configuration
-  filterType, // 'factures', 'paiements', 'services', 'unites', 'types-tarifs', 'tarifs-standards', 'tarifs-speciaux', 'loyers'
+  filterType, // 'factures', 'paiements', 'services', 'unites', 'types-tarifs', 'tarifs-standards', 'tarifs-speciaux'
   
   // Données pour les options
   filterOptions = {},
@@ -41,13 +41,15 @@ const UnifiedFilter = ({
     switch (filterType) {
       case 'factures':
         return {
-          fields: ['annee', 'client', 'etat'],
+          fields: ['type', 'annee', 'client', 'etat'],
           labels: {
+            type: 'Type',
             annee: 'Année',
             client: 'Client',
             etat: 'État'
           },
           defaultLabels: {
+            type: 'Toutes (factures et confirmations)',
             annee: 'Toutes les années',
             client: 'Tous les clients',
             etat: null // ✅ Pas d'option par défaut pour état (géré par les options)
@@ -156,16 +158,20 @@ const UnifiedFilter = ({
           }
         };
 
-      case 'loyers':
+      case 'utilisateurs':
         return {
-          fields: ['client', 'etat'],
+          fields: ['username', 'nom', 'role', 'statut'],
           labels: {
-            client: 'Client',
-            etat: 'État de paiement'
+            username: 'Username',
+            nom:      'Nom complet',
+            role:     'Rôle',
+            statut:   'Statut',
           },
           defaultLabels: {
-            client: 'Tous les clients',
-            etat: 'Tous les états'
+            username: '',
+            nom:      '',
+            role:     'Tous les rôles',
+            statut:   'Tous les statuts',
           }
         };
 
@@ -189,7 +195,7 @@ const UnifiedFilter = ({
   // Rendu d'un filtre
   const renderFilter = useCallback((field) => {
     const options = filterOptions[field] || [];
-    
+
     return (
       <div key={`filter-${field}`} className="input-group">
         <select

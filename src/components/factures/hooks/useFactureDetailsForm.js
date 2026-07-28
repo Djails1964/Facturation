@@ -4,7 +4,6 @@ import { useFactureLignes } from './useFactureLignes';
 import { useFacturePricing } from './useFacturePricing';
 import { useFactureUI } from './useFactureUI';
 import { formatMontant } from '../../../utils/formatters';
-import DateService from '../../../utils/DateService';
 import { createLogger } from '../../../utils/createLogger';
 
 /**
@@ -740,8 +739,6 @@ export function useFactureDetailsForm(
         // Méthodes exposées SIMPLIFIÉES
         initialiserPrixLigneDefaut,
         
-        // Services utilitaires
-        DateService
     }), [
         // États principaux
         lignesManager.lignes,

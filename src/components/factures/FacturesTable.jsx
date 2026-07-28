@@ -68,7 +68,7 @@ const COLUMNS = [
     { label: COLUMN_LABELS.DATE,    field: 'dateFacture',   sortKey: 'dateFacture',   flex: '0.8',     minWidth: '100px', className: 'factures-date-cell' },
     { label: COLUMN_LABELS.MONTANT, field: 'montantTotal',  sortKey: 'montant',       flex: '0.8',     minWidth: '100px', className: 'factures-montant-cell', align: 'right' },
     { label: COLUMN_LABELS.ETAT,    field: 'etat',          sortKey: 'etat',          flex: '1',       minWidth: '100px', className: 'factures-etat-cell' },
-    { label: '',                    field: 'actions',                                 flex: '0 0 240px', minWidth: '240px', className: 'actions-cell' },
+    { label: '',                    field: 'actions',                                 flex: '0 0 280px', minWidth: '280px', className: 'actions-cell' },
 ];
 
 const FacturesTable = ({
@@ -92,8 +92,14 @@ const FacturesTable = ({
             const dir = sortConfig.direction === 'asc' ? 1 : -1;
             switch (sortConfig.key) {
                 case 'numeroFacture': {
-                    const [seqA, yearA] = (a.numeroFacture || '0.0').split('.').map(Number);
-                    const [seqB, yearB] = (b.numeroFacture || '0.0').split('.').map(Number);
+                    // ✅ Numéro au format "NNN.AAAA", éventuellement préfixé
+                    // ("F-NNN.AAAA" / "C-NNN.AAAA") — regex sur la fin de la
+                    // chaîne, robuste au préfixe (un split('.').map(Number)
+                    // casserait dessus : Number("F-047") = NaN).
+                    const matchA = (a.numeroFacture || '').match(/(\d+)\.(\d+)$/);
+                    const matchB = (b.numeroFacture || '').match(/(\d+)\.(\d+)$/);
+                    const [seqA, yearA] = matchA ? [Number(matchA[1]), Number(matchA[2])] : [0, 0];
+                    const [seqB, yearB] = matchB ? [Number(matchB[1]), Number(matchB[2])] : [0, 0];
                     const aVal = yearA !== yearB ? yearA : seqA;
                     const bVal = yearA !== yearB ? yearB : seqB;
                     return (aVal - bVal) * dir;

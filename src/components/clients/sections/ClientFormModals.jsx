@@ -4,6 +4,7 @@
 import React, { useEffect } from 'react';
 import { showConfirm } from '../../../utils/modalSystem';
 import { createLogger } from '../../../utils/createLogger';
+import { UNSAVED_CHANGES_CONFIRM_CONFIG, UNSAVED_CHANGES_MESSAGES } from '../../../constants/appConstants';
 
 /**
  * Composant pour gérer toutes les modales du formulaire client
@@ -40,14 +41,14 @@ function ClientFormModals({
   useEffect(() => {
     if (showUnsavedModal) {
       logger.debug('🎭 ClientFormModals - Affichage modal locale (bouton Retour)');
-      
+
+      // Message dynamique si le nom du client est disponible
+      const message = clientName
+        ? `Vous avez des modifications non sauvegardées pour ${clientName}. Souhaitez-vous vraiment quitter sans sauvegarder ?`
+        : UNSAVED_CHANGES_MESSAGES.CLIENT;
+
       const modalConfig = {
-        title: "Modifications non sauvegardées",
-        message: `Vous avez des modifications non sauvegardées${clientName ? ` pour ${clientName}` : ''}. Souhaitez-vous vraiment quitter sans sauvegarder ?`,
-        confirmText: "Quitter sans sauvegarder",
-        cancelText: "Continuer l'édition",
-        type: 'warning',
-        size: 'medium',
+        ...UNSAVED_CHANGES_CONFIRM_CONFIG(message),
         ...modalOptions.unsaved
       };
 
@@ -77,14 +78,14 @@ function ClientFormModals({
   useEffect(() => {
     if (showGlobalModal) {
       logger.debug('🎭 ClientFormModals - Affichage modal globale (navigation menu)');
-      
+
+      // Message dynamique si le nom du client est disponible
+      const message = clientName
+        ? `Vous avez des modifications non sauvegardées pour ${clientName}. Souhaitez-vous vraiment quitter sans sauvegarder ?`
+        : UNSAVED_CHANGES_MESSAGES.CLIENT;
+
       const modalConfig = {
-        title: "Modifications non sauvegardées",
-        message: `Vous avez des modifications non sauvegardées${clientName ? ` pour ${clientName}` : ''}. Souhaitez-vous vraiment quitter sans sauvegarder ?`,
-        confirmText: "Quitter sans sauvegarder",
-        cancelText: "Continuer l'édition",
-        type: 'warning',
-        size: 'medium',
+        ...UNSAVED_CHANGES_CONFIRM_CONFIG(message),
         ...modalOptions.global
       };
 

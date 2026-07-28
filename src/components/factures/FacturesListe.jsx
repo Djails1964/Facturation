@@ -91,11 +91,14 @@ function FacturesListe({
         isLoadingClients, 
         clientSelectionne,
         etatSelectionne,
+        typeSelectionne,
         handleAnneeChange,
         handleClientChange,
         handleEtatChange,
+        handleTypeChange,
         filteredFactures,
         etats,
+        types,
         anneesOptions
     } = useFactureFilters(
         facturesNonFiltrees, 
@@ -208,13 +211,14 @@ function FacturesListe({
 
     // Préparer les options de filtres
     const filterOptions = useMemo(() => ({
+    type: types, // ✅ Factures / Confirmations / Toutes (par défaut)
     annee: anneesOptions, // Déjà un tableau de nombres
     client: clients.map(c => ({ 
         value: c.idClient, 
         label: `${c.prenom} ${c.nom}` 
     })),
     etat: etats // Déjà un tableau de strings
-    }), [anneesOptions, clients, etats]);
+    }), [types, anneesOptions, clients, etats]);
 
     // Charger les templates email au montage
     useEffect(() => {
@@ -299,16 +303,19 @@ function FacturesListe({
                 filterType="factures"
                 filterOptions={filterOptions}
                 filters={{
+                    type: typeSelectionne,
                     annee: anneeSelectionnee,
                     client: clientSelectionne,
                     etat: etatSelectionne
                 }}
                 onFilterChange={(field, value) => {
+                    if (field === 'type') handleTypeChange({ target: { value } });
                     if (field === 'annee') handleAnneeChange({ target: { value } });
                     if (field === 'client') handleClientChange({ target: { value } });
                     if (field === 'etat') handleEtatChange({ target: { value } });
                 }}
                 onResetFilters={() => {
+                    handleTypeChange({ target: { value: '' } });
                     handleAnneeChange({ target: { value: new Date().getFullYear() } });
                     handleClientChange({ target: { value: '' } });
                     handleEtatChange({ target: { value: 'Sans annulées' } });

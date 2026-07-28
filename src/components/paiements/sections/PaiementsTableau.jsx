@@ -1,7 +1,7 @@
 // src/components/paiements/sections/PaiementsTableau.jsx
 
 import React, { useState, useMemo } from 'react';
-import { FiEye, FiEdit, FiX } from 'react-icons/fi';
+import { ViewActionButton, EditActionButton, DeleteActionButton } from '../../ui/buttons';
 
 import UnifiedTable from '../../shared/tables/UnifiedTable';
 import { formatMontant, getBadgeClasses, formatEtatText, formatDate } from '../../../utils/formatters';
@@ -126,21 +126,20 @@ function PaiementsTableau({
                 const isAnnule = p.statut === 'annule';
                 return (
                     <>
-                        <button className="bouton-action" title="Voir"
-                            onClick={(e) => { e.stopPropagation(); onAfficherPaiement(p.idPaiement); }}>
-                            <FiEye className="action-view-icon" />
-                        </button>
+                        <ViewActionButton
+                            tooltip="Voir le paiement"
+                            onClick={(e) => { e.stopPropagation(); onAfficherPaiement(p.idPaiement); }}
+                        />
                         {!isAnnule && <>
-                            <button className="bouton-action" title="Modifier"
-                                onClick={(e) => { e.stopPropagation(); onModifierPaiement(p.idPaiement); }}>
-                                <FiEdit className="action-edit-icon" />
-                            </button>
-                            <button
-                                className={`bouton-action${isProcessing ? ' bouton-desactive' : ''}`}
-                                title="Annuler" disabled={isProcessing}
-                                onClick={(e) => { e.stopPropagation(); onAnnulerPaiement(p); }}>
-                                <FiX className="action-cancel-icon" />
-                            </button>
+                            <EditActionButton
+                                tooltip="Modifier le paiement"
+                                onClick={(e) => { e.stopPropagation(); onModifierPaiement(p.idPaiement); }}
+                            />
+                            <DeleteActionButton
+                                disabled={isProcessing}
+                                tooltip="Annuler le paiement"
+                                onClick={(e) => { e.stopPropagation(); onAnnulerPaiement(p); }}
+                            />
                         </>}
                     </>
                 );

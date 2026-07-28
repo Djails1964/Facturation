@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import { createLogger } from '../../utils/createLogger';
@@ -10,6 +8,7 @@ import {
   USER_SUCCESS_MESSAGES,
   USER_ERROR_MESSAGES
 } from '../../constants/userConstants';
+import { UNSAVED_CHANGES_CONFIRM_CONFIG } from '../../constants/appConstants';
 import {
   getUserFormTitle,
   getUserSubmitButtonText,
@@ -217,13 +216,7 @@ const UserForm = ({
       if (event.detail && event.detail.callback) {
         try {
           log.info('📋 USER - Affichage de la modale de confirmation');
-          const result = await showConfirm({
-            title: "Modifications non sauvegardées",
-            message: "Vous avez des modifications non sauvegardées. Souhaitez-vous vraiment quitter sans sauvegarder ?",
-            confirmText: "Quitter sans sauvegarder",
-            cancelText: "Continuer l'édition",
-            type: 'warning'
-          });
+          const result = await showConfirm(UNSAVED_CHANGES_CONFIRM_CONFIG());
           
           if (result.action === 'confirm') {
             log.info('✅ USER - Navigation confirmée, exécution du callback');
@@ -274,13 +267,7 @@ const UserForm = ({
     log.debug('⚠️ Modifications détectées - showConfirm');
     
     try {
-      const result = await showConfirm({
-        title: "Modifications non sauvegardées",
-        message: "Vous avez des modifications non sauvegardées. Souhaitez-vous vraiment quitter sans sauvegarder ?",
-        confirmText: "Quitter sans sauvegarder",
-        cancelText: "Continuer l'édition",
-        type: 'warning'
-      });
+      const result = await showConfirm(UNSAVED_CHANGES_CONFIRM_CONFIG());
       
       if (result.action === 'confirm') {
         log.info('✅ Confirmation locale - Nettoyage et retour');

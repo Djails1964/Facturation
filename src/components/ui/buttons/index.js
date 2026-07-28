@@ -21,6 +21,8 @@ export {
   PdfActionButton,
   MoveActionButton,
   FactureActionButton,
+  UserCheckActionButton,
+  UserXActionButton,
   PrevMonthButton,
   NextMonthButton,
   

@@ -1,5 +1,9 @@
 import React from 'react';
+import { createLogger } from '../../../utils/createLogger';
 import { FORM_MODES } from '../../../constants/factureConstants';
+import { BUTTON_LABELS, FORM_MESSAGES } from '../../../constants/appConstants';
+
+const log = createLogger('FactureFormButtons');
 
 export const FactureFormButtons = ({ 
   mode, 
@@ -17,7 +21,7 @@ export const FactureFormButtons = ({
     return (
       <div className="ff-facture-actions">
         <button type="button" className={getCancelButtonClass()} onClick={onCancel}>
-          Retour à la liste
+          {BUTTON_LABELS.BACK_TO_LIST}
         </button>
       </div>
     );
@@ -31,7 +35,7 @@ export const FactureFormButtons = ({
         disabled={isSubmitting || !isFormValid}
         onClick={onSubmit}
       >
-        {isSubmitting ? 'Enregistrement en cours...' : getSubmitButtonText(mode)}
+        {isSubmitting ? FORM_MESSAGES.SAVING : getSubmitButtonText(mode)}
       </button>
       <button
         type="button"
@@ -39,7 +43,7 @@ export const FactureFormButtons = ({
         onClick={onCancel}
         disabled={isSubmitting}
       >
-        Annuler
+        {BUTTON_LABELS.CANCEL}
       </button>
     </div>
   );

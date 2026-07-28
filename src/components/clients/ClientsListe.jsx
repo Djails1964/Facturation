@@ -2,7 +2,8 @@
 // ✅ VERSION avec bouton Payer intégré
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { FiEdit, FiEye, FiTrash2, FiMail, FiPhone, FiMapPin, FiHome, FiKey } from 'react-icons/fi';
+import { ICONS } from '../ui/buttons';
+import { ViewActionButton, EditActionButton, DeleteActionButton } from '../ui/buttons';
 import '../../styles/components/clients/ClientsListe.css';
 
 // ✅ Système modal unifié
@@ -17,41 +18,10 @@ import { toBoolean, normalizeBooleanFieldsArray } from '../../utils/booleanHelpe
 import { createLogger } from '../../utils/createLogger';
 import { formatMontant } from '../../utils/formatters';
 
+const { MAIL: MailIcon, PHONE: PhoneIcon, LOCATION: LocationIcon } = ICONS;
+
 // ✅ Logger créé une seule fois en dehors du composant
 const logger = createLogger('ClientsListe');
-
-/**
- * Icône composite pour indiquer qu'un client a un loyer
- * Colorée selon l'état de paiement agrégé des loyers du client
- */
-function RentalIcon({ size = 18, etatPaiement = null }) {
-  const etatClass = etatPaiement === 'paye'
-    ? 'rental-etat-paye'
-    : etatPaiement === 'partiellement_paye'
-      ? 'rental-etat-partiel'
-      : etatPaiement === 'non_paye'
-        ? 'rental-etat-non-paye'
-        : '';
-
-  const titre = etatPaiement === 'paye'
-    ? 'Loyer(s) entièrement payé(s)'
-    : etatPaiement === 'partiellement_paye'
-      ? 'Loyer(s) partiellement payé(s)'
-      : etatPaiement === 'non_paye'
-        ? 'Loyer(s) non payé(s)'
-        : 'Client avec loyer';
-
-  return (
-    <span
-      className={`cl-rental-icon ${etatClass}`}
-      title={titre}
-      aria-label={titre}
-    >
-      <FiHome size={size} className="rental-icon-home" />
-      <FiKey size={size * 0.55} className="rental-icon-key" />
-    </span>
-  );
-}
 
 function ClientsListe({ 
     nouveauidClient = null, 
@@ -100,12 +70,7 @@ function ClientsListe({
     // Fonction de normalisation des clients
     const normalizeClientsData = React.useCallback((clientsData) => {
         if (!Array.isArray(clientsData)) return clientsData;
-        // Normaliser les booléens et mapper loyer_etat_paiement → loyerEtatPaiement
-        const normalized = normalizeBooleanFieldsArray(clientsData, ['estTherapeute']);
-        return normalized.map(cl => ({
-            ...cl,
-            loyerEtatPaiement: cl.loyerEtatPaiement || null
-        }));
+        return normalizeBooleanFieldsArray(clientsData, ['estTherapeute']);
     }, []);
     
     // ✅ Charger les clients
@@ -383,7 +348,6 @@ function ClientsListe({
                                     <div className="cl-client-name-section">
                                         <h3 className="cl-client-name">
                                             {client.prenom} {client.nom}
-                                            {client.loyerEtatPaiement && <RentalIcon etatPaiement={client.loyerEtatPaiement} />}
                                         </h3>
                                         <div className="cl-client-badge">
                                             {toBoolean(client.estTherapeute) ? 'Thérapeute' : 'Client'}
@@ -394,18 +358,18 @@ function ClientsListe({
                                 <div className="cl-client-contact">
                                     {client.email && (
                                         <div className="cl-contact-item">
-                                            <FiMail size={16} />
+                                            <MailIcon size={16} />
                                             <span>{client.email}</span>
                                         </div>
                                     )}
                                     {client.telephone && (
                                         <div className="cl-contact-item">
-                                            <FiPhone size={16} />
+                                            <PhoneIcon size={16} />
                                             <span>{client.telephone}</span>
                                         </div>
                                     )}
                                     <div className="cl-contact-item">
-                                        <FiMapPin size={16} />
+                                        <LocationIcon size={16} />
                                         <span>{formaterAdresse(client)}</span>
                                     </div>
                                 </div>
@@ -413,37 +377,22 @@ function ClientsListe({
                                 {/* ✅ BOUTONS D'ACTION */}
                                 <div className="cl-card-actions">
                                     {/* Bouton Afficher */}
-                                    <button 
-                                        className="bouton-action"
-                                        aria-label="Afficher le client"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            afficherClient(client.idClient);
-                                        }}
-                                    >
-                                        <FiEye className="action-view-icon" />
-                                    </button>
+                                    <ViewActionButton
+                                        tooltip="Afficher le client"
+                                        onClick={(e) => { e.stopPropagation(); afficherClient(client.idClient); }}
+                                    />
 
                                     {/* Bouton Modifier */}
-                                    <button 
-                                        className="bouton-action"
-                                        aria-label="Modifier le client"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            modifierClient(client.idClient);
-                                        }}
-                                    >
-                                        <FiEdit className="action-edit-icon" />
-                                    </button>
+                                    <EditActionButton
+                                        tooltip="Modifier le client"
+                                        onClick={(e) => { e.stopPropagation(); modifierClient(client.idClient); }}
+                                    />
 
                                     {/* Bouton Supprimer */}
-                                    <button 
-                                        className="bouton-action bouton-supprimer"
-                                        aria-label="Supprimer le client"
+                                    <DeleteActionButton
+                                        tooltip="Supprimer le client"
                                         onClick={(e) => handleSupprimerClient(client.idClient, e)}
-                                    >
-                                        <FiTrash2 className="action-delete-icon" />
-                                    </button>
+                                    />
                                 </div>
                             </div>
                         ))}

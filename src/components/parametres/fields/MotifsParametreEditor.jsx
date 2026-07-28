@@ -186,26 +186,27 @@ const CategorieEditor = ({ categorie, motifs, motifDefaut, onMotifsChange, onDef
  * @param {Object}   props.parametresStructure  - Structure complète chargée depuis l'API
  * @param {Object}   props.modifiedValues       - Valeurs modifiées (géré par useParametres)
  * @param {Function} props.updateParametreValue - (parametreId, updateData) => void
+ * @param {string}   [props.groupeParametre]    - Groupe paramètre ('LocationSalle')
  */
-const MotifsParametreEditor = ({ parametresStructure, modifiedValues, updateParametreValue }) => {
+const MotifsParametreEditor = ({ parametresStructure, modifiedValues, updateParametreValue, groupeParametre = 'LocationSalle' }) => {
 
-  // ── Lire la structure Loyer > Motifs ──────────────────────────────
-  const loyerMotifs = parametresStructure?.Loyer?.Motifs ?? {};
+  // ── Lire la structure groupeParametre > Motifs ────────────────────
+  const groupeMotifs = parametresStructure?.[groupeParametre]?.Motifs ?? {};
 
   // ── Catégories présentes ──────────────────────────────────────────
-  const categories = useMemo(() => Object.keys(loyerMotifs), [loyerMotifs]);
+  const categories = useMemo(() => Object.keys(groupeMotifs), [groupeMotifs]);
 
   if (categories.length === 0) return null;
 
   // ── Helpers lecture ───────────────────────────────────────────────
   const makeId = (categorie, nomParam) =>
-    `Loyer-Motifs-${categorie}-${nomParam}`;
+    `${groupeParametre}-Motifs-${categorie}-${nomParam}`;
 
   const lireValeur = (categorie, nomParam) => {
     const id = makeId(categorie, nomParam);
     if (modifiedValues[id]?.valeurParametre !== undefined)
       return modifiedValues[id].valeurParametre;
-    const params = loyerMotifs[categorie];
+    const params = groupeMotifs[categorie];
     if (!Array.isArray(params)) return '';
     return params.find(p => p.nomParametre === nomParam)?.valeurParametre ?? '';
   };
@@ -217,11 +218,11 @@ const MotifsParametreEditor = ({ parametresStructure, modifiedValues, updatePara
   const ecrire = (categorie, nomParam, valeur) => {
     const id = makeId(categorie, nomParam);
     updateParametreValue(id, {
-      nomParametre:       nomParam,
-      valeurParametre:    valeur,
-      groupeParametre:    'Loyer',
+      nomParametre:        nomParam,
+      valeurParametre:     valeur,
+      groupeParametre:     groupeParametre,
       sousGroupeParametre: 'Motifs',
-      categorie:          categorie
+      categorie:           categorie
     });
   };
 
@@ -229,14 +230,14 @@ const MotifsParametreEditor = ({ parametresStructure, modifiedValues, updatePara
   const handleMotifsChange = (categorie, nouveauxMotifs) => {
     ecrire(categorie, 'motifs', nouveauxMotifs.join('|'));
     // Si le défaut n'est plus dans la liste, réinitialiser
-    const defaut = lireValeur(categorie, 'motif_defaut');
+    const defaut = lireValeur(categorie, 'motifDefaut');
     if (defaut && !nouveauxMotifs.includes(defaut)) {
-      ecrire(categorie, 'motif_defaut', nouveauxMotifs[0] ?? '');
+      ecrire(categorie, 'motifDefaut', nouveauxMotifs[0] ?? '');
     }
   };
 
   const handleDefautChange = (categorie, valeur) => {
-    ecrire(categorie, 'motif_defaut', valeur);
+    ecrire(categorie, 'motifDefaut', valeur);
   };
 
   // ── Rendu ─────────────────────────────────────────────────────────
@@ -244,7 +245,7 @@ const MotifsParametreEditor = ({ parametresStructure, modifiedValues, updatePara
     <div className="motifs-editeur">
       {categories.map(categorie => {
         const motifs    = parsePipe(lireValeur(categorie, 'motifs'));
-        const motifDef  = lireValeur(categorie, 'motif_defaut');
+        const motifDef  = lireValeur(categorie, 'motifDefaut');
 
         return (
           <CategorieEditor

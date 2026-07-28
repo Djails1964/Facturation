@@ -1,18 +1,14 @@
 // src/components/parametres/fields/SalleEditor.jsx
 /**
  * Éditeur des salles de location.
- * Remplace LocationSalleParametreEditor — lit/écrit dans la table `salle`
- * via SalleService au lieu de la table `parametres`.
+ * Lit/écrit dans la table `salle` via SalleService.
  *
- * Fonctionnalités :
- *   - Liste des salles existantes avec édition inline
- *   - Ajout d'une nouvelle salle
- *   - Suppression (bloquée si locations existantes)
- *   - Champs : nom, service tarifaire, type_client_requis, type_document
+ * Champs : nom, service tarifaire
  *
- * ⚠️  Ce composant gère sa propre sauvegarde (appels API directs)
- *     indépendamment du mécanisme useParametres / modifiedValues.
- *     Les salles ne passent plus par le formulaire global des paramètres.
+ * ⚠️  type_document, type_client_requis, facturation_utilisation
+ *     → portés par type_contrat_location (TypeContratLocationEditor)
+ *     categorie_motifs
+ *     → porté par type_contrat_location (TypeContratLocationEditor)
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -20,28 +16,28 @@ import { useSalleActions } from '../hooks/useSalleActions';
 import { useTarifActions } from '../../tarifs/hooks/useTarifActions';
 import { useNotifications } from '../../../services/NotificationService';
 import { showConfirm } from '../../../utils/modalSystem';
-import { PARAMETRE_SELECT_OPTIONS } from '../../../constants';
+import { createLogger } from '../../../utils/createLogger';
 import '../../../styles/components/parametres/GestionParametres.css';
+
+const logger = createLogger('SalleEditor');
 
 // ─── Valeurs par défaut d'une nouvelle salle ─────────────────────────────────
 const SALLE_VIDE = {
-    nom:               '',
-    idService:         '',
-    typeClientRequis:  '',
-    typeDocument:      'facture',
+    nom:       '',
+    idService: '',
 };
 
 // ─── Sous-composant : bloc d'une salle existante ──────────────────────────────
 
-const SalleBloc = ({ salle, servicesActifs, servicesDejaUtilises, onSaved, onDeleted, onModifier, onSupprimer }) => {
+const SalleBloc = ({ salle, servicesActifs, onSaved, onDeleted, onModifier, onSupprimer }) => {
     const { showSuccess, showError } = useNotifications();
-    const [draft,   setDraft]   = useState({ ...salle });
-    const [saving,  setSaving]  = useState(false);
-    const [dirty,   setDirty]   = useState(false);
+    const [draft,  setDraft]  = useState({ ...salle });
+    const [saving, setSaving] = useState(false);
+    const [dirty,  setDirty]  = useState(false);
 
-    // Réinitialiser si la salle change depuis le parent (ex: rechargement)
     useEffect(() => {
         setDraft({ ...salle });
+        logger.debug('SalleBloc: reset draft', { nom: salle.nom });
         setDirty(false);
     }, [salle]);
 
@@ -58,11 +54,9 @@ const SalleBloc = ({ salle, servicesActifs, servicesDejaUtilises, onSaved, onDel
         setSaving(true);
         try {
             await onModifier(salle.id, {
-                nom:               draft.nom.trim(),
-                idService:         draft.idService || null,
-                typeClientRequis:  draft.typeClientRequis?.trim() || null,
-                typeDocument:      draft.typeDocument || 'facture',
-                actif:             draft.actif ?? 1,
+                nom:       draft.nom.trim(),
+                idService: draft.idService || null,
+                actif:     draft.actif ?? 1,
             });
             showSuccess(`Salle "${draft.nom}" enregistrée.`);
             setDirty(false);
@@ -91,19 +85,13 @@ const SalleBloc = ({ salle, servicesActifs, servicesDejaUtilises, onSaved, onDel
         }
     };
 
-    const serviceSelectionne = servicesActifs.find(s =>
-        s.idService === parseInt(draft.idService, 10)
-    );
-
     return (
         <div className="motifs-categorie-bloc">
 
-            {/* ── Bandeau ── */}
             <div className="motifs-categorie-titre">
                 <span className="motifs-categorie-badge">{salle.nom}</span>
             </div>
 
-            {/* ── Corps ── */}
             <div className="ls-salle-body">
 
                 {/* Nom */}
@@ -126,55 +114,14 @@ const SalleBloc = ({ salle, servicesActifs, servicesDejaUtilises, onSaved, onDel
                         onChange={e => handleChange('idService', e.target.value)}
                     >
                         <option value="">— aucun —</option>
-                        {servicesActifs.map(s => {
-                            const dejaUtilise = servicesDejaUtilises.has(s.idService)
-                                && s.idService !== serviceSelectionne?.idService;
-                            return (
-                                <option
-                                    key={s.idService}
-                                    value={s.idService}
-                                    disabled={dejaUtilise}
-                                    title={dejaUtilise ? 'Déjà associé à une autre salle' : ''}
-                                >
-                                    {s.nomService}{dejaUtilise ? ' (déjà utilisé)' : ''}
-                                </option>
-                            );
-                        })}
-                    </select>
-                    <span className="ls-salle-desc">
-                        Service utilisé pour calculer le prix de la location
-                    </span>
-                </div>
-
-                {/* Location ouverte à */}
-                <div className="ls-salle-field">
-                    <label className="ls-salle-label">Location ouverte à :</label>
-                    <input
-                        type="text"
-                        className="ls-salle-input"
-                        value={draft.typeClientRequis ?? ''}
-                        placeholder="Laisser vide = tous les clients. Ex : therapeute"
-                        onChange={e => handleChange('typeClientRequis', e.target.value)}
-                    />
-                    <span className="ls-salle-desc">
-                        Laisser vide = tous les clients
-                    </span>
-                </div>
-
-                {/* Document généré */}
-                <div className="ls-salle-field">
-                    <label className="ls-salle-label">Document généré</label>
-                    <select
-                        className="ls-salle-select"
-                        value={draft.typeDocument ?? 'facture'}
-                        onChange={e => handleChange('typeDocument', e.target.value)}
-                    >
-                        {PARAMETRE_SELECT_OPTIONS['type_document'].map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        {(servicesActifs ?? []).map(s => (
+                            <option key={s.idService} value={s.idService}>
+                                {s.nomService}
+                            </option>
                         ))}
                     </select>
                     <span className="ls-salle-desc">
-                        Type de document produit lors d'une location de cette salle
+                        Service utilisé pour calculer le prix de la location
                     </span>
                 </div>
 
@@ -207,11 +154,11 @@ const SalleBloc = ({ salle, servicesActifs, servicesDejaUtilises, onSaved, onDel
 
 // ─── Sous-composant : formulaire ajout nouvelle salle ─────────────────────────
 
-const NouvellesSalleForm = ({ servicesActifs, servicesDejaUtilises, onCreated, onCreer }) => {
+const NouvellesSalleForm = ({ servicesActifs, onCreated, onCreer }) => {
     const { showSuccess, showError } = useNotifications();
-    const [draft,    setDraft]    = useState({ ...SALLE_VIDE });
-    const [visible,  setVisible]  = useState(false);
-    const [saving,   setSaving]   = useState(false);
+    const [draft,   setDraft]   = useState({ ...SALLE_VIDE });
+    const [visible, setVisible] = useState(false);
+    const [saving,  setSaving]  = useState(false);
 
     const handleChange = (field, value) =>
         setDraft(prev => ({ ...prev, [field]: value }));
@@ -224,10 +171,8 @@ const NouvellesSalleForm = ({ servicesActifs, servicesDejaUtilises, onCreated, o
         setSaving(true);
         try {
             await onCreer({
-                nom:              draft.nom.trim(),
-                idService:        draft.idService || null,
-                typeClientRequis: draft.typeClientRequis?.trim() || null,
-                typeDocument:     draft.typeDocument || 'facture',
+                nom:       draft.nom.trim(),
+                idService: draft.idService || null,
             });
             showSuccess(`Salle "${draft.nom}" créée.`);
             setDraft({ ...SALLE_VIDE });
@@ -279,38 +224,10 @@ const NouvellesSalleForm = ({ servicesActifs, servicesDejaUtilises, onCreated, o
                         onChange={e => handleChange('idService', e.target.value)}
                     >
                         <option value="">— aucun —</option>
-                        {servicesActifs.map(s => (
-                            <option
-                                key={s.idService}
-                                value={s.idService}
-                                disabled={servicesDejaUtilises.has(s.idService)}
-                            >
-                                {s.nomService}{servicesDejaUtilises.has(s.idService) ? ' (déjà utilisé)' : ''}
+                        {(servicesActifs ?? []).map(s => (
+                            <option key={s.idService} value={s.idService}>
+                                {s.nomService}
                             </option>
-                        ))}
-                    </select>
-                </div>
-
-                <div className="ls-salle-field">
-                    <label className="ls-salle-label">Location ouverte à :</label>
-                    <input
-                        type="text"
-                        className="ls-salle-input"
-                        value={draft.typeClientRequis}
-                        placeholder="Laisser vide = tous. Ex : therapeute"
-                        onChange={e => handleChange('typeClientRequis', e.target.value)}
-                    />
-                </div>
-
-                <div className="ls-salle-field">
-                    <label className="ls-salle-label">Document généré</label>
-                    <select
-                        className="ls-salle-select"
-                        value={draft.typeDocument}
-                        onChange={e => handleChange('typeDocument', e.target.value)}
-                    >
-                        {PARAMETRE_SELECT_OPTIONS['type_document'].map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
                         ))}
                     </select>
                 </div>
@@ -348,7 +265,6 @@ const SalleEditor = () => {
     const { listerSalles, creerSalle, modifierSalle, supprimerSalle } = useSalleActions();
     const { charger: tarifCharger } = useTarifActions();
 
-    // ✅ Stabiliser tarifCharger via useRef pour éviter la boucle infinie
     const tarifChargerRef = useRef(tarifCharger);
     useEffect(() => { tarifChargerRef.current = tarifCharger; }, [tarifCharger]);
 
@@ -361,19 +277,15 @@ const SalleEditor = () => {
             ]);
             setSalles(listeSalles ?? []);
             setServicesActifs((listeServices ?? []).filter(s => s.actif !== false));
+            logger.debug(`✅ ${listeSalles?.length ?? 0} salles chargées`);
         } catch (e) {
-            // Silencieux — les erreurs sont loguées dans useSalleActions
+            logger.error('Erreur chargement salles:', e);
         } finally {
             setLoading(false);
         }
-    }, []); // ✅ Dépendances vides — accès via refs
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => { charger(); }, [charger]);
-
-    // Set des idService déjà utilisés (pour éviter les doublons)
-    const servicesDejaUtilises = new Set(
-        salles.map(s => parseInt(s.idService, 10)).filter(Boolean)
-    );
 
     if (loading) {
         return <p className="motifs-vide">Chargement des salles…</p>;
@@ -389,7 +301,6 @@ const SalleEditor = () => {
                     key={salle.id}
                     salle={salle}
                     servicesActifs={servicesActifs}
-                    servicesDejaUtilises={servicesDejaUtilises}
                     onSaved={charger}
                     onDeleted={charger}
                     onModifier={modifierSalle}
@@ -398,7 +309,6 @@ const SalleEditor = () => {
             ))}
             <NouvellesSalleForm
                 servicesActifs={servicesActifs}
-                servicesDejaUtilises={servicesDejaUtilises}
                 onCreated={charger}
                 onCreer={creerSalle}
             />

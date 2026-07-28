@@ -17,6 +17,7 @@ import { showConfirm } from '../../utils/modalSystem';
 import ParametreField from './fields/ParametreField';
 import MotifsParametreEditor from './fields/MotifsParametreEditor';
 import SalleEditor from './fields/SalleEditor';
+import TypeContratLocationEditor from './fields/TypeContratLocationEditor';
 import {
   findParameterValue,
   findParameterYear,
@@ -220,15 +221,16 @@ const GestionParametres = () => {
         <h3 className="groupe-titre">{getGroupeTitre(groupeParametre)}</h3>
         
         {Object.entries(groupeData).map(([sousGroupeParametre, sousGroupeData]) => {
-          // ✅ Rendu spécial pour Loyer > Motifs : éditeur de motifs dédié
-          if (groupeParametre === 'Loyer' && sousGroupeParametre === 'Motifs') {
+          // ✅ Rendu spécial pour LocationSalle > Motifs
+          if (groupeParametre === 'LocationSalle' && sousGroupeParametre === 'Motifs') {
             return (
               <div key={`${groupeParametre}-${sousGroupeParametre}`} className="parametre-sous-groupe">
-                <h4 className="sous-groupe-titre">{getSousGroupeTitre('Loyer', 'Motifs')}</h4>
+                <h4 className="sous-groupe-titre">{getSousGroupeTitre(groupeParametre, 'Motifs')}</h4>
                 <MotifsParametreEditor
                   parametresStructure={parametresStructure}
                   modifiedValues={modifiedValues}
                   updateParametreValue={updateParametreValue}
+                  groupeParametre={groupeParametre}
                 />
               </div>
             );
@@ -349,12 +351,16 @@ const GestionParametres = () => {
               renderParametreGroup(groupeParametre, groupeData)
             )}
 
-            {/* ✅ Bloc LocationSalle — statique, géré par SalleEditor (table salle) */}
+            {/* ✅ Bloc LocationSalle — Salles + Types de contrat (motifs gérés dans TypeContratLocationEditor) */}
             <div className="parametre-groupe">
               <h3 className="groupe-titre">{getGroupeTitre('LocationSalle')}</h3>
               <div className="parametre-sous-groupe">
                 <h4 className="sous-groupe-titre">{getSousGroupeTitre('LocationSalle', 'Salles')}</h4>
                 <SalleEditor />
+              </div>
+              <div className="parametre-sous-groupe">
+                <h4 className="sous-groupe-titre">{getSousGroupeTitre('LocationSalle', 'TypesContrat')}</h4>
+                <TypeContratLocationEditor />
               </div>
             </div>
 

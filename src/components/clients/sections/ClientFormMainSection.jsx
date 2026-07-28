@@ -230,10 +230,11 @@ function EmailField({ client, onChange, fieldErrors, readOnly = false, className
     <div className={fieldClasses.join(' ')}>
       <input type="email" id="email" name="email" value={client.email || ''}
         onChange={onChange} readOnly={readOnly} placeholder=" " maxLength={255}
+        required={!readOnly}
         aria-describedby={fieldErrors.email ? 'email-error' : undefined}
         aria-invalid={!!fieldErrors.email}
       />
-      <label htmlFor="email">Email</label>
+      <label htmlFor="email" className={!readOnly ? 'required' : ''}>Email</label>
       {fieldErrors.email && <div id="email-error" className="error-message" role="alert">{fieldErrors.email}</div>}
     </div>
   );

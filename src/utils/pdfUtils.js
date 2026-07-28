@@ -132,8 +132,15 @@ export async function openFacturePdf(factureFilename, options = {}) {
         return { success: false, error: 'Nom de fichier manquant' };
     }
     
+    // ✅ Le préfixe du nom de fichier (ConfirmationPaiement_/Facture_, voir
+    // ServiceFacture::imprimerFacture) indique quel dossier de stockage
+    // interroger côté document-api.php.
+    const estConfirmation = factureFilename.startsWith('ConfirmationPaiement_');
+    const params = { facture: factureFilename };
+    if (estConfirmation) params.type = 'confirmation';
+
     // Construire l'URL via l'API sécurisée
-    const pdfUrl = apiUrl('document-api.php', { facture: factureFilename });
+    const pdfUrl = apiUrl('document-api.php', params);
     log.debug('📄 URL de facture construite:', pdfUrl);
     
     return openPdfSecurely(pdfUrl, {
@@ -159,8 +166,13 @@ export function convertToSecureUrl(directUrl) {
         return directUrl;
     }
     
+    // ✅ Même déduction du type via le préfixe de nom de fichier
+    const estConfirmation = filename.startsWith('ConfirmationPaiement_');
+    const params = { facture: filename };
+    if (estConfirmation) params.type = 'confirmation';
+
     // Construire l'URL sécurisée
-    return apiUrl('document-api.php', { facture: filename });
+    return apiUrl('document-api.php', params);
 }
 
 export default {

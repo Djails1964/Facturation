@@ -34,7 +34,7 @@ class PaiementService {
       if (options.page) params.page = options.page;
       if (options.limit) params.limit = options.limit;
       if (options.statut) params.statut = options.statut; // ✅ Filtre par statut (confirme/annule)
-      if (options.libre)  params.libre  = 1;              // Paiements non attribués (id_facture IS NULL AND id_loyer IS NULL)
+      if (options.libre)  params.libre  = 1;              // Paiements non attribués (id_facture IS NULL)
 
       console.log('PaiementService - Chargement des paiements avec options:', options);
       console.log('PaiementService - Paramètres de l\'API:', params);
@@ -64,9 +64,6 @@ class PaiementService {
           motifAnnulation: paiement.motifAnnulation || null,
           montantTotalFacture: parseFloat(paiement.montantTotal),
           ristourneFacture: parseFloat(paiement.ristourne || 0),
-          // Champs loyer (présents si le paiement concerne un loyer)
-          idLoyer: paiement.idLoyer || null,
-          numeroLoyer: paiement.numeroLoyer || null,
         }));
         
         this.paiements = paiementsAdaptes;
@@ -93,7 +90,7 @@ class PaiementService {
     try {
       console.log('Récupération du paiement:', idPaiement);
       
-      // Cache désactivé pour éviter de servir des données sans les champs loyer
+      // Cache désactivé pour toujours avoir les données à jour
       // if (idPaiement in this._cachePaiement) { return this._cachePaiement[idPaiement]; }
       
       const response = await api.get(`paiement-api.php?idPaiement=${idPaiement}`);
@@ -120,45 +117,8 @@ class PaiementService {
           motifAnnulation: paiementData.motifAnnulation || null,
           montantTotalFacture: parseFloat(paiementData.montantTotal),
           ristourneFacture: parseFloat(paiementData.ristourne || 0),
-
-          // Données loyer (converties en camelCase par api.js via LOYER_MAPPINGS)
-          idLoyer: paiementData.idLoyer || null,
-          idLoyerDetail: paiementData.idLoyerDetail || null,
-          numeroLoyer: paiementData.numeroLoyer || null,
-          periodeDebut: paiementData.periodeDebut || null,
-          periodeFin: paiementData.periodeFin || null,
-          dureeMois: paiementData.dureeMois ? parseInt(paiementData.dureeMois) : null,
-          loyerMontantTotal: paiementData.loyerMontantTotal ? parseFloat(paiementData.loyerMontantTotal) : null,
-          montantMensuelMoyen: paiementData.montantMensuelMoyen ? parseFloat(paiementData.montantMensuelMoyen) : null,
-          loyerStatut: paiementData.loyerStatut || null,
-          loyerMontantPaye: paiementData.loyerMontantPaye ? parseFloat(paiementData.loyerMontantPaye) : null,
-          loyerMois: paiementData.loyerMois || null,
-          loyerNumeroMois: paiementData.loyerNumeroMois ? parseInt(paiementData.loyerNumeroMois) : null,
-          loyerAnnee: paiementData.loyerAnnee ? parseInt(paiementData.loyerAnnee) : null,
-          loyerDetailMontant: paiementData.loyerDetailMontant ? parseFloat(paiementData.loyerDetailMontant) : null,
-          loyerDetailPaye: paiementData.loyerDetailPaye ? parseFloat(paiementData.loyerDetailPaye) : null,
         };
-        
-        console.log('🔍 DEBUG loyer fields in paiementData:', {
-          allKeys: Object.keys(paiementData).filter(k => 
-            k.toLowerCase().includes('loyer') || k.toLowerCase().includes('periode') || 
-            k.toLowerCase().includes('mois') || k.toLowerCase().includes('annee') ||
-            k.toLowerCase().includes('numero') || k.toLowerCase().includes('mensuel')
-          ),
-          idLoyer: paiementData.idLoyer,
-          numeroLoyer: paiementData.numeroLoyer,
-          periodeDebut: paiementData.periodeDebut,
-          periodeFin: paiementData.periodeFin,
-          loyerMontantTotal: paiementData.loyerMontantTotal,
-          loyerMontantPaye: paiementData.loyerMontantPaye,
-          loyerStatut: paiementData.loyerStatut,
-          montantMensuelMoyen: paiementData.montantMensuelMoyen,
-          loyerMois: paiementData.loyerMois,
-          loyerAnnee: paiementData.loyerAnnee,
-          loyerDetailMontant: paiementData.loyerDetailMontant,
-          dureeMois: paiementData.dureeMois,
-        });
-        
+
         this._cachePaiement[idPaiement] = paiementFormate;
         return paiementFormate;
       }

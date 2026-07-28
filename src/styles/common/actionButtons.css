@@ -377,6 +377,18 @@
   transform: scale(0.95);
 }
 
+/* ========== BOUTON LOYER DÉSACTIVÉ DANS LA GRILLE DE LOCATIONS ========== */
+
+.ls-td-client-inner .ls-btn-loyer.bouton-desactive {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ls-row-contrat:hover .ls-btn-loyer.bouton-desactive {
+  opacity: 1;          /* ← même visibilité que les autres boutons au hover */
+  cursor: not-allowed;
+}
+
 
 /* ========== CONTRASTE ÉLEVÉ ========== */
 @media (prefers-contrast: high) {

@@ -20,9 +20,8 @@ export const usePaiementFormLogic = (formState) => {
         paiement, setPaiement, factures, setFactures, factureSelectionnee, setFactureSelectionnee,
         logsInfo, setLogsInfo, isLoading, setIsLoading, error, setError, logsLoading, setLogsLoading,
         facturesLoading, setFacturesLoading, isCreate, isEdit, mode, idPaiement,
-        paiementActions, factureActions, clientActions, loyerActions,
+        paiementActions, factureActions, clientActions,
         clients, setClients, clientsLoading, setClientsLoading, clientSelectionne, setClientSelectionne,
-        loyers, setLoyers, loyersLoading, setLoyersLoading, setLoyerSelectionne,
         setIsInitialLoadDone, setIsFullyInitialized,
         getFormData, setInitialFormData
     } = formState;
@@ -93,14 +92,13 @@ export const usePaiementFormLogic = (formState) => {
             if (isCreate) {
                 logLine.debug('📋 Mode création - chargement clients');
                 await chargerClients();
-                // Factures et loyers seront chargés quand le client sera sélectionné
+                // Les factures seront chargées quand le client sera sélectionné
                 setPaiement(prev => {
                     if (prev.idClient) return prev;
                     return {
                         ...prev,
                         idClient: '',
                         idFacture: '',
-                        idLoyer: '',
                         datePaiement: getTodayIso(),
                         montantPaye: '',
                         methodePaiement: DEFAULT_VALUES.METHODE_PAIEMENT,
@@ -168,23 +166,6 @@ export const usePaiementFormLogic = (formState) => {
                     methodePaiement: paiementData.methodePaiement,
                     commentaire: paiementData.commentaire || '',
                     
-                    // Loyer (si paiement lié à un loyer)
-                    idLoyer: paiementData.idLoyer || null,
-                    idLoyerDetail: paiementData.idLoyerDetail || null,
-                    numeroLoyer: paiementData.numeroLoyer || null,
-                    periodeDebut: paiementData.periodeDebut || null,
-                    periodeFin: paiementData.periodeFin || null,
-                    dureeMois: paiementData.dureeMois || null,
-                    loyerMontantTotal: paiementData.loyerMontantTotal || null,
-                    montantMensuelMoyen: paiementData.montantMensuelMoyen || null,
-                    loyerStatut: paiementData.loyerStatut || null,
-                    loyerMontantPaye: paiementData.loyerMontantPaye || null,
-                    loyerMois: paiementData.loyerMois || null,
-                    loyerNumeroMois: paiementData.loyerNumeroMois || null,
-                    loyerAnnee: paiementData.loyerAnnee || null,
-                    loyerDetailMontant: paiementData.loyerDetailMontant || null,
-                    loyerDetailPaye: paiementData.loyerDetailPaye || null,
-
                     // État
                     etat: paiementData.statut,
                     statut: paiementData.statut,  // Garder les deux pour compatibilité
@@ -311,40 +292,6 @@ export const usePaiementFormLogic = (formState) => {
         }
     };
 
-    // Chargement des loyers non soldés d'un client spécifique
-    const chargerLoyersDuClient = async (idClient) => {
-        if (!idClient) { setLoyers([]); return; }
-        setLoyersLoading(true);
-        try {
-            logLine.debug('🔄 Chargement loyers du client:', idClient);
-            const tous = await loyerActions.chargerLoyers({ idClient: idClient });
-            // Garder uniquement les loyers :
-            // - non soldés
-            // - sans facture liée (les loyers avec id_facture se paient via la facture)
-            const nonSoldes = (tous || []).filter(l => {
-                const statut = l.statut || l.etat || '';
-                const estSolde = statut === 'solde' || statut === 'soldé';
-                const aFactureLiee = !!l.idFacture;
-                return !estSolde && !aFactureLiee;
-            });
-
-            logLine.debug('🔍 [chargerLoyersDuClient] tous les loyers reçus:', tous);
-            logLine.debug('🔍 [chargerLoyersDuClient] loyer[0] complet:', tous?.[0]);
-            logLine.debug('🔍 [chargerLoyersDuClient] montantsMensuels[0][0]:', 
-            tous?.[0]?.montantsMensuels?.[0]);
-            logLine.debug('🔍 [chargerLoyersDuClient] clés mois[0]:', 
-            Object.keys(tous?.[0]?.montantsMensuels?.[0] || {}));
-            
-            logLine.debug(`✅ ${nonSoldes.length} loyer(s) non soldé(s) pour client ${idClient}`);
-            setLoyers(nonSoldes);
-        } catch (error) {
-            logLine.error('❌ Erreur chargement loyers client:', error);
-            setLoyers([]);
-        } finally {
-            setLoyersLoading(false);
-        }
-    };
-    
     // ✅ FONCTION DE CHARGEMENT DES LOGS AVEC CACHE
     const chargerLogsUtilisateur = async (idPaiement) => {
         if (!idPaiement) return;
@@ -510,7 +457,6 @@ export const usePaiementFormLogic = (formState) => {
         chargerPaiement,
         chargerClients,
         chargerFacturesDuClient,
-        chargerLoyersDuClient,
         chargerLogsUtilisateur,
         extractUserName,
         getCachedUserDetails,

@@ -1,11 +1,11 @@
 // src/components/loyers/hooks/useMotifsLoyer.js
 //
-// Hook partagé : charge les motifs de loyer depuis les paramètres.
+// Hook partagé : charge les motifs de location depuis les paramètres.
 //
 // Structure paramètres :
-//   groupe_parametre  = 'Loyer'
+//   groupe_parametre  = 'LocationSalle'
 //   sous_groupe       = 'Motifs'
-//   categorie         = 'Cabinet' | 'Salle'
+//   categorie         = nom de la salle (ex: 'Cabinet' | 'Salle')
 //   nom_parametre     = 'motifs'        → liste séparée par | (ex: "Motif A|Motif B")
 //   nom_parametre     = 'motif_defaut'  → valeur du motif par défaut
 //
@@ -29,7 +29,7 @@ export function useMotifsLoyer(categorie = null) {
     const charger = useCallback(async () => {
         setLoading(true);
         try {
-            const params = { groupeParametre: 'Loyer', sousGroupeParametre: 'Motifs' };
+            const params = { groupeParametre: 'LocationSalle', sousGroupeParametre: 'Motifs' };
             if (categorie) params.categorie = categorie;
 
             log.debug('Chargement des motifs de loyer avec params:', params);
@@ -37,12 +37,21 @@ export function useMotifsLoyer(categorie = null) {
             const response = await api.get('parametre-api.php', params);
             log.debug('Réponse API paramètres:', response);
 
-            // ✅ La route groupeParametre+sousGroupeParametre retourne un objet { Cabinet: [...], Salle: [...] }
-            // On aplatit en tableau pour pouvoir utiliser find/filter uniformément
+            // ✅ La route groupeParametre+sousGroupeParametre retourne { Cabinet: [...], Salle: [...] }
+            // Si une catégorie est spécifiée, on filtre côté client
             const raw = response?.parametres ?? {};
-            const liste = Array.isArray(raw)
-                ? raw
-                : Object.values(raw).flat();
+
+            let liste;
+            if (categorie && raw[categorie]) {
+                // Prendre uniquement la catégorie demandée
+                liste = Array.isArray(raw[categorie]) ? raw[categorie] : [];
+            } else if (categorie) {
+                // Catégorie demandée mais absente dans la réponse
+                liste = [];
+            } else {
+                // Pas de filtre : tout aplatir
+                liste = Array.isArray(raw) ? raw : Object.values(raw).flat();
+            }
 
             // Trouver la ligne 'motifs' (valeurs séparées par |)
             const motifsEntry = liste.find(
@@ -55,7 +64,7 @@ export function useMotifsLoyer(categorie = null) {
 
             // Trouver le motif par défaut
             const defautEntry = liste.find(
-                p => (p.nomParametre) === 'motif_defaut'
+                p => (p.nomParametre) === 'motifDefaut'
             );
             const defaut = defautEntry?.valeurParametre ?? '';
 

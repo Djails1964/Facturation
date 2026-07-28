@@ -2,11 +2,15 @@
 // ✅ VERSION COMPLÈTE avec support multiselect (factures) ET single date (paiements)
 
 import React, { useCallback } from 'react';
-import { FiCalendar } from 'react-icons/fi';
-import modalSystem from '../../utils/modalSystem';
-import DatePickerModalHandler from '../shared/modals/handlers/DatePickerModalHandler';
-import DateService from '../../utils/DateService';
-import { DATE_LABELS } from '../../constants/dateConstants';
+import { showDatePicker } from '../shared/modals/handlers/DatePickerModalHandler';
+import { CalendarIcon } from '../ui/buttons';
+import { getTodayIso, fromIsoString } from '../../utils/dateHelpers';
+import {
+    parseDatesFromCompact,
+    formatDatesCompact,
+    validateDatesString,
+    formatCompactToDisplay,
+} from '../../utils/formatters';
 
 /**
  * Composant de champ de date avec modal picker unifié
@@ -28,13 +32,6 @@ const DateInputField = ({
     multiSelect = true, // Par défaut, multi-sélection pour les factures
     className = ''
 }) => {
-    // Configuration du DatePickerModalHandler
-    const datePickerHandler = new DatePickerModalHandler({
-        showCustom: modalSystem.custom.bind(modalSystem),
-        showError: modalSystem.error.bind(modalSystem),
-        showLoading: modalSystem.showLoading.bind(modalSystem)
-    });
-
     /**
      * Ouvrir la modal de sélection de dates
      */
@@ -54,23 +51,20 @@ const DateInputField = ({
                 try {
                     if (multiSelect) {
                         // Mode FACTURE: format compact [09/16/23/30.01, ...]
-                        initialDates = DateService.parseDatesFromCompact(value);
+                        // parseDatesFromCompact retourne des objets Date → convertir en YYYY-MM-DD
+                        initialDates = parseDatesFromCompact(value)
+                            .map(d => d instanceof Date
+                                ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+                                : d
+                            );
                     } else {
                         // Mode PAIEMENT: format DD.MM.YYYY ou YYYY-MM-DD
-                        let dateStr = value.trim();
-                        
-                        // Convertir DD.MM.YYYY en YYYY-MM-DD si nécessaire
-                        if (dateStr.includes('.')) {
-                            const parts = dateStr.split('.');
-                            if (parts.length === 3) {
-                                const [day, month, year] = parts;
-                                dateStr = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-                            }
-                        }
-                        
-                        const dateObj = DateService.fromInputFormat(dateStr);
-                        if (dateObj) {
-                            initialDates = [dateObj];
+                        // fromIsoString retourne un objet Date → convertir en YYYY-MM-DD
+                        const dateObj = fromIsoString(value.trim().includes('.')
+                            ? (() => { const [d,m,y] = value.trim().split('.'); return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`; })()
+                            : value.trim());
+                        if (dateObj instanceof Date && !isNaN(dateObj)) {
+                            initialDates = [`${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`];
                         }
                     }
                 } catch (error) {
@@ -83,7 +77,7 @@ const DateInputField = ({
                 initialDates: initialDates,
                 multiSelect: multiSelect,
                 minDate: multiSelect ? null : null,  // Factures: pas de restriction
-                maxDate: multiSelect ? null : DateService.getToday(), // Paiements: pas de dates futures
+                maxDate: multiSelect ? null : getTodayIso(), // Paiements: pas de dates futures
                 title: multiSelect ? 'Sélectionner les dates' : 'Sélectionner une date',
                 confirmText: 'Confirmer la sélection',
                 context: multiSelect ? 'invoice' : 'payment',
@@ -91,13 +85,19 @@ const DateInputField = ({
             };
 
             // Ouvrir la modal et attendre le résultat
-            const result = await datePickerHandler.handle(config, event);
+            const result = await showDatePicker({ ...config, anchorRef: config.anchorRef });
 
             // Traitement du résultat
             if (result.action === 'confirm' && result.dates.length > 0) {
                 
                 if (multiSelect) {
-                    const formattedDates = DateService.formatDatesCompact(result.dates);
+                    // showDatePicker retourne des strings YYYY-MM-DD
+                    // formatDatesCompact attend des Date[] → conversion nécessaire
+                    const dateObjects = result.dates.map(iso => {
+                        const [y, m, d] = iso.split('-').map(Number);
+                        return new Date(y, m - 1, d);
+                    });
+                    const formattedDates = formatDatesCompact(dateObjects);
 
                     // Si updateQuantity est fourni (mode facture), il gère les deux champs
                     // en un seul setState atomique — on n'appelle PAS onChange séparément.
@@ -109,26 +109,21 @@ const DateInputField = ({
                     }
                     
                 } else {
-                    // ✅ Mode PAIEMENT: Format DD.MM.YYYY
-                    const singleDate = result.dates[0];
-                    const day = String(singleDate.getDate()).padStart(2, '0');
-                    const month = String(singleDate.getMonth() + 1).padStart(2, '0');
-                    const year = singleDate.getFullYear();
-                    const formattedDate = `${day}.${month}.${year}`;
+                    // Mode PAIEMENT: Format DD.MM.YYYY
+                    // result.dates[0] est une string YYYY-MM-DD → convertir en DD.MM.YYYY
+                    const [y, m, d] = result.dates[0].split('-');
+                    const formattedDate = `${d}.${m}.${y}`;
 
-                    // Mettre à jour le champ
                     if (onChange && typeof onChange === 'function') {
                         onChange(formattedDate);
                     }
                 }
-            } else {
             }
 
         } catch (error) {
             console.error('❌ Erreur lors de la sélection de dates:', error);
-            await modalSystem.error(`Erreur lors de la sélection de dates : ${error.message}`);
         }
-    }, [readOnly, value, multiSelect, onChange, updateQuantity, datePickerHandler]);
+    }, [readOnly, value, multiSelect, onChange, updateQuantity]);
 
     /**
      * Gestionnaire de changement manuel du champ
@@ -151,7 +146,7 @@ const DateInputField = ({
         if (!inputValue || inputValue.trim() === '') return true;
         if (!multiSelect) return true; // Pas de validation stricte pour single date
         
-        const validation = DateService.validateDatesString(inputValue);
+        const validation = validateDatesString(inputValue);
         return validation.isValid;
     }, [multiSelect]);
 
@@ -162,7 +157,7 @@ const DateInputField = ({
         if (!value || value.trim() === '' || !multiSelect) return '';
         
         try {
-            return DateService.formatCompactToDisplay(value, 'count');
+            return formatCompactToDisplay(value, 'count');
         } catch (error) {
             return '';
         }
@@ -202,19 +197,9 @@ const DateInputField = ({
             </label>
             
             {!readOnly && (
-                <FiCalendar
-                    className="date-input-icon"
+                <CalendarIcon
                     onClick={handleOpenDateModal}
-                    style={{
-                        position: 'absolute',
-                        right: '10px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        cursor: 'pointer',
-                        fontSize: '18px',
-                        color: '#800020',
-                        zIndex: 2
-                    }}
+                    className="date-input-icon"
                 />
             )}
             

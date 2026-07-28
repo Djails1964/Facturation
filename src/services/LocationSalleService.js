@@ -52,19 +52,37 @@ class LocationSalleService {
     }
 
     /**
-     * Ajoute un client au tableau pour une année (crée le contrat en DB).
-     * Idempotent : sans erreur si le contrat existe déjà.
+     * Retourne les types de contrat disponibles.
+     * @returns {Promise<Array>} [{ id, nom, typeDocument, typeClientRequis }]
+     */
+    async getTypesContrat() {
+        try {
+            const response = await api.get('location-salle-api.php', { action: 'types_contrat' });
+            return response?.typesContrat ?? [];
+        } catch (error) {
+            log.error('Erreur getTypesContrat:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Crée un contrat de location pour un client/année/salle/type.
      * @param {number} idClient
      * @param {number} annee
-     * @returns {Promise<{ success: boolean, id: number, created: boolean, message: string }>}
+     * @param {number} idSalle
+     * @param {number} idTypeContrat
      */
-    async creerContrat(idClient, annee) {
+    async creerContrat(idClient, annee, idSalle, idTypeContrat) {
         try {
-            // Envoi en camelCase : api.js convertit vers snake_case automatiquement
             const response = await api.post('location-salle-api.php?action=contrat', {
                 idClient,
                 annee,
+                idSalle,
+                idTypeContrat,
             });
+            if (response?.success === false) {
+                throw new Error(response.message || "Erreur lors de la création du contrat");
+            }
             return response;
         } catch (error) {
             log.error('Erreur creerContrat:', error);
@@ -116,8 +134,10 @@ class LocationSalleService {
      */
     async creerDetail(data) {
         try {
-            // api.js convertit automatiquement camelCase → snake_case avant envoi
             const response = await api.post('location-salle-api.php', data);
+            if (response?.success === false) {
+                throw new Error(response.message || 'Erreur lors de la création de la location');
+            }
             return response;
         } catch (error) {
             log.error('Erreur creerDetail:', error);
@@ -125,16 +145,12 @@ class LocationSalleService {
         }
     }
 
-    /**
-     * Modifie un détail de location.
-     * @param {number} id
-     * @param {Object} data  camelCase : { mois, salle, idUnite, idService, motif, quantite, note?, idContrat }
-     * @returns {Promise<{ success: boolean, message: string }>}
-     */
     async modifierDetail(id, data) {
         try {
-            // api.js convertit automatiquement camelCase → snake_case avant envoi
             const response = await api.put(`location-salle-api.php?id=${id}`, data);
+            if (response?.success === false) {
+                throw new Error(response.message || 'Erreur lors de la modification de la location');
+            }
             return response;
         } catch (error) {
             log.error('Erreur modifierDetail:', error);
@@ -142,14 +158,12 @@ class LocationSalleService {
         }
     }
 
-    /**
-     * Supprime un détail de location.
-     * @param {number} id
-     * @returns {Promise<{ success: boolean, message: string }>}
-     */
     async supprimerDetail(id) {
         try {
             const response = await api.delete(`location-salle-api.php?id=${id}`);
+            if (response?.success === false) {
+                throw new Error(response.message || 'Erreur lors de la suppression de la location');
+            }
             return response;
         } catch (error) {
             log.error('Erreur supprimerDetail:', error);

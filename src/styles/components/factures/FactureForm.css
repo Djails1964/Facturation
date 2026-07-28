@@ -1,5 +1,138 @@
 /* FactureForm.css - Styles pour le formulaire de facture */
 
+/* ── Détail mensuel (confirmations de paiement) ─────────────────────────── */
+
+.ff-details-mensuels-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-lg);
+}
+
+.ff-details-mensuels-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.ff-details-mensuels-table th {
+    text-align: left;
+    padding: var(--spacing-sm) var(--spacing-sm);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--color-primary);
+    border-bottom: 2px solid var(--color-border);
+}
+
+/* ✅ Doit l'emporter sur ".ff-details-mensuels-table th" ci-dessus : élément
+   + classe (0,1,1) est plus spécifique qu'une classe seule (0,1,0), donc
+   ".ff-col-right" seul ne suffisait pas à réaligner les en-têtes — c'était
+   la cause du désalignement Montant/Paiement avec leurs valeurs. */
+.ff-details-mensuels-table th.ff-col-right {
+    text-align: right;
+}
+
+.ff-details-mensuels-table td {
+    padding: 7px var(--spacing-sm);
+    font-size: 13px;
+    border-bottom: 1px solid var(--color-secondary);
+    vertical-align: top;
+    color: var(--color-text);
+}
+
+.ff-col-right {
+    text-align: right;
+}
+
+.ff-col-nowrap {
+    white-space: nowrap;
+}
+
+.ff-mois-nom {
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+/* ── Modification restreinte (confirmation non payée) ───────────────────── */
+
+.ff-description-mensuelle {
+    font-size: 13px;
+    color: var(--color-text-light);
+    margin-bottom: var(--spacing-md, 16px);
+}
+
+/* ✅ Même pattern que .facture-header-input (FactureHeader.css) : ligne
+   inférieure uniquement, label flottant piloté par placeholder=" " +
+   :not(:placeholder-shown), sans state JS de focus supplémentaire. */
+.ff-description-mensuelle-field {
+    position: relative;
+    width: 100%;
+    margin-bottom: var(--spacing-lg, 24px);
+}
+
+.ff-description-mensuelle-field input {
+    width: 100%;
+    padding: 10px 0;
+    font-size: 16px;
+    line-height: 1.5;
+    border: none;
+    border-bottom: 1px solid #ccc;
+    background-color: transparent;
+    transition: border-color 0.3s;
+    box-sizing: border-box;
+    outline: none;
+}
+
+.ff-description-mensuelle-field input:focus {
+    border-bottom: 2px solid var(--color-primary);
+}
+
+.ff-description-mensuelle-field label {
+    position: absolute;
+    top: 10px;
+    left: 0;
+    font-size: 16px;
+    color: var(--color-text-light);
+    transition: all 0.3s ease;
+    pointer-events: none;
+}
+
+.ff-description-mensuelle-field input:focus + label,
+.ff-description-mensuelle-field input:not(:placeholder-shown) + label {
+    top: -12px;
+    font-size: 12px;
+    color: var(--color-primary);
+    font-weight: 500;
+}
+
+/* ✅ Montant : ligne inférieure uniquement, pas de label (le titre de
+   colonne "Montant" en tient lieu). */
+.ff-mois-montant-input {
+    width: 90px;
+    padding: 4px 0;
+    font-size: 13px;
+    text-align: right;
+    border: none;
+    border-bottom: 1px solid #ccc;
+    background-color: transparent;
+    transition: border-color 0.3s;
+    box-sizing: border-box;
+    outline: none;
+}
+
+.ff-mois-montant-input:focus {
+    border-bottom: 2px solid var(--color-primary);
+}
+
+/* ── Responsive : une seule colonne sur petit écran ──────────────────────── */
+
+@media (max-width: 768px) {
+    .ff-details-mensuels-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+    }
+}
+
 /* ── Boutons ─────────────────────────────────────────────────────────────── */
 
 .ff-boutons-container {

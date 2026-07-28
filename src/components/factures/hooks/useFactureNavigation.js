@@ -7,6 +7,10 @@ import { useUnsavedChanges } from '../../../hooks/useUnsavedChanges';
 import { useAutoNavigationGuard } from '../../../hooks/useAutoNavigationGuard';
 import { showConfirm } from '../../../utils/modalSystem';
 import { FORM_MODES } from '../../../constants/factureConstants';
+import { UNSAVED_CHANGES_CONFIRM_CONFIG, UNSAVED_CHANGES_MESSAGES } from '../../../constants/appConstants';
+import { createLogger } from '../../../utils/createLogger';
+
+const log = createLogger('useFactureNavigation');
 
 /**
  * Hook pour la gestion de la navigation et protection des modifications
@@ -41,28 +45,24 @@ export const useFactureNavigation = (mode, idFacture, initialFormData, getFormDa
     if (mode === FORM_MODES.VIEW || !hasUnsavedChanges) return;
 
     const handleNavigationBlocked = async (event) => {
-      console.log('🌍 FACTURE - Événement navigation-blocked reçu:', event.detail);
+      log.debug('🌍 Événement navigation-blocked reçu:', event.detail);
       
       if (event.detail && event.detail.callback) {
         try {
-          const result = await showConfirm({
-            title: "Modifications non sauvegardées",
-            message: "Vous avez des modifications non sauvegardées. Souhaitez-vous vraiment quitter sans sauvegarder ?",
-            confirmText: "Quitter sans sauvegarder",
-            cancelText: "Continuer l'édition",
-            type: 'warning'
-          });
+          const result = await showConfirm(
+            UNSAVED_CHANGES_CONFIRM_CONFIG(UNSAVED_CHANGES_MESSAGES.FACTURE)
+          );
           
           if (result.action === 'confirm') {
-            console.log('✅ FACTURE - Navigation confirmée');
+            log.debug('✅ Navigation confirmée');
             resetChanges();
             unregisterGuard(guardId);
             event.detail.callback();
           } else {
-            console.log('❌ FACTURE - Navigation annulée');
+            log.debug('❌ Navigation annulée');
           }
         } catch (error) {
-          console.error('❌ Erreur modal globale:', error);
+          log.error('❌ Erreur modal globale:', error);
         }
       }
     };
@@ -78,7 +78,7 @@ export const useFactureNavigation = (mode, idFacture, initialFormData, getFormDa
    * Gestion du succès de sauvegarde avec navigation
    */
   const handleSuccessfulSave = useCallback((idFacture, message, callbacks) => {
-    console.log('✅ FACTURE - Sauvegarde réussie, nettoyage des modifications');
+    log.debug('✅ Sauvegarde réussie, nettoyage des modifications');
     
     markAsSaved();
     resetChanges();

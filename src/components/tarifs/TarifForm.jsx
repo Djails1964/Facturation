@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import ConfirmationModal from '../shared/ConfirmationModal';
+import { showConfirm } from '../../utils/modalSystem';
 import TarifFormHeader from './sections/TarifFormHeader';
 import TarifFormBadge from './sections/TarifFormBadge';
 import TarifFormDataSection from './sections/TarifFormDataSection';
@@ -9,6 +9,7 @@ import { useTarifFormLogic } from './hooks/useTarifFormLogic';
 import { useTarifFormValidation } from './hooks/useTarifFormValidation';
 import { useTarifFormHandlers } from './hooks/useTarifFormHandlers';
 import { FORM_MODES, FORM_TITLES, LOADING_MESSAGES } from '../../constants/tarifConstants';
+import { UNSAVED_CHANGES_CONFIRM_CONFIG, UNSAVED_CHANGES_MESSAGES } from '../../constants/appConstants';
 // import '../../styles/components/tarifs/TarifForm.css';
 
 /**
@@ -33,7 +34,6 @@ function TarifForm({
     tarifId = null, 
     onRetourListe, 
     onTarifCreated,
-    // ✅ NOUVEAU: Props pour les données
     services = [],
     unites = [],
     typesTarifs = [],
@@ -41,13 +41,11 @@ function TarifForm({
     loadUnitesByService
 }) {
     
-    // ✅ MODIFIÉ: Passer les données à useTarifForm
     const formState = useTarifForm({ 
         mode, 
         tarifId, 
         onRetourListe, 
         onTarifCreated,
-        // ✅ Passer les données reçues
         services,
         unites,
         typesTarifs,
@@ -58,41 +56,38 @@ function TarifForm({
     const formLogic = useTarifFormLogic(formState);
     const formValidation = useTarifFormValidation(formState);
     const formHandlers = useTarifFormHandlers(formState, formLogic, formValidation);
-    
-    // Enregistrer les guards et événements
+
+    // Intercepter les navigations externes (menu, etc.)
     useEffect(() => {
-        if (formState.canDetectChanges()) {
-            const guardFunction = async () => {
-                return formState.hasUnsavedChanges;
-            };
-            formState.registerGuard(formState.guardId, guardFunction);
-            return () => formState.unregisterGuard(formState.guardId);
-        }
-    }, [formState.canDetectChanges, formState.hasUnsavedChanges, formState.guardId]);
-    
-    // Intercepter les navigations externes
-    useEffect(() => {
-        if (formState.canDetectChanges() && formState.hasUnsavedChanges) {
-            const handleGlobalNavigation = (event) => {
-                if (event.detail && event.detail.source && event.detail.callback) {
-                    formState.setGlobalNavigationCallback(() => event.detail.callback);
-                    formState.setShowGlobalModal(true);
+        if (mode === FORM_MODES.VIEW || !formState.hasUnsavedChanges) return;
+
+        const handleNavigationBlocked = async (event) => {
+            if (!event.detail?.callback) return;
+            try {
+                const result = await showConfirm(
+                    UNSAVED_CHANGES_CONFIRM_CONFIG(UNSAVED_CHANGES_MESSAGES.TARIF)
+                );
+                if (result.action === 'confirm') {
+                    formState.resetChanges();
+                    event.detail.callback();
                 }
-            };
-            window.addEventListener('navigation-blocked', handleGlobalNavigation);
-            return () => window.removeEventListener('navigation-blocked', handleGlobalNavigation);
-        }
-    }, [formState.canDetectChanges, formState.hasUnsavedChanges]);
-    
-    // Cleanup
+            } catch (error) {
+                console.error('❌ Erreur modal navigation globale:', error);
+            }
+        };
+
+        window.addEventListener('navigation-blocked', handleNavigationBlocked);
+        return () => window.removeEventListener('navigation-blocked', handleNavigationBlocked);
+    }, [mode, formState.hasUnsavedChanges, formState.resetChanges]);
+
+    // Cleanup au démontage
     useEffect(() => {
         return () => {
             if (mode !== FORM_MODES.VIEW) {
-                formState.unregisterGuard(formState.guardId);
                 formState.resetChanges();
             }
         };
-    }, [mode, formState.guardId]);
+    }, [mode]);
     
     // Titre du formulaire
     const getTitre = () => {
@@ -119,7 +114,6 @@ function TarifForm({
         return dateDebut <= today && (!dateFin || dateFin >= today);
     };
     
-    // Rendu conditionnel pour le chargement
     if (formState.isLoading) {
         return (
             <div className="content-section-container">
@@ -166,31 +160,6 @@ function TarifForm({
                     />
                 </div>
             </form>
-
-            {/* Modals pour les modifications non sauvegardées */}
-            <ConfirmationModal
-                isOpen={formState.showUnsavedModal}
-                title="Modifications non sauvegardées"
-                message="Vous avez des modifications non sauvegardées dans le formulaire de tarif. Souhaitez-vous vraiment quitter sans sauvegarder ?"
-                type="warning"
-                onConfirm={formState.confirmNavigation}
-                onCancel={formState.cancelNavigation}
-                confirmText="Quitter sans sauvegarder"
-                cancelText="Continuer l'édition"
-                singleButton={false}
-            />
-
-            <ConfirmationModal
-                isOpen={formState.showGlobalModal}
-                title="Modifications non sauvegardées"
-                message="Vous avez des modifications non sauvegardées dans le formulaire de tarif. Souhaitez-vous vraiment quitter sans sauvegarder ?"
-                type="warning"
-                onConfirm={formHandlers.handleConfirmGlobalNavigation}
-                onCancel={formHandlers.handleCancelGlobalNavigation}
-                confirmText="Quitter sans sauvegarder"
-                cancelText="Continuer l'édition"
-                singleButton={false}
-            />
         </div>
     );
 }

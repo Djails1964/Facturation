@@ -23,16 +23,10 @@ export function usePaiementsActions(onPaiementAnnule, onSetNotification) {
      * Créer le contenu HTML de la modal d'annulation
      */
     const createAnnulationContent = (paiement) => {
-        // Détecter le type : loyer ou facture
         log.debug('🔍 Création contenu modal pour paiement:', paiement);
-        const estLoyer     = !!paiement.idLoyer;
-        const refLabel     = estLoyer ? 'Loyer'   : 'Facture';
-        const refValeur    = estLoyer
-            ? (paiement.numeroLoyer   || 'N/A')
-            : (paiement.numeroFacture || 'N/A');
-        const warningTexte = estLoyer
-            ? "Cette action marquera le paiement comme annulé. Le montant sera déduit du total payé du loyer."
-            : "Cette action marquera le paiement comme annulé. Le montant sera déduit du total payé de la facture.";
+        const refLabel     = 'Facture';
+        const refValeur    = paiement.numeroFacture || 'N/A';
+        const warningTexte = "Cette action marquera le paiement comme annulé. Le montant sera déduit du total payé de la facture.";
 
         return `
             ${ModalComponents.createIntroSection(
@@ -172,11 +166,8 @@ export function usePaiementsActions(onPaiementAnnule, onSetNotification) {
             
             // Construire le message de succès détaillé avec montant formaté
             const montantFormate = formatMontant(paiement.montantPaye);
-            const estLoyer      = !!paiement.idLoyer;
-            const refLabel      = estLoyer ? 'loyer'   : 'facture';
-            const refValeur     = estLoyer
-                ? (paiement.numeroLoyer   || 'N/A')
-                : (paiement.numeroFacture || 'N/A');
+            const refLabel       = 'facture';
+            const refValeur      = paiement.numeroFacture || 'N/A';
             const messageSucces = `Paiement n° ${paiement.numeroPaiement} du ${refLabel} ${refValeur} pour ${paiement.nomClient || 'N/A'} et d'un montant de ${montantFormate} CHF annulé avec succès`;
             
             log.debug('✅ Paiement annulé avec succès');

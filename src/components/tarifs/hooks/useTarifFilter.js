@@ -85,28 +85,27 @@ export const useTarifFilter = (data = [], filterType = '', initialFilters = {}) 
           
           case 'service':
             // ✅ Priorité : propriétés normalisées en premier
-            const serviceName = item.service || item.nomService || item.nom_service || '';
+            const serviceName = item.service || item.nomService || '';
             return serviceName === filterValue;
           
           case 'unite':
             // ✅ Priorité : propriétés normalisées en premier
-            const uniteName = item.unite || item.nomUnite || item.nom_unite || '';
+            const uniteName = item.unite || item.nomUnite || '';
             return uniteName === filterValue;
           
           case 'typeTarif':
             // ✅ Priorité : propriétés normalisées en premier
-            const typeTarifName = item.typeTarif || item.nomTypeTarif || item.nom_type_tarif || '';
+            const typeTarifName = item.typeTarif || item.nomTypeTarif || '';
             return typeTarifName === filterValue;
           
           case 'client':
             // ✅ CORRECTION: Utiliser les propriétés qui contiennent le nom COMPLET
-            const clientName = item.client || item.clientNom || item.client_nom || '';
+            const clientName = item.client || item.clientNom || '';
             log.debug('👤 Filtre client:', { 
               filterValue, 
               clientName,
               item_client: item.client,
               item_clientNom: item.clientNom,
-              item_client_nom: item.client_nom,
               match: clientName === filterValue 
             });
             return clientName === filterValue;

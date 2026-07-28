@@ -8,7 +8,6 @@ import { TarifValidationService } from '../services/TarifValidationService';
 import ModalComponents from '../../shared/ModalComponents';
 import { createLogger } from '../../../utils/createLogger';
 import { useNotifications } from '../../../services/NotificationService';
-import DateService from '../../../utils/DateService';
 import { showDatePicker } from '../../shared/modals/handlers/DatePickerModalHandler';
 import { fromDisplayString, fromIsoString, toIsoString } from '../../../utils/dateHelpers';
 import { formatDate } from '../../../utils/formatters';

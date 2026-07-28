@@ -34,6 +34,19 @@ export function useLocationSalleActions() {
         );
     };
 
+    const getTypesContrat = async () => {
+        logger.info('🚀 Chargement types de contrat');
+        return executeApi(
+            async () => {
+                const types = await LocationSalleService.getTypesContrat();
+                logger.debug(`✅ ${types?.length ?? 0} types chargés`);
+                return types ?? [];
+            },
+            null,
+            (err) => { logger.error('❌ Erreur getTypesContrat:', err); throw err; }
+        );
+    };
+
     // ── Contrats ──────────────────────────────────────────────────────────────
 
     /**
@@ -56,21 +69,26 @@ export function useLocationSalleActions() {
     };
 
     /**
-     * Ajoute un client au tableau de l'année (crée le contrat en DB).
+     * Crée un contrat de location (client + salle + type de contrat).
      * @param {number} idClient
      * @param {number} annee
-     * @returns {Promise<{ success: boolean, id: number, created: boolean, message: string }>}
+     * @param {number} idSalle
+     * @param {number} idTypeContrat
      */
-    const creerContrat = async (idClient, annee) => {
-        logger.info(`➕ Ajout client #${idClient} au tableau ${annee}`);
+    const creerContrat = async (idClient, annee, idSalle, idTypeContrat) => {
+        logger.info(`➕ Création contrat client #${idClient} salle #${idSalle} type #${idTypeContrat} ${annee}`);
         return executeApi(
             async () => {
-                const result = await LocationSalleService.creerContrat(idClient, annee);
+                const result = await LocationSalleService.creerContrat(idClient, annee, idSalle, idTypeContrat);
                 logger.debug('✅ Contrat créé:', result);
                 return result;
             },
             (result) => { logger.info(`✅ Contrat créé - ID: ${result?.id}`); },
-            (err) => { logger.error('❌ Erreur creerContrat:', err); throw err; }
+            (err) => {
+                const msg = err?.response?.data?.message || err?.message || "Erreur lors de l'ajout du contrat";
+                logger.error('❌ Erreur creerContrat:', msg);
+                throw new Error(msg);
+            }
         );
     };
 
@@ -185,6 +203,7 @@ export function useLocationSalleActions() {
     return {
         // Paramètres
         getSalles,
+        getTypesContrat,
         // Contrats
         chargerContrats,
         creerContrat,

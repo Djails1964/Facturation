@@ -131,7 +131,7 @@ export const getInputType = (nomParametre, groupe = '') => {
   }
 
   // ✅ SELECT pour les paramètres à choix contraints dans LocationSalle > Salles
-  if (groupe === 'LocationSalle' && (nom === 'nom_service' || nom === 'type_document')) {
+  if (groupe === 'LocationSalle' && (nom === 'nomService' || nom === 'typeDocument')) {
     return PARAMETRE_TYPES.SELECT;
   }
   

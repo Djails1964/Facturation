@@ -1,6 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { showConfirm } from '../../../utils/modalSystem';
 import { FORM_MODES } from '../../../constants/tarifConstants';
+import { UNSAVED_CHANGES_CONFIRM_CONFIG, UNSAVED_CHANGES_MESSAGES } from '../../../constants/appConstants';
+import { createLogger } from '../../../utils/createLogger';
+
+const log = createLogger('useTarifForm');
 
 /**
  * Hook pour gérer le formulaire de tarif
@@ -43,10 +48,6 @@ export const useTarifForm = ({
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-    const [showUnsavedModal, setShowUnsavedModal] = useState(false);
-    const [showGlobalModal, setShowGlobalModal] = useState(false);
-    const [globalNavigationCallback, setGlobalNavigationCallback] = useState(null);
-    const [guardId] = useState(`tarif-form-${Date.now()}`);
     
     // serviceUnites local uniquement (pour le filtre par service)
     const [serviceUnites, setServiceUnites] = useState({});
@@ -67,13 +68,13 @@ export const useTarifForm = ({
                 
                 // ✅ IMPORTANT: Vérifier que les données sont disponibles
                 if (!services || services.length === 0) {
-                    console.warn('⚠️ useTarifForm: Services non disponibles');
+                    log.warn('⚠️ Services non disponibles');
                 }
                 if (!unites || unites.length === 0) {
-                    console.warn('⚠️ useTarifForm: Unités non disponibles');
+                    log.warn('⚠️ Unités non disponibles');
                 }
                 if (!typesTarifs || typesTarifs.length === 0) {
-                    console.warn('⚠️ useTarifForm: Types tarifs non disponibles');
+                    log.warn('⚠️ Types tarifs non disponibles');
                 }
                 
                 // Charger le tarif si mode edit/view
@@ -82,7 +83,7 @@ export const useTarifForm = ({
                 }
                 
             } catch (error) {
-                console.error('❌ Erreur initialisation:', error);
+                log.error('❌ Erreur initialisation:', error);
                 setError('Erreur lors du chargement des données');
             } finally {
                 setIsLoading(false);
@@ -95,39 +96,30 @@ export const useTarifForm = ({
     // Chargement des unités spécifiques à un service
     const loadServiceUnites = async (idService) => {
         if (!loadUnitesByService) {
-            console.error('❌ loadUnitesByService non fourni');
+            log.error('❌ loadUnitesByService non fourni');
             return;
         }
-        
         try {
-            // Utilise la fonction fournie par useTarifGestionState
             await loadUnitesByService(idService);
-            
-            // Note: Les données seront dans serviceUnites de useTarifGestionState
-            // On pourrait aussi les stocker localement si nécessaire
         } catch (error) {
-            console.error('❌ Erreur chargement unités service:', error);
+            log.error('❌ Erreur chargement unités service:', error);
         }
     };
     
     // ✅ REFACTORISÉ: Chargement d'un tarif spécifique avec tarifActions
     const loadTarif = async (id) => {
         if (!tarifActions) {
-            console.error('❌ tarifActions non fourni');
+            log.error('❌ tarifActions non fourni');
             setError('Actions de tarification non disponibles');
             return;
         }
         
         try {
-            // ✅ NOUVEAU: Utilisation de tarifActions.getTarifs au lieu de tarificationService.getTarif
             const tarifs = await tarifActions.getTarifs({ id });
-            
-            // getTarifs retourne un tableau, prendre le premier élément
             const tarifData = Array.isArray(tarifs) && tarifs.length > 0 ? tarifs[0] : null;
             
             if (tarifData) {
                 setTarif(tarifData);
-                // Charger les unités pour le service sélectionné
                 if (tarifData.idService) {
                     await loadServiceUnites(tarifData.idService);
                 }
@@ -135,7 +127,7 @@ export const useTarifForm = ({
                 throw new Error('Tarif non trouvé');
             }
         } catch (error) {
-            console.error('❌ Erreur chargement tarif:', error);
+            log.error('❌ Erreur chargement tarif:', error);
             setError('Erreur lors du chargement du tarif');
         }
     };
@@ -143,29 +135,35 @@ export const useTarifForm = ({
     // Gestion des changements
     const canDetectChanges = () => !isView;
     
-    const registerGuard = (id, guardFunction) => {
-        console.log('Guard registered:', id);
+    const registerGuard = (id) => {
+        log.debug('Guard registered:', id);
     };
     
     const unregisterGuard = (id) => {
-        console.log('Guard unregistered:', id);
+        log.debug('Guard unregistered:', id);
     };
     
     const resetChanges = () => {
         setHasUnsavedChanges(false);
     };
-    
-    const confirmNavigation = () => {
-        setShowUnsavedModal(false);
-        setHasUnsavedChanges(false);
-        if (onRetourListe) {
-            onRetourListe();
+
+    // Demande de navigation avec confirmation si modifications non sauvegardées
+    const requestNavigation = useCallback(async (navigationFn) => {
+        if (!hasUnsavedChanges) {
+            navigationFn?.();
+            return;
         }
-    };
-    
-    const cancelNavigation = () => {
-        setShowUnsavedModal(false);
-    };
+        const result = await showConfirm(
+            UNSAVED_CHANGES_CONFIRM_CONFIG(UNSAVED_CHANGES_MESSAGES.TARIF)
+        );
+        if (result.action === 'confirm') {
+            log.debug('✅ Navigation confirmée');
+            setHasUnsavedChanges(false);
+            navigationFn?.();
+        } else {
+            log.debug('❌ Navigation annulée');
+        }
+    }, [hasUnsavedChanges]);
     
     return {
         // États principaux
@@ -178,19 +176,12 @@ export const useTarifForm = ({
         setIsSubmitting,
         hasUnsavedChanges,
         setHasUnsavedChanges,
-        showUnsavedModal,
-        setShowUnsavedModal,
-        showGlobalModal,
-        setShowGlobalModal,
-        globalNavigationCallback,
-        setGlobalNavigationCallback,
-        guardId,
         services,
         unites,
         typesTarifs,
         serviceUnites,
 
-        // ✅ NOUVEAU: Exposer tarifActions pour les autres hooks
+        // Exposer tarifActions pour les autres hooks
         tarifActions,
         
         // États dérivés
@@ -204,9 +195,8 @@ export const useTarifForm = ({
         registerGuard,
         unregisterGuard,
         resetChanges,
-        confirmNavigation,
-        cancelNavigation,
-        loadServiceUnites
-        
+        requestNavigation,
+        loadServiceUnites,
+        onRetourListe,
     };
 };

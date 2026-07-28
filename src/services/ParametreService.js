@@ -296,6 +296,7 @@ class ParametreService {
    */
   async getParametresParSousGroupe(groupe, sousGroupeParametre) {
     try {
+      this.log.debug(`✅ getParametresParSousGroupe - Chargement des paramètres pour groupe: ${groupe}, sous-groupe: ${sousGroupeParametre}`);
       const response = await api.get('parametre-api.php', {
         groupe_parametre: groupe,
         sousGroupeParametre,

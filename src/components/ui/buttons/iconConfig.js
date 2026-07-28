@@ -3,8 +3,9 @@ import {
   FiMove, FiChevronUp, FiChevronDown, FiChevronLeft, FiChevronRight, FiCopy, FiTrash2, FiClipboard,
   FiEdit, FiEye, FiMail, FiPhone, FiMapPin, FiSlack, FiX, FiUserPlus,
   FiCheck, FiUser, FiShield, FiPrinter, FiDollarSign, FiFile,
-  FiCalendar, FiCreditCard, FiClock, FiAlertCircle, FiCheckCircle,
-  FiPlus, FiFilter, FiAlertTriangle, FiSave, FiFileText, FiHome
+  FiUserX, FiUserCheck,
+  FiCalendar, FiCreditCard, FiClock, FiAlertCircle, FiCheckCircle, FiKey,
+  FiPlus, FiFilter, FiAlertTriangle, FiSave, FiFileText, FiHome, FiInfo
 } from 'react-icons/fi';
 
 import { Link, X, Heart } from 'react-feather';
@@ -45,6 +46,8 @@ export const ICONS = {
   // Utilisateurs et permissions
   USER: FiUser,
   USER_ADD: FiUserPlus,
+  USER_CHECK: FiUserCheck,
+  USER_X: FiUserX,
   SHIELD: FiShield,
 
   // Finance et business
@@ -62,11 +65,13 @@ export const ICONS = {
   WARNING: FiAlertTriangle,
   ERROR: FiAlertCircle,
   INFO: FiAlertCircle,
+  INFO_CIRCLE: FiInfo,
 
   // Spéciaux
   HEART: Heart,
   CLOSE_ALT: X, // Alternative à FiX de react-feather
   HOME: FiHome,
+  KEY:  FiKey,
   INVOICE: LiaFileInvoiceDollarSolid
 };
 

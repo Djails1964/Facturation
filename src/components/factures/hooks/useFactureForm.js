@@ -40,11 +40,15 @@ export const useFactureForm = (mode, idFacture) => {
 
   // Utilitaires
   const isReadOnly = mode === FORM_MODES.VIEW;
+  // ✅ Confirmation de paiement (contrat au forfait) : lignesfacture est
+  // toujours vide, le détail réel est dans facture_detail_mensuel
+  // (facture.detailsMensuels) — ne pas exiger de lignes dans ce cas.
+  const estConfirmation = !!facture.estForfait;
   const isFormValid = mode === FORM_MODES.VIEW ||
     (facture.idClient &&
-      facture.lignes &&
-      facture.lignes.length > 0 &&
-      isLignesValid);
+      (estConfirmation
+        ? (facture.detailsMensuels && facture.detailsMensuels.length > 0)
+        : (facture.lignes && facture.lignes.length > 0 && isLignesValid)));
 
   // Fonction pour obtenir les données du formulaire avec mémorisation
   const getFormData = useCallback(() => {

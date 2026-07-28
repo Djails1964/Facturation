@@ -8,7 +8,6 @@ import { showConfirm } from '../../../utils/modalSystem';
 import { usePaiementActions } from './usePaiementActions';
 import { useFactureActions } from '../../factures/hooks/useFactureActions';
 import { useClientActions } from '../../clients/hooks/useClientActions';
-import { useLoyerActions } from '../../loyers/hooks/useLoyerActions';
 import { getTodayIso } from '../../../utils/dateHelpers';
 import { createLogger } from '../../../utils/createLogger';
 import { 
@@ -16,6 +15,7 @@ import {
     PAIEMENT_ETATS,
     DEFAULT_VALUES
 } from '../../../constants/paiementConstants';
+import { UNSAVED_CHANGES_CONFIRM_CONFIG } from '../../../constants/appConstants';
 
 export const usePaiementForm = ({ mode, idPaiement, onRetourListe, onPaiementCreated }) => {
 
@@ -25,7 +25,6 @@ export const usePaiementForm = ({ mode, idPaiement, onRetourListe, onPaiementCre
     const paiementActions = usePaiementActions();
     const factureActions = useFactureActions();
     const clientActions = useClientActions();
-    const loyerActions  = useLoyerActions();
     
     // Navigation protection
     const { registerGuard, unregisterGuard } = useNavigationGuard();
@@ -90,15 +89,6 @@ export const usePaiementForm = ({ mode, idPaiement, onRetourListe, onPaiementCre
     const [clients, setClients] = useState([]);
     const [clientsLoading, setClientsLoading] = useState(false);
     const [clientSelectionne, setClientSelectionne] = useState(null);
-    
-    // ONGLETS Facture / Loyer (mode CREATE uniquement)
-    const [typeOnglet, setTypeOnglet] = useState("facture"); // 'facture' | 'loyer'
-    
-    // LOYER
-    const [loyers, setLoyers] = useState([]);
-    const [loyersLoading, setLoyersLoading] = useState(false);
-    const [loyerSelectionne, setLoyerSelectionne] = useState(null);
-    const [moisSelectionnes, setMoisSelectionnes] = useState({});
     
     // États pour la protection des modifications
     const [isFullyInitialized, setIsFullyInitialized] = useState(false);
@@ -168,13 +158,9 @@ export const usePaiementForm = ({ mode, idPaiement, onRetourListe, onPaiementCre
                 setGlobalNavigationCallback(() => event.detail.callback);
                 
                 try {
-                    const result = await showConfirm({
-                        title: "Modifications non sauvegardées",
-                        message: "Vous avez des modifications non sauvegardées. Souhaitez-vous vraiment quitter sans sauvegarder ?",
-                        confirmText: "Quitter sans sauvegarder",
-                        cancelText: "Continuer l'édition",
-                        type: 'warning'
-                    });
+                    const result = await showConfirm(
+                        UNSAVED_CHANGES_CONFIRM_CONFIG()
+                    );
                     
                     if (result.action === 'confirm') {
                         log.debug('✅ PAIEMENT - Navigation confirmée');
@@ -266,25 +252,10 @@ export const usePaiementForm = ({ mode, idPaiement, onRetourListe, onPaiementCre
         onRetourListe,
         onPaiementCreated,
         
-        // Onglets CREATE
-        typeOnglet,
-        setTypeOnglet,
-        
-        // Loyer
-        loyers,
-        setLoyers,
-        loyersLoading,
-        setLoyersLoading,
-        loyerSelectionne,
-        setLoyerSelectionne,
-        moisSelectionnes,
-        setMoisSelectionnes,
-        
         // ✅ Actions au lieu de services directs
         paiementActions,
         factureActions,
         clientActions,
-        loyerActions,
         unregisterGuard
     };
 };

@@ -5,6 +5,7 @@ import ModalComponents from '../../shared/ModalComponents';
 import { createLogger } from '../../../utils/createLogger';
 import { formatDate } from '../../../utils/formatters';
 import { toIsoString, fromDisplayString, fromIsoString } from '../../../utils/dateHelpers';
+import { toBoolean } from '../../../utils/booleanHelper';
 
 const log = createLogger("TarifFormService");
 
@@ -153,15 +154,15 @@ export class TarifFormService {
               <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:14px;">
                 <input
                   type="hidden"
-                  name="permet_multiplicateur"
+                  name="permetMultiplicateur"
                   value="0"
                 />
                 <input
                   type="checkbox"
-                  name="permet_multiplicateur"
-                  id="permet_multiplicateur"
+                  name="permetMultiplicateur"
+                  id="permetMultiplicateur"
                   value="1"
-                  ${itemData.permet_multiplicateur == 1 ? 'checked' : ''}
+                  ${toBoolean(itemData.permetMultiplicateur) ? 'checked' : ''}
                   ${isReadOnly ? 'disabled' : ''}
                   style="width:16px; height:16px; cursor:pointer; accent-color:var(--color-primary);"
                 />

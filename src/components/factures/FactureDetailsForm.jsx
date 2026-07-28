@@ -67,7 +67,12 @@ function FactureDetailsForm({
     client = null, 
     readOnly = false,
     onResetRistourne = null,
-    tarifData = null  // ✅ NOUVEAU : Données de tarification depuis FactureGestion
+    tarifData = null,  // ✅ NOUVEAU : Données de tarification depuis FactureGestion
+    // ✅ Modification restreinte (facture liée à un loyer) : seule la
+    // description de chaque ligne reste éditable, dans le bloc résumé.
+    descriptionSeuleModifiable = false,
+    descriptionsModifiees = {},
+    onDescriptionLigneChange = null,
 }) {
 
     log.debug('🔍 Props reçues dans FactureDetailsForm:', {
@@ -187,6 +192,9 @@ function FactureDetailsForm({
                             key={`ligne-${ligne.id || index}`}
                             ligne={ligne}
                             index={index}
+                            descriptionEditable={descriptionSeuleModifiable}
+                            descriptionOverride={descriptionsModifiees[ligne.idLigne ?? index] ?? null}
+                            onDescriptionChange={(valeur) => onDescriptionLigneChange?.(ligne.idLigne ?? index, valeur)}
                             services={services || []}
                             unites={unites || []}
                             unitesByService={unitesByService || {}}

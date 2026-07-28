@@ -92,6 +92,11 @@ function LigneFactureForm({
     draggingIndex,
     prixModifiesManuel,
     readOnly,
+    // ✅ Modification restreinte : seule la description reste éditable,
+    // directement dans le bloc résumé (voir LigneFactureResume.jsx)
+    descriptionEditable,
+    descriptionOverride,
+    onDescriptionChange,
     onModify,
     onToggle,
     onCopy,
@@ -151,6 +156,9 @@ function LigneFactureForm({
                 <div className="fdf_line-resume-container">
                     <LigneFactureResume 
                         {...EnrichedDataExtractor.prepareForResume(ligne)}
+                        descriptionEditable={descriptionEditable}
+                        descriptionOverride={descriptionOverride}
+                        onDescriptionChange={onDescriptionChange}
                     />
                     
                     <div className="fdf_actions_container">
